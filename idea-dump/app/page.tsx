@@ -51,8 +51,8 @@ export default function LandingPage() {
 
                     {/* CTA Buttons */}
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                        <Link href="/dashboard" className="btn-primary text-center">
-                            Go to Dashboard
+                        <Link href="/login" className="btn-primary text-center">
+                            Get Started
                         </Link>
                         <a
                             href="https://github.com"
