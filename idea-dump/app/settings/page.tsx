@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Key, Copy, Plus, Trash2, Moon, Sun } from 'lucide-react';
+import { ArrowLeft, Key, Copy, Plus, Trash2, AlertTriangle } from 'lucide-react';
 import { generateApiKeyPreview } from '@/lib/utils';
 
 interface ApiKeyDisplay {
@@ -13,7 +13,6 @@ interface ApiKeyDisplay {
 }
 
 export default function SettingsPage() {
-    const [theme, setTheme] = useState<'dark' | 'light'>('dark');
     const [apiKeys, setApiKeys] = useState<ApiKeyDisplay[]>([
         {
             id: '1',
@@ -24,12 +23,6 @@ export default function SettingsPage() {
     ]);
     const [newKeyName, setNewKeyName] = useState('');
     const [newKey, setNewKey] = useState<string | null>(null);
-
-    const toggleTheme = () => {
-        const newTheme = theme === 'dark' ? 'light' : 'dark';
-        setTheme(newTheme);
-        document.documentElement.setAttribute('data-theme', newTheme);
-    };
 
     const handleCreateKey = () => {
         if (!newKeyName.trim()) return;
@@ -63,49 +56,62 @@ export default function SettingsPage() {
             <div className="flex items-center gap-4 mb-8">
                 <Link
                     href="/dashboard"
-                    className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors"
+                    className="flex items-center gap-2 transition-colors"
+                    style={{ color: 'var(--text-secondary)' }}
                 >
                     <ArrowLeft size={20} />
                 </Link>
-                <h1 className="text-3xl font-bold text-text-primary">Settings</h1>
+                <h1 style={{ color: 'var(--text-primary)' }}>Settings</h1>
             </div>
 
-            {/* Theme Section */}
-            <section className="mb-8 p-6 rounded-lg bg-bg-elevated border border-border-subtle">
-                <h2 className="text-xl font-semibold text-text-primary mb-4">Appearance</h2>
-                <div className="flex items-center justify-between">
-                    <div>
-                        <p className="font-medium text-text-primary">Theme</p>
-                        <p className="text-sm text-text-secondary">Choose light or dark mode</p>
-                    </div>
-                    <button
-                        onClick={toggleTheme}
-                        className="btn-secondary flex items-center gap-2"
-                    >
-                        {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-                        {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
-                    </button>
-                </div>
-            </section>
-
             {/* API Keys Section */}
-            <section className="p-6 rounded-lg bg-bg-elevated border border-border-subtle">
+            <section
+                className="p-6 rounded-lg"
+                style={{
+                    background: 'var(--bg-elevated)',
+                    border: '1px solid var(--border-subtle)'
+                }}
+            >
                 <div className="flex items-center gap-2 mb-4">
-                    <Key size={20} className="text-accent-rose" />
-                    <h2 className="text-xl font-semibold text-text-primary">API Keys</h2>
+                    <Key size={20} style={{ color: 'var(--accent-rose)' }} />
+                    <h2
+                        className="text-xl font-semibold"
+                        style={{
+                            fontFamily: 'var(--font-body)',
+                            color: 'var(--text-primary)'
+                        }}
+                    >
+                        API Keys
+                    </h2>
                 </div>
-                <p className="text-sm text-text-secondary mb-6">
+                <p
+                    className="text-sm mb-6"
+                    style={{ color: 'var(--text-secondary)' }}
+                >
                     Generate API keys to send PRDs from external tools like Antigravity.
                 </p>
 
                 {/* New Key Display */}
                 {newKey && (
-                    <div className="mb-6 p-4 rounded-lg bg-accent-sage/20 border border-accent-sage">
-                        <p className="text-sm font-medium text-accent-sage mb-2">
-                            ⚠️ Copy this key now. You won&apos;t be able to see it again!
+                    <div
+                        className="mb-6 p-4 rounded-lg"
+                        style={{
+                            background: 'var(--success-bg)',
+                            border: '1px solid var(--accent-sage)'
+                        }}
+                    >
+                        <p
+                            className="text-sm font-medium mb-2 flex items-center gap-2"
+                            style={{ color: 'var(--accent-sage)' }}
+                        >
+                            <AlertTriangle size={16} />
+                            Copy this key now. You won&apos;t be able to see it again!
                         </p>
                         <div className="flex items-center gap-2">
-                            <code className="flex-1 p-2 rounded bg-bg-base text-sm font-mono">
+                            <code
+                                className="flex-1 p-2 rounded text-sm font-mono"
+                                style={{ background: 'var(--bg-base)' }}
+                            >
                                 {newKey}
                             </code>
                             <button
@@ -117,7 +123,8 @@ export default function SettingsPage() {
                         </div>
                         <button
                             onClick={() => setNewKey(null)}
-                            className="text-sm text-text-muted hover:text-text-secondary mt-2"
+                            className="text-sm mt-2"
+                            style={{ color: 'var(--text-muted)' }}
                         >
                             Dismiss
                         </button>
@@ -148,15 +155,27 @@ export default function SettingsPage() {
                     {apiKeys.map((key) => (
                         <div
                             key={key.id}
-                            className="flex items-center justify-between p-4 rounded-lg bg-bg-hover"
+                            className="flex items-center justify-between p-4 rounded-lg"
+                            style={{ background: 'var(--bg-hover)' }}
                         >
                             <div>
-                                <p className="font-medium text-text-primary">{key.name}</p>
-                                <p className="text-sm text-text-muted font-mono">{key.preview}</p>
+                                <p
+                                    className="font-medium"
+                                    style={{ color: 'var(--text-primary)' }}
+                                >
+                                    {key.name}
+                                </p>
+                                <p
+                                    className="text-sm font-mono"
+                                    style={{ color: 'var(--text-muted)' }}
+                                >
+                                    {key.preview}
+                                </p>
                             </div>
                             <button
                                 onClick={() => handleDeleteKey(key.id)}
-                                className="text-text-muted hover:text-accent-rose transition-colors"
+                                className="transition-colors"
+                                style={{ color: 'var(--text-muted)' }}
                             >
                                 <Trash2 size={18} />
                             </button>
@@ -166,10 +185,27 @@ export default function SettingsPage() {
             </section>
 
             {/* Usage Instructions */}
-            <section className="mt-8 p-6 rounded-lg bg-bg-elevated border border-border-subtle">
-                <h2 className="text-xl font-semibold text-text-primary mb-4">API Usage</h2>
-                <pre className="p-4 rounded-lg bg-bg-base text-sm overflow-x-auto">
-                    <code className="text-text-secondary">{`curl -X POST https://your-app.vercel.app/api/ingest \\
+            <section
+                className="mt-8 p-6 rounded-lg"
+                style={{
+                    background: 'var(--bg-elevated)',
+                    border: '1px solid var(--border-subtle)'
+                }}
+            >
+                <h2
+                    className="text-xl font-semibold mb-4"
+                    style={{
+                        fontFamily: 'var(--font-body)',
+                        color: 'var(--text-primary)'
+                    }}
+                >
+                    API Usage
+                </h2>
+                <pre
+                    className="p-4 rounded-lg text-sm overflow-x-auto"
+                    style={{ background: 'var(--bg-base)' }}
+                >
+                    <code style={{ color: 'var(--text-secondary)' }}>{`curl -X POST https://your-app.vercel.app/api/ingest \\
   -H "Content-Type: application/json" \\
   -H "x-api-key: YOUR_API_KEY" \\
   -d '{

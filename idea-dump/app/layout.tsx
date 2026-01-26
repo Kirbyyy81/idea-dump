@@ -1,5 +1,19 @@
 import type { Metadata } from 'next';
+import { DM_Serif_Text, Inter } from 'next/font/google';
 import './globals.css';
+
+const dmSerifText = DM_Serif_Text({
+    weight: '400',
+    subsets: ['latin'],
+    variable: '--font-heading',
+    display: 'swap',
+});
+
+const inter = Inter({
+    subsets: ['latin'],
+    variable: '--font-body',
+    display: 'swap',
+});
 
 export const metadata: Metadata = {
     title: 'IdeaDump - Personal PRD Management Hub',
@@ -12,7 +26,7 @@ export default function RootLayout({
     children: React.ReactNode;
 }) {
     return (
-        <html lang="en" data-theme="dark">
+        <html lang="en" className={`${dmSerifText.variable} ${inter.variable}`}>
             <body className="min-h-screen antialiased">
                 {children}
             </body>

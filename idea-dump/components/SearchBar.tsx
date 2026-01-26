@@ -25,7 +25,8 @@ export function SearchBar({ onSearch, placeholder = 'Search projects...' }: Sear
         <div className="relative">
             <Search
                 size={18}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted"
+                className="absolute left-4 top-1/2 -translate-y-1/2"
+                style={{ color: 'var(--text-muted)' }}
             />
             <input
                 type="text"
@@ -37,7 +38,8 @@ export function SearchBar({ onSearch, placeholder = 'Search projects...' }: Sear
             {query && (
                 <button
                     onClick={handleClear}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+                    style={{ color: 'var(--text-muted)' }}
                 >
                     <X size={18} />
                 </button>

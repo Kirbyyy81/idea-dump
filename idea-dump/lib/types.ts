@@ -44,13 +44,13 @@ export function inferStatus(project: Project): Status {
     return 'idea';
 }
 
-// Status display configuration
+// Status display configuration - using icon names instead of emojis
 export const statusConfig: Record<Status, { label: string; color: string; icon: string }> = {
-    idea: { label: 'Idea', color: 'var(--status-idea)', icon: '💡' },
-    prd: { label: 'PRD', color: 'var(--status-prd)', icon: '📄' },
-    in_development: { label: 'In Development', color: 'var(--status-dev)', icon: '🚧' },
-    completed: { label: 'Completed', color: 'var(--status-complete)', icon: '✅' },
-    archived: { label: 'Archived', color: 'var(--status-archived)', icon: '🗄️' },
+    idea: { label: 'Idea', color: 'var(--status-idea)', icon: 'Lightbulb' },
+    prd: { label: 'PRD', color: 'var(--status-prd)', icon: 'FileText' },
+    in_development: { label: 'In Development', color: 'var(--status-dev)', icon: 'Code' },
+    completed: { label: 'Completed', color: 'var(--status-complete)', icon: 'CheckCircle' },
+    archived: { label: 'Archived', color: 'var(--status-archived)', icon: 'Archive' },
 };
 
 export const priorityConfig: Record<Priority, { label: string; color: string }> = {

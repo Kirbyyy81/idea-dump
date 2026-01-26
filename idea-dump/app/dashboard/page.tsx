@@ -5,6 +5,7 @@ import { Project, Status, inferStatus } from '@/lib/types';
 import { ProjectCard } from '@/components/ProjectCard';
 import { Sidebar } from '@/components/Sidebar';
 import { SearchBar } from '@/components/SearchBar';
+import { Search } from 'lucide-react';
 
 // Demo data for initial display
 const demoProjects: Project[] = [
@@ -113,8 +114,8 @@ export default function DashboardPage() {
                 {/* Header */}
                 <div className="flex items-center justify-between gap-4 mb-8">
                     <div>
-                        <h1 className="text-3xl font-bold text-text-primary">Projects</h1>
-                        <p className="text-text-secondary mt-1">
+                        <h1 style={{ color: 'var(--text-primary)' }}>Projects</h1>
+                        <p className="mt-1" style={{ color: 'var(--text-secondary)' }}>
                             {filteredProjects.length} project{filteredProjects.length !== 1 ? 's' : ''}
                         </p>
                     </div>
@@ -132,11 +133,19 @@ export default function DashboardPage() {
                     </div>
                 ) : (
                     <div className="text-center py-16">
-                        <div className="text-4xl mb-4">🔍</div>
-                        <h3 className="text-lg font-semibold text-text-primary mb-2">
+                        <div className="mb-4" style={{ color: 'var(--text-muted)' }}>
+                            <Search size={48} />
+                        </div>
+                        <h3
+                            className="text-lg font-semibold mb-2"
+                            style={{
+                                fontFamily: 'var(--font-body)',
+                                color: 'var(--text-primary)'
+                            }}
+                        >
                             No projects found
                         </h3>
-                        <p className="text-text-secondary">
+                        <p style={{ color: 'var(--text-secondary)' }}>
                             Try adjusting your search or filters
                         </p>
                     </div>

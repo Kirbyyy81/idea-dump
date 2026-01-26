@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Note } from '@/lib/types';
 import { formatRelativeTime } from '@/lib/utils';
-import { Plus, Send } from 'lucide-react';
+import { Plus, Send, StickyNote } from 'lucide-react';
 
 interface NotesPanelProps {
     notes: Note[];
@@ -31,8 +31,15 @@ export function NotesPanel({ notes, onAddNote }: NotesPanelProps) {
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-text-primary flex items-center gap-2">
-                    📝 Notes
+                <h3
+                    className="font-semibold flex items-center gap-2"
+                    style={{
+                        fontFamily: 'var(--font-body)',
+                        color: 'var(--text-primary)'
+                    }}
+                >
+                    <StickyNote size={18} style={{ color: 'var(--accent-apricot)' }} />
+                    Notes
                 </h3>
                 {!isAdding && (
                     <button
@@ -47,7 +54,13 @@ export function NotesPanel({ notes, onAddNote }: NotesPanelProps) {
 
             {/* Add Note Form */}
             {isAdding && (
-                <div className="p-4 rounded-lg bg-bg-hover border border-border-subtle">
+                <div
+                    className="p-4 rounded-lg"
+                    style={{
+                        background: 'var(--bg-hover)',
+                        border: '1px solid var(--border-subtle)'
+                    }}
+                >
                     <textarea
                         value={newNote}
                         onChange={(e) => setNewNote(e.target.value)}
@@ -78,19 +91,32 @@ export function NotesPanel({ notes, onAddNote }: NotesPanelProps) {
             {/* Notes List */}
             <div className="space-y-3">
                 {notes.length === 0 && !isAdding && (
-                    <p className="text-text-muted text-sm text-center py-8">
+                    <p
+                        className="text-sm text-center py-8"
+                        style={{ color: 'var(--text-muted)' }}
+                    >
                         No notes yet. Add one to track your progress!
                     </p>
                 )}
                 {notes.map((note) => (
                     <div
                         key={note.id}
-                        className="p-4 rounded-lg bg-bg-elevated border border-border-subtle"
+                        className="p-4 rounded-lg"
+                        style={{
+                            background: 'var(--bg-elevated)',
+                            border: '1px solid var(--border-subtle)'
+                        }}
                     >
-                        <p className="text-text-secondary text-sm whitespace-pre-wrap">
+                        <p
+                            className="text-sm whitespace-pre-wrap"
+                            style={{ color: 'var(--text-secondary)' }}
+                        >
                             {note.content}
                         </p>
-                        <p className="text-text-muted text-xs mt-2">
+                        <p
+                            className="text-xs mt-2"
+                            style={{ color: 'var(--text-muted)' }}
+                        >
                             {formatRelativeTime(note.created_at)}
                         </p>
                     </div>

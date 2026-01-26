@@ -10,8 +10,22 @@ import {
     Settings,
     Plus,
     Search,
-    X
+    X,
+    Folder,
+    Lightbulb,
+    FileText,
+    Code,
+    CheckCircle,
+    Archive
 } from 'lucide-react';
+
+const statusIconMap = {
+    Lightbulb,
+    FileText,
+    Code,
+    CheckCircle,
+    Archive,
+};
 
 interface SidebarProps {
     selectedStatus: Status | 'all';
@@ -36,12 +50,29 @@ export function Sidebar({
     );
 
     return (
-        <aside className="w-64 h-screen fixed left-0 top-0 bg-bg-elevated border-r border-border-subtle flex flex-col">
+        <aside
+            className="w-64 h-screen fixed left-0 top-0 flex flex-col"
+            style={{
+                background: 'var(--bg-elevated)',
+                borderRight: '1px solid var(--border-default)'
+            }}
+        >
             {/* Logo */}
-            <div className="p-6 border-b border-border-subtle">
+            <div
+                className="p-6"
+                style={{ borderBottom: '1px solid var(--border-subtle)' }}
+            >
                 <Link href="/dashboard" className="flex items-center gap-2">
-                    <span className="text-2xl">🗂️</span>
-                    <span className="font-bold text-xl text-text-primary">IdeaDump</span>
+                    <Folder size={24} style={{ color: 'var(--accent-rose)' }} />
+                    <span
+                        className="font-bold text-xl"
+                        style={{
+                            fontFamily: 'var(--font-heading)',
+                            color: 'var(--text-primary)'
+                        }}
+                    >
+                        IdeaDump
+                    </span>
                 </Link>
             </div>
 
@@ -52,11 +83,12 @@ export function Sidebar({
                     <Link
                         href="/dashboard"
                         className={cn(
-                            'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors',
-                            pathname === '/dashboard'
-                                ? 'bg-accent-rose/20 text-accent-rose'
-                                : 'text-text-secondary hover:bg-bg-hover hover:text-text-primary'
+                            'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors'
                         )}
+                        style={{
+                            background: pathname === '/dashboard' ? 'rgba(227, 112, 131, 0.1)' : 'transparent',
+                            color: pathname === '/dashboard' ? 'var(--accent-rose)' : 'var(--text-secondary)'
+                        }}
                     >
                         <LayoutDashboard size={18} />
                         Dashboard
@@ -65,48 +97,59 @@ export function Sidebar({
 
                 {/* Status Filters */}
                 <div className="mb-6">
-                    <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3 px-3">
+                    <h3
+                        className="text-xs font-semibold uppercase tracking-wider mb-3 px-3"
+                        style={{ color: 'var(--text-muted)' }}
+                    >
                         Status
                     </h3>
                     <div className="space-y-1">
                         <button
                             onClick={() => onStatusChange('all')}
-                            className={cn(
-                                'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors text-left',
-                                selectedStatus === 'all'
-                                    ? 'bg-bg-hover text-text-primary'
-                                    : 'text-text-secondary hover:bg-bg-hover'
-                            )}
+                            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors text-left"
+                            style={{
+                                background: selectedStatus === 'all' ? 'var(--bg-hover)' : 'transparent',
+                                color: selectedStatus === 'all' ? 'var(--text-primary)' : 'var(--text-secondary)'
+                            }}
                         >
                             All Projects
                         </button>
-                        {(Object.keys(statusConfig) as Status[]).map((status) => (
-                            <button
-                                key={status}
-                                onClick={() => onStatusChange(status)}
-                                className={cn(
-                                    'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors text-left',
-                                    selectedStatus === status
-                                        ? 'bg-bg-hover text-text-primary'
-                                        : 'text-text-secondary hover:bg-bg-hover'
-                                )}
-                            >
-                                <span>{statusConfig[status].icon}</span>
-                                {statusConfig[status].label}
-                            </button>
-                        ))}
+                        {(Object.keys(statusConfig) as Status[]).map((status) => {
+                            const IconComponent = statusIconMap[statusConfig[status].icon as keyof typeof statusIconMap];
+                            return (
+                                <button
+                                    key={status}
+                                    onClick={() => onStatusChange(status)}
+                                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors text-left"
+                                    style={{
+                                        background: selectedStatus === status ? 'var(--bg-hover)' : 'transparent',
+                                        color: selectedStatus === status ? 'var(--text-primary)' : 'var(--text-secondary)'
+                                    }}
+                                >
+                                    {IconComponent && <IconComponent size={16} />}
+                                    {statusConfig[status].label}
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
 
                 {/* Tags */}
                 <div>
-                    <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3 px-3">
+                    <h3
+                        className="text-xs font-semibold uppercase tracking-wider mb-3 px-3"
+                        style={{ color: 'var(--text-muted)' }}
+                    >
                         Tags
                     </h3>
 
                     {/* Tag Search */}
                     <div className="relative mb-2 px-3">
-                        <Search size={14} className="absolute left-6 top-1/2 -translate-y-1/2 text-text-muted" />
+                        <Search
+                            size={14}
+                            className="absolute left-6 top-1/2 -translate-y-1/2"
+                            style={{ color: 'var(--text-muted)' }}
+                        />
                         <input
                             type="text"
                             placeholder="Filter tags..."
@@ -121,12 +164,11 @@ export function Sidebar({
                             <button
                                 key={tag}
                                 onClick={() => onTagToggle(tag)}
-                                className={cn(
-                                    'w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors text-left',
-                                    selectedTags.includes(tag)
-                                        ? 'bg-accent-blue/20 text-accent-blue'
-                                        : 'text-text-secondary hover:bg-bg-hover'
-                                )}
+                                className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors text-left"
+                                style={{
+                                    background: selectedTags.includes(tag) ? 'rgba(137, 183, 194, 0.2)' : 'transparent',
+                                    color: selectedTags.includes(tag) ? 'var(--accent-blue)' : 'var(--text-secondary)'
+                                }}
                             >
                                 #{tag}
                                 {selectedTags.includes(tag) && <X size={12} />}
@@ -137,7 +179,10 @@ export function Sidebar({
             </nav>
 
             {/* Footer */}
-            <div className="p-4 border-t border-border-subtle space-y-2">
+            <div
+                className="p-4 space-y-2"
+                style={{ borderTop: '1px solid var(--border-subtle)' }}
+            >
                 <Link
                     href="/dashboard?new=true"
                     className="btn-primary w-full flex items-center justify-center gap-2"
@@ -147,12 +192,11 @@ export function Sidebar({
                 </Link>
                 <Link
                     href="/settings"
-                    className={cn(
-                        'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors',
-                        pathname === '/settings'
-                            ? 'bg-bg-hover text-text-primary'
-                            : 'text-text-secondary hover:bg-bg-hover'
-                    )}
+                    className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors"
+                    style={{
+                        background: pathname === '/settings' ? 'var(--bg-hover)' : 'transparent',
+                        color: pathname === '/settings' ? 'var(--text-primary)' : 'var(--text-secondary)'
+                    }}
                 >
                     <Settings size={18} />
                     Settings
