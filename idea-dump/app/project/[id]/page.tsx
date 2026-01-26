@@ -1,95 +1,153 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import { Project, Note, inferStatus, priorityConfig, statusConfig, Status, Priority } from '@/lib/types';
+import { useParams, useRouter } from 'next/navigation';
+import { Project, Note, inferStatus, priorityConfig } from '@/lib/types';
 import { formatDate } from '@/lib/utils';
 import { StatusBadge } from '@/components/StatusBadge';
 import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 import { NotesPanel } from '@/components/NotesPanel';
-import { ArrowLeft, ExternalLink, Archive, Check, Pencil, FileText } from 'lucide-react';
-
-// Demo data
-const demoProject: Project = {
-    id: '1',
-    user_id: 'demo',
-    title: 'IdeaDump',
-    description: 'A Notion-inspired, deployable web app to centralize, track, and manage all your PRDs and project ideas.',
-    prd_content: `# IdeaDump - Personal PRD Management Hub
-
-A Notion-inspired, deployable web app to centralize, track, and manage all your PRDs and project ideas.
-
-## Overview
-
-**Problem**: PRDs are scattered across different locations, making it hard to track progress and pick up where you left off.
-
-**Solution**: IdeaDump - a clean, personal hub where you can:
-- Import and store all PRDs (markdown format)
-- Track project status through defined stages
-- Add notes/journal entries per project
-- Link to GitHub repos
-- Access from any device
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|------------|
-| Frontend | Next.js 14 (App Router) + TypeScript |
-| Styling | shadcn/ui + Tailwind CSS |
-| Database | Supabase (PostgreSQL) |
-| Auth | Supabase Magic Link |
-| Hosting | Vercel |
-`,
-    github_url: 'https://github.com/user/ideadump',
-    priority: 'high',
-    tags: ['nextjs', 'supabase', 'productivity'],
-    completed: false,
-    archived: false,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-};
-
-const demoNotes: Note[] = [
-    {
-        id: '1',
-        project_id: '1',
-        content: 'Finished Phase 1 setup. Moving to dashboard implementation.',
-        created_at: new Date().toISOString(),
-    },
-    {
-        id: '2',
-        project_id: '1',
-        content: 'Need to set up Supabase project and add environment variables.',
-        created_at: new Date(Date.now() - 86400000).toISOString(),
-    },
-];
+import { ArrowLeft, ExternalLink, Archive, Check, Pencil, FileText, Loader2, Trash2 } from 'lucide-react';
 
 export default function ProjectPage() {
     const params = useParams();
-    const [project, setProject] = useState<Project>(demoProject);
-    const [notes, setNotes] = useState<Note[]>(demoNotes);
+    const router = useRouter();
+    const projectId = params.id as string;
+
+    const [project, setProject] = useState<Project | null>(null);
+    const [notes, setNotes] = useState<Note[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [isEditing, setIsEditing] = useState(false);
 
-    const status = inferStatus(project);
+    useEffect(() => {
+        if (projectId) {
+            fetchProject();
+            fetchNotes();
+        }
+    }, [projectId]);
+
+    const fetchProject = async () => {
+        try {
+            const response = await fetch('/api/projects');
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || 'Failed to fetch project');
+            }
+
+            const foundProject = result.data?.find((p: Project) => p.id === projectId);
+            if (foundProject) {
+                setProject(foundProject);
+            } else {
+                setError('Project not found');
+            }
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to fetch project');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const fetchNotes = async () => {
+        try {
+            const response = await fetch(`/api/notes?project_id=${projectId}`);
+            const result = await response.json();
+
+            if (response.ok) {
+                setNotes(result.data || []);
+            }
+        } catch (err) {
+            console.error('Failed to fetch notes:', err);
+        }
+    };
 
     const handleAddNote = async (content: string) => {
-        const newNote: Note = {
-            id: Date.now().toString(),
-            project_id: project.id,
-            content,
-            created_at: new Date().toISOString(),
-        };
-        setNotes([newNote, ...notes]);
+        const response = await fetch('/api/notes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ project_id: projectId, content }),
+        });
+
+        if (response.ok) {
+            fetchNotes();
+        }
     };
 
-    const handleToggleComplete = () => {
-        setProject((prev) => ({ ...prev, completed: !prev.completed }));
+    const handleToggleComplete = async () => {
+        if (!project) return;
+
+        const response = await fetch('/api/projects', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: projectId, completed: !project.completed }),
+        });
+
+        if (response.ok) {
+            setProject({ ...project, completed: !project.completed });
+        }
     };
 
-    const handleToggleArchive = () => {
-        setProject((prev) => ({ ...prev, archived: !prev.archived }));
+    const handleToggleArchive = async () => {
+        if (!project) return;
+
+        const response = await fetch('/api/projects', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: projectId, archived: !project.archived }),
+        });
+
+        if (response.ok) {
+            setProject({ ...project, archived: !project.archived });
+        }
     };
+
+    const handleDelete = async () => {
+        if (!confirm('Are you sure you want to delete this project?')) return;
+
+        const response = await fetch(`/api/projects?id=${projectId}`, {
+            method: 'DELETE',
+        });
+
+        if (response.ok) {
+            router.push('/dashboard');
+        }
+    };
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <Loader2 size={32} className="animate-spin" style={{ color: 'var(--accent-rose)' }} />
+            </div>
+        );
+    }
+
+    if (error || !project) {
+        return (
+            <div className="min-h-screen p-8 max-w-5xl mx-auto">
+                <Link
+                    href="/dashboard"
+                    className="flex items-center gap-2 mb-8"
+                    style={{ color: 'var(--text-secondary)' }}
+                >
+                    <ArrowLeft size={20} />
+                    Back to Dashboard
+                </Link>
+                <div
+                    className="text-center py-16 p-6 rounded-lg"
+                    style={{
+                        background: 'var(--error-bg)',
+                        border: '1px solid var(--error)'
+                    }}
+                >
+                    <p style={{ color: 'var(--error)' }}>{error || 'Project not found'}</p>
+                </div>
+            </div>
+        );
+    }
+
+    const status = inferStatus(project);
 
     return (
         <div className="min-h-screen p-8 max-w-5xl mx-auto">
@@ -117,6 +175,13 @@ export default function ProjectPage() {
                     >
                         <Archive size={16} />
                         {project.archived ? 'Unarchive' : 'Archive'}
+                    </button>
+                    <button
+                        onClick={handleDelete}
+                        className="btn-secondary flex items-center gap-2"
+                        style={{ color: 'var(--error)' }}
+                    >
+                        <Trash2 size={16} />
                     </button>
                 </div>
             </div>
