@@ -167,7 +167,7 @@ ideadump/
   
   /* ===== LIGHT MODE ===== */
   /* (toggled via class or media query) */
-  --bg-base-light: #F8FAFC;     /* Crisp Off-White */
+  --bg-base-light: #d0d4d8ff;     /* Crisp Off-White */
   --bg-elevated-light: #FFFFFF;
   --text-primary-light: #0F172A;
   --text-secondary-light: #475569;
