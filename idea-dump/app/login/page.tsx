@@ -1,14 +1,28 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Mail, ArrowLeft, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [isPasswordLogin, setIsPasswordLogin] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+    const router = useRouter();
+    const searchParams = useSearchParams();
+
+    useEffect(() => {
+        const error = searchParams.get('error');
+        if (error === 'auth_failed') {
+            setMessage({ type: 'error', text: 'Authentication failed. Please try again.' });
+        } else if (error) {
+            setMessage({ type: 'error', text: error });
+        }
+    }, [searchParams]);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -17,19 +31,38 @@ export default function LoginPage() {
 
         const supabase = createClient();
 
-        const { error } = await supabase.auth.signInWithOtp({
-            email,
-            options: {
-                emailRedirectTo: `${window.location.origin}/auth/callback`,
-            },
-        });
+        if (isPasswordLogin) {
+            const { error } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+            });
 
-        setIsLoading(false);
+            if (error) {
+                setMessage({ type: 'error', text: error.message });
+                setIsLoading(false);
+            } else {
+                setMessage({ type: 'success', text: 'Login successful! Redirecting...' });
 
-        if (error) {
-            setMessage({ type: 'error', text: error.message });
+                // Use window.location.href to force a hard reload and ensure cookies 
+                // are properly recognized by the server/middleware
+                window.location.href = '/dashboard';
+            }
+
         } else {
-            setMessage({ type: 'success', text: 'Check your email for the magic link!' });
+            const { error } = await supabase.auth.signInWithOtp({
+                email,
+                options: {
+                    emailRedirectTo: `${window.location.origin}/auth/callback`,
+                },
+            });
+
+            setIsLoading(false);
+
+            if (error) {
+                setMessage({ type: 'error', text: error.message });
+            } else {
+                setMessage({ type: 'success', text: 'Check your email for the magic link!' });
+            }
         }
     };
 
@@ -48,7 +81,7 @@ export default function LoginPage() {
                         Welcome to <span style={{ color: 'var(--accent-rose)' }}>IdeaDump</span>
                     </h1>
                     <p style={{ color: 'var(--text-secondary)' }}>
-                        Sign in with your email to continue
+                        Sign in to continue
                     </p>
                 </div>
 
@@ -80,6 +113,27 @@ export default function LoginPage() {
                         </div>
                     </div>
 
+                    {isPasswordLogin && (
+                        <div>
+                            <label
+                                htmlFor="password"
+                                className="block text-sm font-medium mb-2"
+                                style={{ color: 'var(--text-primary)' }}
+                            >
+                                Password
+                            </label>
+                            <input
+                                id="password"
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="••••••••"
+                                required
+                                className="input"
+                            />
+                        </div>
+                    )}
+
                     <button
                         type="submit"
                         disabled={isLoading || !email}
@@ -89,11 +143,20 @@ export default function LoginPage() {
                         {isLoading ? (
                             <>
                                 <Loader2 size={18} className="animate-spin" />
-                                Sending...
+                                {isPasswordLogin ? 'Signing in...' : 'Sending...'}
                             </>
                         ) : (
-                            'Send Magic Link'
+                            isPasswordLogin ? 'Sign In' : 'Send Magic Link'
                         )}
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setIsPasswordLogin(!isPasswordLogin)}
+                        className="w-full text-sm hover:underline mt-2"
+                        style={{ color: 'var(--text-secondary)' }}
+                    >
+                        {isPasswordLogin ? 'Use Magic Link instead' : 'Use Password instead'}
                     </button>
                 </form>
 

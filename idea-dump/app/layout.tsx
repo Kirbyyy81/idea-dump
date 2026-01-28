@@ -20,6 +20,8 @@ export const metadata: Metadata = {
     description: 'Centralize, track, and manage all your PRDs and project ideas in one place.',
 };
 
+import { AuthProvider } from '@/components/AuthProvider';
+
 export default function RootLayout({
     children,
 }: {
@@ -28,7 +30,9 @@ export default function RootLayout({
     return (
         <html lang="en" className={`${dmSerifText.variable} ${inter.variable}`}>
             <body className="min-h-screen antialiased">
-                {children}
+                <AuthProvider>
+                    {children}
+                </AuthProvider>
             </body>
         </html>
     );
