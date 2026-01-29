@@ -23,7 +23,7 @@ export function StatusBadge({ status, size = 'sm' }: StatusBadgeProps) {
     const getBgColor = (status: Status) => {
         switch (status) {
             case 'idea': return 'var(--info-bg)';
-            case 'prd': return '#FEF2F4';
+            case 'prd': return 'var(--status-prd-bg)';
             case 'in_development': return 'var(--warning-bg)';
             case 'completed': return 'var(--success-bg)';
             case 'archived': return 'var(--bg-subtle)';

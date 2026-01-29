@@ -263,23 +263,7 @@ export default function ProjectPage() {
                     </div>
                 </div>
 
-                {/* Tags */}
-                {project.tags.length > 0 && (
-                    <div className="flex gap-2 mt-4 flex-wrap">
-                        {project.tags.map((tag) => (
-                            <span
-                                key={tag}
-                                className="text-sm px-3 py-1 rounded-full"
-                                style={{
-                                    background: 'var(--bg-hover)',
-                                    color: 'var(--text-secondary)'
-                                }}
-                            >
-                                #{tag}
-                            </span>
-                        ))}
-                    </div>
-                )}
+
 
                 {/* Complete Toggle */}
                 <button

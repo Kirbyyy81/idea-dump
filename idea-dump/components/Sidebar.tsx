@@ -30,24 +30,13 @@ const statusIconMap = {
 interface SidebarProps {
     selectedStatus: Status | 'all';
     onStatusChange: (status: Status | 'all') => void;
-    selectedTags: string[];
-    onTagToggle: (tag: string) => void;
-    allTags: string[];
 }
 
 export function Sidebar({
     selectedStatus,
     onStatusChange,
-    selectedTags,
-    onTagToggle,
-    allTags
 }: SidebarProps) {
     const pathname = usePathname();
-    const [tagSearch, setTagSearch] = useState('');
-
-    const filteredTags = allTags.filter(tag =>
-        tag.toLowerCase().includes(tagSearch.toLowerCase())
-    );
 
     return (
         <aside
@@ -134,48 +123,7 @@ export function Sidebar({
                     </div>
                 </div>
 
-                {/* Tags */}
-                <div>
-                    <h3
-                        className="text-xs font-semibold uppercase tracking-wider mb-3 px-3"
-                        style={{ color: 'var(--text-muted)' }}
-                    >
-                        Tags
-                    </h3>
 
-                    {/* Tag Search */}
-                    <div className="relative mb-2 px-3">
-                        <Search
-                            size={14}
-                            className="absolute left-6 top-1/2 -translate-y-1/2"
-                            style={{ color: 'var(--text-muted)' }}
-                        />
-                        <input
-                            type="text"
-                            placeholder="Filter tags..."
-                            value={tagSearch}
-                            onChange={(e) => setTagSearch(e.target.value)}
-                            className="input pl-8 py-1.5 text-sm"
-                        />
-                    </div>
-
-                    <div className="space-y-1 max-h-48 overflow-y-auto">
-                        {filteredTags.map((tag) => (
-                            <button
-                                key={tag}
-                                onClick={() => onTagToggle(tag)}
-                                className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors text-left"
-                                style={{
-                                    background: selectedTags.includes(tag) ? 'rgba(137, 183, 194, 0.2)' : 'transparent',
-                                    color: selectedTags.includes(tag) ? 'var(--accent-blue)' : 'var(--text-secondary)'
-                                }}
-                            >
-                                #{tag}
-                                {selectedTags.includes(tag) && <X size={12} />}
-                            </button>
-                        ))}
-                    </div>
-                </div>
             </nav>
 
             {/* Footer */}

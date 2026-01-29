@@ -14,7 +14,7 @@ export default function DashboardPage() {
     const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedStatus, setSelectedStatus] = useState<Status | 'all'>('all');
-    const [selectedTags, setSelectedTags] = useState<string[]>([]);
+
     const [showNewModal, setShowNewModal] = useState(false);
 
     // Fetch projects on mount
@@ -42,13 +42,6 @@ export default function DashboardPage() {
         }
     };
 
-    // Extract all unique tags
-    const allTags = useMemo(() => {
-        const tags = new Set<string>();
-        projects.forEach((p) => p.tags.forEach((t) => tags.add(t)));
-        return Array.from(tags).sort();
-    }, [projects]);
-
     // Filter projects
     const filteredProjects = useMemo(() => {
         return projects.filter((project) => {
@@ -65,21 +58,9 @@ export default function DashboardPage() {
                 if (inferStatus(project) !== selectedStatus) return false;
             }
 
-            // Tag filter
-            if (selectedTags.length > 0) {
-                const hasAllTags = selectedTags.every((tag) => project.tags.includes(tag));
-                if (!hasAllTags) return false;
-            }
-
             return true;
         });
-    }, [projects, searchQuery, selectedStatus, selectedTags]);
-
-    const handleTagToggle = (tag: string) => {
-        setSelectedTags((prev) =>
-            prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-        );
-    };
+    }, [projects, searchQuery, selectedStatus]);
 
     return (
         <div className="min-h-screen">
@@ -87,9 +68,7 @@ export default function DashboardPage() {
             <Sidebar
                 selectedStatus={selectedStatus}
                 onStatusChange={setSelectedStatus}
-                selectedTags={selectedTags}
-                onTagToggle={handleTagToggle}
-                allTags={allTags}
+
             />
 
             {/* Main Content */}

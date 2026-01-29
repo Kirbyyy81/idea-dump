@@ -43,29 +43,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
                     className="flex items-center justify-between mt-auto pt-3"
                     style={{ borderTop: '1px solid var(--border-subtle)' }}
                 >
-                    {/* Tags */}
-                    <div className="flex gap-1.5 flex-wrap">
-                        {project.tags.slice(0, 3).map((tag) => (
-                            <span
-                                key={tag}
-                                className="text-xs px-2 py-0.5 rounded-full"
-                                style={{
-                                    background: 'var(--bg-hover)',
-                                    color: 'var(--text-muted)'
-                                }}
-                            >
-                                #{tag}
-                            </span>
-                        ))}
-                        {project.tags.length > 3 && (
-                            <span
-                                className="text-xs"
-                                style={{ color: 'var(--text-muted)' }}
-                            >
-                                +{project.tags.length - 3}
-                            </span>
-                        )}
-                    </div>
+
 
                     {/* Priority indicator */}
                     <div

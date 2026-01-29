@@ -69,18 +69,14 @@ export default function LoginPage() {
     return (
         <div className="min-h-screen flex items-center justify-center p-6">
             <div
-                className="w-full max-w-md p-8 rounded-xl"
-                style={{
-                    background: 'var(--bg-elevated)',
-                    border: '1px solid var(--border-default)'
-                }}
+                className="w-full max-w-md p-8 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-default)]"
             >
                 {/* Header */}
                 <div className="text-center mb-8">
-                    <h1 className="text-3xl mb-2" style={{ color: 'var(--text-primary)' }}>
-                        Welcome to <span style={{ color: 'var(--accent-rose)' }}>IdeaDump</span>
+                    <h1 className="text-3xl mb-2 text-[var(--text-primary)]">
+                        Welcome to <span className="text-[var(--accent-rose)]">IdeaDump</span>
                     </h1>
-                    <p style={{ color: 'var(--text-secondary)' }}>
+                    <p className="text-[var(--text-secondary)]">
                         Sign in to continue
                     </p>
                 </div>
@@ -90,16 +86,14 @@ export default function LoginPage() {
                     <div>
                         <label
                             htmlFor="email"
-                            className="block text-sm font-medium mb-2"
-                            style={{ color: 'var(--text-primary)' }}
+                            className="block text-sm font-medium mb-2 text-[var(--text-primary)]"
                         >
                             Email address
                         </label>
                         <div className="relative">
                             <Mail
                                 size={18}
-                                className="absolute left-4 top-1/2 -translate-y-1/2"
-                                style={{ color: 'var(--text-muted)' }}
+                                className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
                             />
                             <input
                                 id="email"
@@ -117,8 +111,7 @@ export default function LoginPage() {
                         <div>
                             <label
                                 htmlFor="password"
-                                className="block text-sm font-medium mb-2"
-                                style={{ color: 'var(--text-primary)' }}
+                                className="block text-sm font-medium mb-2 text-[var(--text-primary)]"
                             >
                                 Password
                             </label>
@@ -137,8 +130,7 @@ export default function LoginPage() {
                     <button
                         type="submit"
                         disabled={isLoading || !email}
-                        className="btn-primary w-full flex items-center justify-center gap-2"
-                        style={{ opacity: isLoading || !email ? 0.7 : 1 }}
+                        className={`btn-primary w-full flex items-center justify-center gap-2 ${isLoading || !email ? 'opacity-70' : 'opacity-100'}`}
                     >
                         {isLoading ? (
                             <>
@@ -153,8 +145,7 @@ export default function LoginPage() {
                     <button
                         type="button"
                         onClick={() => setIsPasswordLogin(!isPasswordLogin)}
-                        className="w-full text-sm hover:underline mt-2"
-                        style={{ color: 'var(--text-secondary)' }}
+                        className="w-full text-sm hover:underline mt-2 text-[var(--text-secondary)]"
                     >
                         {isPasswordLogin ? 'Use Magic Link instead' : 'Use Password instead'}
                     </button>
@@ -163,20 +154,19 @@ export default function LoginPage() {
                 {/* Message */}
                 {message && (
                     <div
-                        className="mt-4 p-4 rounded-lg flex items-start gap-3"
-                        style={{
-                            background: message.type === 'success' ? 'var(--success-bg)' : 'var(--error-bg)',
-                            border: `1px solid ${message.type === 'success' ? 'var(--accent-sage)' : 'var(--error)'}`
-                        }}
+                        className={`mt-4 p-4 rounded-lg flex items-start gap-3 border ${message.type === 'success'
+                                ? 'bg-[var(--success-bg)] border-[var(--accent-sage)]'
+                                : 'bg-[var(--error-bg)] border-[var(--error)]'
+                            }`}
                     >
                         {message.type === 'success' ? (
-                            <CheckCircle size={20} style={{ color: 'var(--accent-sage)' }} />
+                            <CheckCircle size={20} className="text-[var(--accent-sage)]" />
                         ) : (
-                            <AlertCircle size={20} style={{ color: 'var(--error)' }} />
+                            <AlertCircle size={20} className="text-[var(--error)]" />
                         )}
                         <p
-                            className="text-sm"
-                            style={{ color: message.type === 'success' ? 'var(--accent-sage)' : 'var(--error)' }}
+                            className={`text-sm ${message.type === 'success' ? 'text-[var(--accent-sage)]' : 'text-[var(--error)]'
+                                }`}
                         >
                             {message.text}
                         </p>
@@ -187,8 +177,7 @@ export default function LoginPage() {
                 <div className="mt-6 text-center">
                     <Link
                         href="/"
-                        className="text-sm flex items-center justify-center gap-1"
-                        style={{ color: 'var(--text-muted)' }}
+                        className="text-sm flex items-center justify-center gap-1 text-[var(--text-muted)]"
                     >
                         <ArrowLeft size={14} />
                         Back to home
@@ -198,3 +187,4 @@ export default function LoginPage() {
         </div>
     );
 }
+

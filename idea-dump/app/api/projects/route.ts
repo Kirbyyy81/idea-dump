@@ -1,25 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { getAuthenticatedUser } from '@/lib/auth';
 
 // GET /api/projects - List all projects
-export async function GET() {
+export async function GET(request: NextRequest) {
     try {
         const supabase = await createClient();
+        const user = await getAuthenticatedUser(supabase);
 
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        const { searchParams } = new URL(request.url);
+        const page = parseInt(searchParams.get('page') || '1');
+        const limit = parseInt(searchParams.get('limit') || '50');
+        const offset = (page - 1) * limit;
 
-        const { data, error } = await supabase
+        const { data, error, count } = await supabase
             .from('projects')
-            .select('*')
-            .eq('user_id', user.id)
-            .order('updated_at', { ascending: false });
+            .select('*', { count: 'exact' })
+            .eq('user_id', user!.id)
+            .order('updated_at', { ascending: false })
+            .range(offset, offset + limit - 1);
 
         if (error) throw error;
 
-        return NextResponse.json({ data });
+        return NextResponse.json({
+            data,
+            pagination: {
+                page,
+                limit,
+                total: count,
+                totalPages: count ? Math.ceil(count / limit) : 0
+            }
+        });
     } catch (error) {
         console.error('Error fetching projects:', error);
         return NextResponse.json({ error: 'Failed to fetch projects' }, { status: 500 });
@@ -30,14 +41,10 @@ export async function GET() {
 export async function POST(request: NextRequest) {
     try {
         const supabase = await createClient();
-
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        const user = await getAuthenticatedUser(supabase);
 
         const body = await request.json();
-        const { title, description, prd_content, github_url, priority, tags } = body;
+        const { title, description, prd_content, github_url, priority } = body;
 
         if (!title) {
             return NextResponse.json({ error: 'Title is required' }, { status: 400 });
@@ -46,13 +53,12 @@ export async function POST(request: NextRequest) {
         const { data, error } = await supabase
             .from('projects')
             .insert({
-                user_id: user.id,
+                user_id: user!.id,
                 title,
                 description: description || null,
                 prd_content: prd_content || null,
                 github_url: github_url || null,
                 priority: priority || 'medium',
-                tags: tags || [],
             })
             .select()
             .single();
@@ -70,11 +76,7 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
     try {
         const supabase = await createClient();
-
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        const user = await getAuthenticatedUser(supabase);
 
         const body = await request.json();
         const { id, ...updates } = body;
@@ -87,7 +89,7 @@ export async function PUT(request: NextRequest) {
             .from('projects')
             .update({ ...updates, updated_at: new Date().toISOString() })
             .eq('id', id)
-            .eq('user_id', user.id)
+            .eq('user_id', user!.id)
             .select()
             .single();
 
@@ -104,11 +106,7 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
     try {
         const supabase = await createClient();
-
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        const user = await getAuthenticatedUser(supabase);
 
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
@@ -121,7 +119,7 @@ export async function DELETE(request: NextRequest) {
             .from('projects')
             .delete()
             .eq('id', id)
-            .eq('user_id', user.id);
+            .eq('user_id', user!.id);
 
         if (error) throw error;
 
@@ -131,3 +129,4 @@ export async function DELETE(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to delete project' }, { status: 500 });
     }
 }
+

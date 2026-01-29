@@ -43,8 +43,9 @@ export async function POST(request: NextRequest) {
             .eq('key_hash', keyHash);
 
         // Parse request body
+        // Parse request body
         const body = await request.json();
-        const { title, description, prd_content, tags } = body;
+        const { title, description, prd_content } = body;
 
         if (!title) {
             return NextResponse.json({ error: 'Title is required' }, { status: 400 });
@@ -59,7 +60,6 @@ export async function POST(request: NextRequest) {
                 description: description || null,
                 prd_content: prd_content || null,
                 priority: 'medium',
-                tags: tags || [],
             })
             .select()
             .single();
@@ -96,13 +96,11 @@ export async function GET() {
                     title: 'string (required)',
                     description: 'string (optional)',
                     prd_content: 'string - markdown content (optional)',
-                    tags: 'string[] (optional)',
                 },
                 example: {
                     title: 'My New Project',
                     description: 'A brief description',
                     prd_content: '# PRD Content\n\nMarkdown here...',
-                    tags: ['ai', 'web'],
                 },
             },
         },

@@ -54,10 +54,4 @@ export function extractDescription(markdown: string): string {
     return lines[0] || '';
 }
 
-// Parse tags from comma-separated string
-export function parseTags(tagsString: string): string[] {
-    return tagsString
-        .split(',')
-        .map(tag => tag.trim().toLowerCase().replace(/^#/, ''))
-        .filter(Boolean);
-}
+

@@ -49,6 +49,7 @@
   --warning-bg: #FEF8EC;
   --error-bg: #FEF2F2;
   --info-bg: #EFF6F8;
+  --status-prd-bg: #FEF2F4;
 
   /* ===== SPACING ===== */
   --space-1: 4px;
@@ -84,7 +85,12 @@ body {
 }
 
 /* ===== TYPOGRAPHY ===== */
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-family: var(--font-heading);
   font-weight: 400;
   color: var(--text-primary);
@@ -240,9 +246,17 @@ h4 {
   margin-bottom: 16px;
 }
 
-.markdown-body h1 { font-size: 28px; }
-.markdown-body h2 { font-size: 24px; }
-.markdown-body h3 { font-size: 20px; }
+.markdown-body h1 {
+  font-size: 28px;
+}
+
+.markdown-body h2 {
+  font-size: 24px;
+}
+
+.markdown-body h3 {
+  font-size: 20px;
+}
 
 .markdown-body p {
   margin-bottom: 16px;
