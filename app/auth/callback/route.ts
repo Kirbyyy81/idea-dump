@@ -6,6 +6,8 @@ export async function GET(request: Request) {
     const code = searchParams.get('code');
     const next = searchParams.get('next') ?? '/dashboard';
 
+    let errorMsg = 'Could not authenticate user';
+
     if (code) {
         const supabase = await createClient();
         const { error } = await supabase.auth.exchangeCodeForSession(code);
@@ -21,9 +23,13 @@ export async function GET(request: Request) {
             } else {
                 return NextResponse.redirect(`${origin}${next}`);
             }
+        } else {
+            errorMsg = error.message;
         }
+    } else {
+        errorMsg = 'No code provided';
     }
 
     // Return the user to an error page with instructions
-    return NextResponse.redirect(`${origin}/login?error=Could not authenticate user`);
+    return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(errorMsg)}`);
 }
