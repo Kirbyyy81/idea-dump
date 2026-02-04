@@ -12,9 +12,6 @@ export default function DashboardPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // Filter states
-    const [searchQuery, setSearchQuery] = useState('');
-
     // Fetch projects
     useEffect(() => {
         async function fetchProjects() {
@@ -31,23 +28,6 @@ export default function DashboardPage() {
         }
         fetchProjects();
     }, []);
-
-    // Filter projects
-    const filteredProjects = useMemo(() => {
-        if (!projects) return [];
-
-        return projects.filter((project) => {
-            // Search filter only
-            if (searchQuery.trim()) {
-                const query = searchQuery.toLowerCase();
-                const titleMatch = project.title.toLowerCase().includes(query);
-                const descMatch = project.description?.toLowerCase().includes(query);
-                if (!titleMatch && !descMatch) return false;
-            }
-
-            return true;
-        });
-    }, [projects, searchQuery]);
 
     if (isLoading) {
         return (
@@ -74,37 +54,22 @@ export default function DashboardPage() {
 
             <main className="flex-1 ml-64 p-8">
                 {/* Header */}
-                <header className="flex items-center justify-between mb-8">
-                    <div>
-                        <h1 className="text-3xl font-heading font-medium mb-2">My Projects</h1>
-                        <p className="text-text-secondary">
-                            Manage and track your PRD implementations
-                        </p>
-                    </div>
-
-                    {/* Search */}
-                    <div className="relative w-64">
-                        <input
-                            type="text"
-                            placeholder="Search projects..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="input w-full pl-4 pr-4 py-2"
-                        />
-                    </div>
+                <header className="mb-8">
+                    <h1 className="text-3xl font-heading font-medium mb-2">My Projects</h1>
+                    <p className="text-text-secondary">
+                        Manage and track your PRD implementations
+                    </p>
                 </header>
 
                 {/* Projects Grid */}
-                {filteredProjects.length === 0 ? (
+                {projects.length === 0 ? (
                     <div className="text-center py-12 text-text-muted">
-                        <p>No projects found matching your filters.</p>
-                        {projects.length === 0 && (
-                            <p className="mt-2">Create your first project to get started!</p>
-                        )}
+                        <p>No projects yet.</p>
+                        <p className="mt-2">Create your first project to get started!</p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        {filteredProjects.map((project) => (
+                        {projects.map((project) => (
                             <ProjectCard key={project.id} project={project} />
                         ))}
                     </div>

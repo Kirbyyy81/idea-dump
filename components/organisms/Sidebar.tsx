@@ -8,7 +8,6 @@ import { cn } from '@/lib/utils';
 import {
     LayoutDashboard,
     Settings,
-    Plus,
     Search,
     ChevronRight
 } from 'lucide-react';
@@ -128,13 +127,7 @@ export function Sidebar({
             </nav>
 
             {/* Footer */}
-            <div className="p-4 space-y-2 border-t border-border-subtle">
-                <Link href="/dashboard?new=true" className="block">
-                    <Button variant="primary" className="w-full" icon={<Plus size={18} />}>
-                        New Project
-                    </Button>
-                </Link>
-
+            <div className="p-4 border-t border-border-subtle">
                 <Link href="/settings" className="block">
                     <Button
                         variant="ghost"

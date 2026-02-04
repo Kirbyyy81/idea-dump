@@ -19,7 +19,11 @@ export const metadata: Metadata = {
     title: 'IdeaDump - Personal PRD Management Hub',
     description: 'Centralize, track, and manage all your PRDs and project ideas in one place.',
     icons: {
-        icon: '/favicon.ico',
+        icon: [
+            { url: '/logo.png', sizes: '32x32', type: 'image/png' },
+            { url: '/logo.png', sizes: '16x16', type: 'image/png' },
+        ],
+        apple: '/logo.png',
     },
 };
 
