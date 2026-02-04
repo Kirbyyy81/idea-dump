@@ -1,49 +1,81 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Key, Copy, Plus, Trash2, AlertTriangle } from 'lucide-react';
-import { generateApiKeyPreview } from '@/lib/utils';
+import { ArrowLeft, Key, Copy, Plus, Trash2, AlertTriangle, Loader2 } from 'lucide-react';
+import { formatDate } from '@/lib/utils';
 
 interface ApiKeyDisplay {
     id: string;
     name: string;
-    preview: string;
     created_at: string;
+    last_used_at: string | null;
 }
 
 export default function SettingsPage() {
-    const [apiKeys, setApiKeys] = useState<ApiKeyDisplay[]>([
-        {
-            id: '1',
-            name: 'Antigravity Integration',
-            preview: 'id_abc...xyz',
-            created_at: new Date().toISOString(),
-        },
-    ]);
+    const [apiKeys, setApiKeys] = useState<ApiKeyDisplay[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isCreating, setIsCreating] = useState(false);
     const [newKeyName, setNewKeyName] = useState('');
     const [newKey, setNewKey] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
-    const handleCreateKey = () => {
+    // Fetch existing API keys
+    useEffect(() => {
+        async function fetchKeys() {
+            try {
+                const res = await fetch('/api/keys');
+                if (!res.ok) throw new Error('Failed to fetch keys');
+                const { data } = await res.json();
+                setApiKeys(data || []);
+            } catch (err) {
+                console.error('Error fetching keys:', err);
+            } finally {
+                setIsLoading(false);
+            }
+        }
+        fetchKeys();
+    }, []);
+
+    const handleCreateKey = async () => {
         if (!newKeyName.trim()) return;
 
-        const key = generateApiKeyPreview();
-        setNewKey(key);
+        setIsCreating(true);
+        setError(null);
 
-        setApiKeys((prev) => [
-            ...prev,
-            {
-                id: Date.now().toString(),
-                name: newKeyName,
-                preview: `${key.slice(0, 6)}...${key.slice(-4)}`,
-                created_at: new Date().toISOString(),
-            },
-        ]);
-        setNewKeyName('');
+        try {
+            const res = await fetch('/api/keys', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: newKeyName.trim() }),
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'Failed to create key');
+            }
+
+            const { data } = await res.json();
+            setNewKey(data.key);
+            setApiKeys((prev) => [{ id: data.id, name: data.name, created_at: data.created_at, last_used_at: null }, ...prev]);
+            setNewKeyName('');
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'An error occurred');
+        } finally {
+            setIsCreating(false);
+        }
     };
 
-    const handleDeleteKey = (id: string) => {
-        setApiKeys((prev) => prev.filter((k) => k.id !== id));
+    const handleDeleteKey = async (id: string) => {
+        if (!confirm('Are you sure you want to delete this API key?')) return;
+
+        try {
+            const res = await fetch(`/api/keys?id=${id}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error('Failed to delete key');
+            setApiKeys((prev) => prev.filter((k) => k.id !== id));
+        } catch (err) {
+            console.error('Failed to delete key:', err);
+        }
     };
 
     const copyToClipboard = (text: string) => {
@@ -56,62 +88,34 @@ export default function SettingsPage() {
             <div className="flex items-center gap-4 mb-8">
                 <Link
                     href="/dashboard"
-                    className="flex items-center gap-2 transition-colors"
-                    style={{ color: 'var(--text-secondary)' }}
+                    className="flex items-center gap-2 transition-colors text-text-secondary hover:text-text-primary"
                 >
                     <ArrowLeft size={20} />
                 </Link>
-                <h1 style={{ color: 'var(--text-primary)' }}>Settings</h1>
+                <h1 className="text-text-primary">Settings</h1>
             </div>
 
             {/* API Keys Section */}
-            <section
-                className="p-6 rounded-lg"
-                style={{
-                    background: 'var(--bg-elevated)',
-                    border: '1px solid var(--border-subtle)'
-                }}
-            >
+            <section className="p-6 rounded-lg bg-bg-elevated border border-border-subtle">
                 <div className="flex items-center gap-2 mb-4">
-                    <Key size={20} style={{ color: 'var(--accent-rose)' }} />
-                    <h2
-                        className="text-xl font-semibold"
-                        style={{
-                            fontFamily: 'var(--font-body)',
-                            color: 'var(--text-primary)'
-                        }}
-                    >
+                    <Key size={20} className="text-accent-rose" />
+                    <h2 className="text-xl font-semibold font-body text-text-primary">
                         API Keys
                     </h2>
                 </div>
-                <p
-                    className="text-sm mb-6"
-                    style={{ color: 'var(--text-secondary)' }}
-                >
+                <p className="text-sm mb-6 text-text-secondary">
                     Generate API keys to send PRDs from external tools like Antigravity.
                 </p>
 
                 {/* New Key Display */}
                 {newKey && (
-                    <div
-                        className="mb-6 p-4 rounded-lg"
-                        style={{
-                            background: 'var(--success-bg)',
-                            border: '1px solid var(--accent-sage)'
-                        }}
-                    >
-                        <p
-                            className="text-sm font-medium mb-2 flex items-center gap-2"
-                            style={{ color: 'var(--accent-sage)' }}
-                        >
+                    <div className="mb-6 p-4 rounded-lg bg-success-bg border border-accent-sage">
+                        <p className="text-sm font-medium mb-2 flex items-center gap-2 text-accent-sage">
                             <AlertTriangle size={16} />
                             Copy this key now. You won&apos;t be able to see it again!
                         </p>
                         <div className="flex items-center gap-2">
-                            <code
-                                className="flex-1 p-2 rounded text-sm font-mono"
-                                style={{ background: 'var(--bg-base)' }}
-                            >
+                            <code className="flex-1 p-2 rounded text-sm font-mono bg-bg-base text-text-primary overflow-x-auto">
                                 {newKey}
                             </code>
                             <button
@@ -123,11 +127,17 @@ export default function SettingsPage() {
                         </div>
                         <button
                             onClick={() => setNewKey(null)}
-                            className="text-sm mt-2"
-                            style={{ color: 'var(--text-muted)' }}
+                            className="text-sm mt-2 text-text-muted hover:text-text-secondary"
                         >
                             Dismiss
                         </button>
+                    </div>
+                )}
+
+                {/* Error Display */}
+                {error && (
+                    <div className="mb-6 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                        <p className="text-sm text-red-400">{error}</p>
                     </div>
                 )}
 
@@ -139,73 +149,66 @@ export default function SettingsPage() {
                         onChange={(e) => setNewKeyName(e.target.value)}
                         placeholder="Key name (e.g., Antigravity)"
                         className="input flex-1"
+                        onKeyDown={(e) => e.key === 'Enter' && handleCreateKey()}
                     />
                     <button
                         onClick={handleCreateKey}
-                        disabled={!newKeyName.trim()}
+                        disabled={!newKeyName.trim() || isCreating}
                         className="btn-primary flex items-center gap-2"
                     >
-                        <Plus size={16} />
+                        {isCreating ? (
+                            <Loader2 size={16} className="animate-spin" />
+                        ) : (
+                            <Plus size={16} />
+                        )}
                         Generate Key
                     </button>
                 </div>
 
                 {/* Existing Keys */}
-                <div className="space-y-3">
-                    {apiKeys.map((key) => (
-                        <div
-                            key={key.id}
-                            className="flex items-center justify-between p-4 rounded-lg"
-                            style={{ background: 'var(--bg-hover)' }}
-                        >
-                            <div>
-                                <p
-                                    className="font-medium"
-                                    style={{ color: 'var(--text-primary)' }}
-                                >
-                                    {key.name}
-                                </p>
-                                <p
-                                    className="text-sm font-mono"
-                                    style={{ color: 'var(--text-muted)' }}
-                                >
-                                    {key.preview}
-                                </p>
-                            </div>
-                            <button
-                                onClick={() => handleDeleteKey(key.id)}
-                                className="transition-colors"
-                                style={{ color: 'var(--text-muted)' }}
+                {isLoading ? (
+                    <div className="flex justify-center py-8">
+                        <Loader2 size={24} className="animate-spin text-accent-rose" />
+                    </div>
+                ) : apiKeys.length === 0 ? (
+                    <p className="text-center py-8 text-text-muted">
+                        No API keys yet. Create one to get started.
+                    </p>
+                ) : (
+                    <div className="space-y-3">
+                        {apiKeys.map((key) => (
+                            <div
+                                key={key.id}
+                                className="flex items-center justify-between p-4 rounded-lg bg-bg-hover"
                             >
-                                <Trash2 size={18} />
-                            </button>
-                        </div>
-                    ))}
-                </div>
+                                <div>
+                                    <p className="font-medium text-text-primary">
+                                        {key.name}
+                                    </p>
+                                    <p className="text-sm text-text-muted">
+                                        Created {formatDate(key.created_at)}
+                                        {key.last_used_at && ` · Last used ${formatDate(key.last_used_at)}`}
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => handleDeleteKey(key.id)}
+                                    className="text-text-muted hover:text-red-400 transition-colors"
+                                >
+                                    <Trash2 size={18} />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </section>
 
             {/* Usage Instructions */}
-            <section
-                className="mt-8 p-6 rounded-lg"
-                style={{
-                    background: 'var(--bg-elevated)',
-                    border: '1px solid var(--border-subtle)'
-                }}
-            >
-                <h2
-                    className="text-xl font-semibold mb-4"
-                    style={{
-                        fontFamily: 'var(--font-body)',
-                        color: 'var(--text-primary)'
-                    }}
-                >
+            <section className="mt-8 p-6 rounded-lg bg-bg-elevated border border-border-subtle">
+                <h2 className="text-xl font-semibold mb-4 font-body text-text-primary">
                     API Usage
                 </h2>
-                <pre
-                    className="p-4 rounded-lg text-sm overflow-x-auto"
-                    style={{ background: 'var(--bg-base)' }}
-                >
-                    <code style={{ color: 'var(--text-secondary)' }}>{`curl -X POST https://your-app.vercel.app/api/ingest \\
+                <pre className="p-4 rounded-lg text-sm overflow-x-auto bg-bg-base">
+                    <code className="text-text-secondary">{`curl -X POST https://your-app.vercel.app/api/ingest \\
   -H "Content-Type: application/json" \\
   -H "x-api-key: YOUR_API_KEY" \\
   -d '{
