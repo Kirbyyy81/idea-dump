@@ -9,10 +9,8 @@ import {
     LayoutDashboard,
     Settings,
     Plus,
-    Folder,
-    ChevronDown,
-    ChevronRight,
-    Search
+    Search,
+    ChevronRight
 } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
@@ -25,7 +23,7 @@ export function Sidebar({
     projects,
 }: SidebarProps) {
     const pathname = usePathname();
-    const [isProjectsOpen, setIsProjectsOpen] = useState(true);
+    const [isProjectsOpen, setIsProjectsOpen] = useState(false);
     const [projectSearch, setProjectSearch] = useState('');
 
     const filteredProjects = projects.filter(p =>
@@ -39,7 +37,7 @@ export function Sidebar({
             {/* Logo */}
             <div className="p-6 border-b border-border-subtle">
                 <Link href="/dashboard" className="flex items-center gap-2">
-                    <Folder size={24} className="text-accent-rose" />
+                    <img src="/logo.png" alt="IdeaDump Logo" className="w-6 h-6 object-contain" />
                     <span className="font-bold text-xl font-heading text-text-primary">
                         IdeaDump
                     </span>
@@ -48,8 +46,12 @@ export function Sidebar({
 
             {/* Navigation */}
             <nav className="flex-1 p-4 overflow-y-auto">
-                <div className="space-y-1 mb-6">
-                    <Link href="/dashboard" className="block">
+                <div
+                    className="space-y-1 mb-6"
+                    onMouseEnter={() => setIsProjectsOpen(true)}
+                    onMouseLeave={() => setIsProjectsOpen(false)}
+                >
+                    <Link href="/dashboard" className="block relative z-10">
                         <Button
                             variant="ghost"
                             className={cn(
@@ -59,25 +61,27 @@ export function Sidebar({
                                     : "text-text-secondary hover:text-text-primary"
                             )}
                             icon={<LayoutDashboard size={18} />}
+                            onClick={() => setIsProjectsOpen(!isProjectsOpen)}
                         >
-                            Dashboard
+                            <span className="flex-1 text-left">Dashboard</span>
+                            {filteredProjects.length > 0 && (
+                                <ChevronRight
+                                    size={14}
+                                    className={cn(
+                                        "transition-transform text-text-muted",
+                                        isProjectsOpen && "rotate-90"
+                                    )}
+                                />
+                            )}
                         </Button>
                     </Link>
-                </div>
 
-                {/* Projects Dropdown */}
-                <div className="mb-6">
-                    <button
-                        onClick={() => setIsProjectsOpen(!isProjectsOpen)}
-                        className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wider text-text-muted hover:text-text-primary transition-colors mb-2"
-                    >
-                        <span>Projects</span>
-                        {isProjectsOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                    </button>
-
-                    {isProjectsOpen && (
-                        <div className="space-y-2">
-                            {/* Optional Mini Search */}
+                    {/* Projects Dropdown */}
+                    <div className={cn(
+                        "transition-all duration-200 ease-in-out overflow-hidden",
+                        isProjectsOpen ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"
+                    )}>
+                        <div className="pl-4 space-y-1 pt-1">
                             <div className="px-2 mb-2">
                                 <div className="relative">
                                     <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
@@ -94,7 +98,7 @@ export function Sidebar({
                             <div className="space-y-0.5 max-h-[300px] overflow-y-auto custom-scrollbar">
                                 {filteredProjects.length === 0 ? (
                                     <p className="px-3 py-1.5 text-xs text-text-muted italic">
-                                        {projects.length === 0 ? "No projects yet" : "No matches"}
+                                        {projects.length === 0 ? "No projects" : "No matches"}
                                     </p>
                                 ) : (
                                     filteredProjects.map((project) => (
@@ -106,9 +110,9 @@ export function Sidebar({
                                             <Button
                                                 variant="ghost"
                                                 className={cn(
-                                                    "w-full justify-start text-sm py-1.5 h-8 font-normal truncate",
+                                                    "w-full justify-start text-xs py-1.5 h-7 font-normal truncate",
                                                     pathname === `/project/${project.id}`
-                                                        ? "bg-bg-hover text-text-primary"
+                                                        ? "bg-bg-hover text-text-primary border-l-2 border-accent-rose rounded-l-none"
                                                         : "text-text-secondary hover:text-text-primary"
                                                 )}
                                             >
@@ -119,7 +123,7 @@ export function Sidebar({
                                 )}
                             </div>
                         </div>
-                    )}
+                    </div>
                 </div>
             </nav>
 
