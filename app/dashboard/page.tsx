@@ -1,25 +1,25 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
-import { Project, Status, inferStatus } from '@/lib/types';
-import { ProjectCard } from '@/components/ProjectCard';
-import { Sidebar } from '@/components/Sidebar';
-import { SearchBar } from '@/components/SearchBar';
-import { Search, Plus, Loader2 } from 'lucide-react';
-import Link from 'next/link';
+import { useState, useEffect, useMemo } from 'react';
+import { Sidebar } from '@/components/organisms/Sidebar';
+import { ProjectCard } from '@/components/organisms/ProjectCard';
+import { Project, Status } from '@/lib/types';
+import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/atoms/Button';
 
 export default function DashboardPage() {
     const [projects, setProjects] = useState<Project[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [selectedStatus, setSelectedStatus] = useState<Status | 'all'>('all');
 
-    // Fetch projects from API
+    // Filter states
+    const [selectedStatus, setSelectedStatus] = useState<Status | 'all'>('all');
+    const [searchQuery, setSearchQuery] = useState('');
+
+    // Fetch projects
     useEffect(() => {
         async function fetchProjects() {
             try {
-                setIsLoading(true);
                 const res = await fetch('/api/projects');
                 if (!res.ok) throw new Error('Failed to fetch projects');
                 const { data } = await res.json();
@@ -35,108 +35,102 @@ export default function DashboardPage() {
 
     // Filter projects
     const filteredProjects = useMemo(() => {
-        return projects.filter((project) => {
-            // Search filter
-            if (searchQuery) {
-                const query = searchQuery.toLowerCase();
-                const matchesTitle = project.title.toLowerCase().includes(query);
-                const matchesDesc = project.description?.toLowerCase().includes(query);
-                if (!matchesTitle && !matchesDesc) return false;
-            }
+        if (!projects) return [];
 
+        return projects.filter((project) => {
             // Status filter
             if (selectedStatus !== 'all') {
-                if (inferStatus(project) !== selectedStatus) return false;
+                // This is a simplified check. Ideally we might want more robust status inference mapping
+                // But for now relying on the same logic used elsewhere or if project.status existed
+                // Since project doesn't have explicit status field in DB (it's inferred), 
+                // we might need to assume 'all' for now or duplicate inference logic here if we really want strict filtering
+                // For this refactor, I'll keep it simple: strict filtering would require inferStatus helpers 
+                // but let's assume specific status demands specific implementation.
+                // Actually, existing implementation might have had logic for this.
+                // Let's re-use the status inference if possible or just filter by simple props if we had them.
+                // ...
+                // Re-reading types: Project has no status field. It's inferred.
+                // So filtering by status requires inferring status for each project.
+
+                // Let's bring in inferStatus
+                const { inferStatus } = require('@/lib/types');
+                const status = inferStatus(project);
+                if (status !== selectedStatus) return false;
+            }
+
+            // Search filter
+            if (searchQuery.trim()) {
+                const query = searchQuery.toLowerCase();
+                const titleMatch = project.title.toLowerCase().includes(query);
+                const descMatch = project.description?.toLowerCase().includes(query);
+                if (!titleMatch && !descMatch) return false;
             }
 
             return true;
         });
-    }, [projects, searchQuery, selectedStatus]);
+    }, [projects, selectedStatus, searchQuery]);
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-bg-base">
+                <Loader2 size={32} className="animate-spin text-accent-rose" />
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center bg-bg-base">
+                <p className="text-red-400 mb-4">{error}</p>
+                <Button onClick={() => window.location.reload()}>
+                    Retry
+                </Button>
+            </div>
+        );
+    }
 
     return (
-        <div className="min-h-screen">
-            {/* Sidebar */}
+        <div className="flex min-h-screen bg-bg-base font-body text-text-primary">
             <Sidebar
                 selectedStatus={selectedStatus}
                 onStatusChange={setSelectedStatus}
             />
 
-            {/* Main Content */}
-            <main className="ml-64 p-8">
+            <main className="flex-1 ml-64 p-8">
                 {/* Header */}
-                <div className="flex items-center justify-between gap-4 mb-8">
+                <header className="flex items-center justify-between mb-8">
                     <div>
-                        <h1 style={{ color: 'var(--text-primary)' }}>Projects</h1>
-                        <p className="mt-1" style={{ color: 'var(--text-secondary)' }}>
-                            {isLoading ? 'Loading...' : `${filteredProjects.length} project${filteredProjects.length !== 1 ? 's' : ''}`}
+                        <h1 className="text-3xl font-heading font-medium mb-2">My Projects</h1>
+                        <p className="text-text-secondary">
+                            Manage and track your PRD implementations
                         </p>
                     </div>
-                    <div className="flex items-center gap-4">
-                        <div className="w-80">
-                            <SearchBar onSearch={setSearchQuery} />
-                        </div>
-                        <Link href="/project/new" className="btn-primary flex items-center gap-2">
-                            <Plus size={18} />
-                            New Project
-                        </Link>
-                    </div>
-                </div>
 
-                {/* Loading State */}
-                {isLoading && (
-                    <div className="flex items-center justify-center py-16">
-                        <Loader2 size={32} className="animate-spin text-accent-rose" />
+                    {/* Search - Using a simple input for now, could be its own molecule */}
+                    <div className="relative w-64">
+                        <input
+                            type="text"
+                            placeholder="Search projects..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="input w-full pl-4 pr-4 py-2"
+                        />
                     </div>
-                )}
+                </header>
 
-                {/* Error State */}
-                {error && !isLoading && (
-                    <div className="text-center py-16">
-                        <p className="text-red-400 mb-4">{error}</p>
-                        <button
-                            onClick={() => window.location.reload()}
-                            className="btn-secondary"
-                        >
-                            Try Again
-                        </button>
+                {/* Projects Grid */}
+                {filteredProjects.length === 0 ? (
+                    <div className="text-center py-12 text-text-muted">
+                        <p>No projects found matching your filters.</p>
+                        {projects.length === 0 && (
+                            <p className="mt-2">Create your first project to get started!</p>
+                        )}
                     </div>
-                )}
-
-                {/* Project Grid */}
-                {!isLoading && !error && filteredProjects.length > 0 && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {filteredProjects.map((project) => (
                             <ProjectCard key={project.id} project={project} />
                         ))}
-                    </div>
-                )}
-
-                {/* Empty State */}
-                {!isLoading && !error && filteredProjects.length === 0 && (
-                    <div className="text-center py-16">
-                        <div className="mb-4" style={{ color: 'var(--text-muted)' }}>
-                            <Search size={48} />
-                        </div>
-                        <h3
-                            className="text-lg font-semibold mb-2"
-                            style={{
-                                fontFamily: 'var(--font-body)',
-                                color: 'var(--text-primary)'
-                            }}
-                        >
-                            {projects.length === 0 ? 'No projects yet' : 'No projects found'}
-                        </h3>
-                        <p style={{ color: 'var(--text-secondary)' }}>
-                            {projects.length === 0
-                                ? 'Create your first project to get started'
-                                : 'Try adjusting your search or filters'}
-                        </p>
-                        {projects.length === 0 && (
-                            <Link href="/project/new" className="btn-primary inline-flex items-center gap-2 mt-4">
-                                <Plus size={18} />
-                                Create Project
-                            </Link>
-                        )}
                     </div>
                 )}
             </main>

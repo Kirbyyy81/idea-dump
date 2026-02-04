@@ -3,12 +3,22 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { Project, Note, inferStatus, priorityConfig } from '@/lib/types';
-import { formatDate } from '@/lib/utils';
-import { StatusBadge } from '@/components/StatusBadge';
-import { MarkdownRenderer } from '@/components/MarkdownRenderer';
-import { NotesPanel } from '@/components/NotesPanel';
-import { ArrowLeft, ExternalLink, Archive, Check, Pencil, FileText, Loader2, Trash2 } from 'lucide-react';
+import { StatusBadge } from '@/components/molecules/StatusBadge';
+import { PriorityBadge } from '@/components/molecules/PriorityBadge';
+import { MarkdownRenderer } from '@/components/molecules/MarkdownRenderer';
+import { NotesPanel } from '@/components/organisms/NotesPanel';
+import { Button } from '@/components/atoms/Button';
+import { Card } from '@/components/atoms/Card';
+import {
+    ArrowLeft,
+    ExternalLink,
+    Archive,
+    Check,
+    Pencil,
+    FileText,
+    Loader2,
+    Trash2
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function ProjectPage() {
@@ -147,28 +157,27 @@ export default function ProjectPage() {
                     Back to Dashboard
                 </Link>
                 <div className="flex gap-2">
-                    <Link
-                        href={`/project/${project.id}/edit`}
-                        className="btn-secondary flex items-center gap-2"
-                    >
-                        <Pencil size={16} />
-                        Edit
+                    <Link href={`/project/${project.id}/edit`}>
+                        <Button variant="secondary" icon={<Pencil size={16} />}>
+                            Edit
+                        </Button>
                     </Link>
-                    <button
+                    <Button
+                        variant="secondary"
                         onClick={handleToggleArchive}
                         disabled={isUpdating}
-                        className="btn-secondary flex items-center gap-2"
+                        icon={<Archive size={16} />}
                     >
-                        <Archive size={16} />
                         {project.archived ? 'Unarchive' : 'Archive'}
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                        variant="ghost"
                         onClick={handleDelete}
-                        className="btn-secondary flex items-center gap-2 text-red-400 hover:text-red-300"
+                        className="text-red-400 hover:text-red-300 hover:bg-red-50"
+                        icon={<Trash2 size={16} />}
                     >
-                        <Trash2 size={16} />
                         Delete
-                    </button>
+                    </Button>
                 </div>
             </div>
 
@@ -176,7 +185,7 @@ export default function ProjectPage() {
             <div className="mb-8">
                 <div className="flex items-start justify-between gap-4 mb-4">
                     <h1 className="text-text-primary text-3xl font-heading font-medium">{project.title}</h1>
-                    <StatusBadge status={status} size="md" />
+                    <StatusBadge status={status} className="px-3 py-1 text-sm" />
                 </div>
 
                 {project.description && (
@@ -186,14 +195,9 @@ export default function ProjectPage() {
                 )}
 
                 {/* Meta Info */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 rounded-lg bg-bg-elevated border border-border-subtle">
+                <Card className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 !border-border-subtle bg-bg-elevated">
                     <div>
-                        <p className="text-xs uppercase mb-1 text-text-muted">
-                            Priority
-                        </p>
-                        <p className={`font-medium ${priorityConfig[project.priority].textClass}`}>
-                            {priorityConfig[project.priority].label}
-                        </p>
+                        <PriorityBadge priority={project.priority} />
                     </div>
                     <div>
                         <p className="text-xs uppercase mb-1 text-text-muted">
@@ -225,38 +229,43 @@ export default function ProjectPage() {
                             <p className="text-text-muted">Not linked</p>
                         )}
                     </div>
-                </div>
+                </Card>
 
                 {/* Complete Toggle */}
-                <button
+                <Button
                     onClick={handleToggleComplete}
                     disabled={isUpdating}
+                    variant="ghost"
                     className={cn(
-                        "mt-4 flex items-center gap-2 px-4 py-2 rounded-lg transition-colors",
+                        "mt-4 w-full md:w-auto justify-start",
                         project.completed
-                            ? 'bg-success-bg text-status-complete'
+                            ? 'bg-success-bg text-status-complete hover:bg-success-bg/80'
                             : 'bg-bg-hover text-text-secondary hover:bg-bg-subtle'
                     )}
+                    icon={<Check size={18} />}
                 >
-                    <Check size={18} />
                     {project.completed ? 'Marked as Complete' : 'Mark as Complete'}
-                </button>
+                </Button>
             </div>
 
             {/* PRD Content */}
             {project.prd_content && (
-                <section className="mb-8 p-6 rounded-lg bg-bg-elevated border border-border-subtle">
-                    <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 font-body text-text-primary">
-                        <FileText size={20} className="text-accent-rose" />
-                        PRD
-                    </h2>
-                    <MarkdownRenderer content={project.prd_content} />
+                <section className="mb-8">
+                    <Card className="p-6">
+                        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 font-body text-text-primary">
+                            <FileText size={20} className="text-accent-rose" />
+                            PRD
+                        </h2>
+                        <MarkdownRenderer content={project.prd_content} />
+                    </Card>
                 </section>
             )}
 
             {/* Notes */}
-            <section className="p-6 rounded-lg bg-bg-elevated border border-border-subtle">
-                <NotesPanel notes={notes} onAddNote={handleAddNote} />
+            <section>
+                <Card className="p-6">
+                    <NotesPanel notes={notes} onAddNote={handleAddNote} />
+                </Card>
             </section>
         </div>
     );

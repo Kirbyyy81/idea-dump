@@ -1,6 +1,7 @@
 ---
 description: ALWAYS run this workflow for ANY code change - commit using conventional commits and atomic commits
 ---
+
 # Git Workflow Guidelines
 
 **⚠️ MANDATORY**: This workflow MUST be executed for EVERY code change. Do not skip this workflow.
@@ -165,4 +166,3 @@ When a task or feature is complete:
    git merge <branch-name>
    git push origin main
    ```
-
