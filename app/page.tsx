@@ -10,10 +10,10 @@ export default function LandingPage() {
                     {/* Logo/Title */}
                     <div className="mb-8">
                         <h1 className="text-5xl md:text-6xl tracking-tight mb-4">
-                            <span style={{ color: 'var(--text-primary)' }}>Idea</span>
-                            <span style={{ color: 'var(--accent-rose)' }}>Dump</span>
+                            <span className="text-text-primary">Idea</span>
+                            <span className="text-accent-rose">Dump</span>
                         </h1>
-                        <p className="text-xl max-w-xl mx-auto" style={{ color: 'var(--text-secondary)' }}>
+                        <p className="text-xl max-w-xl mx-auto text-text-secondary">
                             Your personal hub to centralize, track, and manage all your PRDs and project ideas.
                         </p>
                     </div>
@@ -21,29 +21,29 @@ export default function LandingPage() {
                     {/* Features */}
                     <div className="grid md:grid-cols-3 gap-6 mb-12 text-left">
                         <div className="card">
-                            <div className="mb-3" style={{ color: 'var(--accent-blue)' }}>
+                            <div className="mb-3 text-accent-blue">
                                 <FileText size={28} />
                             </div>
-                            <h3 className="font-semibold mb-2" style={{ fontFamily: 'var(--font-body)', color: 'var(--text-primary)' }}>Store PRDs</h3>
-                            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                            <h3 className="font-semibold mb-2 font-body text-text-primary">Store PRDs</h3>
+                            <p className="text-sm text-text-secondary">
                                 Import and store all your PRDs in beautiful markdown format.
                             </p>
                         </div>
                         <div className="card">
-                            <div className="mb-3" style={{ color: 'var(--accent-sage)' }}>
+                            <div className="mb-3 text-accent-sage">
                                 <Target size={28} />
                             </div>
-                            <h3 className="font-semibold mb-2" style={{ fontFamily: 'var(--font-body)', color: 'var(--text-primary)' }}>Track Progress</h3>
-                            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                            <h3 className="font-semibold mb-2 font-body text-text-primary">Track Progress</h3>
+                            <p className="text-sm text-text-secondary">
                                 Status auto-updates as you add content and link repos.
                             </p>
                         </div>
                         <div className="card">
-                            <div className="mb-3" style={{ color: 'var(--accent-apricot)' }}>
+                            <div className="mb-3 text-accent-apricot">
                                 <Link2 size={28} />
                             </div>
-                            <h3 className="font-semibold mb-2" style={{ fontFamily: 'var(--font-body)', color: 'var(--text-primary)' }}>API Access</h3>
-                            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                            <h3 className="font-semibold mb-2 font-body text-text-primary">API Access</h3>
+                            <p className="text-sm text-text-secondary">
                                 Send PRDs directly from tools like Antigravity.
                             </p>
                         </div>
@@ -68,11 +68,7 @@ export default function LandingPage() {
 
             {/* Footer */}
             <footer
-                className="py-6 px-6 text-center text-sm"
-                style={{
-                    color: 'var(--text-muted)',
-                    borderTop: '1px solid var(--border-subtle)'
-                }}
+                className="py-6 px-6 text-center text-sm text-text-muted border-t border-border-subtle"
             >
                 <p>Built with Next.js + Supabase</p>
             </footer>
