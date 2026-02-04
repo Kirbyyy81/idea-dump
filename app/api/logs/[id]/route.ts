@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { resolveIdentity, AuthError, canModifyLog, canDeleteLog } from '@/lib/auth/resolveIdentity';
 import { UpdateDailyLogInput } from '@/lib/types';
 
@@ -13,7 +14,11 @@ interface RouteParams {
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
     try {
         const identity = await resolveIdentity(request);
-        const supabase = await createClient();
+
+        // Use admin client for agent, regular client for admin session
+        const supabase = identity.role === 'agent'
+            ? createAdminClient()
+            : await createClient();
 
         const { id } = await params;
         const body: UpdateDailyLogInput = await request.json();
@@ -67,7 +72,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
     try {
         const identity = await resolveIdentity(request);
-        const supabase = await createClient();
+
+        // Use admin client for agent, regular client for admin session
+        const supabase = identity.role === 'agent'
+            ? createAdminClient()
+            : await createClient();
 
         const { id } = await params;
 

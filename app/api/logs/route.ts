@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { resolveIdentity, AuthError } from '@/lib/auth/resolveIdentity';
 import { CreateDailyLogInput } from '@/lib/types';
 
@@ -7,7 +8,11 @@ import { CreateDailyLogInput } from '@/lib/types';
 export async function GET(request: NextRequest) {
     try {
         const identity = await resolveIdentity(request);
-        const supabase = await createClient();
+
+        // Use admin client for agent, regular client for admin session
+        const supabase = identity.role === 'agent'
+            ? createAdminClient()
+            : await createClient();
 
         const { searchParams } = new URL(request.url);
         const from = searchParams.get('from');
@@ -61,7 +66,11 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         const identity = await resolveIdentity(request);
-        const supabase = await createClient();
+
+        // Use admin client for agent, regular client for admin session
+        const supabase = identity.role === 'agent'
+            ? createAdminClient()
+            : await createClient();
 
         const body: CreateDailyLogInput = await request.json();
 
