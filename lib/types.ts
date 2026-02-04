@@ -12,7 +12,6 @@ export interface Project {
     prd_content: string | null;
     github_url: string | null;
     priority: Priority;
-    tags: string[];
     completed: boolean;
     archived: boolean;
     created_at: string;
@@ -66,7 +65,6 @@ export interface CreateProjectInput {
     prd_content?: string;
     github_url?: string;
     priority?: Priority;
-    tags?: string[];
 }
 
 export interface UpdateProjectInput extends Partial<CreateProjectInput> {
@@ -90,5 +88,4 @@ export interface IngestPayload {
     title: string;
     description?: string;
     prd_content?: string;
-    tags?: string[];
 }

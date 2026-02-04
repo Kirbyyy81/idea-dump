@@ -20,7 +20,6 @@ export default function EditProjectPage() {
     const [prdContent, setPrdContent] = useState('');
     const [githubUrl, setGithubUrl] = useState('');
     const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
-    const [tagsInput, setTagsInput] = useState('');
 
     // Fetch existing project
     useEffect(() => {
@@ -37,7 +36,6 @@ export default function EditProjectPage() {
                 setPrdContent(data.prd_content || '');
                 setGithubUrl(data.github_url || '');
                 setPriority(data.priority || 'medium');
-                setTagsInput(data.tags?.join(', ') || '');
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'An error occurred');
             } finally {
@@ -71,11 +69,6 @@ export default function EditProjectPage() {
         setError(null);
 
         try {
-            const tags = tagsInput
-                .split(',')
-                .map((t) => t.trim().toLowerCase())
-                .filter((t) => t.length > 0);
-
             const res = await fetch('/api/projects', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -86,7 +79,6 @@ export default function EditProjectPage() {
                     prd_content: prdContent.trim() || null,
                     github_url: githubUrl.trim() || null,
                     priority,
-                    tags,
                 }),
             });
 
@@ -210,33 +202,18 @@ export default function EditProjectPage() {
                                 type="button"
                                 onClick={() => setPriority(p)}
                                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${priority === p
-                                        ? p === 'high'
-                                            ? 'bg-accent-rose text-white'
-                                            : p === 'medium'
-                                                ? 'bg-accent-apricot text-bg-base'
-                                                : 'bg-accent-sage text-bg-base'
-                                        : 'bg-bg-hover text-text-secondary hover:bg-bg-subtle'
+                                    ? p === 'high'
+                                        ? 'bg-accent-rose text-white'
+                                        : p === 'medium'
+                                            ? 'bg-accent-apricot text-bg-base'
+                                            : 'bg-accent-sage text-bg-base'
+                                    : 'bg-bg-hover text-text-secondary hover:bg-bg-subtle'
                                     }`}
                             >
                                 {p.charAt(0).toUpperCase() + p.slice(1)}
                             </button>
                         ))}
                     </div>
-                </div>
-
-                {/* Tags */}
-                <div>
-                    <label htmlFor="tags" className="block text-sm font-medium text-text-secondary mb-2">
-                        Tags (comma-separated)
-                    </label>
-                    <input
-                        id="tags"
-                        type="text"
-                        value={tagsInput}
-                        onChange={(e) => setTagsInput(e.target.value)}
-                        placeholder="nextjs, ai, productivity"
-                        className="input w-full"
-                    />
                 </div>
 
                 {/* Error */}

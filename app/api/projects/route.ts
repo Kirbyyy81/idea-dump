@@ -34,7 +34,6 @@ A Notion-inspired, deployable web app to centralize, track, and manage all your 
 `,
     github_url: 'https://github.com/user/ideadump',
     priority: 'high',
-    tags: ['nextjs', 'supabase', 'productivity'],
     completed: false,
     archived: false,
     created_at: new Date().toISOString(),
@@ -105,7 +104,7 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json();
-        const { title, description, prd_content, github_url, priority, tags } = body;
+        const { title, description, prd_content, github_url, priority } = body;
 
         if (!title) {
             return NextResponse.json({ error: 'Title is required' }, { status: 400 });
@@ -120,9 +119,8 @@ export async function POST(request: NextRequest) {
                 prd_content: prd_content || null,
                 github_url: github_url || null,
                 priority: priority || 'medium',
-                tags: tags || [],
             })
-            .select()
+            .select() // Assuming tags column might still exist in DB but we ignore it
             .single();
 
         if (error) throw error;

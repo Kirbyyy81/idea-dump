@@ -15,7 +15,6 @@ export default function NewProjectPage() {
     const [prdContent, setPrdContent] = useState('');
     const [githubUrl, setGithubUrl] = useState('');
     const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
-    const [tagsInput, setTagsInput] = useState('');
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -47,11 +46,6 @@ export default function NewProjectPage() {
         setError(null);
 
         try {
-            const tags = tagsInput
-                .split(',')
-                .map((t) => t.trim().toLowerCase())
-                .filter((t) => t.length > 0);
-
             const res = await fetch('/api/projects', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -61,7 +55,6 @@ export default function NewProjectPage() {
                     prd_content: prdContent.trim() || null,
                     github_url: githubUrl.trim() || null,
                     priority,
-                    tags,
                 }),
             });
 
@@ -178,33 +171,18 @@ export default function NewProjectPage() {
                                 type="button"
                                 onClick={() => setPriority(p)}
                                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${priority === p
-                                        ? p === 'high'
-                                            ? 'bg-accent-rose text-white'
-                                            : p === 'medium'
-                                                ? 'bg-accent-apricot text-bg-base'
-                                                : 'bg-accent-sage text-bg-base'
-                                        : 'bg-bg-hover text-text-secondary hover:bg-bg-subtle'
+                                    ? p === 'high'
+                                        ? 'bg-accent-rose text-white'
+                                        : p === 'medium'
+                                            ? 'bg-accent-apricot text-bg-base'
+                                            : 'bg-accent-sage text-bg-base'
+                                    : 'bg-bg-hover text-text-secondary hover:bg-bg-subtle'
                                     }`}
                             >
                                 {p.charAt(0).toUpperCase() + p.slice(1)}
                             </button>
                         ))}
                     </div>
-                </div>
-
-                {/* Tags */}
-                <div>
-                    <label htmlFor="tags" className="block text-sm font-medium text-text-secondary mb-2">
-                        Tags (comma-separated)
-                    </label>
-                    <input
-                        id="tags"
-                        type="text"
-                        value={tagsInput}
-                        onChange={(e) => setTagsInput(e.target.value)}
-                        placeholder="nextjs, ai, productivity"
-                        className="input w-full"
-                    />
                 </div>
 
                 {/* Error */}
