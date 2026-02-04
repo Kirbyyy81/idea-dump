@@ -1,18 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { Note } from '@/lib/types';
+
+const demoNotes: Note[] = [
+    {
+        id: '1',
+        project_id: '1',
+        content: 'Finished Phase 1 setup. Moving to dashboard implementation.',
+        created_at: new Date().toISOString(),
+    },
+    {
+        id: '2',
+        project_id: '1',
+        content: 'Need to set up Supabase project and add environment variables.',
+        created_at: new Date(Date.now() - 86400000).toISOString(),
+    },
+];
 
 // GET /api/notes?project_id=xxx - List notes for a project
 export async function GET(request: NextRequest) {
     try {
         const supabase = await createClient();
-
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
 
         const { searchParams } = new URL(request.url);
         const projectId = searchParams.get('project_id');
+
+        if (!user) {
+            // Mock data for demo
+            if (projectId === '1') return NextResponse.json({ data: demoNotes });
+            return NextResponse.json({ data: [] });
+        }
 
         if (!projectId) {
             return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
@@ -29,6 +47,9 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ data });
     } catch (error) {
         console.error('Error fetching notes:', error);
+
+        // Fallback for non-authenticated view on main branch
+        if (request.url.includes('project_id=1')) return NextResponse.json({ data: demoNotes });
         return NextResponse.json({ error: 'Failed to fetch notes' }, { status: 500 });
     }
 }
@@ -37,14 +58,22 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         const supabase = await createClient();
-
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
 
         const body = await request.json();
         const { project_id, content } = body;
+
+        if (!user) {
+            // Mock creation
+            return NextResponse.json({
+                data: {
+                    id: Date.now().toString(),
+                    project_id,
+                    content,
+                    created_at: new Date().toISOString()
+                }
+            }, { status: 201 });
+        }
 
         if (!project_id || !content) {
             return NextResponse.json({ error: 'Project ID and content are required' }, { status: 400 });
@@ -75,10 +104,11 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
     try {
         const supabase = await createClient();
-
         const { data: { user } } = await supabase.auth.getUser();
+
         if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            // Mock deletion
+            return NextResponse.json({ success: true });
         }
 
         const { searchParams } = new URL(request.url);

@@ -1,18 +1,63 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { Project } from '@/lib/types';
+
+const demoProject: Project = {
+    id: '1',
+    user_id: 'demo',
+    title: 'IdeaDump',
+    description: 'A Notion-inspired, deployable web app to centralize, track, and manage all your PRDs and project ideas.',
+    prd_content: `# IdeaDump - Personal PRD Management Hub
+
+A Notion-inspired, deployable web app to centralize, track, and manage all your PRDs and project ideas.
+
+## Overview
+
+**Problem**: PRDs are scattered across different locations, making it hard to track progress and pick up where you left off.
+
+**Solution**: IdeaDump - a clean, personal hub where you can:
+- Import and store all PRDs (markdown format)
+- Track project status through defined stages
+- Add notes/journal entries per project
+- Link to GitHub repos
+- Access from any device
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| Frontend | Next.js 14 (App Router) + TypeScript |
+| Styling | shadcn/ui + Tailwind CSS |
+| Database | Supabase (PostgreSQL) |
+| Auth | Supabase Magic Link |
+| Hosting | Vercel |
+`,
+    github_url: 'https://github.com/user/ideadump',
+    priority: 'high',
+    tags: ['nextjs', 'supabase', 'productivity'],
+    completed: false,
+    archived: false,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+};
 
 // GET /api/projects - List all projects or get single project by ID
 export async function GET(request: NextRequest) {
     try {
         const supabase = await createClient();
-
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
 
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
+
+        // IF NO USER, RETURN MOCK DATA (For Main Branch Demo)
+        if (!user) {
+            if (id) {
+                if (id === '1') return NextResponse.json({ data: demoProject });
+                return NextResponse.json({ data: null });
+            }
+            return NextResponse.json({ data: [demoProject] });
+        }
 
         // If ID is provided, fetch single project
         if (id) {
@@ -40,6 +85,8 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ data });
     } catch (error) {
         console.error('Error fetching projects:', error);
+        // Fallback to demo data on error as well for main branch stability
+        if (request.url.includes('id=1')) return NextResponse.json({ data: demoProject });
         return NextResponse.json({ error: 'Failed to fetch projects' }, { status: 500 });
     }
 }
@@ -48,10 +95,13 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         const supabase = await createClient();
-
         const { data: { user } } = await supabase.auth.getUser();
+
         if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            // Mock creation for demo
+            return NextResponse.json({
+                data: { ...demoProject, id: Date.now().toString(), title: "Demo Project" }
+            }, { status: 201 });
         }
 
         const body = await request.json();
@@ -88,10 +138,11 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
     try {
         const supabase = await createClient();
-
         const { data: { user } } = await supabase.auth.getUser();
+
         if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            // Mock update
+            return NextResponse.json({ data: demoProject });
         }
 
         const body = await request.json();
@@ -122,10 +173,10 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
     try {
         const supabase = await createClient();
-
         const { data: { user } } = await supabase.auth.getUser();
+
         if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            return NextResponse.json({ success: true });
         }
 
         const { searchParams } = new URL(request.url);

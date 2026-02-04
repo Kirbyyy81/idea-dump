@@ -38,11 +38,11 @@ export async function middleware(request: NextRequest) {
         request.nextUrl.pathname.startsWith(path)
     );
 
-    if (isProtectedPath && !user) {
-        const url = request.nextUrl.clone();
-        url.pathname = '/login';
-        return NextResponse.redirect(url);
-    }
+    // if (isProtectedPath && !user) {
+    //     const url = request.nextUrl.clone();
+    //     url.pathname = '/login';
+    //     return NextResponse.redirect(url);
+    // }
 
     // If logged in and trying to access login page, redirect to dashboard
     if (user && request.nextUrl.pathname === '/login') {
