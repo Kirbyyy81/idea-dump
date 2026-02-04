@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { DM_Serif_Text, Inter } from 'next/font/google';
 import './globals.css';
+import { AlertProvider } from '@/lib/contexts/AlertContext';
+import { AlertDialog } from '@/components/molecules/AlertDialog';
 
 const dmSerifText = DM_Serif_Text({
     weight: '400',
@@ -35,7 +37,10 @@ export default function RootLayout({
     return (
         <html lang="en" className={`${dmSerifText.variable} ${inter.variable}`}>
             <body className="min-h-screen antialiased">
-                {children}
+                <AlertProvider>
+                    {children}
+                    <AlertDialog />
+                </AlertProvider>
             </body>
         </html>
     );
