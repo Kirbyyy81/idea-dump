@@ -8,11 +8,20 @@ export async function GET(request: Request) {
 
     let errorMsg = 'Could not authenticate user';
 
+    // Check if the URL has an error param from Supabase
+    const error = searchParams.get('error');
+    const errorDescription = searchParams.get('error_description');
+    const errorCode = searchParams.get('error_code');
+
+    if (error) {
+        return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(errorDescription || error)}&code=${errorCode}`);
+    }
+
     if (code) {
         const supabase = await createClient();
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        const { error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
 
-        if (!error) {
+        if (!sessionError) {
             const forwardedHost = request.headers.get('x-forwarded-host');
             const isLocalEnv = process.env.NODE_ENV === 'development';
 
@@ -24,7 +33,7 @@ export async function GET(request: Request) {
                 return NextResponse.redirect(`${origin}${next}`);
             }
         } else {
-            errorMsg = error.message;
+            errorMsg = sessionError.message;
         }
     } else {
         errorMsg = 'No code provided';
