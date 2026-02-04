@@ -1,25 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { getClientForIdentity } from '@/lib/supabase/getClient';
 import { resolveIdentity, AuthError } from '@/lib/auth/resolveIdentity';
 import { CreateDailyLogInput } from '@/lib/types';
+
+// Pagination constants
+const DEFAULT_LIMIT = 200;
+const MAX_LIMIT = 500;
+const DEFAULT_SORT = 'created_at.desc';
 
 // GET /api/logs - List log entries
 export async function GET(request: NextRequest) {
     try {
         const identity = await resolveIdentity(request);
-
-        // Use admin client for agent, regular client for admin session
-        const supabase = identity.role === 'agent'
-            ? createAdminClient()
-            : await createClient();
+        const supabase = await getClientForIdentity(identity);
 
         const { searchParams } = new URL(request.url);
         const from = searchParams.get('from');
         const to = searchParams.get('to');
-        const limit = Math.min(parseInt(searchParams.get('limit') || '200'), 500);
+        const limit = Math.min(parseInt(searchParams.get('limit') || String(DEFAULT_LIMIT)), MAX_LIMIT);
         const cursor = searchParams.get('cursor');
-        const sort = searchParams.get('sort') || 'created_at.desc';
+        const sort = searchParams.get('sort') || DEFAULT_SORT;
 
         let query = supabase
             .from('daily_logs')
@@ -66,11 +66,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         const identity = await resolveIdentity(request);
-
-        // Use admin client for agent, regular client for admin session
-        const supabase = identity.role === 'agent'
-            ? createAdminClient()
-            : await createClient();
+        const supabase = await getClientForIdentity(identity);
 
         const body: CreateDailyLogInput = await request.json();
 
