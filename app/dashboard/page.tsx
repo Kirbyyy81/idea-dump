@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Sidebar } from '@/components/organisms/Sidebar';
 import { ProjectCard } from '@/components/organisms/ProjectCard';
-import { Project, Status } from '@/lib/types';
+import { Project } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
 
@@ -13,7 +13,6 @@ export default function DashboardPage() {
     const [error, setError] = useState<string | null>(null);
 
     // Filter states
-    const [selectedStatus, setSelectedStatus] = useState<Status | 'all'>('all');
     const [searchQuery, setSearchQuery] = useState('');
 
     // Fetch projects
@@ -38,27 +37,7 @@ export default function DashboardPage() {
         if (!projects) return [];
 
         return projects.filter((project) => {
-            // Status filter
-            if (selectedStatus !== 'all') {
-                // This is a simplified check. Ideally we might want more robust status inference mapping
-                // But for now relying on the same logic used elsewhere or if project.status existed
-                // Since project doesn't have explicit status field in DB (it's inferred), 
-                // we might need to assume 'all' for now or duplicate inference logic here if we really want strict filtering
-                // For this refactor, I'll keep it simple: strict filtering would require inferStatus helpers 
-                // but let's assume specific status demands specific implementation.
-                // Actually, existing implementation might have had logic for this.
-                // Let's re-use the status inference if possible or just filter by simple props if we had them.
-                // ...
-                // Re-reading types: Project has no status field. It's inferred.
-                // So filtering by status requires inferring status for each project.
-
-                // Let's bring in inferStatus
-                const { inferStatus } = require('@/lib/types');
-                const status = inferStatus(project);
-                if (status !== selectedStatus) return false;
-            }
-
-            // Search filter
+            // Search filter only
             if (searchQuery.trim()) {
                 const query = searchQuery.toLowerCase();
                 const titleMatch = project.title.toLowerCase().includes(query);
@@ -68,7 +47,7 @@ export default function DashboardPage() {
 
             return true;
         });
-    }, [projects, selectedStatus, searchQuery]);
+    }, [projects, searchQuery]);
 
     if (isLoading) {
         return (
@@ -91,10 +70,7 @@ export default function DashboardPage() {
 
     return (
         <div className="flex min-h-screen bg-bg-base font-body text-text-primary">
-            <Sidebar
-                selectedStatus={selectedStatus}
-                onStatusChange={setSelectedStatus}
-            />
+            <Sidebar projects={projects} />
 
             <main className="flex-1 ml-64 p-8">
                 {/* Header */}
@@ -106,7 +82,7 @@ export default function DashboardPage() {
                         </p>
                     </div>
 
-                    {/* Search - Using a simple input for now, could be its own molecule */}
+                    {/* Search */}
                     <div className="relative w-64">
                         <input
                             type="text"

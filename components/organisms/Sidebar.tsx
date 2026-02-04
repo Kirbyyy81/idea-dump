@@ -1,28 +1,36 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Status, statusConfig } from '@/lib/types';
+import { Project } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { iconMap } from '@/lib/icons';
-import { Button } from '@/components/atoms/Button';
 import {
     LayoutDashboard,
     Settings,
     Plus,
-    Folder
+    Folder,
+    ChevronDown,
+    ChevronRight,
+    Search
 } from 'lucide-react';
+import { Button } from '@/components/atoms/Button';
+import { Input } from '@/components/atoms/Input';
 
 interface SidebarProps {
-    selectedStatus: Status | 'all';
-    onStatusChange: (status: Status | 'all') => void;
+    projects: Project[];
 }
 
 export function Sidebar({
-    selectedStatus,
-    onStatusChange,
+    projects,
 }: SidebarProps) {
     const pathname = usePathname();
+    const [isProjectsOpen, setIsProjectsOpen] = useState(true);
+    const [projectSearch, setProjectSearch] = useState('');
+
+    const filteredProjects = projects.filter(p =>
+        p.title.toLowerCase().includes(projectSearch.toLowerCase())
+    );
 
     return (
         <aside
@@ -40,7 +48,6 @@ export function Sidebar({
 
             {/* Navigation */}
             <nav className="flex-1 p-4 overflow-y-auto">
-                {/* Main Links */}
                 <div className="space-y-1 mb-6">
                     <Link href="/dashboard" className="block">
                         <Button
@@ -58,45 +65,61 @@ export function Sidebar({
                     </Link>
                 </div>
 
-                {/* Status Filters */}
+                {/* Projects Dropdown */}
                 <div className="mb-6">
-                    <h3 className="text-xs font-semibold uppercase tracking-wider mb-3 px-3 text-text-muted">
-                        Status
-                    </h3>
-                    <div className="space-y-1">
-                        <Button
-                            variant="ghost"
-                            onClick={() => onStatusChange('all')}
-                            className={cn(
-                                "w-full justify-start",
-                                selectedStatus === 'all'
-                                    ? "bg-bg-hover text-text-primary"
-                                    : "text-text-secondary"
-                            )}
-                        >
-                            All Projects
-                        </Button>
+                    <button
+                        onClick={() => setIsProjectsOpen(!isProjectsOpen)}
+                        className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wider text-text-muted hover:text-text-primary transition-colors mb-2"
+                    >
+                        <span>Projects</span>
+                        {isProjectsOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                    </button>
 
-                        {(Object.keys(statusConfig) as Status[]).map((status) => {
-                            const IconComponent = iconMap[statusConfig[status].icon];
-                            return (
-                                <Button
-                                    key={status}
-                                    variant="ghost"
-                                    onClick={() => onStatusChange(status)}
-                                    className={cn(
-                                        "w-full justify-start",
-                                        selectedStatus === status
-                                            ? "bg-bg-hover text-text-primary"
-                                            : "text-text-secondary"
-                                    )}
-                                    icon={IconComponent && <IconComponent size={16} />}
-                                >
-                                    {statusConfig[status].label}
-                                </Button>
-                            );
-                        })}
-                    </div>
+                    {isProjectsOpen && (
+                        <div className="space-y-2">
+                            {/* Optional Mini Search */}
+                            <div className="px-2 mb-2">
+                                <div className="relative">
+                                    <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
+                                    <input
+                                        type="text"
+                                        placeholder="Find..."
+                                        value={projectSearch}
+                                        onChange={(e) => setProjectSearch(e.target.value)}
+                                        className="w-full pl-7 pr-2 py-1 text-xs bg-bg-base border border-border-subtle rounded text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-rose"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-0.5 max-h-[300px] overflow-y-auto custom-scrollbar">
+                                {filteredProjects.length === 0 ? (
+                                    <p className="px-3 py-1.5 text-xs text-text-muted italic">
+                                        {projects.length === 0 ? "No projects yet" : "No matches"}
+                                    </p>
+                                ) : (
+                                    filteredProjects.map((project) => (
+                                        <Link
+                                            key={project.id}
+                                            href={`/project/${project.id}`}
+                                            className="block"
+                                        >
+                                            <Button
+                                                variant="ghost"
+                                                className={cn(
+                                                    "w-full justify-start text-sm py-1.5 h-8 font-normal truncate",
+                                                    pathname === `/project/${project.id}`
+                                                        ? "bg-bg-hover text-text-primary"
+                                                        : "text-text-secondary hover:text-text-primary"
+                                                )}
+                                            >
+                                                <span className="truncate">{project.title}</span>
+                                            </Button>
+                                        </Link>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </nav>
 
