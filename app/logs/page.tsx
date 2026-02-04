@@ -187,10 +187,7 @@ export default function LogsPage() {
             <main className="flex-1 ml-64 p-8">
                 {/* Header */}
                 <header className="flex items-center justify-between mb-8">
-                    <div>
-                        <h1 className="text-3xl font-heading font-medium mb-2">Weekly Productivity Log</h1>
-                        <p className="text-text-secondary">Track your daily tasks, tools, and lessons learned</p>
-                    </div>
+                    <h1 className="text-3xl font-heading font-medium">Weekly Productivity Log</h1>
 
                     <div className="flex items-center gap-3">
                         <Button variant="ghost" onClick={handleRefresh} icon={<RefreshCw size={18} />}>

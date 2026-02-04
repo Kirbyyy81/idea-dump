@@ -55,10 +55,7 @@ export default function DashboardPage() {
             <main className="flex-1 ml-64 p-8">
                 {/* Header */}
                 <header className="mb-8">
-                    <h1 className="text-3xl font-heading font-medium mb-2">My Projects</h1>
-                    <p className="text-text-secondary">
-                        Manage and track your PRD implementations
-                    </p>
+                    <h1 className="text-3xl font-heading font-medium">My Projects</h1>
                 </header>
 
                 {/* Projects Grid */}
