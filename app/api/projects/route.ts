@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
-// GET /api/projects - List all projects
-export async function GET() {
+// GET /api/projects - List all projects or get single project by ID
+export async function GET(request: NextRequest) {
     try {
         const supabase = await createClient();
 
@@ -11,6 +11,24 @@ export async function GET() {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
+
+        // If ID is provided, fetch single project
+        if (id) {
+            const { data, error } = await supabase
+                .from('projects')
+                .select('*')
+                .eq('id', id)
+                .eq('user_id', user.id)
+                .single();
+
+            if (error) throw error;
+
+            return NextResponse.json({ data });
+        }
+
+        // Otherwise, fetch all projects
         const { data, error } = await supabase
             .from('projects')
             .select('*')

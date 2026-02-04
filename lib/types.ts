@@ -53,10 +53,10 @@ export const statusConfig: Record<Status, { label: string; color: string; icon: 
     archived: { label: 'Archived', color: 'var(--status-archived)', icon: 'Archive' },
 };
 
-export const priorityConfig: Record<Priority, { label: string; color: string }> = {
-    low: { label: 'Low', color: 'var(--text-muted)' },
-    medium: { label: 'Medium', color: 'var(--accent-apricot)' },
-    high: { label: 'High', color: 'var(--accent-rose)' },
+export const priorityConfig: Record<Priority, { label: string; color: string; textClass: string }> = {
+    low: { label: 'Low', color: 'var(--text-muted)', textClass: 'text-text-muted' },
+    medium: { label: 'Medium', color: 'var(--accent-apricot)', textClass: 'text-accent-apricot' },
+    high: { label: 'High', color: 'var(--accent-rose)', textClass: 'text-accent-rose' },
 };
 
 // Form types
