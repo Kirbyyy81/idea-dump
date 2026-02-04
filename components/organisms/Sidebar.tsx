@@ -9,7 +9,8 @@ import {
     LayoutDashboard,
     Settings,
     Search,
-    ChevronRight
+    ChevronRight,
+    ClipboardList
 } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
@@ -124,6 +125,22 @@ export function Sidebar({
                         </div>
                     </div>
                 </div>
+
+                {/* Logs Navigation */}
+                <Link href="/logs" className="block">
+                    <Button
+                        variant="ghost"
+                        className={cn(
+                            "w-full justify-start",
+                            pathname === '/logs'
+                                ? "bg-accent-rose/10 text-accent-rose hover:bg-accent-rose/20 hover:text-accent-rose"
+                                : "text-text-secondary hover:text-text-primary"
+                        )}
+                        icon={<ClipboardList size={18} />}
+                    >
+                        Weekly Logs
+                    </Button>
+                </Link>
             </nav>
 
             {/* Footer */}

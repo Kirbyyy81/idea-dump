@@ -89,3 +89,34 @@ export interface IngestPayload {
     description?: string;
     prd_content?: string;
 }
+
+// Daily Log types
+export type LogSource = 'agent' | 'human';
+
+export interface DailyLogContent {
+    date: string;
+    day?: string;
+    operation_task?: string;
+    tools_used?: string;
+    lesson_learned?: string;
+}
+
+export interface DailyLogEntry {
+    id: string;
+    user_id: string;
+    source: LogSource;
+    content: DailyLogContent;
+    effective_date: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface CreateDailyLogInput {
+    content: DailyLogContent;
+    effective_date?: string;
+}
+
+export interface UpdateDailyLogInput {
+    content: DailyLogContent;
+    allow_human_overwrite?: boolean;
+}
