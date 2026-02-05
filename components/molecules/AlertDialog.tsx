@@ -89,7 +89,7 @@ export function AlertDialog() {
                 tabIndex={-1}
                 className={cn(
                     "relative z-10 w-full max-w-md mx-4 p-6 rounded-lg shadow-xl",
-                    "bg-bg-card border",
+                    "bg-bg-elevated border",
                     styles.border
                 )}
                 onClick={(e) => e.stopPropagation()}
