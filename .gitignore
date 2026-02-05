@@ -32,3 +32,6 @@ Thumbs.db
 
 # TypeScript
 *.tsbuildinfo
+
+# Agent secrets
+.agent/**/.wpl_api_key

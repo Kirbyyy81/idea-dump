@@ -6,6 +6,33 @@ description: How to interact with the Weekly Productivity Log API
 
 This skill enables AI agents to create, read, and update daily productivity log entries.
 
+## Quick Start (CLI Scripts)
+
+**PowerShell (Windows):**
+```powershell
+# Create a log entry
+.\weekly-log.ps1 -Action create -Date 2026-02-05 -Day Wednesday -Task "Built API endpoints" -Tools "Next.js, Supabase" -Lesson "RLS is powerful"
+
+# List recent logs
+.\weekly-log.ps1 -Action list -From 2026-02-01 -Limit 10
+```
+
+**Bash (Linux/Mac/WSL):**
+```bash
+# Create a log entry
+./weekly-log.sh create 2026-02-05 Wednesday "Built API endpoints" "Next.js, Supabase" "RLS is powerful"
+
+# List recent logs
+./weekly-log.sh list 2026-02-01 2026-02-07 10
+```
+
+### Setup
+1. Copy `.wpl_api_key.template` to `.wpl_api_key`
+2. Add your API key to the file (one line, no quotes)
+3. Ensure `.wpl_api_key` is in `.gitignore`
+
+---
+
 ## Authentication
 
 Include your API key in the request header:
@@ -117,7 +144,7 @@ Updates an existing log entry. Content is fully replaced.
 4. **Track tools** - Noting tools helps identify patterns
 5. **Capture lessons** - Even small insights are valuable
 
-## Example: Daily Log Creation
+## Example: cURL
 
 ```bash
 curl -X POST https://your-app.vercel.app/api/logs \
@@ -127,9 +154,9 @@ curl -X POST https://your-app.vercel.app/api/logs \
     "content": {
       "date": "2026-02-04",
       "day": "Tuesday",
-      "operation_task": "Implemented Weekly Productivity Log feature with API endpoints and dashboard UI",
+      "operation_task": "Implemented Weekly Productivity Log feature",
       "tools_used": "VSCode, Next.js, Supabase, TypeScript",
-      "lesson_learned": "Hybrid auth (session + API key) simplifies multi-client access patterns"
+      "lesson_learned": "Hybrid auth simplifies multi-client access"
     }
   }'
 ```

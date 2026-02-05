@@ -1,0 +1,8 @@
+# API Key for Weekly Productivity Log
+# WARNING: Do not commit this file to git!
+# Add to .gitignore: .agent/weekly-log/.wpl_api_key
+
+# Option 1: Place your API key below (one line, no quotes)
+# YOUR_API_KEY_HERE
+
+# Option 2: Use environment variable WPL_API_KEY instead
