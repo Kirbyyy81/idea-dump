@@ -9,6 +9,7 @@ import { MarkdownRenderer } from '@/components/molecules/MarkdownRenderer';
 import { NotesPanel } from '@/components/organisms/NotesPanel';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
+import { Project, Note } from '@/lib/types';
 import {
     ArrowLeft,
     ExternalLink,
