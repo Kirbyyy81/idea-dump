@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Project } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -37,7 +38,13 @@ export function Sidebar({
             {/* Logo */}
             <div className="p-6 border-b border-border-subtle">
                 <Link href="/dashboard" className="flex items-center gap-2">
-                    <img src="/logo.png" alt="IdeaDump Logo" className="w-6 h-6 object-contain" />
+                    <Image
+                        src="/logo.png"
+                        alt="IdeaDump Logo"
+                        width={24}
+                        height={24}
+                        className="w-6 h-6 object-contain"
+                    />
                     <span className="font-bold text-xl font-heading text-text-primary">
                         IdeaDump
                     </span>

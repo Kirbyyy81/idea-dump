@@ -251,7 +251,7 @@ export default function LogsPage() {
                 {sortedDates.length === 0 ? (
                     <Card className="p-12 text-center">
                         <p className="text-text-muted mb-2">No log entries yet.</p>
-                        <p className="text-text-muted">Click "New Entry" to add your first log.</p>
+                        <p className="text-text-muted">Click &quot;New Entry&quot; to add your first log.</p>
                     </Card>
                 ) : (
                     <div className="space-y-6">
