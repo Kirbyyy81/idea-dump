@@ -193,6 +193,35 @@ export default function LogsPage() {
                     <h1 className="text-3xl font-heading font-medium">Weekly Productivity Log</h1>
 
                     <div className="flex items-center gap-3">
+                        {/* Export Controls */}
+                        <div className="flex items-center gap-2 bg-bg-elevated px-3 py-1.5 rounded-lg border border-border-subtle">
+                            <Calendar size={16} className="text-text-muted" />
+                            <input
+                                type="date"
+                                value={exportFrom}
+                                onChange={(e) => setExportFrom(e.target.value)}
+                                className="bg-transparent text-sm text-text-primary border-none outline-none w-28"
+                                title="Export from date"
+                            />
+                            <span className="text-text-muted text-sm">→</span>
+                            <input
+                                type="date"
+                                value={exportTo}
+                                onChange={(e) => setExportTo(e.target.value)}
+                                className="bg-transparent text-sm text-text-primary border-none outline-none w-28"
+                                title="Export to date"
+                            />
+                            <Button
+                                variant="ghost"
+                                onClick={handleExport}
+                                isLoading={isExporting}
+                                icon={<Download size={16} />}
+                                title="Export to Markdown"
+                            >
+                                Export
+                            </Button>
+                        </div>
+
                         <Button variant="ghost" onClick={handleRefresh} icon={<RefreshCw size={18} />}>
                             Refresh
                         </Button>
@@ -208,35 +237,6 @@ export default function LogsPage() {
                         <button onClick={() => setError(null)} className="ml-2 underline">Dismiss</button>
                     </div>
                 )}
-
-                {/* Export Section */}
-                <Card className="p-4 mb-6">
-                    <div className="flex items-center gap-4">
-                        <Calendar size={20} className="text-text-muted" />
-                        <span className="text-sm font-medium">Export Range:</span>
-                        <input
-                            type="date"
-                            value={exportFrom}
-                            onChange={(e) => setExportFrom(e.target.value)}
-                            className="input py-1 px-2 text-sm w-36"
-                        />
-                        <span className="text-text-muted">to</span>
-                        <input
-                            type="date"
-                            value={exportTo}
-                            onChange={(e) => setExportTo(e.target.value)}
-                            className="input py-1 px-2 text-sm w-36"
-                        />
-                        <Button
-                            variant="secondary"
-                            onClick={handleExport}
-                            isLoading={isExporting}
-                            icon={<Download size={16} />}
-                        >
-                            Export Markdown
-                        </Button>
-                    </div>
-                </Card>
 
                 {/* New Log Form */}
                 {showNewForm && (
