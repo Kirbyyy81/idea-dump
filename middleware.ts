@@ -33,7 +33,7 @@ export async function middleware(request: NextRequest) {
     } = await supabase.auth.getUser();
 
     // Public routes - allow access without authentication
-    const publicPaths = ['/login', '/auth'];
+    const publicPaths = ['/login', '/signup', '/reset-password', '/auth'];
     const isPublicPath = publicPaths.some((path) =>
         request.nextUrl.pathname.startsWith(path)
     );
