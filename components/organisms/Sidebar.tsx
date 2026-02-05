@@ -64,15 +64,6 @@ export function Sidebar({
                             onClick={() => setIsProjectsOpen(!isProjectsOpen)}
                         >
                             <span className="flex-1 text-left">Dashboard</span>
-                            {filteredProjects.length > 0 && (
-                                <ChevronRight
-                                    size={14}
-                                    className={cn(
-                                        "transition-transform text-text-muted",
-                                        isProjectsOpen && "rotate-90"
-                                    )}
-                                />
-                            )}
                         </Button>
                     </Link>
 
@@ -82,18 +73,7 @@ export function Sidebar({
                         isProjectsOpen ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"
                     )}>
                         <div className="pl-4 space-y-1 pt-1">
-                            <div className="px-2 mb-2">
-                                <div className="relative">
-                                    <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
-                                    <input
-                                        type="text"
-                                        placeholder="Find..."
-                                        value={projectSearch}
-                                        onChange={(e) => setProjectSearch(e.target.value)}
-                                        className="w-full pl-7 pr-2 py-1 text-xs bg-bg-base border border-border-subtle rounded text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-rose"
-                                    />
-                                </div>
-                            </div>
+
 
                             <div className="space-y-0.5 max-h-[300px] overflow-y-auto custom-scrollbar">
                                 {filteredProjects.length === 0 ? (
