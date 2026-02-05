@@ -4,35 +4,52 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import { Mail, ArrowLeft, Loader2, CheckCircle } from 'lucide-react';
+import { Mail, ArrowLeft, Loader2, CheckCircle, Lock, KeyRound } from 'lucide-react';
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
     const [code, setCode] = useState('');
+    const [password, setPassword] = useState('');
+    const [authMethod, setAuthMethod] = useState<'otp' | 'password'>('otp');
     const [isLoading, setIsLoading] = useState(false);
     const [isVerifying, setIsVerifying] = useState(false);
     const [isSent, setIsSent] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const router = useRouter();
 
-    const handleSendCode = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
         setError(null);
 
         try {
             const supabase = createClient();
-            const { error } = await supabase.auth.signInWithOtp({
-                email,
-                options: {
-                    shouldCreateUser: true,
-                },
-            });
 
-            if (error) {
-                setError(error.message);
+            if (authMethod === 'otp') {
+                const { error } = await supabase.auth.signInWithOtp({
+                    email,
+                    options: {
+                        emailRedirectTo: `${window.location.origin}/auth/callback`,
+                    },
+                });
+
+                if (error) {
+                    setError(error.message);
+                } else {
+                    setIsSent(true);
+                }
             } else {
-                setIsSent(true);
+                const { error } = await supabase.auth.signInWithPassword({
+                    email,
+                    password,
+                });
+
+                if (error) {
+                    setError(error.message);
+                } else {
+                    // Successful password login
+                    router.push('/dashboard');
+                }
             }
         } catch {
             setError('An unexpected error occurred');
@@ -110,9 +127,39 @@ export default function LoginPage() {
                             <span className="text-accent-rose">Dump</span>
                         </h1>
                         <p className="text-text-secondary">
-                            {isSent ? 'Enter the code we emailed you' : 'Sign in with a one-time code'}
+                            {isSent
+                                ? 'Check your email!'
+                                : authMethod === 'otp'
+                                    ? 'Sign in with magic link'
+                                    : 'Sign in with password'}
                         </p>
                     </div>
+
+                    {/* Auth Method Toggle */}
+                    {!isSent && (
+                        <div className="flex p-1 bg-surface-tertiary rounded-lg mb-6">
+                            <button
+                                type="button"
+                                onClick={() => setAuthMethod('otp')}
+                                className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${authMethod === 'otp'
+                                        ? 'bg-surface-primary text-text-primary shadow-sm'
+                                        : 'text-text-secondary hover:text-text-primary'
+                                    }`}
+                            >
+                                Magic Link
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setAuthMethod('password')}
+                                className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${authMethod === 'password'
+                                        ? 'bg-surface-primary text-text-primary shadow-sm'
+                                        : 'text-text-secondary hover:text-text-primary'
+                                    }`}
+                            >
+                                Password
+                            </button>
+                        </div>
+                    )}
 
                     {isSent ? (
                         /* Verify Code */
@@ -191,8 +238,8 @@ export default function LoginPage() {
                             </div>
                         </form>
                     ) : (
-                        /* Send Code */
-                        <form onSubmit={handleSendCode} className="space-y-6">
+                        /* Send Code / Password Login */
+                        <form onSubmit={handleSubmit} className="space-y-6">
                             <div>
                                 <label
                                     htmlFor="email"
@@ -217,6 +264,32 @@ export default function LoginPage() {
                                 </div>
                             </div>
 
+                            {authMethod === 'password' && (
+                                <div>
+                                    <label
+                                        htmlFor="password"
+                                        className="block text-sm font-medium text-text-secondary mb-2"
+                                    >
+                                        Password
+                                    </label>
+                                    <div className="relative">
+                                        <input
+                                            id="password"
+                                            type="password"
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            placeholder="••••••••"
+                                            required
+                                            className="input w-full pl-10"
+                                        />
+                                        <Lock
+                                            size={18}
+                                            className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
                             {error && (
                                 <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
                                     <p className="text-sm text-red-400">{error}</p>
@@ -225,16 +298,16 @@ export default function LoginPage() {
 
                             <button
                                 type="submit"
-                                disabled={isLoading || !email}
+                                disabled={isLoading || !email || (authMethod === 'password' && !password)}
                                 className="btn-primary w-full flex items-center justify-center gap-2"
                             >
                                 {isLoading ? (
                                     <>
                                         <Loader2 size={18} className="animate-spin" />
-                                        Sending...
+                                        Logging in...
                                     </>
                                 ) : (
-                                    'Send Code'
+                                    authMethod === 'otp' ? 'Send Magic Link' : 'Sign In'
                                 )}
                             </button>
                         </form>
@@ -243,7 +316,9 @@ export default function LoginPage() {
 
                 {/* Footer */}
                 <p className="text-center text-sm text-text-muted mt-6">
-                    No password needed. We&apos;ll email you a one-time code.
+                    {authMethod === 'otp'
+                        ? "No password needed. We'll email you a secure login link."
+                        : "Enter your secure password to access your account."}
                 </p>
             </div>
         </div>
