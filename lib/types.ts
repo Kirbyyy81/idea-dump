@@ -12,7 +12,6 @@ export interface Project {
     prd_content: string | null;
     github_url: string | null;
     priority: Priority;
-    tags: string[];
     completed: boolean;
     archived: boolean;
     created_at: string;
@@ -66,7 +65,6 @@ export interface CreateProjectInput {
     prd_content?: string;
     github_url?: string;
     priority?: Priority;
-    tags?: string[];
 }
 
 export interface UpdateProjectInput extends Partial<CreateProjectInput> {
@@ -90,5 +88,35 @@ export interface IngestPayload {
     title: string;
     description?: string;
     prd_content?: string;
-    tags?: string[];
+}
+
+// Daily Log types
+export type LogSource = 'agent' | 'human';
+
+export interface DailyLogContent {
+    date: string;
+    day?: string;
+    operation_task?: string;
+    tools_used?: string;
+    lesson_learned?: string;
+}
+
+export interface DailyLogEntry {
+    id: string;
+    user_id: string;
+    source: LogSource;
+    content: DailyLogContent;
+    effective_date: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface CreateDailyLogInput {
+    content: DailyLogContent;
+    effective_date?: string;
+}
+
+export interface UpdateDailyLogInput {
+    content: DailyLogContent;
+    allow_human_overwrite?: boolean;
 }

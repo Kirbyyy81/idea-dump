@@ -2,8 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Key, Copy, Plus, Trash2, AlertTriangle, Loader2 } from 'lucide-react';
+import { ArrowLeft, Key, Copy, Plus, Trash2, AlertTriangle } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import { Button } from '@/components/atoms/Button';
+import { Input } from '@/components/atoms/Input';
+import { Card } from '@/components/atoms/Card';
 
 interface ApiKeyDisplay {
     id: string;
@@ -96,7 +99,7 @@ export default function SettingsPage() {
             </div>
 
             {/* API Keys Section */}
-            <section className="p-6 rounded-lg bg-bg-elevated border border-border-subtle">
+            <Card className="p-6">
                 <div className="flex items-center gap-2 mb-4">
                     <Key size={20} className="text-accent-rose" />
                     <h2 className="text-xl font-semibold font-body text-text-primary">
@@ -118,19 +121,21 @@ export default function SettingsPage() {
                             <code className="flex-1 p-2 rounded text-sm font-mono bg-bg-base text-text-primary overflow-x-auto">
                                 {newKey}
                             </code>
-                            <button
+                            <Button
+                                variant="secondary"
                                 onClick={() => copyToClipboard(newKey)}
-                                className="btn-secondary p-2"
+                                icon={<Copy size={16} />}
                             >
-                                <Copy size={16} />
-                            </button>
+                                Copy
+                            </Button>
                         </div>
-                        <button
+                        <Button
+                            variant="ghost"
                             onClick={() => setNewKey(null)}
-                            className="text-sm mt-2 text-text-muted hover:text-text-secondary"
+                            className="mt-2 text-text-muted hover:text-text-secondary h-auto p-0 hover:bg-transparent"
                         >
                             Dismiss
-                        </button>
+                        </Button>
                     </div>
                 )}
 
@@ -143,32 +148,27 @@ export default function SettingsPage() {
 
                 {/* Create New Key */}
                 <div className="flex gap-2 mb-6">
-                    <input
-                        type="text"
+                    <Input
                         value={newKeyName}
                         onChange={(e) => setNewKeyName(e.target.value)}
                         placeholder="Key name (e.g., Antigravity)"
-                        className="input flex-1"
+                        className="flex-1"
                         onKeyDown={(e) => e.key === 'Enter' && handleCreateKey()}
                     />
-                    <button
+                    <Button
                         onClick={handleCreateKey}
                         disabled={!newKeyName.trim() || isCreating}
-                        className="btn-primary flex items-center gap-2"
+                        isLoading={isCreating}
+                        icon={<Plus size={16} />}
                     >
-                        {isCreating ? (
-                            <Loader2 size={16} className="animate-spin" />
-                        ) : (
-                            <Plus size={16} />
-                        )}
                         Generate Key
-                    </button>
+                    </Button>
                 </div>
 
                 {/* Existing Keys */}
                 {isLoading ? (
                     <div className="flex justify-center py-8">
-                        <Loader2 size={24} className="animate-spin text-accent-rose" />
+                        <Button variant="ghost" isLoading disabled>Loading keys...</Button>
                     </div>
                 ) : apiKeys.length === 0 ? (
                     <p className="text-center py-8 text-text-muted">
@@ -190,20 +190,20 @@ export default function SettingsPage() {
                                         {key.last_used_at && ` · Last used ${formatDate(key.last_used_at)}`}
                                     </p>
                                 </div>
-                                <button
+                                <Button
+                                    variant="ghost"
                                     onClick={() => handleDeleteKey(key.id)}
-                                    className="text-text-muted hover:text-red-400 transition-colors"
-                                >
-                                    <Trash2 size={18} />
-                                </button>
+                                    className="text-text-muted hover:text-red-400 hover:bg-red-50"
+                                    icon={<Trash2 size={18} />}
+                                />
                             </div>
                         ))}
                     </div>
                 )}
-            </section>
+            </Card>
 
             {/* Usage Instructions */}
-            <section className="mt-8 p-6 rounded-lg bg-bg-elevated border border-border-subtle">
+            <Card className="mt-8 p-6">
                 <h2 className="text-xl font-semibold mb-4 font-body text-text-primary">
                     API Usage
                 </h2>
@@ -217,7 +217,7 @@ export default function SettingsPage() {
     "tags": ["ai", "web"]
   }'`}</code>
                 </pre>
-            </section>
+            </Card>
         </div>
     );
 }
