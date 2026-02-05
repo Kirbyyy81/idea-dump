@@ -9,6 +9,7 @@ import { Card } from '@/components/atoms/Card';
 import { DailyLogEntry, DailyLogContent, Project } from '@/lib/types';
 import { Loader2, Plus, Download, RefreshCw, Calendar } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import { useAlert } from '@/lib/contexts/AlertContext';
 
 export default function LogsPage() {
     const [logs, setLogs] = useState<DailyLogEntry[]>([]);
@@ -136,9 +137,11 @@ export default function LogsPage() {
         }
     };
 
+    const { showError, showSuccess } = useAlert();
+
     const handleExport = async () => {
         if (!exportFrom || !exportTo) {
-            setError('Please select both from and to dates');
+            showError('Please select both from and to dates', 'Export Error');
             return;
         }
 
@@ -154,9 +157,9 @@ export default function LogsPage() {
 
             const data = await res.json();
             await navigator.clipboard.writeText(data.markdown);
-            alert('Markdown copied to clipboard!');
+            showSuccess('Markdown copied to clipboard!', 'Export Complete');
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Export failed');
+            showError(err instanceof Error ? err.message : 'Export failed', 'Export Error');
         } finally {
             setIsExporting(false);
         }
