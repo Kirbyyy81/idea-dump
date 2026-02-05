@@ -20,7 +20,7 @@ import {
     Loader2,
     Trash2
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatDate } from '@/lib/utils';
 
 export default function ProjectPage() {
     const params = useParams();
