@@ -5,10 +5,11 @@ import Link from 'next/link';
 import { Sidebar } from '@/components/organisms/Sidebar';
 import { ProjectCard } from '@/components/organisms/ProjectCard';
 import { Project, Status, statusConfig, inferStatus } from '@/lib/types';
-import { Loader2, Plus, Search, X } from 'lucide-react';
+import { Plus, Search, X } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
 import { cn } from '@/lib/utils';
 import { iconMap } from '@/lib/icons';
+import { PageLoader } from '@/components/ui/loader';
 
 export default function DashboardPage() {
     const [projects, setProjects] = useState<Project[]>([]);
@@ -63,11 +64,7 @@ export default function DashboardPage() {
     }, [projects]);
 
     if (isLoading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-bg-base">
-                <Loader2 size={32} className="animate-spin text-accent-rose" />
-            </div>
-        );
+        return <PageLoader />;
     }
 
     if (error) {

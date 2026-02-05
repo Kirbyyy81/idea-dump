@@ -7,9 +7,10 @@ import { LogEntryCard } from '@/components/organisms/LogEntryCard';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { DailyLogEntry, DailyLogContent, Project } from '@/lib/types';
-import { Loader2, Plus, Download, RefreshCw, Calendar } from 'lucide-react';
+import { Plus, Download, RefreshCw, Calendar } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { useAlert } from '@/lib/contexts/AlertContext';
+import { PageLoader } from '@/components/ui/loader';
 
 export default function LogsPage() {
     const [logs, setLogs] = useState<DailyLogEntry[]>([]);
@@ -176,11 +177,7 @@ export default function LogsPage() {
     const sortedDates = Object.keys(groupedLogs).sort((a, b) => b.localeCompare(a));
 
     if (isLoading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-bg-base">
-                <Loader2 size={32} className="animate-spin text-accent-rose" />
-            </div>
-        );
+        return <PageLoader />;
     }
 
     return (

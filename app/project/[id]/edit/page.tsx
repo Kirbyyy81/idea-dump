@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { ProjectForm } from '@/components/organisms/ProjectForm';
 import { CreateProjectInput } from '@/lib/types';
+import { PageLoader } from '@/components/ui/loader';
 
 export default function EditProjectPage() {
     const router = useRouter();
@@ -70,11 +71,7 @@ export default function EditProjectPage() {
     };
 
     if (isLoading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <Loader2 size={32} className="animate-spin text-accent-rose" />
-            </div>
-        );
+        return <PageLoader />;
     }
 
     return (

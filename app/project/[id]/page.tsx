@@ -17,9 +17,9 @@ import {
     Check,
     Pencil,
     FileText,
-    Loader2,
     Trash2
 } from 'lucide-react';
+import { PageLoader } from '@/components/ui/loader';
 import { cn, formatDate } from '@/lib/utils';
 
 export default function ProjectPage() {
@@ -126,11 +126,7 @@ export default function ProjectPage() {
     };
 
     if (isLoading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <Loader2 size={32} className="animate-spin text-accent-rose" />
-            </div>
-        );
+        return <PageLoader />;
     }
 
     if (error || !project) {
