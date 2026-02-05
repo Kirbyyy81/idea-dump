@@ -10,7 +10,7 @@ import { DailyLogEntry, DailyLogContent, Project } from '@/lib/types';
 import { Plus, Download, RefreshCw, Calendar } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { useAlert } from '@/lib/contexts/AlertContext';
-import { PageLoader } from '@/components/ui/loader';
+import { PageLoader } from '@/components/atoms/Loader';
 
 export default function LogsPage() {
     const [logs, setLogs] = useState<DailyLogEntry[]>([]);

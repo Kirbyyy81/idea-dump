@@ -9,7 +9,7 @@ import { Plus, Search, X } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
 import { cn } from '@/lib/utils';
 import { iconMap } from '@/lib/icons';
-import { PageLoader } from '@/components/ui/loader';
+import { PageLoader } from '@/components/atoms/Loader';
 
 export default function DashboardPage() {
     const [projects, setProjects] = useState<Project[]>([]);

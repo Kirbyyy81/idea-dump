@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { ProjectForm } from '@/components/organisms/ProjectForm';
 import { CreateProjectInput } from '@/lib/types';
-import { PageLoader } from '@/components/ui/loader';
+import { PageLoader } from '@/components/atoms/Loader';
 
 export default function EditProjectPage() {
     const router = useRouter();

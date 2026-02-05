@@ -19,7 +19,7 @@ import {
     FileText,
     Trash2
 } from 'lucide-react';
-import { PageLoader } from '@/components/ui/loader';
+import { PageLoader } from '@/components/atoms/Loader';
 import { cn, formatDate } from '@/lib/utils';
 
 export default function ProjectPage() {
