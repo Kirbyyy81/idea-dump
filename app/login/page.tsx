@@ -48,7 +48,7 @@ export default function LoginPage() {
                     setError(error.message);
                 } else {
                     // Successful password login
-                    router.push('/dashboard');
+                    router.push('/');
                 }
             }
         } catch {
@@ -74,7 +74,7 @@ export default function LoginPage() {
             if (error) {
                 setError(error.message);
             } else {
-                router.push('/dashboard');
+                router.push('/');
             }
         } catch {
             setError('An unexpected error occurred');
@@ -142,8 +142,8 @@ export default function LoginPage() {
                                 type="button"
                                 onClick={() => setAuthMethod('otp')}
                                 className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${authMethod === 'otp'
-                                        ? 'bg-surface-primary text-text-primary shadow-sm'
-                                        : 'text-text-secondary hover:text-text-primary'
+                                    ? 'bg-surface-primary text-text-primary shadow-sm'
+                                    : 'text-text-secondary hover:text-text-primary'
                                     }`}
                             >
                                 Magic Link
@@ -152,8 +152,8 @@ export default function LoginPage() {
                                 type="button"
                                 onClick={() => setAuthMethod('password')}
                                 className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${authMethod === 'password'
-                                        ? 'bg-surface-primary text-text-primary shadow-sm'
-                                        : 'text-text-secondary hover:text-text-primary'
+                                    ? 'bg-surface-primary text-text-primary shadow-sm'
+                                    : 'text-text-secondary hover:text-text-primary'
                                     }`}
                             >
                                 Password
