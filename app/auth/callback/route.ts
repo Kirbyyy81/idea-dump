@@ -5,7 +5,7 @@ export async function GET(request: NextRequest) {
     const { searchParams, origin } = new URL(request.url);
     const code = searchParams.get('code');
     const tokenHash = searchParams.get('token_hash') ?? searchParams.get('token');
-    const type = searchParams.get('type');
+    const authType = searchParams.get('type');
 
     const requestedNext = searchParams.get('next') ?? '/';
     const nextPath = requestedNext.startsWith('/') ? requestedNext : '/';
@@ -18,20 +18,22 @@ export async function GET(request: NextRequest) {
     const errorCode = searchParams.get('error_code');
 
     if (error) {
+        const errorTarget = authType === 'recovery' ? '/reset-password' : '/login';
         return NextResponse.redirect(
-            `${origin}/login?error=${encodeURIComponent(errorDescription || error)}&code=${errorCode}`
+            `${origin}${errorTarget}?error=${encodeURIComponent(errorDescription || error)}&code=${errorCode}`
         );
     }
 
-    if (code || (tokenHash && type)) {
+    if (code || (tokenHash && authType)) {
         const forwardedHost = request.headers.get('x-forwarded-host');
         const isLocalEnv = process.env.NODE_ENV === 'development';
 
+        const redirectPath = authType === 'recovery' ? '/reset-password' : nextPath;
         const redirectUrl = isLocalEnv
-            ? `${origin}${nextPath}`
+            ? `${origin}${redirectPath}`
             : forwardedHost
-                ? `https://${forwardedHost}${nextPath}`
-                : `${origin}${nextPath}`;
+                ? `https://${forwardedHost}${redirectPath}`
+                : `${origin}${redirectPath}`;
 
         const response = NextResponse.redirect(redirectUrl);
         const supabase = createServerClient(
@@ -54,7 +56,7 @@ export async function GET(request: NextRequest) {
         const { error: sessionError } = code
             ? await supabase.auth.exchangeCodeForSession(code)
             : await supabase.auth.verifyOtp({
-                type: type as any,
+                type: authType as any,
                 token_hash: tokenHash as string,
             });
 
@@ -68,5 +70,6 @@ export async function GET(request: NextRequest) {
     }
 
     // Return the user to an error page with instructions
-    return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(errorMsg)}`);
+    const errorTarget = authType === 'recovery' ? '/reset-password' : '/login';
+    return NextResponse.redirect(`${origin}${errorTarget}?error=${encodeURIComponent(errorMsg)}`);
 }

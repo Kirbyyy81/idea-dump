@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import { Mail, ArrowLeft, Loader2, CheckCircle, Lock, KeyRound } from 'lucide-react';
+import { Mail, ArrowLeft, Loader2, CheckCircle, Lock } from 'lucide-react';
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
@@ -16,6 +16,12 @@ export default function LoginPage() {
     const [isSent, setIsSent] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const router = useRouter();
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const queryError = new URLSearchParams(window.location.search).get('error');
+        if (queryError) setError(queryError);
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -138,7 +144,7 @@ export default function LoginPage() {
 
                     {/* Auth Method Toggle */}
                     {!isSent && (
-                        <div className="flex p-1 bg-surface-tertiary rounded-lg mb-6">
+                        <div className="flex p-1 bg-surface-tertiary rounded-lg mb-4">
                             <button
                                 type="button"
                                 onClick={() => setAuthMethod('otp')}
@@ -159,6 +165,23 @@ export default function LoginPage() {
                             >
                                 Password
                             </button>
+                        </div>
+                    )}
+
+                    {!isSent && authMethod === 'password' && (
+                        <div className="flex items-center justify-between text-sm mb-4">
+                            <Link
+                                href="/reset-password"
+                                className="text-text-secondary hover:text-text-primary transition-colors"
+                            >
+                                Forgot password?
+                            </Link>
+                            <Link
+                                href="/signup"
+                                className="text-text-secondary hover:text-text-primary transition-colors"
+                            >
+                                Create account
+                            </Link>
                         </div>
                     )}
 

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Key, Copy, Plus, Trash2, AlertTriangle } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import { APP_VERSION, LAST_UPDATED, shortVersionCode, VERSION_CODE } from '@/lib/version';
 import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
 import { Card } from '@/components/atoms/Card';
@@ -218,6 +219,13 @@ export default function SettingsPage() {
   }'`}</code>
                 </pre>
             </Card>
+
+            <div className="mt-10 flex items-center justify-center text-xs text-text-muted">
+                <p>
+                    Version {APP_VERSION} ({shortVersionCode(VERSION_CODE)})
+                    {LAST_UPDATED ? ` | Updated ${formatDate(LAST_UPDATED)}` : ''}
+                </p>
+            </div>
         </div>
     );
 }

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Project } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -37,7 +38,13 @@ export function Sidebar({
             {/* Logo */}
             <div className="p-6 border-b border-border-subtle">
                 <Link href="/" className="flex items-center gap-2">
-                    <img src="/logo.png" alt="IdeaDump Logo" className="w-6 h-6 object-contain" />
+                    <Image
+                        src="/logo.png"
+                        alt="IdeaDump Logo"
+                        width={24}
+                        height={24}
+                        className="w-6 h-6 object-contain"
+                    />
                     <span className="font-bold text-xl font-heading text-text-primary">
                         IdeaDump
                     </span>
@@ -56,7 +63,7 @@ export function Sidebar({
                             variant="ghost"
                             className={cn(
                                 "w-full justify-start",
-                                pathname === '/'
+                                pathname === '/' || pathname === '/dashboard'
                                     ? "bg-accent-rose/10 text-accent-rose hover:bg-accent-rose/20 hover:text-accent-rose"
                                     : "text-text-secondary hover:text-text-primary"
                             )}
@@ -84,13 +91,16 @@ export function Sidebar({
                         <div className="pl-4 space-y-1 pt-1">
                             <div className="px-2 mb-2">
                                 <div className="relative">
-                                    <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
-                                    <input
+                                    <Search
+                                        size={12}
+                                        className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted"
+                                    />
+                                    <Input
                                         type="text"
                                         placeholder="Find..."
                                         value={projectSearch}
                                         onChange={(e) => setProjectSearch(e.target.value)}
-                                        className="w-full pl-7 pr-2 py-1 text-xs bg-bg-base border border-border-subtle rounded text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-rose"
+                                        className="w-full pl-7 pr-2 py-1 text-xs h-7 bg-bg-base border border-border-subtle rounded text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-rose"
                                     />
                                 </div>
                             </div>

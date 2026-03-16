@@ -29,6 +29,9 @@ npm install
 1. Create a project at [supabase.com](https://supabase.com)
 2. Run the SQL schema in the SQL Editor (see `schema.sql` below)
 3. Copy your project URL and keys
+4. In **Authentication → URL Configuration**, set your Site URL and add redirect URLs for:
+   - `http://localhost:3000/auth/callback` (local dev)
+   - `https://YOUR_DOMAIN/auth/callback` (production)
 
 ### 3. Configure Environment
 
@@ -47,6 +50,21 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000)
+
+### Windows note (Git Bash)
+
+If `npm` isn’t available in PowerShell (common in some locked-down environments), run build/lint via Git Bash using:
+
+```powershell
+.\scripts\npm-gitbash.ps1 run lint
+.\scripts\npm-gitbash.ps1 run build
+```
+
+## Versioning
+
+- `APP_VERSION` (shown in Settings) comes from `package.json` `version`. Increment it when you intentionally ship a release.
+- `VERSION_CODE` (shown in Settings) is the per-deploy identifier (commit SHA on Vercel via `VERCEL_GIT_COMMIT_SHA`, or set `GIT_COMMIT_SHA` elsewhere).
+- `LAST_UPDATED` (shown in Settings) defaults to build time (or set `BUILD_TIME`).
 
 ## Database Schema
 

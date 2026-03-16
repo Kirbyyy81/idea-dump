@@ -7,9 +7,10 @@ import { LogEntryCard } from '@/components/organisms/LogEntryCard';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { DailyLogEntry, DailyLogContent, Project } from '@/lib/types';
-import { Loader2, Plus, Download, RefreshCw, Calendar } from 'lucide-react';
+import { Plus, Download, RefreshCw, Calendar } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { useAlert } from '@/lib/contexts/AlertContext';
+import { PageLoader } from '@/components/atoms/Loader';
 
 export default function LogsPage() {
     const [logs, setLogs] = useState<DailyLogEntry[]>([]);
@@ -176,11 +177,7 @@ export default function LogsPage() {
     const sortedDates = Object.keys(groupedLogs).sort((a, b) => b.localeCompare(a));
 
     if (isLoading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-bg-base">
-                <Loader2 size={32} className="animate-spin text-accent-rose" />
-            </div>
-        );
+        return <PageLoader />;
     }
 
     return (
@@ -193,6 +190,35 @@ export default function LogsPage() {
                     <h1 className="text-3xl font-heading font-medium">Weekly Productivity Log</h1>
 
                     <div className="flex items-center gap-3">
+                        {/* Export Controls */}
+                        <div className="flex items-center gap-2 bg-bg-elevated px-3 py-1.5 rounded-lg border border-border-subtle">
+                            <Calendar size={16} className="text-text-muted" />
+                            <input
+                                type="date"
+                                value={exportFrom}
+                                onChange={(e) => setExportFrom(e.target.value)}
+                                className="bg-transparent text-sm text-text-primary border-none outline-none w-28"
+                                title="Export from date"
+                            />
+                            <span className="text-text-muted text-sm">→</span>
+                            <input
+                                type="date"
+                                value={exportTo}
+                                onChange={(e) => setExportTo(e.target.value)}
+                                className="bg-transparent text-sm text-text-primary border-none outline-none w-28"
+                                title="Export to date"
+                            />
+                            <Button
+                                variant="ghost"
+                                onClick={handleExport}
+                                isLoading={isExporting}
+                                icon={<Download size={16} />}
+                                title="Export to Markdown"
+                            >
+                                Export
+                            </Button>
+                        </div>
+
                         <Button variant="ghost" onClick={handleRefresh} icon={<RefreshCw size={18} />}>
                             Refresh
                         </Button>
@@ -209,35 +235,6 @@ export default function LogsPage() {
                     </div>
                 )}
 
-                {/* Export Section */}
-                <Card className="p-4 mb-6">
-                    <div className="flex items-center gap-4">
-                        <Calendar size={20} className="text-text-muted" />
-                        <span className="text-sm font-medium">Export Range:</span>
-                        <input
-                            type="date"
-                            value={exportFrom}
-                            onChange={(e) => setExportFrom(e.target.value)}
-                            className="input py-1 px-2 text-sm w-36"
-                        />
-                        <span className="text-text-muted">to</span>
-                        <input
-                            type="date"
-                            value={exportTo}
-                            onChange={(e) => setExportTo(e.target.value)}
-                            className="input py-1 px-2 text-sm w-36"
-                        />
-                        <Button
-                            variant="secondary"
-                            onClick={handleExport}
-                            isLoading={isExporting}
-                            icon={<Download size={16} />}
-                        >
-                            Export Markdown
-                        </Button>
-                    </div>
-                </Card>
-
                 {/* New Log Form */}
                 {showNewForm && (
                     <LogForm
@@ -251,7 +248,7 @@ export default function LogsPage() {
                 {sortedDates.length === 0 ? (
                     <Card className="p-12 text-center">
                         <p className="text-text-muted mb-2">No log entries yet.</p>
-                        <p className="text-text-muted">Click "New Entry" to add your first log.</p>
+                        <p className="text-text-muted">Click &quot;New Entry&quot; to add your first log.</p>
                     </Card>
                 ) : (
                     <div className="space-y-6">
