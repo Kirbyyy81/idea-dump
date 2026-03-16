@@ -4,8 +4,11 @@ import { NextResponse, type NextRequest } from 'next/server';
 export async function GET(request: NextRequest) {
     const { searchParams, origin } = new URL(request.url);
     const code = searchParams.get('code');
-    const next = searchParams.get('next') ?? '/';
+    const tokenHash = searchParams.get('token_hash') ?? searchParams.get('token');
     const authType = searchParams.get('type');
+
+    const requestedNext = searchParams.get('next') ?? '/';
+    const nextPath = requestedNext.startsWith('/') ? requestedNext : '/';
 
     let errorMsg = 'Could not authenticate user';
 
@@ -21,11 +24,11 @@ export async function GET(request: NextRequest) {
         );
     }
 
-    if (code) {
+    if (code || (tokenHash && authType)) {
         const forwardedHost = request.headers.get('x-forwarded-host');
         const isLocalEnv = process.env.NODE_ENV === 'development';
 
-        const redirectPath = authType === 'recovery' ? '/reset-password' : next;
+        const redirectPath = authType === 'recovery' ? '/reset-password' : nextPath;
         const redirectUrl = isLocalEnv
             ? `${origin}${redirectPath}`
             : forwardedHost
@@ -50,7 +53,12 @@ export async function GET(request: NextRequest) {
             }
         );
 
-        const { error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
+        const { error: sessionError } = code
+            ? await supabase.auth.exchangeCodeForSession(code)
+            : await supabase.auth.verifyOtp({
+                type: authType as any,
+                token_hash: tokenHash as string,
+            });
 
         if (!sessionError) {
             return response;
@@ -58,7 +66,7 @@ export async function GET(request: NextRequest) {
 
         errorMsg = sessionError.message;
     } else {
-        errorMsg = 'No code provided';
+        errorMsg = 'No auth parameters provided';
     }
 
     // Return the user to an error page with instructions
