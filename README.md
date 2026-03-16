@@ -51,6 +51,12 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000)
 
+## Versioning
+
+- `APP_VERSION` (shown in Settings) comes from `package.json` `version`. Increment it when you intentionally ship a release.
+- `VERSION_CODE` (shown in Settings) is the per-deploy identifier (commit SHA on Vercel via `VERCEL_GIT_COMMIT_SHA`, or set `GIT_COMMIT_SHA` elsewhere).
+- `LAST_UPDATED` (shown in Settings) defaults to build time (or set `BUILD_TIME`).
+
 ## Database Schema
 
 ```sql
