@@ -7,6 +7,7 @@ import { Plus, Send, StickyNote } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
 import { Textarea } from '@/components/atoms/Textarea';
 import { Card } from '@/components/atoms/Card';
+import { MarkdownRenderer } from '@/components/molecules/MarkdownRenderer';
 
 interface NotesPanelProps {
     notes: Note[];
@@ -77,9 +78,9 @@ export function NotesPanel({ notes, onAddNote }: NotesPanelProps) {
                 ) : (
                     notes.map((note) => (
                         <Card key={note.id} className="p-4 bg-white/50 hover:bg-white text-sm">
-                            <p className="whitespace-pre-wrap text-text-secondary mb-2">
-                                {note.content}
-                            </p>
+                            <div className="text-text-secondary mb-2">
+                                <MarkdownRenderer content={note.content} />
+                            </div>
                             <p className="text-xs text-text-muted">
                                 {formatRelativeTime(note.created_at)}
                             </p>
