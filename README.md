@@ -51,6 +51,15 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000)
 
+### Windows note (Git Bash)
+
+If `npm` isn’t available in PowerShell (common in some locked-down environments), run build/lint via Git Bash using:
+
+```powershell
+.\scripts\npm-gitbash.ps1 run lint
+.\scripts\npm-gitbash.ps1 run build
+```
+
 ## Versioning
 
 - `APP_VERSION` (shown in Settings) comes from `package.json` `version`. Increment it when you intentionally ship a release.
