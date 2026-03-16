@@ -36,7 +36,7 @@ export function Sidebar({
         >
             {/* Logo */}
             <div className="p-6 border-b border-border-subtle">
-                <Link href="/dashboard" className="flex items-center gap-2">
+                <Link href="/" className="flex items-center gap-2">
                     <img src="/logo.png" alt="IdeaDump Logo" className="w-6 h-6 object-contain" />
                     <span className="font-bold text-xl font-heading text-text-primary">
                         IdeaDump
@@ -51,12 +51,12 @@ export function Sidebar({
                     onMouseEnter={() => setIsProjectsOpen(true)}
                     onMouseLeave={() => setIsProjectsOpen(false)}
                 >
-                    <Link href="/dashboard" className="block relative z-10">
+                    <Link href="/" className="block relative z-10">
                         <Button
                             variant="ghost"
                             className={cn(
                                 "w-full justify-start",
-                                pathname === '/dashboard'
+                                pathname === '/'
                                     ? "bg-accent-rose/10 text-accent-rose hover:bg-accent-rose/20 hover:text-accent-rose"
                                     : "text-text-secondary hover:text-text-primary"
                             )}
