@@ -14,13 +14,13 @@ import {
     ArrowLeft,
     ExternalLink,
     Archive,
-    Check,
     Pencil,
     FileText,
+    Rocket,
     Trash2
 } from 'lucide-react';
 import { PageLoader } from '@/components/atoms/Loader';
-import { cn, formatDate } from '@/lib/utils';
+import { formatDate } from '@/lib/utils';
 
 export default function ProjectPage() {
     const params = useParams();
@@ -105,7 +105,6 @@ export default function ProjectPage() {
     const handleToggleComplete = () => {
         handleUpdateProject({ completed: !project?.completed });
     };
-
     const handleToggleArchive = () => {
         handleUpdateProject({ archived: !project?.archived });
     };
@@ -192,7 +191,7 @@ export default function ProjectPage() {
                 )}
 
                 {/* Meta Info */}
-                <Card className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 !border-border-subtle bg-bg-elevated">
+                <Card className="grid grid-cols-2 md:grid-cols-5 gap-4 p-4 !border-border-subtle bg-bg-elevated">
                     <div>
                         <PriorityBadge priority={project.priority} />
                     </div>
@@ -226,23 +225,25 @@ export default function ProjectPage() {
                             <p className="text-text-muted">Not linked</p>
                         )}
                     </div>
+                    <div>
+                        <p className="text-xs uppercase mb-1 text-text-muted">
+                            Deploy
+                        </p>
+                        {project.deploy_url ? (
+                            <a
+                                href={project.deploy_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 text-accent-sage hover:underline"
+                            >
+                                <Rocket size={14} />
+                                View App
+                            </a>
+                        ) : (
+                            <p className="text-text-muted">Not deployed</p>
+                        )}
+                    </div>
                 </Card>
-
-                {/* Complete Toggle */}
-                <Button
-                    onClick={handleToggleComplete}
-                    disabled={isUpdating}
-                    variant="ghost"
-                    className={cn(
-                        "mt-4 w-full md:w-auto justify-start",
-                        project.completed
-                            ? 'bg-success-bg text-status-complete hover:bg-success-bg/80'
-                            : 'bg-bg-hover text-text-secondary hover:bg-bg-subtle'
-                    )}
-                    icon={<Check size={18} />}
-                >
-                    {project.completed ? 'Marked as Complete' : 'Mark as Complete'}
-                </Button>
             </div>
 
             {/* PRD Content */}

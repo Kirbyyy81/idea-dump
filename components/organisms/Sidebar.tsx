@@ -11,7 +11,8 @@ import {
     Settings,
     Search,
     ChevronRight,
-    ClipboardList
+    ClipboardList,
+    BookOpen
 } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
@@ -149,6 +150,21 @@ export function Sidebar({
                         icon={<ClipboardList size={18} />}
                     >
                         Weekly Logs
+                    </Button>
+                </Link>
+
+                <Link href="/docs" className="block">
+                    <Button
+                        variant="ghost"
+                        className={cn(
+                            "w-full justify-start",
+                            pathname === '/docs'
+                                ? "bg-bg-hover text-text-primary"
+                                : "text-text-secondary hover:text-text-primary"
+                        )}
+                        icon={<BookOpen size={18} />}
+                    >
+                        API Docs
                     </Button>
                 </Link>
             </nav>

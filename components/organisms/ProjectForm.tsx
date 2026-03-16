@@ -6,6 +6,7 @@ import { CreateProjectInput, Priority } from '@/lib/types';
 import { Button } from '@/components/atoms/Button';
 import { FormField } from '@/components/molecules/FormField';
 import { Card } from '@/components/atoms/Card';
+import { cn } from '@/lib/utils';
 
 interface ProjectFormProps {
     initialData?: CreateProjectInput;
@@ -26,25 +27,43 @@ export function ProjectForm({
     const [description, setDescription] = useState(initialData?.description || '');
     const [prdContent, setPrdContent] = useState(initialData?.prd_content || '');
     const [githubUrl, setGithubUrl] = useState(initialData?.github_url || '');
+    const [deployUrl, setDeployUrl] = useState(initialData?.deploy_url || '');
     const [priority, setPriority] = useState<Priority>(initialData?.priority || 'medium');
     const [errors, setErrors] = useState<Record<string, string>>({});
+    const [isDragOver, setIsDragOver] = useState(false);
+
+    const extractTitle = (content: string, fileName: string) => {
+        const match = content.match(/^#\s+(.+)$/m);
+        if (match?.[1]) return match[1].trim();
+        return fileName.replace(/\.md$/i, '');
+    };
+
+    const loadMarkdownFile = async (file: File) => {
+        const content = await file.text();
+        setPrdContent(content);
+
+        if (!title.trim()) {
+            setTitle(extractTitle(content, file.name));
+        }
+    };
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        loadMarkdownFile(file);
+    };
 
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const content = event.target?.result as string;
-            setPrdContent(content);
+    const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        setIsDragOver(false);
 
-            // Auto-fill title from filename if empty
-            if (!title) {
-                const fileName = file.name.replace(/\.md$/, '');
-                setTitle(fileName);
-            }
-        };
-        reader.readAsText(file);
+        const file = e.dataTransfer.files?.[0];
+        if (!file) return;
+        if (!file.name.toLowerCase().endsWith('.md') && !file.name.toLowerCase().endsWith('.markdown')) {
+            return;
+        }
+
+        await loadMarkdownFile(file);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -65,6 +84,7 @@ export function ProjectForm({
             description: description.trim() || undefined,
             prd_content: prdContent.trim() || undefined,
             github_url: githubUrl.trim() || undefined,
+            deploy_url: deployUrl.trim() || undefined,
             priority,
         });
     };
@@ -107,15 +127,39 @@ export function ProjectForm({
                             />
                         </label>
                     </div>
-                    <FormField // Using FormField for textarea via multiline prop
-                        label="" // Label is handled above custom
-                        multiline
-                        value={prdContent}
-                        onChange={(e) => setPrdContent(e.target.value)}
-                        placeholder="# Project PRD\n\nPaste or type your PRD content here..."
-                        className="font-mono text-sm"
-                        rows={12}
-                    />
+                    <div
+                        onDragEnter={(e) => {
+                            e.preventDefault();
+                            setIsDragOver(true);
+                        }}
+                        onDragOver={(e) => {
+                            e.preventDefault();
+                            setIsDragOver(true);
+                        }}
+                        onDragLeave={() => setIsDragOver(false)}
+                        onDrop={handleDrop}
+                        className={cn(
+                            "rounded-lg transition-colors",
+                            isDragOver && "ring-2 ring-accent-rose/40 bg-bg-subtle"
+                        )}
+                    >
+                        <div className={cn("rounded-lg", isDragOver && "border border-dashed border-accent-rose/50")}>
+                            <FormField // Using FormField for textarea via multiline prop
+                                label="" // Label is handled above custom
+                                multiline
+                                value={prdContent}
+                                onChange={(e) => setPrdContent(e.target.value)}
+                                placeholder="# Project PRD\n\nPaste, type, or drag & drop a .md file here..."
+                                className="font-mono text-sm"
+                                rows={12}
+                            />
+                        </div>
+                        {isDragOver && (
+                            <div className="pointer-events-none -mt-3 pb-3 text-center text-xs text-text-muted">
+                                Drop to import markdown
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* GitHub URL */}
@@ -125,6 +169,15 @@ export function ProjectForm({
                     value={githubUrl}
                     onChange={(e) => setGithubUrl(e.target.value)}
                     placeholder="https://github.com/user/repo"
+                />
+
+                {/* Deploy URL */}
+                <FormField
+                    label="Deploy URL"
+                    type="url"
+                    value={deployUrl}
+                    onChange={(e) => setDeployUrl(e.target.value)}
+                    placeholder="https://your-app.vercel.app"
                 />
 
                 {/* Priority */}

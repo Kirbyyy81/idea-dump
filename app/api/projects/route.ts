@@ -33,6 +33,7 @@ A Notion-inspired, deployable web app to centralize, track, and manage all your 
 | Hosting | Vercel |
 `,
     github_url: 'https://github.com/user/ideadump',
+    deploy_url: 'https://ideadump.example.com',
     priority: 'high',
     completed: false,
     archived: false,
@@ -104,7 +105,7 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json();
-        const { title, description, prd_content, github_url, priority } = body;
+        const { title, description, prd_content, github_url, deploy_url, priority } = body;
 
         if (!title) {
             return NextResponse.json({ error: 'Title is required' }, { status: 400 });
@@ -118,6 +119,7 @@ export async function POST(request: NextRequest) {
                 description: description || null,
                 prd_content: prd_content || null,
                 github_url: github_url || null,
+                deploy_url: deploy_url || null,
                 priority: priority || 'medium',
             })
             .select() // Assuming tags column might still exist in DB but we ignore it
