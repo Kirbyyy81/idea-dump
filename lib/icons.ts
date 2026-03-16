@@ -1,4 +1,4 @@
-import { Lightbulb, FileText, Code, CheckCircle, Archive, LucideIcon } from 'lucide-react';
+import { Lightbulb, FileText, Code, CheckCircle, Archive, Rocket, LucideIcon } from 'lucide-react';
 
 // Map icon names from statusConfig to actual Lucide components
 export const iconMap: Record<string, LucideIcon> = {
@@ -7,4 +7,5 @@ export const iconMap: Record<string, LucideIcon> = {
     Code,
     CheckCircle,
     Archive,
+    Rocket,
 };

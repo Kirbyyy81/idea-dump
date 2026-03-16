@@ -12,11 +12,10 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
     const IconComponent = iconMap[config.icon];
 
     // Map status to badge variant
-    const variantMap: Record<Status, 'idea' | 'prd' | 'dev' | 'complete' | 'archived'> = {
-        idea: 'idea',
-        prd: 'prd',
-        in_development: 'dev',
-        completed: 'complete',
+    const variantMap: Record<Status, 'idea' | 'dev' | 'deployed' | 'archived'> = {
+        ideation: 'idea',
+        development: 'dev',
+        deployed: 'deployed',
         archived: 'archived',
     };
 
