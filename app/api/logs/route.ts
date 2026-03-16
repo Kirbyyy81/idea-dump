@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getClientForIdentity } from '@/lib/supabase/getClient';
 import { resolveIdentity, AuthError } from '@/lib/auth/resolveIdentity';
 import { CreateDailyLogInput } from '@/lib/types';
+import { normalizeDailyLogEntry } from '@/lib/dailyLogs';
 
 // Pagination constants
 const DEFAULT_LIMIT = 200;
@@ -50,10 +51,12 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Database error', message: error.message }, { status: 500 });
         }
 
+        const normalized = (data || []).map(normalizeDailyLogEntry);
+
         // Determine next cursor
         const nextCursor = data && data.length === limit ? data[data.length - 1].created_at : null;
 
-        return NextResponse.json({ data, next_cursor: nextCursor });
+        return NextResponse.json({ data: normalized, next_cursor: nextCursor });
     } catch (err) {
         if (err instanceof AuthError) {
             // Return empty data for unauthenticated users (demo mode)
@@ -97,7 +100,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Database error', message: error.message }, { status: 500 });
         }
 
-        return NextResponse.json({ data }, { status: 201 });
+        return NextResponse.json({ data: normalizeDailyLogEntry(data) }, { status: 201 });
     } catch (err) {
         if (err instanceof AuthError) {
             return NextResponse.json({ error: 'Unauthorized', message: err.message }, { status: err.statusCode });

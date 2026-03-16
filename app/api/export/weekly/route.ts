@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { resolveIdentity, AuthError } from '@/lib/auth/resolveIdentity';
 import { DailyLogEntry } from '@/lib/types';
+import { normalizeDailyLogEntry } from '@/lib/dailyLogs';
 
 interface ExportRequest {
     from: string;
@@ -46,7 +47,8 @@ export async function POST(request: NextRequest) {
         }
 
         // Generate markdown table
-        const markdown = generateMarkdownTable(logs || []);
+        const normalized = (logs || []).map(normalizeDailyLogEntry);
+        const markdown = generateMarkdownTable(normalized);
 
         return NextResponse.json({ markdown });
     } catch (err) {
@@ -66,7 +68,7 @@ function generateMarkdownTable(logs: DailyLogEntry[]): string {
     const separator = '|------------|------------------|-------------------------------------|----------------|';
 
     const rows = logs.map(log => {
-        const content = log.content;
+        const content = log.content || ({ date: log.effective_date } as DailyLogEntry['content']);
         const dateDay = content.day ? `${content.date} / ${content.day}` : content.date;
         const task = content.operation_task || '';
         const tools = content.tools_used || '';
