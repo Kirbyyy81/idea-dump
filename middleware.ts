@@ -15,13 +15,9 @@ export async function middleware(request: NextRequest) {
                     return request.cookies.getAll();
                 },
                 setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
-                    cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-                    supabaseResponse = NextResponse.next({
-                        request,
+                    cookiesToSet.forEach(({ name, value, options }) => {
+                        supabaseResponse.cookies.set(name, value, options);
                     });
-                    cookiesToSet.forEach(({ name, value, options }) =>
-                        supabaseResponse.cookies.set(name, value, options)
-                    );
                 },
             },
         }
@@ -42,14 +38,22 @@ export async function middleware(request: NextRequest) {
     if (!isPublicPath && !user) {
         const url = request.nextUrl.clone();
         url.pathname = '/login';
-        return NextResponse.redirect(url);
+        const redirectResponse = NextResponse.redirect(url);
+        supabaseResponse.cookies.getAll().forEach((cookie) => {
+            redirectResponse.cookies.set(cookie);
+        });
+        return redirectResponse;
     }
 
     // If logged in and trying to access login page, redirect to dashboard
     if (user && request.nextUrl.pathname === '/login') {
         const url = request.nextUrl.clone();
         url.pathname = '/';
-        return NextResponse.redirect(url);
+        const redirectResponse = NextResponse.redirect(url);
+        supabaseResponse.cookies.getAll().forEach((cookie) => {
+            redirectResponse.cookies.set(cookie);
+        });
+        return redirectResponse;
     }
 
     return supabaseResponse;

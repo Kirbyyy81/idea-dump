@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { Mail, ArrowLeft, Loader2, CheckCircle, Lock } from 'lucide-react';
@@ -14,7 +14,15 @@ export default function ResetPasswordPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [message, setMessage] = useState<string | null>(null);
+    const searchParams = useSearchParams();
     const router = useRouter();
+
+    useEffect(() => {
+        const queryError = searchParams.get('error');
+        if (queryError) {
+            setError(queryError);
+        }
+    }, [searchParams]);
 
     useEffect(() => {
         const checkSession = async () => {

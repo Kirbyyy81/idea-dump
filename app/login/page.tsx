@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { Mail, ArrowLeft, Loader2, CheckCircle, Lock } from 'lucide-react';
@@ -15,7 +15,15 @@ export default function LoginPage() {
     const [isVerifying, setIsVerifying] = useState(false);
     const [isSent, setIsSent] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const searchParams = useSearchParams();
     const router = useRouter();
+
+    useEffect(() => {
+        const queryError = searchParams.get('error');
+        if (queryError) {
+            setError(queryError);
+        }
+    }, [searchParams]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

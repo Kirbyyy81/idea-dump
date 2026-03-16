@@ -15,7 +15,10 @@ export async function GET(request: NextRequest) {
     const errorCode = searchParams.get('error_code');
 
     if (error) {
-        return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(errorDescription || error)}&code=${errorCode}`);
+        const errorTarget = authType === 'recovery' ? '/reset-password' : '/login';
+        return NextResponse.redirect(
+            `${origin}${errorTarget}?error=${encodeURIComponent(errorDescription || error)}&code=${errorCode}`
+        );
     }
 
     if (code) {
@@ -59,5 +62,6 @@ export async function GET(request: NextRequest) {
     }
 
     // Return the user to an error page with instructions
-    return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(errorMsg)}`);
+    const errorTarget = authType === 'recovery' ? '/reset-password' : '/login';
+    return NextResponse.redirect(`${origin}${errorTarget}?error=${encodeURIComponent(errorMsg)}`);
 }
