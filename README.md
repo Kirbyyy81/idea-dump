@@ -29,6 +29,9 @@ npm install
 1. Create a project at [supabase.com](https://supabase.com)
 2. Run the SQL schema in the SQL Editor (see `schema.sql` below)
 3. Copy your project URL and keys
+4. In **Authentication → URL Configuration**, set your Site URL and add redirect URLs for:
+   - `http://localhost:3000/auth/callback` (local dev)
+   - `https://YOUR_DOMAIN/auth/callback` (production)
 
 ### 3. Configure Environment
 
