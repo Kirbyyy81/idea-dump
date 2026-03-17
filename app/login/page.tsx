@@ -23,6 +23,56 @@ export default function LoginPage() {
         if (queryError) setError(queryError);
     }, []);
 
+    // Fallback: if Supabase redirects to /login?code=... (misconfigured redirect URL allowlist),
+    // complete the session exchange here and then navigate to next.
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        const params = new URLSearchParams(window.location.search);
+        const urlCode = params.get('code');
+        const tokenHash = params.get('token_hash') ?? params.get('token');
+        const type = params.get('type');
+        const requestedNext = params.get('next') ?? '/';
+        const nextPath = requestedNext.startsWith('/') ? requestedNext : '/';
+
+        if (!urlCode && !(tokenHash && type)) return;
+
+        let cancelled = false;
+
+        async function completeAuth() {
+            setIsVerifying(true);
+            setError(null);
+            try {
+                const supabase = createClient();
+                const { error } = urlCode
+                    ? await supabase.auth.exchangeCodeForSession(urlCode)
+                    : await supabase.auth.verifyOtp({
+                        type: type as any,
+                        token_hash: tokenHash as string,
+                    });
+
+                if (cancelled) return;
+
+                if (error) {
+                    setError(error.message);
+                    return;
+                }
+
+                router.replace(nextPath);
+            } catch {
+                if (!cancelled) setError('An unexpected error occurred');
+            } finally {
+                if (!cancelled) setIsVerifying(false);
+            }
+        }
+
+        completeAuth();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [router]);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
