@@ -12,7 +12,8 @@ import {
     Search,
     ChevronRight,
     ClipboardList,
-    BookOpen
+    BookOpen,
+    FileText
 } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
@@ -150,6 +151,21 @@ export function Sidebar({
                         icon={<ClipboardList size={18} />}
                     >
                         Weekly Logs
+                    </Button>
+                </Link>
+
+                <Link href="/log-viewer" className="block">
+                    <Button
+                        variant="ghost"
+                        className={cn(
+                            "w-full justify-start",
+                            pathname === '/log-viewer'
+                                ? "bg-accent-rose/10 text-accent-rose hover:bg-accent-rose/20 hover:text-accent-rose"
+                                : "text-text-secondary hover:text-text-primary"
+                        )}
+                        icon={<FileText size={18} />}
+                    >
+                        Log Viewer
                     </Button>
                 </Link>
 
