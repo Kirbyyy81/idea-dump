@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { Mail, ArrowLeft, Loader2, CheckCircle, Lock } from 'lucide-react';
@@ -15,7 +14,11 @@ export default function LoginPage() {
     const [isVerifying, setIsVerifying] = useState(false);
     const [isSent, setIsSent] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const router = useRouter();
+
+    const redirectToApp = (path: string) => {
+        if (typeof window === 'undefined') return;
+        window.location.assign(path);
+    };
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
@@ -58,7 +61,7 @@ export default function LoginPage() {
                     return;
                 }
 
-                router.replace(nextPath);
+                redirectToApp(nextPath);
             } catch {
                 if (!cancelled) setError('An unexpected error occurred');
             } finally {
@@ -71,7 +74,7 @@ export default function LoginPage() {
         return () => {
             cancelled = true;
         };
-    }, [router]);
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -95,7 +98,7 @@ export default function LoginPage() {
                     setIsSent(true);
                 }
             } else {
-                const { error } = await supabase.auth.signInWithPassword({
+                const { data, error } = await supabase.auth.signInWithPassword({
                     email,
                     password,
                 });
@@ -103,8 +106,12 @@ export default function LoginPage() {
                 if (error) {
                     setError(error.message);
                 } else {
-                    // Successful password login
-                    router.push('/');
+                    if (!data.session) {
+                        setError('Login succeeded but no session was returned');
+                        return;
+                    }
+
+                    redirectToApp('/');
                 }
             }
         } catch {
@@ -130,7 +137,7 @@ export default function LoginPage() {
             if (error) {
                 setError(error.message);
             } else {
-                router.push('/');
+                redirectToApp('/');
             }
         } catch {
             setError('An unexpected error occurred');
