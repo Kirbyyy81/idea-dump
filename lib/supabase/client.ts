@@ -1,17 +1,19 @@
 import { createBrowserClient, type CookieOptions } from '@supabase/ssr';
 
-const parseCookies = (): { name: string; value: string }[] => {
+const getCookie = (name: string): string | undefined => {
     if (typeof document === 'undefined' || !document.cookie) {
-        return [];
+        return undefined;
     }
 
-    return document.cookie.split('; ').flatMap((part) => {
-        const [rawName, ...rest] = part.split('=');
-        if (!rawName) {
-            return [];
-        }
-        return [{ name: rawName, value: decodeURIComponent(rest.join('=')) }];
-    });
+    const match = document.cookie
+        .split('; ')
+        .find((part) => part.startsWith(`${name}=`));
+
+    if (!match) {
+        return undefined;
+    }
+
+    return decodeURIComponent(match.slice(name.length + 1));
 };
 
 const applyCookie = (name: string, value: string, options?: CookieOptions) => {
@@ -53,6 +55,13 @@ const applyCookie = (name: string, value: string, options?: CookieOptions) => {
     document.cookie = cookie;
 };
 
+const removeCookie = (name: string, options?: CookieOptions) => {
+    applyCookie(name, '', {
+        ...options,
+        maxAge: 0,
+    });
+};
+
 export function createClient() {
     return createBrowserClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -62,13 +71,14 @@ export function createClient() {
                 flowType: 'pkce',
             },
             cookies: {
-                getAll() {
-                    return parseCookies();
+                get(name) {
+                    return getCookie(name);
                 },
-                setAll(cookiesToSet: { name: string; value: string; options?: CookieOptions }[]) {
-                    cookiesToSet.forEach(({ name, value, options }) => {
-                        applyCookie(name, value, options);
-                    });
+                set(name, value, options) {
+                    applyCookie(name, value, options);
+                },
+                remove(name, options) {
+                    removeCookie(name, options);
                 },
             },
         }

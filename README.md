@@ -66,6 +66,12 @@ If `npm` isn’t available in PowerShell (common in some locked-down environment
 - `VERSION_CODE` (shown in Settings) is the per-deploy identifier (commit SHA on Vercel via `VERCEL_GIT_COMMIT_SHA`, or set `GIT_COMMIT_SHA` elsewhere).
 - `LAST_UPDATED` (shown in Settings) defaults to build time (or set `BUILD_TIME`).
 
+## GitHub Automation
+
+- `.github/workflows/auto-pr-from-main.yml` runs on every push to `main`.
+- Set the repository variable `AUTO_PR_BASE_BRANCH` to the branch that should receive the PR.
+- The workflow pushes the latest `main` commit to `codex/auto-pr-main` and opens or reuses a PR from that branch into `AUTO_PR_BASE_BRANCH`.
+
 ## Database Schema
 
 ```sql
