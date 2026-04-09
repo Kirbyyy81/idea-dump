@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { buildCachedProfile, clearCachedProfile, setCachedProfile } from '@/lib/auth/profileCache';
 import { Mail, ArrowLeft, Loader2, CheckCircle, Lock } from 'lucide-react';
 
 export default function LoginPage() {
@@ -36,7 +37,11 @@ export default function LoginPage() {
         const tokenHash = params.get('token_hash') ?? params.get('token');
         const type = params.get('type');
         const requestedNext = params.get('next') ?? '/';
-        const nextPath = requestedNext.startsWith('/') ? requestedNext : '/';
+        const nextPath = type === 'recovery'
+            ? '/reset-password'
+            : requestedNext.startsWith('/')
+                ? requestedNext
+                : '/';
 
         if (!urlCode && !(tokenHash && type)) return;
 
@@ -83,6 +88,7 @@ export default function LoginPage() {
 
         try {
             const supabase = createClient();
+            clearCachedProfile();
 
             if (authMethod === 'otp') {
                 const { error } = await supabase.auth.signInWithOtp({
@@ -111,6 +117,7 @@ export default function LoginPage() {
                         return;
                     }
 
+                    setCachedProfile(buildCachedProfile(data.session.user));
                     redirectToApp('/');
                 }
             }
@@ -137,6 +144,10 @@ export default function LoginPage() {
             if (error) {
                 setError(error.message);
             } else {
+                const { data } = await supabase.auth.getUser();
+                if (data.user) {
+                    setCachedProfile(buildCachedProfile(data.user));
+                }
                 redirectToApp('/');
             }
         } catch {
