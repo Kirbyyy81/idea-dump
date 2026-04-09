@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getClientForIdentity } from '@/lib/supabase/getClient';
 import { resolveIdentity, AuthError } from '@/lib/auth/resolveIdentity';
+import { getAccessibleLogUserIds, getLogClientForIdentity } from '@/lib/logs/access';
 import { CreateDailyLogInput } from '@/lib/types';
 
 // Pagination constants
@@ -12,7 +12,8 @@ const DEFAULT_SORT = 'created_at.desc';
 export async function GET(request: NextRequest) {
     try {
         const identity = await resolveIdentity(request);
-        const supabase = await getClientForIdentity(identity);
+        const supabase = await getLogClientForIdentity(identity);
+        const accessibleUserIds = getAccessibleLogUserIds(identity);
 
         const { searchParams } = new URL(request.url);
         const from = searchParams.get('from');
@@ -24,8 +25,11 @@ export async function GET(request: NextRequest) {
         let query = supabase
             .from('daily_logs')
             .select('*')
-            .eq('user_id', identity.user_id)
             .limit(limit);
+
+        query = accessibleUserIds.length === 1
+            ? query.eq('user_id', accessibleUserIds[0])
+            : query.in('user_id', accessibleUserIds);
 
         // Apply date filters
         if (from) {
@@ -67,7 +71,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         const identity = await resolveIdentity(request);
-        const supabase = await getClientForIdentity(identity);
+        const supabase = await getLogClientForIdentity(identity);
 
         const body: CreateDailyLogInput = await request.json();
 

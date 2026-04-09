@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getClientForIdentity } from '@/lib/supabase/getClient';
 import { resolveIdentity, AuthError, canModifyLog, canDeleteLog } from '@/lib/auth/resolveIdentity';
+import { getAccessibleLogUserIds, getLogClientForIdentity } from '@/lib/logs/access';
 import { UpdateDailyLogInput } from '@/lib/types';
 
 interface RouteParams {
@@ -13,7 +13,8 @@ interface RouteParams {
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
     try {
         const identity = await resolveIdentity(request);
-        const supabase = await getClientForIdentity(identity);
+        const supabase = await getLogClientForIdentity(identity);
+        const accessibleUserIds = getAccessibleLogUserIds(identity);
 
         const { id } = await params;
         const body: UpdateDailyLogInput = await request.json();
@@ -23,7 +24,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             .from('daily_logs')
             .select('*')
             .eq('id', id)
-            .eq('user_id', identity.user_id)
+            .in('user_id', accessibleUserIds)
             .single();
 
         if (fetchError || !existingLog) {
@@ -47,6 +48,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
                 updated_at: new Date().toISOString(),
             })
             .eq('id', id)
+            .in('user_id', accessibleUserIds)
             .select()
             .single();
 
@@ -67,7 +69,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
     try {
         const identity = await resolveIdentity(request);
-        const supabase = await getClientForIdentity(identity);
+        const supabase = await getLogClientForIdentity(identity);
+        const accessibleUserIds = getAccessibleLogUserIds(identity);
 
         const { id } = await params;
 
@@ -83,7 +86,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             .from('daily_logs')
             .delete()
             .eq('id', id)
-            .eq('user_id', identity.user_id);
+            .in('user_id', accessibleUserIds);
 
         if (error) {
             return NextResponse.json({ error: 'Database error', message: error.message }, { status: 500 });
