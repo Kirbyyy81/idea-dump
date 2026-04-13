@@ -36,6 +36,7 @@
   --status-prd: #E37083;
   --status-dev: #FCCD86;
   --status-complete: #A8BF8A;
+  --status-deployed: #A8BF8A;
   --status-archived: #9CA3AF;
 
   /* ===== SEMANTIC COLORS ===== */
@@ -199,6 +200,37 @@ h4 {
     font-size: 12px;
     font-weight: 500;
     border: 1px solid transparent;
+  }
+
+  /* Status variants */
+  .badge-idea {
+    background: var(--info-bg);
+    color: var(--status-idea);
+    border-color: var(--status-idea);
+  }
+
+  .badge-prd {
+    background: #FEF2F4;
+    color: var(--status-prd);
+    border-color: var(--status-prd);
+  }
+
+  .badge-dev {
+    background: var(--warning-bg);
+    color: var(--status-dev);
+    border-color: var(--status-dev);
+  }
+
+  .badge-complete {
+    background: var(--success-bg);
+    color: var(--status-complete);
+    border-color: var(--status-complete);
+  }
+
+  .badge-deployed {
+    background: var(--success-bg);
+    color: var(--status-deployed);
+    border-color: var(--status-deployed);
   }
 
   .input {

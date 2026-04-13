@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 import { LucideIcon } from 'lucide-react';
 
 export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
-    variant?: 'default' | 'idea' | 'prd' | 'dev' | 'complete' | 'archived';
+    variant?: 'default' | 'idea' | 'prd' | 'dev' | 'complete' | 'deployed' | 'archived';
     icon?: LucideIcon;
 }
 
@@ -15,6 +15,7 @@ export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
             prd: 'badge-prd',
             dev: 'badge-dev',
             complete: 'badge-complete',
+            deployed: 'badge-deployed',
             archived: 'bg-bg-subtle text-text-muted border-text-muted',
         };
 

@@ -33,6 +33,7 @@ export default function EditProjectPage() {
                     description: data.description || '',
                     prd_content: data.prd_content || '',
                     github_url: data.github_url || '',
+                    deploy_url: data.deploy_url || '',
                     priority: data.priority || 'medium',
                 });
             } catch (err) {

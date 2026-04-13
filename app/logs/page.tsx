@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Sidebar } from '@/components/organisms/Sidebar';
-import { LogForm, createDefaultLogContent } from '@/components/organisms/LogForm';
+import { LogForm } from '@/components/organisms/LogForm';
 import { LogEntryCard } from '@/components/organisms/LogEntryCard';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
@@ -11,6 +11,7 @@ import { Plus, Download, RefreshCw, Calendar } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { useAlert } from '@/lib/contexts/AlertContext';
 import { PageLoader } from '@/components/atoms/Loader';
+import { Input } from '@/components/atoms/Input';
 
 export default function LogsPage() {
     const [logs, setLogs] = useState<DailyLogEntry[]>([]);
@@ -25,9 +26,13 @@ export default function LogsPage() {
     // New log form
     const [showNewForm, setShowNewForm] = useState(false);
 
-    // Date range for export
+    // Filters + export date range (YYYY-MM-DD)
     const [exportFrom, setExportFrom] = useState('');
     const [exportTo, setExportTo] = useState('');
+    const [sourceFilter, setSourceFilter] = useState<'all' | 'agent' | 'human'>('all');
+    const [query, setQuery] = useState('');
+
+    const [exportMarkdown, setExportMarkdown] = useState<string>('');
 
     // Fetch logs and projects
     useEffect(() => {
@@ -140,9 +145,70 @@ export default function LogsPage() {
 
     const { showError, showSuccess } = useAlert();
 
+    const copyToClipboard = async (text: string): Promise<boolean> => {
+        try {
+            await navigator.clipboard.writeText(text);
+            return true;
+        } catch {
+            // fall through
+        }
+
+        try {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.setAttribute('readonly', 'true');
+            textarea.style.position = 'fixed';
+            textarea.style.top = '0';
+            textarea.style.left = '0';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            const ok = document.execCommand('copy');
+            document.body.removeChild(textarea);
+            return ok;
+        } catch {
+            return false;
+        }
+    };
+
+    const allEffectiveDates = logs
+        .map(l => l.effective_date)
+        .filter((d): d is string => Boolean(d))
+        .sort((a, b) => a.localeCompare(b)); // YYYY-MM-DD lexical sort
+
+    const filterFrom = exportFrom || allEffectiveDates[0] || '';
+    const filterTo = exportTo || allEffectiveDates[allEffectiveDates.length - 1] || '';
+
+    const filteredLogs = logs.filter((log) => {
+        if (exportFrom && log.effective_date < exportFrom) return false;
+        if (exportTo && log.effective_date > exportTo) return false;
+        if (sourceFilter !== 'all' && log.source !== sourceFilter) return false;
+
+        if (query.trim()) {
+            const q = query.trim().toLowerCase();
+            const content = log.content as unknown as Partial<DailyLogContent>;
+            const haystack = [
+                content.day,
+                content.operation_task,
+                content.tools_used,
+                content.lesson_learned,
+            ]
+                .filter(Boolean)
+                .join(' ')
+                .toLowerCase();
+
+            if (!haystack.includes(q)) return false;
+        }
+
+        return true;
+    });
+
     const handleExport = async () => {
-        if (!exportFrom || !exportTo) {
-            showError('Please select both from and to dates', 'Export Error');
+        const from = exportFrom || filterFrom;
+        const to = exportTo || filterTo;
+
+        if (!from || !to) {
+            showError('No logs available to export yet.', 'Export Error');
             return;
         }
 
@@ -151,14 +217,21 @@ export default function LogsPage() {
             const res = await fetch('/api/export/weekly', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ from: exportFrom, to: exportTo }),
+                body: JSON.stringify({ from, to }),
             });
 
             if (!res.ok) throw new Error('Failed to export');
 
             const data = await res.json();
-            await navigator.clipboard.writeText(data.markdown);
-            showSuccess('Markdown copied to clipboard!', 'Export Complete');
+            const markdown = String(data.markdown || '');
+            setExportMarkdown(markdown);
+
+            const copied = await copyToClipboard(markdown);
+            if (copied) {
+                showSuccess('Markdown copied to clipboard!', 'Export Complete');
+            } else {
+                showSuccess('Markdown generated below (copy manually if needed).', 'Export Complete');
+            }
         } catch (err) {
             showError(err instanceof Error ? err.message : 'Export failed', 'Export Error');
         } finally {
@@ -167,7 +240,7 @@ export default function LogsPage() {
     };
 
     // Group logs by date
-    const groupedLogs = logs.reduce((acc, log) => {
+    const groupedLogs = filteredLogs.reduce((acc, log) => {
         const date = log.effective_date;
         if (!acc[date]) acc[date] = [];
         acc[date].push(log);
@@ -190,35 +263,6 @@ export default function LogsPage() {
                     <h1 className="text-3xl font-heading font-medium">Weekly Productivity Log</h1>
 
                     <div className="flex items-center gap-3">
-                        {/* Export Controls */}
-                        <div className="flex items-center gap-2 bg-bg-elevated px-3 py-1.5 rounded-lg border border-border-subtle">
-                            <Calendar size={16} className="text-text-muted" />
-                            <input
-                                type="date"
-                                value={exportFrom}
-                                onChange={(e) => setExportFrom(e.target.value)}
-                                className="bg-transparent text-sm text-text-primary border-none outline-none w-28"
-                                title="Export from date"
-                            />
-                            <span className="text-text-muted text-sm">→</span>
-                            <input
-                                type="date"
-                                value={exportTo}
-                                onChange={(e) => setExportTo(e.target.value)}
-                                className="bg-transparent text-sm text-text-primary border-none outline-none w-28"
-                                title="Export to date"
-                            />
-                            <Button
-                                variant="ghost"
-                                onClick={handleExport}
-                                isLoading={isExporting}
-                                icon={<Download size={16} />}
-                                title="Export to Markdown"
-                            >
-                                Export
-                            </Button>
-                        </div>
-
                         <Button variant="ghost" onClick={handleRefresh} icon={<RefreshCw size={18} />}>
                             Refresh
                         </Button>
@@ -244,6 +288,118 @@ export default function LogsPage() {
                     />
                 )}
 
+                <Card className="p-4 mb-6">
+                    <div className="flex flex-col gap-3">
+                        <div className="flex flex-wrap items-end gap-3">
+                            <div className="flex items-center gap-2">
+                                <Calendar size={16} className="text-text-muted" />
+                                <input
+                                    type="date"
+                                    value={exportFrom}
+                                    onChange={(e) => setExportFrom(e.target.value)}
+                                    className="bg-transparent text-sm text-text-primary border border-border-subtle rounded-md px-2 py-1"
+                                    title="From date"
+                                />
+                                <span className="text-text-muted text-sm">→</span>
+                                <input
+                                    type="date"
+                                    value={exportTo}
+                                    onChange={(e) => setExportTo(e.target.value)}
+                                    className="bg-transparent text-sm text-text-primary border border-border-subtle rounded-md px-2 py-1"
+                                    title="To date"
+                                />
+                            </div>
+
+                            <div className="min-w-[160px]">
+                                <label className="block text-xs text-text-muted mb-1">Source</label>
+                                <select
+                                    value={sourceFilter}
+                                    onChange={(e) => setSourceFilter(e.target.value as 'all' | 'agent' | 'human')}
+                                    className="input py-2 text-sm"
+                                >
+                                    <option value="all">All</option>
+                                    <option value="human">Human</option>
+                                    <option value="agent">Agent</option>
+                                </select>
+                            </div>
+
+                            <div className="flex-1 min-w-[220px]">
+                                <label className="block text-xs text-text-muted mb-1">Search</label>
+                                <Input
+                                    value={query}
+                                    onChange={(e) => setQuery(e.target.value)}
+                                    placeholder="Search task/tools/lesson…"
+                                    className="text-sm"
+                                />
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    variant="ghost"
+                                    onClick={() => {
+                                        setExportFrom('');
+                                        setExportTo('');
+                                        setSourceFilter('all');
+                                        setQuery('');
+                                    }}
+                                >
+                                    Clear
+                                </Button>
+
+                                <Button
+                                    variant="ghost"
+                                    onClick={handleExport}
+                                    isLoading={isExporting}
+                                    icon={<Download size={16} />}
+                                    title="Export to Markdown (auto-copies)"
+                                >
+                                    Export
+                                </Button>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center justify-between text-sm text-text-muted">
+                            <span>
+                                Showing {filteredLogs.length} of {logs.length} entries
+                                {(exportFrom || exportTo) && filterFrom && filterTo ? ` (${filterFrom} → ${filterTo})` : ''}
+                            </span>
+                            {exportMarkdown && (
+                                <Button
+                                    variant="ghost"
+                                    onClick={async () => {
+                                        const copied = await copyToClipboard(exportMarkdown);
+                                        if (copied) showSuccess('Copied to clipboard!', 'Copied');
+                                        else showError('Copy failed. Please select and copy manually.', 'Copy Error');
+                                    }}
+                                    title="Copy last export again"
+                                >
+                                    Copy last export
+                                </Button>
+                            )}
+                        </div>
+                    </div>
+                </Card>
+
+                {exportMarkdown && (
+                    <Card className="p-4 mb-6">
+                        <div className="flex items-center justify-between mb-2">
+                            <h3 className="font-heading text-sm text-text-secondary">Export (Markdown)</h3>
+                            <Button
+                                variant="ghost"
+                                onClick={() => setExportMarkdown('')}
+                                title="Dismiss export preview"
+                            >
+                                Dismiss
+                            </Button>
+                        </div>
+                        <textarea
+                            className="input w-full text-sm min-h-[160px] font-mono"
+                            value={exportMarkdown}
+                            readOnly
+                        />
+                    </Card>
+                )}
+
                 {/* Logs List */}
                 {sortedDates.length === 0 ? (
                     <Card className="p-12 text-center">
@@ -258,7 +414,10 @@ export default function LogsPage() {
                                     {formatDate(date)}
                                 </h3>
                                 <div className="space-y-3">
-                                    {groupedLogs[date].map(log => (
+                                    {groupedLogs[date]
+                                        .slice()
+                                        .sort((a, b) => b.created_at.localeCompare(a.created_at))
+                                        .map(log => (
                                         <LogEntryCard
                                             key={log.id}
                                             log={log}

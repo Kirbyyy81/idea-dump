@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { resolveIdentity, AuthError, canModifyLog, canDeleteLog } from '@/lib/auth/resolveIdentity';
 import { getAccessibleLogUserIds, getLogClientForIdentity } from '@/lib/logs/access';
 import { UpdateDailyLogInput } from '@/lib/types';
+import { normalizeDailyLogEntry } from '@/lib/dailyLogs';
 
 interface RouteParams {
     params: Promise<{
@@ -56,7 +57,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ error: 'Database error', message: error.message }, { status: 500 });
         }
 
-        return NextResponse.json({ data });
+        return NextResponse.json({ data: normalizeDailyLogEntry(data) });
     } catch (err) {
         if (err instanceof AuthError) {
             return NextResponse.json({ error: 'Unauthorized', message: err.message }, { status: err.statusCode });

@@ -1,6 +1,6 @@
 // Database types matching Supabase schema
 
-export type Status = 'idea' | 'prd' | 'in_development' | 'completed' | 'archived';
+export type Status = 'ideation' | 'development' | 'deployed' | 'archived';
 
 export type Priority = 'low' | 'medium' | 'high';
 
@@ -11,6 +11,7 @@ export interface Project {
     description: string | null;
     prd_content: string | null;
     github_url: string | null;
+    deploy_url?: string | null;
     priority: Priority;
     completed: boolean;
     archived: boolean;
@@ -37,18 +38,16 @@ export interface ApiKey {
 // Status inference logic from PRD
 export function inferStatus(project: Project): Status {
     if (project.archived) return 'archived';
-    if (project.completed) return 'completed';
-    if (project.github_url) return 'in_development';
-    if (project.prd_content && project.prd_content.length > 500) return 'prd';
-    return 'idea';
+    if (project.deploy_url) return 'deployed';
+    if (project.github_url) return 'development';
+    return 'ideation';
 }
 
 // Status display configuration - using icon names instead of emojis
 export const statusConfig: Record<Status, { label: string; color: string; icon: string }> = {
-    idea: { label: 'Idea', color: 'var(--status-idea)', icon: 'Lightbulb' },
-    prd: { label: 'PRD', color: 'var(--status-prd)', icon: 'FileText' },
-    in_development: { label: 'In Development', color: 'var(--status-dev)', icon: 'Code' },
-    completed: { label: 'Completed', color: 'var(--status-complete)', icon: 'CheckCircle' },
+    ideation: { label: 'Ideation', color: 'var(--status-idea)', icon: 'Lightbulb' },
+    development: { label: 'Development', color: 'var(--status-dev)', icon: 'Code' },
+    deployed: { label: 'Deployed', color: 'var(--status-deployed)', icon: 'Rocket' },
     archived: { label: 'Archived', color: 'var(--status-archived)', icon: 'Archive' },
 };
 
@@ -64,6 +63,7 @@ export interface CreateProjectInput {
     description?: string;
     prd_content?: string;
     github_url?: string;
+    deploy_url?: string;
     priority?: Priority;
 }
 
