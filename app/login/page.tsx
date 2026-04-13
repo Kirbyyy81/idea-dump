@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { buildCachedProfile, clearCachedProfile, setCachedProfile } from '@/lib/auth/profileCache';
 import { Mail, ArrowLeft, Loader2, CheckCircle, Lock } from 'lucide-react';
 
 export default function LoginPage() {
@@ -15,12 +15,70 @@ export default function LoginPage() {
     const [isVerifying, setIsVerifying] = useState(false);
     const [isSent, setIsSent] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const router = useRouter();
+
+    const redirectToApp = (path: string) => {
+        if (typeof window === 'undefined') return;
+        window.location.assign(path);
+    };
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
         const queryError = new URLSearchParams(window.location.search).get('error');
         if (queryError) setError(queryError);
+    }, []);
+
+    // Fallback: if Supabase redirects to /login?code=... (misconfigured redirect URL allowlist),
+    // complete the session exchange here and then navigate to next.
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        const params = new URLSearchParams(window.location.search);
+        const urlCode = params.get('code');
+        const tokenHash = params.get('token_hash') ?? params.get('token');
+        const type = params.get('type');
+        const requestedNext = params.get('next') ?? '/';
+        const nextPath = type === 'recovery'
+            ? '/reset-password'
+            : requestedNext.startsWith('/')
+                ? requestedNext
+                : '/';
+
+        if (!urlCode && !(tokenHash && type)) return;
+
+        let cancelled = false;
+
+        async function completeAuth() {
+            setIsVerifying(true);
+            setError(null);
+            try {
+                const supabase = createClient();
+                const { error } = urlCode
+                    ? await supabase.auth.exchangeCodeForSession(urlCode)
+                    : await supabase.auth.verifyOtp({
+                        type: type as any,
+                        token_hash: tokenHash as string,
+                    });
+
+                if (cancelled) return;
+
+                if (error) {
+                    setError(error.message);
+                    return;
+                }
+
+                redirectToApp(nextPath);
+            } catch {
+                if (!cancelled) setError('An unexpected error occurred');
+            } finally {
+                if (!cancelled) setIsVerifying(false);
+            }
+        }
+
+        completeAuth();
+
+        return () => {
+            cancelled = true;
+        };
     }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -30,6 +88,7 @@ export default function LoginPage() {
 
         try {
             const supabase = createClient();
+            clearCachedProfile();
 
             if (authMethod === 'otp') {
                 const { error } = await supabase.auth.signInWithOtp({
@@ -45,7 +104,7 @@ export default function LoginPage() {
                     setIsSent(true);
                 }
             } else {
-                const { error } = await supabase.auth.signInWithPassword({
+                const { data, error } = await supabase.auth.signInWithPassword({
                     email,
                     password,
                 });
@@ -53,8 +112,13 @@ export default function LoginPage() {
                 if (error) {
                     setError(error.message);
                 } else {
-                    // Successful password login
-                    router.push('/');
+                    if (!data.session) {
+                        setError('Login succeeded but no session was returned');
+                        return;
+                    }
+
+                    setCachedProfile(buildCachedProfile(data.session.user));
+                    redirectToApp('/');
                 }
             }
         } catch {
@@ -80,7 +144,11 @@ export default function LoginPage() {
             if (error) {
                 setError(error.message);
             } else {
-                router.push('/');
+                const { data } = await supabase.auth.getUser();
+                if (data.user) {
+                    setCachedProfile(buildCachedProfile(data.user));
+                }
+                redirectToApp('/');
             }
         } catch {
             setError('An unexpected error occurred');

@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { Mail, ArrowLeft, Loader2, CheckCircle, Lock } from 'lucide-react';
@@ -14,7 +13,11 @@ export default function ResetPasswordPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [message, setMessage] = useState<string | null>(null);
-    const router = useRouter();
+
+    const redirectToApp = (path: string) => {
+        if (typeof window === 'undefined') return;
+        window.location.assign(path);
+    };
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -81,7 +84,7 @@ export default function ResetPasswordPage() {
             }
 
             setMessage('Password updated successfully.');
-            router.push('/');
+            redirectToApp('/');
         } catch {
             setError('An unexpected error occurred');
         } finally {

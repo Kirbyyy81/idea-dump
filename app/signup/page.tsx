@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { Mail, ArrowLeft, Loader2, CheckCircle, Lock } from 'lucide-react';
@@ -13,7 +12,11 @@ export default function SignupPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [isSent, setIsSent] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const router = useRouter();
+
+    const redirectToApp = (path: string) => {
+        if (typeof window === 'undefined') return;
+        window.location.assign(path);
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -42,7 +45,7 @@ export default function SignupPage() {
             }
 
             if (data.session) {
-                router.push('/');
+                redirectToApp('/');
             } else {
                 setIsSent(true);
             }

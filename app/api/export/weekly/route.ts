@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { resolveIdentity, AuthError } from '@/lib/auth/resolveIdentity';
+import { getAccessibleLogUserIds, getLogClientForIdentity } from '@/lib/logs/access';
 import { DailyLogEntry } from '@/lib/types';
 
 interface ExportRequest {
@@ -21,7 +21,8 @@ export async function POST(request: NextRequest) {
             }, { status: 403 });
         }
 
-        const supabase = await createClient();
+        const supabase = await getLogClientForIdentity(identity);
+        const accessibleUserIds = getAccessibleLogUserIds(identity);
         const body: ExportRequest = await request.json();
 
         if (!body.from || !body.to) {
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
         const { data: logs, error } = await supabase
             .from('daily_logs')
             .select('*')
-            .eq('user_id', identity.user_id)
+            .in('user_id', accessibleUserIds)
             .gte('effective_date', body.from)
             .lte('effective_date', body.to)
             .order('effective_date', { ascending: true })
