@@ -71,13 +71,13 @@ export function createClient() {
                 flowType: 'pkce',
             },
             cookies: {
-                get(name) {
+                get(name: string) {
                     return getCookie(name);
                 },
-                set(name, value, options) {
+                set(name: string, value: string, options: CookieOptions) {
                     applyCookie(name, value, options);
                 },
-                remove(name, options) {
+                remove(name: string, options: CookieOptions) {
                     removeCookie(name, options);
                 },
             },
