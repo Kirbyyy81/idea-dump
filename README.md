@@ -68,9 +68,11 @@ If `npm` isn’t available in PowerShell (common in some locked-down environment
 
 ## GitHub Automation
 
-- `.github/workflows/auto-pr-from-main.yml` runs on every push to `main`.
-- Set the repository variable `AUTO_PR_BASE_BRANCH` to the branch that should receive the PR.
-- The workflow pushes the latest `main` commit to `codex/auto-pr-main` and opens or reuses a PR from that branch into `AUTO_PR_BASE_BRANCH`.
+- `.github/workflows/auto-pr.yml` opens a PR into `main` when a non-`main` branch is pushed and no PR already exists.
+- `.github/workflows/release-please.yml` runs on pushes to `main` and lets `release-please` manage release PRs, semantic version bumps, tags, and GitHub Releases.
+- `APP_VERSION` is sourced from `package.json` and is expected to change through the `release-please` release PR flow instead of manual edits for routine releases.
+- `VERSION_CODE` and `LAST_UPDATED` continue to update automatically at build time.
+- Commits merged into `main` should follow Conventional Commits so release version bumps stay predictable.
 
 ## Database Schema
 
