@@ -1,5 +1,7 @@
 import { NextRequest } from 'next/server';
+import crypto from 'crypto';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 export type IdentityRole = 'admin' | 'agent';
 
@@ -41,21 +43,27 @@ export async function resolveIdentity(request: NextRequest): Promise<ResolvedIde
     const apiKey = request.headers.get('x-api-key');
 
     if (apiKey) {
-        const validApiKey = process.env.AGENT_API_KEY;
-        const agentUserId = process.env.AGENT_USER_ID;
+        const admin = createAdminClient();
+        const keyHash = crypto.createHash('sha256').update(apiKey).digest('hex');
 
-        if (!validApiKey || !agentUserId) {
-            throw new AuthError('Agent authentication not configured', 500);
+        const { data: apiKeyRecord, error } = await admin
+            .from('api_keys')
+            .select('user_id')
+            .eq('key_hash', keyHash)
+            .maybeSingle();
+
+        if (error) {
+            throw new AuthError('Agent authentication lookup failed', 500);
         }
 
-        if (apiKey === validApiKey) {
-            return {
-                role: 'agent',
-                user_id: agentUserId,
-            };
+        if (!apiKeyRecord?.user_id) {
+            throw new AuthError('Invalid API key', 401);
         }
 
-        throw new AuthError('Invalid API key', 401);
+        return {
+            role: 'agent',
+            user_id: apiKeyRecord.user_id,
+        };
     }
 
     // 3. No valid authentication found

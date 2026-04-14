@@ -103,6 +103,8 @@ export function getOpenApiSpec() {
                 },
                 post: {
                     summary: 'Create a log entry',
+                    description:
+                        'Creates a human log for the current session user or an agent log for the user that owns the provided x-api-key.',
                     requestBody: {
                         required: true,
                         content: {
