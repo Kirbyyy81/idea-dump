@@ -13,6 +13,7 @@ import {
     ChevronRight,
     ClipboardList,
     BookOpen,
+    FilePenLine,
 } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
@@ -159,6 +160,21 @@ export function Sidebar({ projects }: SidebarProps) {
                         icon={<BookOpen size={18} />}
                     >
                         API
+                    </Button>
+                </Link>
+
+                <Link href="/article-creation" className="block">
+                    <Button
+                        variant="ghost"
+                        className={cn(
+                            'w-full justify-start',
+                            pathname === '/article-creation'
+                                ? 'bg-bg-hover text-text-primary'
+                                : 'text-text-secondary hover:text-text-primary'
+                        )}
+                        icon={<FilePenLine size={18} />}
+                    >
+                        Article Creation
                     </Button>
                 </Link>
             </nav>
