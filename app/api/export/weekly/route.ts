@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveIdentity, AuthError } from '@/lib/auth/resolveIdentity';
-import { getAccessibleLogUserIds, getLogClientForIdentity } from '@/lib/logs/access';
+import { listAccessibleLogs } from '@/lib/logs/access';
 import { DailyLogEntry } from '@/lib/types';
-import { normalizeDailyLogEntry } from '@/lib/dailyLogs';
 
 interface ExportRequest {
     from: string;
@@ -22,8 +21,6 @@ export async function POST(request: NextRequest) {
             }, { status: 403 });
         }
 
-        const supabase = await getLogClientForIdentity(identity);
-        const accessibleUserIds = getAccessibleLogUserIds(identity);
         const body: ExportRequest = await request.json();
 
         if (!body.from || !body.to) {
@@ -33,23 +30,12 @@ export async function POST(request: NextRequest) {
             }, { status: 400 });
         }
 
-        // Fetch logs in date range
-        const { data: logs, error } = await supabase
-            .from('daily_logs')
-            .select('*')
-            .in('user_id', accessibleUserIds)
-            .gte('effective_date', body.from)
-            .lte('effective_date', body.to)
-            .order('effective_date', { ascending: true })
-            .order('created_at', { ascending: true });
-
-        if (error) {
-            return NextResponse.json({ error: 'Database error', message: error.message }, { status: 500 });
-        }
-
-        // Generate markdown table
-        const normalized = (logs || []).map(normalizeDailyLogEntry);
-        const markdown = generateMarkdownTable(normalized);
+        const { data } = await listAccessibleLogs(identity, {
+            from: body.from,
+            sort: 'effective_date.asc',
+            to: body.to,
+        });
+        const markdown = generateMarkdownTable(data);
 
         return NextResponse.json({ markdown });
     } catch (err) {
