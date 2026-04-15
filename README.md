@@ -1,83 +1,140 @@
 # IdeaDump
 
-A Notion-inspired web app to centralize, track, and manage all your PRDs and project ideas.
+IdeaDump is a Next.js app for managing product ideas, PRDs, and lightweight delivery logs in one place. It combines a project workspace, markdown-based PRD storage, personal API keys, and a weekly productivity log with export support.
 
-## Features
+## Current Features
 
-- 📄 **Store PRDs** - Import and store PRDs in markdown format
-- 🎯 **Auto Status** - Status auto-updates based on content and GitHub links
-- 📝 **Notes** - Add journal entries to track progress
-- 🔗 **API Access** - Send PRDs from external tools via API
+- Project dashboard with search and status filters
+- Create, edit, archive, and review projects
+- Markdown PRD storage and rendering
+- Project notes for ongoing context and updates
+- Status inference from project metadata:
+  - `Ideation` when a project has no GitHub or deploy URL
+  - `Development` when a GitHub URL is present
+  - `Deployed` when a deploy URL is present
+  - `Archived` when a project is archived
+- Weekly productivity log with:
+  - manual entry creation
+  - agent vs human source tracking
+  - edit and delete support
+  - date-range, source, and text filtering
+  - markdown export with clipboard copy
+- API key management from the Settings page
+- API ingestion endpoint for creating projects from external tools
+- In-app API documentation via Swagger UI at `/docs`
+- Supabase magic-link auth with signup, login, callback, and reset-password flows
+
+## Repo Overview
+
+- `app/`: Next.js App Router pages and API routes
+- `components/`: atomic-design UI components
+- `lib/`: Supabase clients, shared types, OpenAPI helpers, auth cache, and utilities
+- `document/`: product docs and SQL migrations
+- `scripts/`: local helper scripts, including Windows Git Bash npm wrapper
 
 ## Tech Stack
 
-- **Frontend**: Next.js 14 + TypeScript + Tailwind CSS
-- **Database**: Supabase (PostgreSQL)
-- **Auth**: Supabase Magic Link
-- **Hosting**: Vercel
+- Next.js 14
+- TypeScript
+- Tailwind CSS
+- Supabase Auth + PostgreSQL
+- Swagger UI for API docs
+- Vercel-friendly build metadata and deployment flow
 
-## Getting Started
+## Local Setup
 
-### 1. Install Dependencies
+### 1. Install dependencies
 
 ```bash
 npm install
 ```
 
-### 2. Set Up Supabase
+### 2. Configure environment
 
-1. Create a project at [supabase.com](https://supabase.com)
-2. Run the SQL schema in the SQL Editor (see `schema.sql` below)
-3. Copy your project URL and keys
-4. In **Authentication → URL Configuration**, set your Site URL and add redirect URLs for:
-   - `http://localhost:3000/auth/callback` (local dev)
-   - `https://YOUR_DOMAIN/auth/callback` (production)
-
-### 3. Configure Environment
-
-Create a `.env.local` file:
+Copy `.env.example` to `.env.local` and fill in your Supabase values:
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=your-project-url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+NEXT_PUBLIC_SUPABASE_URL=your-supabase-project-url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
 ```
 
-### 4. Run Development Server
+Optional build metadata:
+
+```env
+GIT_COMMIT_SHA=your-commit-sha
+BUILD_TIME=2026-03-16T00:00:00.000Z
+```
+
+### 3. Prepare Supabase
+
+Create a Supabase project, then apply the project schema and migrations used by this repo.
+
+- Core project and note tables are documented below in this README.
+- Daily log support is defined in `document/migrations/20260316_daily_logs.sql`.
+
+In Supabase Auth URL configuration, add:
+
+- `http://localhost:3000/auth/callback`
+- `https://YOUR_DOMAIN/auth/callback`
+
+### 4. Run the app
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000)
+Open [http://localhost:3000](http://localhost:3000).
 
-### Windows note (Git Bash)
+### Windows note
 
-If `npm` isn’t available in PowerShell (common in some locked-down environments), run build/lint via Git Bash using:
+If `npm` is not available in PowerShell, use the helper script:
 
 ```powershell
 .\scripts\npm-gitbash.ps1 run lint
 .\scripts\npm-gitbash.ps1 run build
 ```
 
-## Versioning
+## Available Routes
 
-- `APP_VERSION` (shown in Settings) comes from `package.json` `version`. Increment it when you intentionally ship a release.
-- `VERSION_CODE` (shown in Settings) is the per-deploy identifier (commit SHA on Vercel via `VERCEL_GIT_COMMIT_SHA`, or set `GIT_COMMIT_SHA` elsewhere).
-- `LAST_UPDATED` (shown in Settings) defaults to build time (or set `BUILD_TIME`).
+### App pages
+
+- `/dashboard`: main project list with filters
+- `/project/new`: create a project
+- `/project/[id]`: project detail view
+- `/project/[id]/edit`: edit an existing project
+- `/logs`: weekly productivity log
+- `/docs`: interactive API docs
+- `/settings`: API keys, profile, and version footer
+- `/login`, `/signup`, `/reset-password`: auth flows
+
+### API routes
+
+- `POST /api/ingest`: create a project from an external tool using an API key
+- `GET /api/projects`: list projects
+- `GET|POST|DELETE /api/keys`: manage API keys
+- `GET|POST /api/logs`: list and create daily log entries
+- `PATCH|DELETE /api/logs/[id]`: update or delete a log entry
+- `POST /api/export/weekly`: export logs as markdown
+- `GET /api/openapi`: OpenAPI spec consumed by the docs page
+- `GET|POST /api/notes`: note management
+
+## Versioning And Releases
+
+- `APP_VERSION` is sourced from `package.json` and shown in Settings.
+- `VERSION_CODE` is derived from `NEXT_PUBLIC_VERSION_CODE`, `VERCEL_GIT_COMMIT_SHA`, `GIT_COMMIT_SHA`, or local git state.
+- `LAST_UPDATED` is derived from `NEXT_PUBLIC_LAST_UPDATED`, `BUILD_TIME`, or the build timestamp.
+- GitHub release automation is handled by `release-please` on pushes to `main`.
+- Commit messages merged into `main` should follow Conventional Commits so version bumps stay predictable.
 
 ## GitHub Automation
 
 - `.github/workflows/auto-pr.yml` opens a PR into `main` when a non-`main` branch is pushed and no PR already exists.
-- `.github/workflows/release-please.yml` runs on pushes to `main` and lets `release-please` manage release PRs, semantic version bumps, tags, and GitHub Releases.
-- `APP_VERSION` is sourced from `package.json` and is expected to change through the `release-please` release PR flow instead of manual edits for routine releases.
-- `VERSION_CODE` and `LAST_UPDATED` continue to update automatically at build time.
-- Commits merged into `main` should follow Conventional Commits so release version bumps stay predictable.
+- `.github/workflows/release-please.yml` runs on pushes to `main` and manages release PRs, semantic version bumps, tags, and GitHub Releases.
 
 ## Database Schema
 
 ```sql
--- Projects table
 CREATE TABLE projects (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -85,6 +142,7 @@ CREATE TABLE projects (
   description TEXT,
   prd_content TEXT,
   github_url TEXT,
+  deploy_url TEXT,
   priority TEXT DEFAULT 'medium',
   tags TEXT[],
   completed BOOLEAN DEFAULT FALSE,
@@ -93,7 +151,6 @@ CREATE TABLE projects (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Notes table
 CREATE TABLE notes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
@@ -101,7 +158,6 @@ CREATE TABLE notes (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- API Keys table
 CREATE TABLE api_keys (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -111,12 +167,20 @@ CREATE TABLE api_keys (
   last_used_at TIMESTAMPTZ
 );
 
--- Enable RLS
+CREATE TABLE daily_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL,
+  source TEXT NOT NULL CHECK (source IN ('agent', 'human')),
+  content JSONB NOT NULL,
+  effective_date DATE NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE api_keys ENABLE ROW LEVEL SECURITY;
 
--- RLS Policies
 CREATE POLICY "Users can view own projects" ON projects
   FOR SELECT USING (auth.uid() = user_id);
 
@@ -130,7 +194,7 @@ CREATE POLICY "Users can delete own projects" ON projects
   FOR DELETE USING (auth.uid() = user_id);
 ```
 
-## API Usage
+## API Example
 
 ```bash
 curl -X POST https://your-app.vercel.app/api/ingest \
