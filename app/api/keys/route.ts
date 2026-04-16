@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import crypto from 'crypto';
 
 // Generate a secure random API key
@@ -23,7 +24,8 @@ export async function GET() {
             return NextResponse.json({ data: [] });
         }
 
-        const { data, error } = await supabase
+        const admin = createAdminClient();
+        const { data, error } = await admin
             .from('api_keys')
             .select('id, name, created_at, last_used_at')
             .eq('user_id', user.id)
@@ -44,6 +46,7 @@ export async function POST(request: NextRequest) {
     try {
         const supabase = await createClient();
         const { data: { user } } = await supabase.auth.getUser();
+        const admin = createAdminClient();
 
         const body = await request.json();
         const { name } = body;
@@ -69,7 +72,7 @@ export async function POST(request: NextRequest) {
 
         const keyHash = hashApiKey(apiKey);
 
-        const { data, error } = await supabase
+        const { data, error } = await admin
             .from('api_keys')
             .insert({
                 user_id: user.id,
@@ -99,6 +102,7 @@ export async function DELETE(request: NextRequest) {
     try {
         const supabase = await createClient();
         const { data: { user } } = await supabase.auth.getUser();
+        const admin = createAdminClient();
 
         if (!user) {
             return NextResponse.json({ success: true });
@@ -111,7 +115,7 @@ export async function DELETE(request: NextRequest) {
             return NextResponse.json({ error: 'Key ID is required' }, { status: 400 });
         }
 
-        const { error } = await supabase
+        const { error } = await admin
             .from('api_keys')
             .delete()
             .eq('id', id)
