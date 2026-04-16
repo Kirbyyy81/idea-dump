@@ -18,16 +18,16 @@ import { ModuleOverrideEffect, UserAppAccess } from '@/lib/rbac/types';
 
 interface RoleRow {
     id: string;
-    slug: AppRoleSlug;
+    role: AppRoleSlug;
 }
 
 interface OverrideRow {
     effect: ModuleOverrideEffect;
-    app_modules: { slug: AppModuleSlug } | { slug: AppModuleSlug }[] | null;
+    DIM_modules: { modules: AppModuleSlug } | { modules: AppModuleSlug }[] | null;
 }
 
 interface RoleModuleRow {
-    app_modules: { slug: AppModuleSlug } | { slug: AppModuleSlug }[] | null;
+    DIM_modules: { modules: AppModuleSlug } | { modules: AppModuleSlug }[] | null;
 }
 
 export async function getSessionUser() {
@@ -52,20 +52,20 @@ export async function getUserAppAccess(userId: string): Promise<UserAppAccess> {
     const admin = createAdminClient();
 
     const { data: roles, error: rolesError } = await admin
-        .from('app_roles')
-        .select('id, slug')
-        .in('slug', [...APP_ROLE_SLUGS]);
+        .from('DIM_roles')
+        .select('id, role')
+        .in('role', [...APP_ROLE_SLUGS]);
 
     if (rolesError) {
         throw new Error(rolesError.message);
     }
 
     const typedRoles = (roles || []) as RoleRow[];
-    const roleBySlug = new Map(typedRoles.map((role) => [role.slug, role]));
+    const roleBySlug = new Map(typedRoles.map((role) => [role.role, role]));
 
     const { data: userRoleRow, error: userRoleError } = await admin
-        .from('app_user_roles')
-        .select('app_roles!inner(slug)')
+        .from('BRIDGE_user_roles')
+        .select('DIM_roles!inner(role)')
         .eq('user_id', userId)
         .maybeSingle();
 
@@ -74,20 +74,20 @@ export async function getUserAppAccess(userId: string): Promise<UserAppAccess> {
     }
 
     const resolvedRole = normalizeRoleSlug(
-        unwrapMaybeArray(userRoleRow?.app_roles)?.slug ?? DEFAULT_APP_ROLE
+        unwrapMaybeArray(userRoleRow?.DIM_roles)?.role ?? DEFAULT_APP_ROLE
     );
     const roleRecord = roleBySlug.get(resolvedRole);
 
     const [roleModulesResult, overridesResult] = await Promise.all([
         roleRecord
             ? admin
-                .from('app_role_modules')
-                .select('app_modules!inner(slug)')
+                .from('BRIDGE_role_modules')
+                .select('DIM_modules!inner(modules)')
                 .eq('role_id', roleRecord.id)
             : Promise.resolve({ data: [], error: null }),
         admin
             .from('app_user_module_overrides')
-            .select('effect, app_modules!inner(slug)')
+            .select('effect, DIM_modules!inner(modules)')
             .eq('user_id', userId),
     ]);
 
@@ -108,7 +108,7 @@ export async function getUserAppAccess(userId: string): Promise<UserAppAccess> {
     }
 
     for (const row of roleModules) {
-        const moduleSlug = unwrapMaybeArray(row.app_modules)?.slug;
+        const moduleSlug = unwrapMaybeArray(row.DIM_modules)?.modules;
         if (isAppModuleSlug(moduleSlug)) {
             allowed.add(moduleSlug);
         }
@@ -116,7 +116,7 @@ export async function getUserAppAccess(userId: string): Promise<UserAppAccess> {
 
     const overrides: Partial<Record<AppModuleSlug, ModuleOverrideEffect>> = {};
     for (const row of (overridesResult.data || []) as OverrideRow[]) {
-        const moduleSlug = unwrapMaybeArray(row.app_modules)?.slug;
+        const moduleSlug = unwrapMaybeArray(row.DIM_modules)?.modules;
         if (!isAppModuleSlug(moduleSlug)) continue;
 
         overrides[moduleSlug] = row.effect;
