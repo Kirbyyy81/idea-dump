@@ -41,7 +41,7 @@ export default function NewProjectPage() {
             {/* Header */}
             <div className="flex items-center gap-4 mb-8">
                 <Link
-                    href="/"
+                    href="/projects"
                     className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors"
                 >
                     <ArrowLeft size={20} />
@@ -58,7 +58,7 @@ export default function NewProjectPage() {
             <ProjectForm
                 onSubmit={handleSubmit}
                 isSubmitting={isSubmitting}
-                onCancel={() => router.back()}
+                onCancel={() => router.push('/projects')}
                 submitLabel="Create Project"
             />
         </div>

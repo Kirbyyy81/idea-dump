@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { canAccessModule, getUserAppAccess } from '@/lib/rbac/access';
+import { authorizeSessionModule, createForbiddenModuleResponse } from '@/lib/rbac/guards';
 
 // POST /api/ingest - External API for ingesting projects
 // Headers: { "x-api-key": "your-api-key" }
@@ -34,6 +36,11 @@ export async function POST(request: NextRequest) {
 
         if (keyError || !keyData) {
             return NextResponse.json({ error: 'Invalid API key' }, { status: 401 });
+        }
+
+        const access = await getUserAppAccess(keyData.user_id);
+        if (!canAccessModule(access, 'api')) {
+            return createForbiddenModuleResponse();
         }
 
         // Update last_used_at
@@ -82,6 +89,11 @@ export async function POST(request: NextRequest) {
 
 // GET /api/ingest - API documentation
 export async function GET() {
+    const access = await authorizeSessionModule('api');
+    if ('response' in access) {
+        return access.response;
+    }
+
     return NextResponse.json({
         name: 'IdeaDump Ingest API',
         version: '1.0',

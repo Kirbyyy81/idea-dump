@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveIdentity, AuthError } from '@/lib/auth/resolveIdentity';
 import { createLogForIdentity, listAccessibleLogs } from '@/lib/logs/access';
+import { authorizeIdentityModule } from '@/lib/rbac/guards';
 import { CreateDailyLogInput } from '@/lib/types';
 
 // Pagination constants
@@ -12,6 +13,10 @@ const DEFAULT_SORT = 'created_at.desc';
 export async function GET(request: NextRequest) {
     try {
         const identity = await resolveIdentity(request);
+        const access = await authorizeIdentityModule(identity, 'logs');
+        if ('response' in access) {
+            return access.response;
+        }
 
         const { searchParams } = new URL(request.url);
         const from = searchParams.get('from');
@@ -42,6 +47,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         const identity = await resolveIdentity(request);
+        const access = await authorizeIdentityModule(identity, 'logs');
+        if ('response' in access) {
+            return access.response;
+        }
         const body: CreateDailyLogInput = await request.json();
         const result = await createLogForIdentity(identity, body);
 

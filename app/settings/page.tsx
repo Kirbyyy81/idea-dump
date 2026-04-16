@@ -13,6 +13,7 @@ import {
     setCachedProfile,
 } from '@/lib/auth/profileCache';
 import { ArrowLeft, LogOut, User as UserIcon } from 'lucide-react';
+import { AppRoleSlug } from '@/lib/rbac/constants';
 import { formatDate } from '@/lib/utils';
 import { APP_VERSION, LAST_UPDATED, shortVersionCode, VERSION_CODE } from '@/lib/version';
 import { Button } from '@/components/atoms/Button';
@@ -21,6 +22,7 @@ import { Card } from '@/components/atoms/Card';
 export default function SettingsPage() {
     const router = useRouter();
     const [profile, setProfile] = useState<CachedProfile | null>(null);
+    const [role, setRole] = useState<AppRoleSlug | null>(null);
     const [isSigningOut, setIsSigningOut] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -43,6 +45,19 @@ export default function SettingsPage() {
         }
 
         syncProfile();
+
+        async function loadAccess() {
+            try {
+                const res = await fetch('/api/access/me');
+                if (!res.ok) return;
+                const payload = await res.json();
+                setRole(payload.data.role);
+            } catch {
+                // Hide access management if access lookup fails.
+            }
+        }
+
+        loadAccess();
 
         const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
             if (session?.user) {
@@ -143,6 +158,24 @@ export default function SettingsPage() {
                 <div className="mt-6 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
                     <p className="text-sm text-red-400">{error}</p>
                 </div>
+            )}
+
+            {(role === 'owner' || role === 'admin') && (
+                <Card className="mt-6 p-6">
+                    <div className="flex items-center justify-between gap-4">
+                        <div>
+                            <h2 className="text-xl font-semibold font-body text-text-primary">
+                                Access Control
+                            </h2>
+                            <p className="text-sm text-text-secondary">
+                                Manage module roles and user-specific access overrides.
+                            </p>
+                        </div>
+                        <Link href="/settings/access">
+                            <Button>Manage Access</Button>
+                        </Link>
+                    </div>
+                </Card>
             )}
 
             <div className="mt-10 flex items-center justify-center text-xs text-text-muted">

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveIdentity, AuthError, canModifyLog, canDeleteLog } from '@/lib/auth/resolveIdentity';
 import { deleteAccessibleLog, findAccessibleLog, updateAccessibleLog } from '@/lib/logs/access';
+import { authorizeIdentityModule } from '@/lib/rbac/guards';
 import { UpdateDailyLogInput } from '@/lib/types';
 
 interface RouteParams {
@@ -13,6 +14,10 @@ interface RouteParams {
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
     try {
         const identity = await resolveIdentity(request);
+        const access = await authorizeIdentityModule(identity, 'logs');
+        if ('response' in access) {
+            return access.response;
+        }
         const { id } = await params;
         const body: UpdateDailyLogInput = await request.json();
 
@@ -57,6 +62,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
     try {
         const identity = await resolveIdentity(request);
+        const access = await authorizeIdentityModule(identity, 'logs');
+        if ('response' in access) {
+            return access.response;
+        }
         const { id } = await params;
 
         // Check permissions
