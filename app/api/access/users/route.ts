@@ -1,5 +1,10 @@
 import { NextResponse } from 'next/server';
-import { getDisplayName, getSessionUserAppAccess, getUserAppAccess } from '@/lib/rbac/access';
+import {
+    canAccessModule,
+    getDisplayName,
+    getSessionUserAppAccess,
+    getUserAppAccess,
+} from '@/lib/rbac/access';
 import { ACCESS_MANAGER_ROLES, APP_ROLE_SLUGS, MANAGED_MODULE_SLUGS } from '@/lib/rbac/constants';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { AccessAdminUserRecord } from '@/lib/rbac/types';
@@ -13,7 +18,10 @@ export async function GET() {
         );
     }
 
-    if (!ACCESS_MANAGER_ROLES.includes(session.access.role)) {
+    if (
+        !canAccessModule(session.access, 'access_control') ||
+        !ACCESS_MANAGER_ROLES.includes(session.access.role)
+    ) {
         return NextResponse.json(
             { error: 'Forbidden', message: 'You do not have access to this module' },
             { status: 403 }

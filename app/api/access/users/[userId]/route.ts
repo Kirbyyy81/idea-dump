@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSessionUserAppAccess, isManagedModuleSlug, normalizeRoleSlug } from '@/lib/rbac/access';
+import {
+    canAccessModule,
+    getSessionUserAppAccess,
+    isManagedModuleSlug,
+    normalizeRoleSlug,
+} from '@/lib/rbac/access';
 import { ACCESS_MANAGER_ROLES } from '@/lib/rbac/constants';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { ModuleOverrideEffect } from '@/lib/rbac/types';
@@ -21,7 +26,10 @@ export async function PUT(
         );
     }
 
-    if (!ACCESS_MANAGER_ROLES.includes(session.access.role)) {
+    if (
+        !canAccessModule(session.access, 'access_control') ||
+        !ACCESS_MANAGER_ROLES.includes(session.access.role)
+    ) {
         return NextResponse.json(
             { error: 'Forbidden', message: 'You do not have access to this module' },
             { status: 403 }
@@ -34,9 +42,9 @@ export async function PUT(
     const roleSlug = normalizeRoleSlug(body.role);
 
     const { data: roleRow, error: roleError } = await admin
-        .from('app_roles')
+        .from('DIM_roles')
         .select('id')
-        .eq('slug', roleSlug)
+        .eq('role', roleSlug)
         .single();
 
     if (roleError || !roleRow) {
@@ -44,7 +52,7 @@ export async function PUT(
     }
 
     const { error: upsertRoleError } = await admin
-        .from('app_user_roles')
+        .from('BRIDGE_user_roles')
         .upsert({ user_id: userId, role_id: roleRow.id }, { onConflict: 'user_id' });
 
     if (upsertRoleError) {
@@ -58,9 +66,9 @@ export async function PUT(
         }
 
         const { data: moduleRow, error: moduleError } = await admin
-            .from('app_modules')
+            .from('DIM_modules')
             .select('id')
-            .eq('slug', moduleSlug)
+            .eq('modules', moduleSlug)
             .single();
 
         if (moduleError || !moduleRow) {
@@ -80,12 +88,32 @@ export async function PUT(
             continue;
         }
 
-        const { error: upsertOverrideError } = await admin
+        const { data: existingOverride, error: existingOverrideError } = await admin
             .from('app_user_module_overrides')
-            .upsert(
-                { user_id: userId, module_id: moduleRow.id, effect },
-                { onConflict: 'user_id,module_id' }
+            .select('id')
+            .eq('user_id', userId)
+            .eq('module_id', moduleRow.id)
+            .maybeSingle();
+
+        if (existingOverrideError) {
+            return NextResponse.json(
+                { error: 'Failed to load existing override', message: existingOverrideError.message },
+                { status: 500 }
             );
+        }
+
+        const upsertOverrideError = existingOverride
+            ? (
+                await admin
+                    .from('app_user_module_overrides')
+                    .update({ effect })
+                    .eq('id', existingOverride.id)
+            ).error
+            : (
+                await admin
+                    .from('app_user_module_overrides')
+                    .insert({ user_id: userId, module_id: moduleRow.id, effect })
+            ).error;
 
         if (upsertOverrideError) {
             return NextResponse.json({ error: 'Failed to save override', message: upsertOverrideError.message }, { status: 500 });

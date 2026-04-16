@@ -11,6 +11,7 @@ import {
     LayoutDashboard,
     FolderKanban,
     Settings,
+    ShieldCheck,
     Search,
     ChevronRight,
     ClipboardList,
@@ -29,6 +30,7 @@ const DEFAULT_ALLOWED_MODULES: AppModuleSlug[] = ['dashboard', 'settings'];
 const MODULE_NAV_ITEMS: Array<{ href: string; icon: JSX.Element; module: AppModuleSlug }> = [
     { href: '/logs', icon: <ClipboardList size={18} />, module: 'logs' },
     { href: '/api-tools', icon: <BookOpen size={18} />, module: 'api' },
+    { href: '/settings/access', icon: <ShieldCheck size={18} />, module: 'access_control' },
     { href: '/article-creation', icon: <FilePenLine size={18} />, module: 'article_creation' },
 ];
 
@@ -68,6 +70,7 @@ export function Sidebar({ projects }: SidebarProps) {
     const canAccessModule = (moduleSlug: AppModuleSlug) => allowedModules.includes(moduleSlug);
     const isDashboardActive = pathname === '/' || pathname.startsWith('/dashboard');
     const isProjectsActive = pathname === '/projects' || pathname.startsWith('/project/');
+    const isAccessControlActive = pathname.startsWith('/settings/access');
 
     return (
         <aside className="w-64 h-screen fixed left-0 top-0 flex flex-col bg-bg-elevated border-r border-border-default">
@@ -196,7 +199,9 @@ export function Sidebar({ projects }: SidebarProps) {
                             variant="ghost"
                             className={cn(
                                 'w-full justify-start',
-                                pathname === item.href
+                                (item.module === 'access_control'
+                                    ? isAccessControlActive
+                                    : pathname === item.href)
                                     ? item.module === 'logs'
                                         ? 'bg-accent-rose/10 text-accent-rose hover:bg-accent-rose/20 hover:text-accent-rose'
                                         : 'bg-bg-hover text-text-primary'
@@ -216,7 +221,7 @@ export function Sidebar({ projects }: SidebarProps) {
                         variant="ghost"
                         className={cn(
                             'w-full justify-start',
-                            pathname.startsWith('/settings')
+                            pathname === '/settings'
                                 ? 'bg-bg-hover text-text-primary'
                                 : 'text-text-secondary'
                         )}

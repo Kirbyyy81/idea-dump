@@ -3,6 +3,7 @@
 import { ComponentType, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
+    ShieldCheck,
     BookOpen,
     ClipboardList,
     FilePenLine,
@@ -39,6 +40,10 @@ const MODULE_CARD_META: Partial<
     api: {
         description: 'Manage API keys and explore the available endpoints.',
         icon: BookOpen,
+    },
+    access_control: {
+        description: 'Manage roles, grants, and user-specific access overrides.',
+        icon: ShieldCheck,
     },
     article_creation: {
         description: 'Use the article creation tools available to your role.',

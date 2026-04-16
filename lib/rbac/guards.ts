@@ -28,7 +28,7 @@ export async function requireAccessAdminPage() {
         redirect('/login');
     }
 
-    if (!session.access.canManageAccess) {
+    if (!canAccessModule(session.access, 'access_control') || !session.access.canManageAccess) {
         redirect(getFirstAllowedModulePath(session.access));
     }
 
