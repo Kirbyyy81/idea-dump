@@ -74,6 +74,7 @@ export function AccessControlClient() {
     const [newOverrideDrafts, setNewOverrideDrafts] = useState<Record<string, NewOverrideDraft>>({});
     const [newRoleDraft, setNewRoleDraft] = useState<NewRoleDraft>(DEFAULT_NEW_ROLE);
     const [isCreatingRole, setIsCreatingRole] = useState(false);
+    const [showNewRoleRow, setShowNewRoleRow] = useState(false);
 
     async function loadAccessData() {
         try {
@@ -256,12 +257,19 @@ export function AccessControlClient() {
             }
 
             setNewRoleDraft(DEFAULT_NEW_ROLE);
+            setShowNewRoleRow(false);
             await loadAccessData();
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to create role');
         } finally {
             setIsCreatingRole(false);
         }
+    };
+
+    const cancelCreateRole = () => {
+        setNewRoleDraft(DEFAULT_NEW_ROLE);
+        setShowNewRoleRow(false);
+        setError(null);
     };
 
     const saveUser = async (user: AccessAdminUserRecord) => {
@@ -345,60 +353,80 @@ export function AccessControlClient() {
                     <div className="grid grid-cols-[180px_minmax(0,1fr)_110px] items-center gap-4 text-xs uppercase tracking-[0.18em] text-text-muted">
                         <span>Role</span>
                         <span>Modules</span>
-                        <span>Action</span>
+                        <div className="flex justify-end">
+                            <button
+                                type="button"
+                                onClick={() => setShowNewRoleRow(true)}
+                                className="inline-flex items-center gap-1 text-xs font-medium normal-case tracking-normal text-text-secondary transition-colors hover:text-text-primary"
+                            >
+                                <Plus size={14} />
+                                New
+                            </button>
+                        </div>
                     </div>
                 </div>
 
                 <div>
-                    <div className="grid grid-cols-[180px_minmax(0,1fr)_110px] items-start gap-4 border-b border-border-default px-6 py-4">
-                        <div className="space-y-2 pt-0.5">
-                            <span className="text-xs uppercase tracking-[0.14em] text-text-muted">New role</span>
-                            <Input
-                                value={newRoleDraft.role}
-                                onChange={(e) =>
-                                    setNewRoleDraft((current) => ({
-                                        ...current,
-                                        role: e.target.value,
-                                    }))
-                                }
-                                placeholder="e.g. editor"
-                                className="h-10"
-                            />
-                        </div>
+                    {showNewRoleRow && (
+                        <div className="grid grid-cols-[180px_minmax(0,1fr)_110px] items-start gap-4 border-b border-border-default px-6 py-4">
+                            <div className="space-y-2 pt-0.5">
+                                <span className="text-xs uppercase tracking-[0.14em] text-text-muted">New role</span>
+                                <Input
+                                    value={newRoleDraft.role}
+                                    onChange={(e) =>
+                                        setNewRoleDraft((current) => ({
+                                            ...current,
+                                            role: e.target.value,
+                                        }))
+                                    }
+                                    placeholder="e.g. editor"
+                                    className="h-10"
+                                />
+                            </div>
 
-                        <div className="flex flex-wrap gap-2 pt-6">
-                            {data?.modules.map((moduleSlug) => {
-                                const selected = newRoleDraft.modules.includes(moduleSlug);
+                            <div className="flex flex-wrap gap-2 pt-6">
+                                {data?.modules.map((moduleSlug) => {
+                                    const selected = newRoleDraft.modules.includes(moduleSlug);
 
-                                return (
-                                    <button
-                                        key={`new-role-${moduleSlug}`}
-                                        type="button"
-                                        onClick={() => toggleNewRoleModule(moduleSlug)}
-                                        className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
-                                            selected
-                                                ? 'border-accent-rose bg-accent-rose/10 text-accent-rose'
-                                                : 'border-border-default bg-transparent text-text-secondary hover:border-border-strong hover:text-text-primary'
-                                        }`}
-                                    >
-                                        {MODULE_LABELS[moduleSlug]}
-                                    </button>
-                                );
-                            })}
-                        </div>
+                                    return (
+                                        <button
+                                            key={`new-role-${moduleSlug}`}
+                                            type="button"
+                                            onClick={() => toggleNewRoleModule(moduleSlug)}
+                                            className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
+                                                selected
+                                                    ? 'border-accent-rose bg-accent-rose/10 text-accent-rose'
+                                                    : 'border-border-default bg-transparent text-text-secondary hover:border-border-strong hover:text-text-primary'
+                                            }`}
+                                        >
+                                            {MODULE_LABELS[moduleSlug]}
+                                        </button>
+                                    );
+                                })}
+                            </div>
 
-                        <div className="flex justify-end pt-6">
-                            <Button
-                                type="button"
-                                onClick={createRole}
-                                isLoading={isCreatingRole}
-                                disabled={isCreatingRole}
-                                className="h-9 px-4 text-xs"
-                            >
-                                Create
-                            </Button>
+                            <div className="flex justify-end gap-2 pt-6">
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    onClick={cancelCreateRole}
+                                    disabled={isCreatingRole}
+                                    className="h-9 px-4 text-xs"
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    type="button"
+                                    onClick={createRole}
+                                    isLoading={isCreatingRole}
+                                    disabled={isCreatingRole}
+                                    className="h-9 px-4 text-xs"
+                                >
+                                    Create
+                                </Button>
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     {data?.roleAssignments.map((roleRecord) => {
                         const draftModules = getRoleDraft(roleRecord);
