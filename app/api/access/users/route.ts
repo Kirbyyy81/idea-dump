@@ -2,12 +2,13 @@ import { NextResponse } from 'next/server';
 import {
     canAccessModule,
     getDisplayName,
+    getRoleModuleAssignments,
     getSessionUserAppAccess,
     getUserAppAccess,
 } from '@/lib/rbac/access';
 import { ACCESS_MANAGER_ROLES, APP_ROLE_SLUGS, MANAGED_MODULE_SLUGS } from '@/lib/rbac/constants';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { AccessAdminUserRecord } from '@/lib/rbac/types';
+import { AccessAdminRoleRecord, AccessAdminUserRecord } from '@/lib/rbac/types';
 
 export async function GET() {
     const session = await getSessionUserAppAccess();
@@ -38,23 +39,29 @@ export async function GET() {
         return NextResponse.json({ error: 'Failed to load users', message: error.message }, { status: 500 });
     }
 
-    const users: AccessAdminUserRecord[] = [];
-    for (const user of data.users) {
-        const access = await getUserAppAccess(user.id);
-        users.push({
-            allowedModules: access.allowedModules,
-            displayName: getDisplayName(user),
-            email: user.email ?? null,
-            id: user.id,
-            overrides: access.overrides,
-            role: access.role,
-        });
-    }
+    const [roleAssignments, users] = await Promise.all([
+        getRoleModuleAssignments(),
+        Promise.all(
+            data.users.map(async (user) => {
+                const access = await getUserAppAccess(user.id);
+
+                return {
+                    allowedModules: access.allowedModules,
+                    displayName: getDisplayName(user),
+                    email: user.email ?? null,
+                    id: user.id,
+                    overrides: access.overrides,
+                    role: access.role,
+                } satisfies AccessAdminUserRecord;
+            })
+        ),
+    ]);
 
     return NextResponse.json({
         data: {
             modules: MANAGED_MODULE_SLUGS,
             roles: APP_ROLE_SLUGS,
+            roleAssignments: roleAssignments satisfies AccessAdminRoleRecord[],
             users,
         },
     });

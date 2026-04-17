@@ -14,7 +14,7 @@ import {
     MODULE_PATHS,
     MODULE_REDIRECT_ORDER,
 } from '@/lib/rbac/constants';
-import { ModuleOverrideEffect, UserAppAccess } from '@/lib/rbac/types';
+import { AccessAdminRoleRecord, ModuleOverrideEffect, UserAppAccess } from '@/lib/rbac/types';
 
 interface RoleRow {
     id: string;
@@ -27,6 +27,7 @@ interface OverrideRow {
 }
 
 interface RoleModuleRow {
+    role_id: string;
     DIM_modules: { modules: AppModuleSlug } | { modules: AppModuleSlug }[] | null;
 }
 
@@ -138,6 +139,63 @@ export async function getUserAppAccess(userId: string): Promise<UserAppAccess> {
         role: resolvedRole,
         userId,
     };
+}
+
+export async function getRoleModuleAssignments(): Promise<AccessAdminRoleRecord[]> {
+    const admin = createAdminClient();
+
+    const { data: roles, error: rolesError } = await admin
+        .from('DIM_roles')
+        .select('id, role')
+        .in('role', [...APP_ROLE_SLUGS]);
+
+    if (rolesError) {
+        throw new Error(rolesError.message);
+    }
+
+    const typedRoles = (roles || []) as RoleRow[];
+    const roleIds = typedRoles.map((role) => role.id);
+
+    const { data: roleModules, error: roleModulesError } = roleIds.length
+        ? await admin
+            .from('BRIDGE_role_modules')
+            .select('role_id, DIM_modules!inner(modules)')
+            .in('role_id', roleIds)
+        : { data: [], error: null };
+
+    if (roleModulesError) {
+        throw new Error(roleModulesError.message);
+    }
+
+    const modulesByRoleId = new Map<string, Set<AppModuleSlug>>();
+    for (const row of (roleModules || []) as RoleModuleRow[]) {
+        const moduleSlug = unwrapMaybeArray(row.DIM_modules)?.modules;
+        if (!isManagedModuleSlug(moduleSlug)) continue;
+
+        if (!modulesByRoleId.has(row.role_id)) {
+            modulesByRoleId.set(row.role_id, new Set<AppModuleSlug>());
+        }
+
+        modulesByRoleId.get(row.role_id)?.add(moduleSlug);
+    }
+
+    return APP_ROLE_SLUGS.map((roleSlug) => {
+        const roleRow = typedRoles.find((row) => row.role === roleSlug);
+        const roleModulesForRole = roleRow ? modulesByRoleId.get(roleRow.id) : null;
+        const moduleSet =
+            roleModulesForRole && roleModulesForRole.size > 0
+                ? roleModulesForRole
+                : new Set(
+                    (DEFAULT_ROLE_MODULES[roleSlug] || []).filter((moduleSlug) =>
+                        isManagedModuleSlug(moduleSlug)
+                    )
+                );
+
+        return {
+            modules: MANAGED_MODULE_SLUGS.filter((moduleSlug) => moduleSet.has(moduleSlug)),
+            role: roleSlug,
+        };
+    });
 }
 
 export function canAccessModule(access: UserAppAccess, moduleSlug: AppModuleSlug) {

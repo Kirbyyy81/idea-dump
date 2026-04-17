@@ -18,3 +18,8 @@ export interface AccessAdminUserRecord {
     role: AppRoleSlug;
     allowedModules: AppModuleSlug[];
 }
+
+export interface AccessAdminRoleRecord {
+    role: AppRoleSlug;
+    modules: AppModuleSlug[];
+}
