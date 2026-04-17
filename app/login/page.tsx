@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { buildCachedProfile, clearCachedProfile, setCachedProfile } from '@/lib/auth/profileCache';
-import { Mail, ArrowLeft, Loader2, CheckCircle, Lock } from 'lucide-react';
+import { Mail, ArrowLeft, CheckCircle, Lock } from 'lucide-react';
+import { LoaderOne } from '@/components/atoms/Loader';
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
@@ -298,7 +299,7 @@ export default function LoginPage() {
                             >
                                 {isVerifying ? (
                                     <>
-                                        <Loader2 size={18} className="animate-spin" />
+                                        <LoaderOne size="sm" />
                                         Verifying...
                                     </>
                                 ) : (
@@ -395,7 +396,7 @@ export default function LoginPage() {
                             >
                                 {isLoading ? (
                                     <>
-                                        <Loader2 size={18} className="animate-spin" />
+                                        <LoaderOne size="sm" />
                                         Logging in...
                                     </>
                                 ) : (

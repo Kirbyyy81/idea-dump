@@ -9,6 +9,7 @@ import { Badge } from '@/components/atoms/Badge';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
+import { PageLoader } from '@/components/atoms/Loader';
 
 interface AccessUsersResponse {
     modules: AppModuleSlug[];
@@ -311,11 +312,7 @@ export function AccessControlClient() {
     };
 
     if (isLoading) {
-        return (
-            <div className="mx-auto min-h-screen max-w-7xl p-8">
-                <p className="text-text-secondary">Loading access controls...</p>
-            </div>
-        );
+        return <PageLoader message="Loading access controls..." />;
     }
 
     return (

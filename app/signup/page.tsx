@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import { Mail, ArrowLeft, Loader2, CheckCircle, Lock } from 'lucide-react';
+import { Mail, ArrowLeft, CheckCircle, Lock } from 'lucide-react';
+import { LoaderOne } from '@/components/atoms/Loader';
 
 export default function SignupPage() {
     const [email, setEmail] = useState('');
@@ -184,7 +185,7 @@ export default function SignupPage() {
                             >
                                 {isLoading ? (
                                     <>
-                                        <Loader2 size={18} className="animate-spin" />
+                                        <LoaderOne size="sm" />
                                         Creating account...
                                     </>
                                 ) : (
