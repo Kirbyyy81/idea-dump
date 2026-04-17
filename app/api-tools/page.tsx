@@ -193,14 +193,8 @@ export default function ApiToolsPage() {
             <Sidebar projects={projects} />
             <main className="flex-1 ml-64 p-8">
                 <div className="max-w-5xl space-y-8">
-                    <header className="space-y-3">
+                    <header>
                         <h1 className="text-3xl font-heading font-medium">API</h1>
-                        <p className="text-text-muted max-w-3xl">
-                            Manage API keys, verify request formats, and inspect the live OpenAPI
-                            surface in one place. Agent-authenticated requests inherit ownership
-                            from the user tied to the submitted
-                            <code className="ml-1 text-text-secondary">x-api-key</code>.
-                        </p>
                     </header>
 
                     <Card className="p-6">
@@ -235,11 +229,6 @@ export default function ApiToolsPage() {
                                 API Keys
                             </h2>
                         </div>
-                        <p className="text-sm mb-6 text-text-secondary">
-                            Generate per-user API keys for external tools and agents. Keys are
-                            shown once at creation time.
-                        </p>
-
                         {newKey && (
                             <div className="mb-6 p-4 rounded-lg bg-success-bg border border-accent-sage">
                                 <p className="text-sm font-medium mb-2 flex items-center gap-2 text-accent-sage">
@@ -356,10 +345,6 @@ export default function ApiToolsPage() {
                             <h2 className="text-xl font-semibold font-body text-text-primary">
                                 API Reference
                             </h2>
-                            <p className="text-text-muted mt-1">
-                                Interactive docs powered by{' '}
-                                <code className="text-text-secondary">/api/openapi</code>.
-                            </p>
                         </div>
                         {docsError ? (
                             <div className="p-6">

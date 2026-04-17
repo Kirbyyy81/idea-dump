@@ -1,6 +1,6 @@
 'use client';
 
-import { ComponentType, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
     ShieldCheck,
@@ -9,6 +9,7 @@ import {
     FilePenLine,
     FolderKanban,
     LayoutDashboard,
+    LucideIcon,
     Settings,
 } from 'lucide-react';
 import { Sidebar } from '@/components/organisms/Sidebar';
@@ -22,35 +23,26 @@ interface AccessPayload {
     allowed_modules: AppModuleSlug[];
 }
 
-const MODULE_CARD_META: Partial<
-    Record<AppModuleSlug, { description: string; icon: ComponentType<{ size?: number; className?: string }> }>
-> = {
+const MODULE_CARD_META: Partial<Record<AppModuleSlug, { icon: LucideIcon }>> = {
     dashboard: {
-        description: 'Your central workspace for navigating the app.',
         icon: LayoutDashboard,
     },
     projects: {
-        description: 'Create, track, and update project records.',
         icon: FolderKanban,
     },
     logs: {
-        description: 'Review and export weekly productivity logs.',
         icon: ClipboardList,
     },
     api: {
-        description: 'Manage API keys and explore the available endpoints.',
         icon: BookOpen,
     },
     access_control: {
-        description: 'Manage roles, grants, and user-specific access overrides.',
         icon: ShieldCheck,
     },
     article_creation: {
-        description: 'Use the article creation tools available to your role.',
         icon: FilePenLine,
     },
     settings: {
-        description: 'Update your account details and access settings.',
         icon: Settings,
     },
 };
@@ -136,12 +128,8 @@ export default function DashboardPage() {
 
             <main className="flex-1 ml-64 p-8">
                 <div className="max-w-5xl space-y-8">
-                    <header className="space-y-3">
+                    <header>
                         <h1 className="text-3xl font-heading font-medium">Dashboard</h1>
-                        <p className="text-text-muted max-w-3xl">
-                            This is your shared home screen. The cards below reflect the modules
-                            currently available to your account.
-                        </p>
                     </header>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -160,9 +148,6 @@ export default function DashboardPage() {
                                             </h2>
                                         </div>
                                     </div>
-                                    <p className="text-sm text-text-secondary flex-1">
-                                        {item.description}
-                                    </p>
                                     <Link href={item.href}>
                                         <Button className="w-full">Open {item.label}</Button>
                                     </Link>
@@ -173,13 +158,9 @@ export default function DashboardPage() {
 
                     {!allowedModules.includes('projects') && (
                         <Card className="p-6">
-                            <h2 className="text-lg font-semibold text-text-primary mb-2">
+                            <h2 className="text-lg font-semibold text-text-primary">
                                 Projects Access
                             </h2>
-                            <p className="text-sm text-text-secondary">
-                                Your account does not currently include the Projects workspace. If
-                                you need it, ask an access manager to grant the Projects module.
-                            </p>
                         </Card>
                     )}
                 </div>
