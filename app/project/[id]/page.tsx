@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { StatusBadge } from '@/components/molecules/StatusBadge';
-import { PriorityBadge } from '@/components/molecules/PriorityBadge';
-import { MarkdownRenderer } from '@/components/molecules/MarkdownRenderer';
-import { NotesPanel } from '@/components/organisms/NotesPanel';
+import { StatusBadge } from '../_components/StatusBadge';
+import { PriorityBadge } from '../_components/PriorityBadge';
+import { MarkdownRenderer } from '../_components/MarkdownRenderer';
+import { NotesPanel } from '../_components/NotesPanel';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { Project, Note, inferStatus } from '@/lib/types';
@@ -118,7 +118,7 @@ export default function ProjectPage() {
             });
 
             if (!res.ok) throw new Error('Failed to delete project');
-            router.push('/');
+            router.push('/projects');
         } catch (err) {
             console.error('Failed to delete project:', err);
         }
@@ -132,8 +132,8 @@ export default function ProjectPage() {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center">
                 <p className="text-red-400 mb-4">{error || 'Project not found'}</p>
-                <Link href="/" className="btn-secondary">
-                    Back to Dashboard
+                <Link href="/projects" className="btn-secondary">
+                    Back to Projects
                 </Link>
             </div>
         );
@@ -146,11 +146,11 @@ export default function ProjectPage() {
             {/* Header */}
             <div className="flex items-center justify-between mb-8">
                 <Link
-                    href="/"
+                    href="/projects"
                     className="flex items-center gap-2 transition-colors text-text-secondary hover:text-text-primary"
                 >
                     <ArrowLeft size={20} />
-                    Back to Dashboard
+                    Back to Projects
                 </Link>
                 <div className="flex gap-2">
                     <Link href={`/project/${project.id}/edit`}>

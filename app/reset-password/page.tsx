@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import { Mail, ArrowLeft, Loader2, CheckCircle, Lock } from 'lucide-react';
+import { Mail, ArrowLeft, Lock } from 'lucide-react';
+import { LoaderOne } from '@/components/atoms/Loader';
 
 export default function ResetPasswordPage() {
     const [email, setEmail] = useState('');
@@ -183,7 +184,7 @@ export default function ResetPasswordPage() {
                             >
                                 {isLoading ? (
                                     <>
-                                        <Loader2 size={18} className="animate-spin" />
+                                        <LoaderOne size="sm" />
                                         Updating...
                                     </>
                                 ) : (
@@ -224,7 +225,7 @@ export default function ResetPasswordPage() {
                             >
                                 {isLoading ? (
                                     <>
-                                        <Loader2 size={18} className="animate-spin" />
+                                        <LoaderOne size="sm" />
                                         Sending...
                                     </>
                                 ) : (

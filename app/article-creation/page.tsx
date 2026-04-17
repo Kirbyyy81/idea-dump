@@ -6,9 +6,9 @@ import { Card } from '@/components/atoms/Card';
 import { Project } from '@/lib/types';
 import { PageLoader } from '@/components/atoms/Loader';
 import { FilePenLine } from 'lucide-react';
-import { MinuteReaderCard } from '@/components/article-creation/MinuteReaderCard';
-import { SlugImageNameCard } from '@/components/article-creation/SlugImageNameCard';
-import { TocAnchorGeneratorCard } from '@/components/article-creation/TocAnchorGeneratorCard';
+import { MinuteReaderCard } from './_components/MinuteReaderCard';
+import { SlugImageNameCard } from './_components/SlugImageNameCard';
+import { TocAnchorGeneratorCard } from './_components/TocAnchorGeneratorCard';
 
 export default function ArticleCreationPage() {
     const [projects, setProjects] = useState<Project[]>([]);
