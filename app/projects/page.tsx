@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { Sidebar } from '@/components/organisms/Sidebar';
-import { ProjectCard } from '@/components/organisms/ProjectCard';
+import { ProjectCard } from './_components/ProjectCard';
 import { Project, Status, statusConfig, inferStatus } from '@/lib/types';
 import { Plus, Search, X } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';

@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { StatusBadge } from '@/components/molecules/StatusBadge';
-import { PriorityBadge } from '@/components/molecules/PriorityBadge';
-import { MarkdownRenderer } from '@/components/molecules/MarkdownRenderer';
-import { NotesPanel } from '@/components/organisms/NotesPanel';
+import { StatusBadge } from '../_components/StatusBadge';
+import { PriorityBadge } from '../_components/PriorityBadge';
+import { MarkdownRenderer } from '../_components/MarkdownRenderer';
+import { NotesPanel } from '../_components/NotesPanel';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { Project, Note, inferStatus } from '@/lib/types';

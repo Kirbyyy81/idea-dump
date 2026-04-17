@@ -17,7 +17,7 @@ interface AccessUsersResponse {
     users: AccessAdminUserRecord[];
 }
 
-export function AccessManagementPanel() {
+export function AccessControlClient() {
     const [data, setData] = useState<AccessUsersResponse | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);

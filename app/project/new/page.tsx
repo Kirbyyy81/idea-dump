@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-import { ProjectForm } from '@/components/organisms/ProjectForm';
+import { ProjectForm } from '../_components/ProjectForm';
 import { CreateProjectInput } from '@/lib/types';
 
 export default function NewProjectPage() {
