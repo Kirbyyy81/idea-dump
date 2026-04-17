@@ -27,9 +27,19 @@ interface NewOverrideDraft {
     module: AppModuleSlug | '';
 }
 
+interface NewRoleDraft {
+    modules: AppModuleSlug[];
+    role: string;
+}
+
 const DEFAULT_NEW_OVERRIDE: NewOverrideDraft = {
     module: '',
     effect: 'allow',
+};
+
+const DEFAULT_NEW_ROLE: NewRoleDraft = {
+    role: '',
+    modules: [],
 };
 
 function getUserLabel(user: AccessAdminUserRecord) {
@@ -62,6 +72,8 @@ export function AccessControlClient() {
     const [roleDrafts, setRoleDrafts] = useState<Partial<Record<AppRoleSlug, AppModuleSlug[]>>>({});
     const [userDrafts, setUserDrafts] = useState<Record<string, UserDraftState>>({});
     const [newOverrideDrafts, setNewOverrideDrafts] = useState<Record<string, NewOverrideDraft>>({});
+    const [newRoleDraft, setNewRoleDraft] = useState<NewRoleDraft>(DEFAULT_NEW_ROLE);
+    const [isCreatingRole, setIsCreatingRole] = useState(false);
 
     async function loadAccessData() {
         try {
@@ -117,6 +129,15 @@ export function AccessControlClient() {
                 [role]: MANAGED_MODULE_SLUGS.filter((managedModule) => next.includes(managedModule)),
             };
         });
+    };
+
+    const toggleNewRoleModule = (moduleSlug: AppModuleSlug) => {
+        setNewRoleDraft((current) => ({
+            ...current,
+            modules: current.modules.includes(moduleSlug)
+                ? current.modules.filter((value) => value !== moduleSlug)
+                : [...current.modules, moduleSlug],
+        }));
     };
 
     const updateUserRole = (user: AccessAdminUserRecord, role: AppRoleSlug) => {
@@ -209,6 +230,40 @@ export function AccessControlClient() {
         }
     };
 
+    const createRole = async () => {
+        const role = newRoleDraft.role.trim();
+        if (!role) {
+            setError('Role name is required');
+            return;
+        }
+
+        setIsCreatingRole(true);
+        setError(null);
+
+        try {
+            const res = await fetch('/api/access/roles', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    role,
+                    modules: newRoleDraft.modules,
+                }),
+            });
+
+            if (!res.ok) {
+                const payload = await res.json();
+                throw new Error(payload.message || 'Failed to create role');
+            }
+
+            setNewRoleDraft(DEFAULT_NEW_ROLE);
+            await loadAccessData();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to create role');
+        } finally {
+            setIsCreatingRole(false);
+        }
+    };
+
     const saveUser = async (user: AccessAdminUserRecord) => {
         const draft = getUserDraft(user);
         setSavingUserId(user.id);
@@ -295,6 +350,56 @@ export function AccessControlClient() {
                 </div>
 
                 <div>
+                    <div className="grid grid-cols-[180px_minmax(0,1fr)_110px] items-start gap-4 border-b border-border-default px-6 py-4">
+                        <div className="space-y-2 pt-0.5">
+                            <span className="text-xs uppercase tracking-[0.14em] text-text-muted">New role</span>
+                            <Input
+                                value={newRoleDraft.role}
+                                onChange={(e) =>
+                                    setNewRoleDraft((current) => ({
+                                        ...current,
+                                        role: e.target.value,
+                                    }))
+                                }
+                                placeholder="e.g. editor"
+                                className="h-10"
+                            />
+                        </div>
+
+                        <div className="flex flex-wrap gap-2 pt-6">
+                            {data?.modules.map((moduleSlug) => {
+                                const selected = newRoleDraft.modules.includes(moduleSlug);
+
+                                return (
+                                    <button
+                                        key={`new-role-${moduleSlug}`}
+                                        type="button"
+                                        onClick={() => toggleNewRoleModule(moduleSlug)}
+                                        className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
+                                            selected
+                                                ? 'border-accent-rose bg-accent-rose/10 text-accent-rose'
+                                                : 'border-border-default bg-transparent text-text-secondary hover:border-border-strong hover:text-text-primary'
+                                        }`}
+                                    >
+                                        {MODULE_LABELS[moduleSlug]}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        <div className="flex justify-end pt-6">
+                            <Button
+                                type="button"
+                                onClick={createRole}
+                                isLoading={isCreatingRole}
+                                disabled={isCreatingRole}
+                                className="h-9 px-4 text-xs"
+                            >
+                                Create
+                            </Button>
+                        </div>
+                    </div>
+
                     {data?.roleAssignments.map((roleRecord) => {
                         const draftModules = getRoleDraft(roleRecord);
 

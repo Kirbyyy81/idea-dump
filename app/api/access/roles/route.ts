@@ -1,20 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import {
-    canAccessModule,
-    getSessionUserAppAccess,
-    isManagedModuleSlug,
-} from '@/lib/rbac/access';
-import { ACCESS_MANAGER_ROLES, MANAGED_MODULE_SLUGS } from '@/lib/rbac/constants';
+import { canAccessModule, getSessionUserAppAccess, isManagedModuleSlug } from '@/lib/rbac/access';
+import { ACCESS_MANAGER_ROLES } from '@/lib/rbac/constants';
 import { createAdminClient } from '@/lib/supabase/admin';
 
-interface UpdateRoleModulesBody {
+interface CreateRoleBody {
     modules?: string[];
+    role?: string;
 }
 
-export async function PUT(
-    request: NextRequest,
-    { params }: { params: Promise<{ role: string }> }
-) {
+function normalizeNewRole(value?: string | null) {
+    return value
+        ?.trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9_ -]/g, '')
+        .replace(/\s+/g, '_') ?? '';
+}
+
+export async function POST(request: NextRequest) {
     const session = await getSessionUserAppAccess();
     if (!session) {
         return NextResponse.json(
@@ -33,14 +35,20 @@ export async function PUT(
         );
     }
 
-    const { role } = await params;
-    const roleSlug = role.trim();
-    const body = (await request.json()) as UpdateRoleModulesBody;
+    const body = (await request.json()) as CreateRoleBody;
+    const roleSlug = normalizeNewRole(body.role);
     const requestedModules = Array.from(new Set((body.modules || []).filter(isManagedModuleSlug)));
 
     if (!roleSlug) {
         return NextResponse.json(
-            { error: 'Validation error', message: 'Invalid role' },
+            { error: 'Validation error', message: 'Role name is required' },
+            { status: 400 }
+        );
+    }
+
+    if (!/^[a-z0-9_ -]+$/.test(roleSlug) || roleSlug.length > 40) {
+        return NextResponse.json(
+            { error: 'Validation error', message: 'Role name is invalid' },
             { status: 400 }
         );
     }
@@ -53,28 +61,35 @@ export async function PUT(
     }
 
     const admin = createAdminClient();
-
-    const { data: roleRow, error: roleError } = await admin
+    const { data: existingRole, error: existingRoleError } = await admin
         .from('DIM_roles')
         .select('id')
         .eq('role', roleSlug)
-        .single();
+        .maybeSingle();
 
-    if (roleError || !roleRow) {
+    if (existingRoleError) {
         return NextResponse.json(
-            { error: 'Validation error', message: 'Invalid role' },
+            { error: 'Failed to create role', message: existingRoleError.message },
+            { status: 500 }
+        );
+    }
+
+    if (existingRole) {
+        return NextResponse.json(
+            { error: 'Validation error', message: 'Role already exists' },
             { status: 400 }
         );
     }
 
-    const { error: deleteError } = await admin
-        .from('BRIDGE_role_modules')
-        .delete()
-        .eq('role_id', roleRow.id);
+    const { data: createdRole, error: createRoleError } = await admin
+        .from('DIM_roles')
+        .insert({ role: roleSlug, name: roleSlug.replace(/_/g, ' ') })
+        .select('id, role')
+        .single();
 
-    if (deleteError) {
+    if (createRoleError || !createdRole) {
         return NextResponse.json(
-            { error: 'Failed to update role modules', message: deleteError.message },
+            { error: 'Failed to create role', message: createRoleError?.message || 'Role creation failed' },
             { status: 500 }
         );
     }
@@ -87,16 +102,12 @@ export async function PUT(
 
         if (moduleError) {
             return NextResponse.json(
-                { error: 'Failed to update role modules', message: moduleError.message },
+                { error: 'Failed to create role', message: moduleError.message },
                 { status: 500 }
             );
         }
 
-        const validModules = (moduleRows || [])
-            .map((moduleRow) => moduleRow.modules)
-            .filter((moduleSlug) => isManagedModuleSlug(moduleSlug));
-
-        if (validModules.length !== requestedModules.length) {
+        if ((moduleRows || []).length !== requestedModules.length) {
             return NextResponse.json(
                 { error: 'Validation error', message: 'Invalid module selection' },
                 { status: 400 }
@@ -106,23 +117,23 @@ export async function PUT(
         const { error: insertError } = await admin.from('BRIDGE_role_modules').insert(
             (moduleRows || []).map((moduleRow) => ({
                 module_id: moduleRow.id,
-                role_id: roleRow.id,
+                role_id: createdRole.id,
             }))
         );
 
         if (insertError) {
             return NextResponse.json(
-                { error: 'Failed to update role modules', message: insertError.message },
+                { error: 'Failed to create role', message: insertError.message },
                 { status: 500 }
             );
         }
     }
 
     return NextResponse.json({
-        data: {
-            modules: MANAGED_MODULE_SLUGS.filter((moduleSlug) => requestedModules.includes(moduleSlug)),
-            role: roleSlug,
-        },
         success: true,
+        data: {
+            role: createdRole.role,
+            modules: requestedModules,
+        },
     });
 }

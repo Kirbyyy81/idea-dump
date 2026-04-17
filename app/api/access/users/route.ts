@@ -6,7 +6,7 @@ import {
     getSessionUserAppAccess,
     getUserAppAccess,
 } from '@/lib/rbac/access';
-import { ACCESS_MANAGER_ROLES, APP_ROLE_SLUGS, MANAGED_MODULE_SLUGS } from '@/lib/rbac/constants';
+import { ACCESS_MANAGER_ROLES, MANAGED_MODULE_SLUGS } from '@/lib/rbac/constants';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { AccessAdminRoleRecord, AccessAdminUserRecord } from '@/lib/rbac/types';
 
@@ -39,8 +39,9 @@ export async function GET() {
         return NextResponse.json({ error: 'Failed to load users', message: error.message }, { status: 500 });
     }
 
-    const [roleAssignments, users] = await Promise.all([
+    const [roleAssignments, roleRows, users] = await Promise.all([
         getRoleModuleAssignments(),
+        admin.from('DIM_roles').select('role').order('role', { ascending: true }),
         Promise.all(
             data.users.map(async (user) => {
                 const access = await getUserAppAccess(user.id);
@@ -57,10 +58,22 @@ export async function GET() {
         ),
     ]);
 
+    if (roleRows.error) {
+        return NextResponse.json(
+            { error: 'Failed to load roles', message: roleRows.error.message },
+            { status: 500 }
+        );
+    }
+
+    const orderedRoles = [
+        ...(roleRows.data || []).map((row) => row.role).filter((role) => role === 'owner' || role === 'admin' || role === 'member'),
+        ...(roleRows.data || []).map((row) => row.role).filter((role) => role !== 'owner' && role !== 'admin' && role !== 'member'),
+    ];
+
     return NextResponse.json({
         data: {
             modules: MANAGED_MODULE_SLUGS,
-            roles: APP_ROLE_SLUGS,
+            roles: orderedRoles,
             roleAssignments: roleAssignments satisfies AccessAdminRoleRecord[],
             users,
         },

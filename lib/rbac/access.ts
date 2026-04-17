@@ -5,7 +5,6 @@ import {
     ACCESS_MANAGER_ROLES,
     ALWAYS_ALLOWED_MODULES,
     APP_MODULE_SLUGS,
-    APP_ROLE_SLUGS,
     AppModuleSlug,
     AppRoleSlug,
     DEFAULT_ROLE_MODULES,
@@ -18,7 +17,7 @@ import { AccessAdminRoleRecord, ModuleOverrideEffect, UserAppAccess } from '@/li
 
 interface RoleRow {
     id: string;
-    role: AppRoleSlug;
+    role: string;
 }
 
 interface OverrideRow {
@@ -54,8 +53,7 @@ export async function getUserAppAccess(userId: string): Promise<UserAppAccess> {
 
     const { data: roles, error: rolesError } = await admin
         .from('DIM_roles')
-        .select('id, role')
-        .in('role', [...APP_ROLE_SLUGS]);
+        .select('id, role');
 
     if (rolesError) {
         throw new Error(rolesError.message);
@@ -74,9 +72,7 @@ export async function getUserAppAccess(userId: string): Promise<UserAppAccess> {
         throw new Error(userRoleError.message);
     }
 
-    const resolvedRole = normalizeRoleSlug(
-        unwrapMaybeArray(userRoleRow?.DIM_roles)?.role ?? DEFAULT_APP_ROLE
-    );
+    const resolvedRole = normalizeRoleSlug(unwrapMaybeArray(userRoleRow?.DIM_roles)?.role ?? DEFAULT_APP_ROLE);
     const roleRecord = roleBySlug.get(resolvedRole);
 
     const [roleModulesResult, overridesResult] = await Promise.all([
@@ -103,7 +99,7 @@ export async function getUserAppAccess(userId: string): Promise<UserAppAccess> {
     const roleModules = (roleModulesResult.data || []) as RoleModuleRow[];
 
     if (roleModules.length === 0) {
-        for (const moduleSlug of DEFAULT_ROLE_MODULES[resolvedRole] || []) {
+        for (const moduleSlug of DEFAULT_ROLE_MODULES[resolvedRole as keyof typeof DEFAULT_ROLE_MODULES] || []) {
             allowed.add(moduleSlug);
         }
     }
@@ -147,7 +143,7 @@ export async function getRoleModuleAssignments(): Promise<AccessAdminRoleRecord[
     const { data: roles, error: rolesError } = await admin
         .from('DIM_roles')
         .select('id, role')
-        .in('role', [...APP_ROLE_SLUGS]);
+        .order('role', { ascending: true });
 
     if (rolesError) {
         throw new Error(rolesError.message);
@@ -179,14 +175,19 @@ export async function getRoleModuleAssignments(): Promise<AccessAdminRoleRecord[
         modulesByRoleId.get(row.role_id)?.add(moduleSlug);
     }
 
-    return APP_ROLE_SLUGS.map((roleSlug) => {
-        const roleRow = typedRoles.find((row) => row.role === roleSlug);
+    const orderedRoles = [
+        ...typedRoles.filter((row) => row.role === 'owner' || row.role === 'admin' || row.role === 'member'),
+        ...typedRoles.filter((row) => row.role !== 'owner' && row.role !== 'admin' && row.role !== 'member'),
+    ];
+
+    return orderedRoles.map((roleRow) => {
+        const roleSlug = roleRow.role;
         const roleModulesForRole = roleRow ? modulesByRoleId.get(roleRow.id) : null;
         const moduleSet =
             roleModulesForRole && roleModulesForRole.size > 0
                 ? roleModulesForRole
                 : new Set(
-                    (DEFAULT_ROLE_MODULES[roleSlug] || []).filter((moduleSlug) =>
+                    (DEFAULT_ROLE_MODULES[roleSlug as keyof typeof DEFAULT_ROLE_MODULES] || []).filter((moduleSlug) =>
                         isManagedModuleSlug(moduleSlug)
                     )
                 );
@@ -211,9 +212,7 @@ export function getFirstAllowedModulePath(access: UserAppAccess) {
 }
 
 export function normalizeRoleSlug(value?: string | null): AppRoleSlug {
-    return APP_ROLE_SLUGS.includes(value as AppRoleSlug)
-        ? (value as AppRoleSlug)
-        : DEFAULT_APP_ROLE;
+    return value?.trim() || DEFAULT_APP_ROLE;
 }
 
 export function isAppModuleSlug(value?: string | null): value is AppModuleSlug {

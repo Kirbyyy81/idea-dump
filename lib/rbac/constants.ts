@@ -1,5 +1,6 @@
 export const APP_ROLE_SLUGS = ['owner', 'admin', 'member'] as const;
-export type AppRoleSlug = (typeof APP_ROLE_SLUGS)[number];
+export type BuiltInAppRoleSlug = (typeof APP_ROLE_SLUGS)[number];
+export type AppRoleSlug = string;
 
 export const APP_MODULE_SLUGS = [
     'dashboard',
@@ -12,7 +13,7 @@ export const APP_MODULE_SLUGS = [
 ] as const;
 export type AppModuleSlug = (typeof APP_MODULE_SLUGS)[number];
 
-export const DEFAULT_APP_ROLE: AppRoleSlug = 'member';
+export const DEFAULT_APP_ROLE: BuiltInAppRoleSlug = 'member';
 export const ALWAYS_ALLOWED_MODULES: AppModuleSlug[] = ['dashboard', 'settings'];
 export const MANAGED_MODULE_SLUGS: AppModuleSlug[] = [
     'projects',
@@ -42,7 +43,7 @@ export const MODULE_REDIRECT_ORDER: AppModuleSlug[] = [
     'settings',
 ];
 
-export const DEFAULT_ROLE_MODULES: Record<AppRoleSlug, AppModuleSlug[]> = {
+export const DEFAULT_ROLE_MODULES: Record<BuiltInAppRoleSlug, AppModuleSlug[]> = {
     owner: ['projects', 'logs', 'api', 'access_control', 'article_creation'],
     admin: ['projects', 'logs', 'api', 'access_control', 'article_creation'],
     member: ['logs', 'api'],

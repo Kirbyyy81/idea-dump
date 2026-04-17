@@ -3,7 +3,6 @@ import {
     canAccessModule,
     getSessionUserAppAccess,
     isManagedModuleSlug,
-    normalizeRoleSlug,
 } from '@/lib/rbac/access';
 import { ACCESS_MANAGER_ROLES } from '@/lib/rbac/constants';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -39,7 +38,11 @@ export async function PUT(
     const { userId } = await params;
     const body = (await request.json()) as UpdateAccessBody;
     const admin = createAdminClient();
-    const roleSlug = normalizeRoleSlug(body.role);
+    const roleSlug = body.role?.trim();
+
+    if (!roleSlug) {
+        return NextResponse.json({ error: 'Validation error', message: 'Invalid role' }, { status: 400 });
+    }
 
     const { data: roleRow, error: roleError } = await admin
         .from('DIM_roles')
