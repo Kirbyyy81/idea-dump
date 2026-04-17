@@ -12,14 +12,12 @@ import {
     FolderKanban,
     Settings,
     ShieldCheck,
-    Search,
     ChevronRight,
     ClipboardList,
     BookOpen,
     FilePenLine,
 } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
-import { Input } from '@/components/atoms/Input';
 
 interface SidebarProps {
     projects: Project[];
@@ -37,12 +35,7 @@ const MODULE_NAV_ITEMS: Array<{ href: string; icon: JSX.Element; module: AppModu
 export function Sidebar({ projects }: SidebarProps) {
     const pathname = usePathname();
     const [isProjectsOpen, setIsProjectsOpen] = useState(false);
-    const [projectSearch, setProjectSearch] = useState('');
     const [allowedModules, setAllowedModules] = useState<AppModuleSlug[]>(DEFAULT_ALLOWED_MODULES);
-
-    const filteredProjects = projects.filter((p) =>
-        p.title.toLowerCase().includes(projectSearch.toLowerCase())
-    );
 
     useEffect(() => {
         let cancelled = false;
@@ -126,7 +119,7 @@ export function Sidebar({ projects }: SidebarProps) {
                                 onClick={() => setIsProjectsOpen(!isProjectsOpen)}
                             >
                                 <span className="flex-1 text-left">{MODULE_LABELS.projects}</span>
-                                {filteredProjects.length > 0 && (
+                                {projects.length > 0 && (
                                     <ChevronRight
                                         size={14}
                                         className={cn(
@@ -145,29 +138,13 @@ export function Sidebar({ projects }: SidebarProps) {
                             )}
                         >
                             <div className="pl-4 space-y-1 pt-1">
-                                <div className="px-2 mb-2">
-                                    <div className="relative">
-                                        <Search
-                                            size={12}
-                                            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted"
-                                        />
-                                        <Input
-                                            type="text"
-                                            placeholder="Find..."
-                                            value={projectSearch}
-                                            onChange={(e) => setProjectSearch(e.target.value)}
-                                            className="w-full pl-7 pr-2 py-1 text-xs h-7 bg-bg-base border border-border-subtle rounded text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-rose"
-                                        />
-                                    </div>
-                                </div>
-
                                 <div className="space-y-0.5 max-h-[300px] overflow-y-auto custom-scrollbar">
-                                    {filteredProjects.length === 0 ? (
+                                    {projects.length === 0 ? (
                                         <p className="px-3 py-1.5 text-xs text-text-muted italic">
-                                            {projects.length === 0 ? 'No projects' : 'No matches'}
+                                            No projects
                                         </p>
                                     ) : (
-                                        filteredProjects.map((project) => (
+                                        projects.map((project) => (
                                             <Link
                                                 key={project.id}
                                                 href={`/project/${project.id}`}
