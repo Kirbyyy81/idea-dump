@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Plus, Search, X } from 'lucide-react';
 import { AppModuleSlug, AppRoleSlug, MANAGED_MODULE_SLUGS, MODULE_LABELS } from '@/lib/rbac/constants';
 import { AccessAdminRoleRecord, AccessAdminUserRecord, ModuleOverrideEffect } from '@/lib/rbac/types';
 import { Badge } from '@/components/atoms/Badge';
@@ -17,6 +17,41 @@ interface AccessUsersResponse {
     users: AccessAdminUserRecord[];
 }
 
+interface UserDraftState {
+    overrides: Partial<Record<AppModuleSlug, ModuleOverrideEffect | null>>;
+    role: AppRoleSlug;
+}
+
+interface NewOverrideDraft {
+    effect: ModuleOverrideEffect;
+    module: AppModuleSlug | '';
+}
+
+const DEFAULT_NEW_OVERRIDE: NewOverrideDraft = {
+    module: '',
+    effect: 'allow',
+};
+
+function getUserLabel(user: AccessAdminUserRecord) {
+    return user.displayName || user.email || user.id;
+}
+
+function getUserSubLabel(user: AccessAdminUserRecord) {
+    return user.email || user.id;
+}
+
+function getInitials(value: string) {
+    const trimmed = value.trim();
+    if (!trimmed) return 'U';
+
+    const parts = trimmed.split(/\s+/).filter(Boolean);
+    if (parts.length === 1) {
+        return parts[0].slice(0, 2).toUpperCase();
+    }
+
+    return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase();
+}
+
 export function AccessControlClient() {
     const [data, setData] = useState<AccessUsersResponse | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -25,9 +60,8 @@ export function AccessControlClient() {
     const [savingUserId, setSavingUserId] = useState<string | null>(null);
     const [search, setSearch] = useState('');
     const [roleDrafts, setRoleDrafts] = useState<Partial<Record<AppRoleSlug, AppModuleSlug[]>>>({});
-    const [userDrafts, setUserDrafts] = useState<
-        Record<string, { overrides: Partial<Record<AppModuleSlug, ModuleOverrideEffect | null>>; role: AppRoleSlug }>
-    >({});
+    const [userDrafts, setUserDrafts] = useState<Record<string, UserDraftState>>({});
+    const [newOverrideDrafts, setNewOverrideDrafts] = useState<Record<string, NewOverrideDraft>>({});
 
     async function loadAccessData() {
         try {
@@ -69,6 +103,8 @@ export function AccessControlClient() {
     const getUserDraft = (user: AccessAdminUserRecord) =>
         userDrafts[user.id] ?? { overrides: { ...user.overrides }, role: user.role };
 
+    const getNewOverrideDraft = (userId: string) => newOverrideDrafts[userId] ?? DEFAULT_NEW_OVERRIDE;
+
     const toggleRoleModule = (role: AppRoleSlug, moduleSlug: AppModuleSlug) => {
         setRoleDrafts((current) => {
             const existing = current[role] ?? data?.roleAssignments.find((record) => record.role === role)?.modules ?? [];
@@ -108,6 +144,39 @@ export function AccessControlClient() {
                 },
             },
         }));
+    };
+
+    const updateNewOverrideDraft = (
+        userId: string,
+        field: keyof NewOverrideDraft,
+        value: AppModuleSlug | '' | ModuleOverrideEffect
+    ) => {
+        setNewOverrideDrafts((current) => ({
+            ...current,
+            [userId]: {
+                ...getNewOverrideDraft(userId),
+                [field]: value,
+            } as NewOverrideDraft,
+        }));
+    };
+
+    const addUserOverride = (user: AccessAdminUserRecord) => {
+        const draft = getNewOverrideDraft(user.id);
+        if (!draft.module) {
+            setError('Choose a module before adding an exception');
+            return;
+        }
+
+        updateUserOverride(user, draft.module, draft.effect);
+        setNewOverrideDrafts((current) => ({
+            ...current,
+            [user.id]: DEFAULT_NEW_OVERRIDE,
+        }));
+        setError(null);
+    };
+
+    const removeUserOverride = (user: AccessAdminUserRecord, moduleSlug: AppModuleSlug) => {
+        updateUserOverride(user, moduleSlug, null);
     };
 
     const saveRole = async (roleRecord: AccessAdminRoleRecord) => {
@@ -165,6 +234,11 @@ export function AccessControlClient() {
                 delete next[user.id];
                 return next;
             });
+            setNewOverrideDrafts((current) => {
+                const next = { ...current };
+                delete next[user.id];
+                return next;
+            });
             await loadAccessData();
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to save access');
@@ -175,211 +249,256 @@ export function AccessControlClient() {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen p-8 max-w-7xl mx-auto">
+            <div className="mx-auto min-h-screen max-w-7xl p-8">
                 <p className="text-text-secondary">Loading access controls...</p>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen p-8 max-w-7xl mx-auto">
-            <div className="flex items-center justify-between gap-4 mb-8">
+        <div className="mx-auto min-h-screen max-w-7xl space-y-8 p-8">
+            <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                     <Link
                         href="/settings"
-                        className="flex items-center gap-2 transition-colors text-text-secondary hover:text-text-primary"
+                        className="flex items-center gap-2 text-text-secondary transition-colors hover:text-text-primary"
                     >
                         <ArrowLeft size={20} />
                     </Link>
                     <h1 className="text-text-primary">Access Control</h1>
                 </div>
 
-                <Input
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search users..."
-                    className="max-w-xs"
-                />
+                <div className="relative w-full max-w-sm">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+                    <Input
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder="Search users"
+                        className="pl-9"
+                    />
+                </div>
             </div>
 
             {error && (
-                <div className="mb-6 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3">
                     <p className="text-sm text-red-400">{error}</p>
                 </div>
             )}
 
-            <div className="space-y-8">
-                <Card className="p-0 overflow-hidden">
-                    <div className="border-b border-border-default px-6 py-4">
-                        <h2 className="text-lg font-semibold text-text-primary">Roles</h2>
+            <Card className="overflow-hidden rounded-2xl p-0">
+                <div className="border-b border-border-default bg-bg-hover px-6 py-3">
+                    <div className="grid grid-cols-[180px_minmax(0,1fr)_110px] items-center gap-4 text-xs uppercase tracking-[0.18em] text-text-muted">
+                        <span>Role</span>
+                        <span>Modules</span>
+                        <span>Action</span>
                     </div>
+                </div>
 
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full text-sm">
-                            <thead className="bg-bg-hover text-left text-text-secondary">
-                                <tr>
-                                    <th className="px-6 py-3 font-medium">Role</th>
-                                    <th className="px-6 py-3 font-medium">Assigned modules</th>
-                                    <th className="px-6 py-3 font-medium w-32">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {data?.roleAssignments.map((roleRecord) => {
-                                    const draftModules = getRoleDraft(roleRecord);
+                <div>
+                    {data?.roleAssignments.map((roleRecord) => {
+                        const draftModules = getRoleDraft(roleRecord);
 
-                                    return (
-                                        <tr key={roleRecord.role} className="border-t border-border-default align-top">
-                                            <td className="px-6 py-4 font-medium text-text-primary uppercase">
-                                                {roleRecord.role}
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex flex-wrap gap-2">
-                                                    {data.modules.map((moduleSlug) => {
-                                                        const selected = draftModules.includes(moduleSlug);
+                        return (
+                            <div
+                                key={roleRecord.role}
+                                className="grid grid-cols-[180px_minmax(0,1fr)_110px] items-start gap-4 border-b border-border-default px-6 py-4 last:border-b-0 hover:bg-bg-hover"
+                            >
+                                <div className="pt-1">
+                                    <span className="font-medium uppercase tracking-[0.14em] text-text-primary">
+                                        {roleRecord.role}
+                                    </span>
+                                </div>
 
-                                                        return (
-                                                            <button
-                                                                key={`${roleRecord.role}-${moduleSlug}`}
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    toggleRoleModule(roleRecord.role, moduleSlug)
-                                                                }
-                                                                className={`rounded-full border px-3 py-1 text-xs transition-colors ${
-                                                                    selected
-                                                                        ? 'border-accent-rose bg-accent-rose/10 text-accent-rose'
-                                                                        : 'border-border-default bg-bg-hover text-text-secondary hover:text-text-primary'
-                                                                }`}
-                                                            >
-                                                                {MODULE_LABELS[moduleSlug]}
-                                                            </button>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <Button
-                                                    onClick={() => saveRole(roleRecord)}
-                                                    isLoading={savingRole === roleRecord.role}
-                                                    disabled={savingRole === roleRecord.role}
+                                <div className="flex flex-wrap gap-2">
+                                    {data.modules.map((moduleSlug) => {
+                                        const selected = draftModules.includes(moduleSlug);
+
+                                        return (
+                                            <button
+                                                key={`${roleRecord.role}-${moduleSlug}`}
+                                                type="button"
+                                                onClick={() => toggleRoleModule(roleRecord.role, moduleSlug)}
+                                                className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
+                                                    selected
+                                                        ? 'border-accent-rose bg-accent-rose/10 text-accent-rose'
+                                                        : 'border-border-default bg-transparent text-text-secondary hover:border-border-strong hover:text-text-primary'
+                                                }`}
+                                            >
+                                                {MODULE_LABELS[moduleSlug]}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                <div className="flex justify-end">
+                                    <Button
+                                        onClick={() => saveRole(roleRecord)}
+                                        isLoading={savingRole === roleRecord.role}
+                                        disabled={savingRole === roleRecord.role}
+                                        className="h-9 px-4 text-xs"
+                                    >
+                                        Save
+                                    </Button>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </Card>
+
+            <Card className="overflow-hidden rounded-2xl p-0">
+                <div className="border-b border-border-default bg-bg-hover px-6 py-3">
+                    <div className="grid grid-cols-[minmax(0,1.4fr)_180px_minmax(0,1.2fr)_110px] items-center gap-4 text-xs uppercase tracking-[0.18em] text-text-muted">
+                        <span>User</span>
+                        <span>Role</span>
+                        <span>Exceptions</span>
+                        <span>Action</span>
+                    </div>
+                </div>
+
+                <div>
+                    {filteredUsers.map((user) => {
+                        const draft = getUserDraft(user);
+                        const newOverride = getNewOverrideDraft(user.id);
+                        const overrideEntries = MANAGED_MODULE_SLUGS.filter(
+                            (moduleSlug) => draft.overrides[moduleSlug]
+                        );
+                        const availableModules = data?.modules.filter(
+                            (moduleSlug) => !overrideEntries.includes(moduleSlug)
+                        ) ?? [];
+                        const userLabel = getUserLabel(user);
+
+                        return (
+                            <div
+                                key={user.id}
+                                className="grid grid-cols-[minmax(0,1.4fr)_180px_minmax(0,1.2fr)_110px] items-start gap-4 border-b border-border-default px-6 py-4 last:border-b-0 hover:bg-bg-hover"
+                            >
+                                <div className="flex min-w-0 items-center gap-3">
+                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border-default bg-bg-hover text-xs font-semibold uppercase text-text-primary">
+                                        {getInitials(userLabel)}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="truncate font-medium text-text-primary">{userLabel}</p>
+                                        <p className="truncate text-xs text-text-secondary">{getUserSubLabel(user)}</p>
+                                    </div>
+                                </div>
+
+                                <div className="pt-0.5">
+                                    <select
+                                        value={draft.role}
+                                        onChange={(e) => updateUserRole(user, e.target.value as AppRoleSlug)}
+                                        className="input h-10 min-w-[160px] text-sm"
+                                    >
+                                        {data?.roles.map((role) => (
+                                            <option key={role} value={role}>
+                                                {role}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="space-y-3">
+                                    {overrideEntries.length > 0 ? (
+                                        <div className="space-y-2">
+                                            {overrideEntries.map((moduleSlug) => (
+                                                <div
+                                                    key={`${user.id}-${moduleSlug}`}
+                                                    className="flex items-center gap-2 rounded-xl border border-border-default bg-bg-hover px-3 py-2"
                                                 >
-                                                    Save
-                                                </Button>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                </Card>
-
-                <Card className="p-0 overflow-hidden">
-                    <div className="border-b border-border-default px-6 py-4">
-                        <h2 className="text-lg font-semibold text-text-primary">Users</h2>
-                    </div>
-
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full text-sm">
-                            <thead className="bg-bg-hover text-left text-text-secondary">
-                                <tr>
-                                    <th className="px-6 py-3 font-medium">User</th>
-                                    <th className="px-6 py-3 font-medium">Role</th>
-                                    <th className="px-6 py-3 font-medium">Special modules</th>
-                                    <th className="px-6 py-3 font-medium w-32">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredUsers.map((user) => {
-                                    const draft = getUserDraft(user);
-                                    const overrideEntries = MANAGED_MODULE_SLUGS.filter(
-                                        (moduleSlug) => draft.overrides[moduleSlug]
-                                    );
-
-                                    return (
-                                        <tr key={user.id} className="border-t border-border-default align-top">
-                                            <td className="px-6 py-4">
-                                                <div>
-                                                    <p className="font-medium text-text-primary">
-                                                        {user.displayName || user.email || user.id}
-                                                    </p>
-                                                    <p className="text-xs text-text-secondary">{user.email || user.id}</p>
+                                                    <Badge className="shrink-0">{MODULE_LABELS[moduleSlug]}</Badge>
+                                                    <select
+                                                        value={draft.overrides[moduleSlug] ?? 'allow'}
+                                                        onChange={(e) =>
+                                                            updateUserOverride(
+                                                                user,
+                                                                moduleSlug,
+                                                                e.target.value as ModuleOverrideEffect
+                                                            )
+                                                        }
+                                                        className="input h-8 min-w-[110px] border-0 bg-transparent px-2 text-xs"
+                                                    >
+                                                        <option value="allow">Allow</option>
+                                                        <option value="deny">Deny</option>
+                                                    </select>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeUserOverride(user, moduleSlug)}
+                                                        className="ml-auto rounded-full p-1 text-text-muted transition-colors hover:bg-bg-hover hover:text-text-primary"
+                                                        aria-label={`Remove ${MODULE_LABELS[moduleSlug]} override`}
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
                                                 </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <select
-                                                    value={draft.role}
-                                                    onChange={(e) =>
-                                                        updateUserRole(user, e.target.value as AppRoleSlug)
-                                                    }
-                                                    className="input min-w-[160px]"
-                                                >
-                                                    {data?.roles.map((role) => (
-                                                        <option key={role} value={role}>
-                                                            {role}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="mb-3 flex flex-wrap gap-2">
-                                                    {overrideEntries.length > 0 ? (
-                                                        overrideEntries.map((moduleSlug) => (
-                                                            <Badge key={`${user.id}-badge-${moduleSlug}`}>
-                                                                {MODULE_LABELS[moduleSlug]}: {draft.overrides[moduleSlug]}
-                                                            </Badge>
-                                                        ))
-                                                    ) : (
-                                                        <span className="text-xs text-text-muted">None</span>
-                                                    )}
-                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <span className="inline-flex h-10 items-center text-sm text-text-muted">
+                                            None
+                                        </span>
+                                    )}
 
-                                                <div className="space-y-2">
-                                                    {data?.modules.map((moduleSlug) => (
-                                                        <div
-                                                            key={`${user.id}-${moduleSlug}`}
-                                                            className="grid grid-cols-[minmax(0,1fr)_140px] items-center gap-3"
-                                                        >
-                                                            <span className="text-xs text-text-secondary">
-                                                                {MODULE_LABELS[moduleSlug]}
-                                                            </span>
-                                                            <select
-                                                                value={draft.overrides[moduleSlug] ?? 'default'}
-                                                                onChange={(e) =>
-                                                                    updateUserOverride(
-                                                                        user,
-                                                                        moduleSlug,
-                                                                        e.target.value === 'default'
-                                                                            ? null
-                                                                            : (e.target.value as ModuleOverrideEffect)
-                                                                    )
-                                                                }
-                                                                className="input h-9 text-xs"
-                                                            >
-                                                                <option value="default">Role default</option>
-                                                                <option value="allow">Allow</option>
-                                                                <option value="deny">Deny</option>
-                                                            </select>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <Button
-                                                    onClick={() => saveUser(user)}
-                                                    isLoading={savingUserId === user.id}
-                                                    disabled={savingUserId === user.id}
-                                                >
-                                                    Save
-                                                </Button>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                </Card>
-            </div>
+                                    {availableModules.length > 0 && (
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <select
+                                                value={newOverride.module}
+                                                onChange={(e) =>
+                                                    updateNewOverrideDraft(
+                                                        user.id,
+                                                        'module',
+                                                        e.target.value as AppModuleSlug | ''
+                                                    )
+                                                }
+                                                className="input h-9 min-w-[150px] text-xs"
+                                            >
+                                                <option value="">Add module</option>
+                                                {availableModules.map((moduleSlug) => (
+                                                    <option key={`${user.id}-new-${moduleSlug}`} value={moduleSlug}>
+                                                        {MODULE_LABELS[moduleSlug]}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <select
+                                                value={newOverride.effect}
+                                                onChange={(e) =>
+                                                    updateNewOverrideDraft(
+                                                        user.id,
+                                                        'effect',
+                                                        e.target.value as ModuleOverrideEffect
+                                                    )
+                                                }
+                                                className="input h-9 min-w-[110px] text-xs"
+                                            >
+                                                <option value="allow">Allow</option>
+                                                <option value="deny">Deny</option>
+                                            </select>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                onClick={() => addUserOverride(user)}
+                                                className="h-9 px-3 text-xs"
+                                                icon={<Plus size={14} />}
+                                            >
+                                                Add
+                                            </Button>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="flex justify-end">
+                                    <Button
+                                        onClick={() => saveUser(user)}
+                                        isLoading={savingUserId === user.id}
+                                        disabled={savingUserId === user.id}
+                                        className="h-9 px-4 text-xs"
+                                    >
+                                        Save
+                                    </Button>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </Card>
         </div>
     );
 }
