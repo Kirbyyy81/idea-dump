@@ -197,7 +197,7 @@ CREATE POLICY "Users can delete own projects" ON projects
 ## API Example
 
 ```bash
-curl -X POST https://your-app.vercel.app/api/ingest \
+curl -X POST https://idea-dump-alpha.vercel.app/api/ingest \
   -H "Content-Type: application/json" \
   -H "x-api-key: YOUR_API_KEY" \
   -d '{

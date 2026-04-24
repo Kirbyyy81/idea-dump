@@ -23,26 +23,33 @@ interface AccessPayload {
     allowed_modules: AppModuleSlug[];
 }
 
-const MODULE_CARD_META: Partial<Record<AppModuleSlug, { icon: LucideIcon }>> = {
+const MODULE_CARD_META: Partial<Record<AppModuleSlug, { description: string; icon: LucideIcon }>> = {
     dashboard: {
+        description: 'Review your available modules and jump into the areas you can access.',
         icon: LayoutDashboard,
     },
     projects: {
+        description: 'Manage project records and open individual project detail pages.',
         icon: FolderKanban,
     },
     logs: {
+        description: 'View, add, edit, and export your weekly productivity logs.',
         icon: ClipboardList,
     },
     api: {
+        description: 'Manage API keys and review the API usage and documentation.',
         icon: BookOpen,
     },
     access_control: {
+        description: 'Manage roles, module access, and user-specific exceptions.',
         icon: ShieldCheck,
     },
     article_creation: {
+        description: 'Use the built-in helpers for article planning and content support.',
         icon: FilePenLine,
     },
     settings: {
+        description: 'Manage your personal account settings and sign-out actions.',
         icon: Settings,
     },
 };
@@ -137,21 +144,23 @@ export default function DashboardPage() {
                             const Icon = item.icon;
 
                             return (
-                                <Card key={item.moduleSlug} className="p-6 flex flex-col gap-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="rounded-lg bg-accent-rose/10 p-3">
-                                            <Icon size={20} className="text-accent-rose" />
+                                <Link key={item.moduleSlug} href={item.href} className="block">
+                                    <Card className="p-6 flex h-full flex-col gap-4 transition-colors hover:border-border-strong hover:bg-bg-hover/50 focus-within:border-border-strong">
+                                        <div className="flex items-center gap-3">
+                                            <div className="rounded-lg bg-accent-rose/10 p-3">
+                                                <Icon size={20} className="text-accent-rose" />
+                                            </div>
+                                            <div>
+                                                <h2 className="text-lg font-semibold text-text-primary">
+                                                    {item.label}
+                                                </h2>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <h2 className="text-lg font-semibold text-text-primary">
-                                                {item.label}
-                                            </h2>
-                                        </div>
-                                    </div>
-                                    <Link href={item.href}>
-                                        <Button className="w-full">Open {item.label}</Button>
-                                    </Link>
-                                </Card>
+                                        <p className="text-sm leading-6 text-text-secondary">
+                                            {item.description}
+                                        </p>
+                                    </Card>
+                                </Link>
                             );
                         })}
                     </div>
