@@ -1,15 +1,20 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ComponentType, type ReactNode } from 'react';
+import Link from 'next/link';
 import {
+    Activity,
     AlertTriangle,
     BookOpen,
+    ChevronDown,
     Copy,
     Download,
-    Key,
-    Plus,
+    KeyRound,
+    Lightbulb,
+    LayoutDashboard,
+    ShieldCheck,
+    TerminalSquare,
     Trash2,
-    Workflow,
 } from 'lucide-react';
 import { Sidebar } from '@/components/organisms/Sidebar';
 import { Button } from '@/components/atoms/Button';
@@ -31,6 +36,13 @@ interface ApiKeyDisplay {
     created_at: string;
     last_used_at: string | null;
 }
+
+const setupPrompt = `Use the IdeaDump implementation guide workflow.
+
+1. Generate an API key in the API Key Section.
+2. Download the Weekly Log Skill and add it to the agent environment.
+3. Authorize the agent with the generated API key.
+4. Send a test log and verify it appears on the dashboard.`;
 
 const weeklyLogSkillMarkdown = `---
 name: weekly-log
@@ -171,6 +183,99 @@ function loadScript(src: string): Promise<void> {
     });
 }
 
+function SectionTitle({
+    icon: Icon,
+    title,
+    description,
+}: {
+    icon: ComponentType<{ className?: string; size?: number }>;
+    title: string;
+    description?: string;
+}) {
+    return (
+        <div className="space-y-2">
+            <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border-default bg-bg-elevated text-accent-rose">
+                    <Icon size={18} />
+                </div>
+                <div className="space-y-1">
+                    <h2 className="text-xl font-heading font-medium text-text-primary">
+                        {title}
+                    </h2>
+                    {description ? (
+                        <p className="max-w-2xl text-sm leading-6 text-text-secondary">
+                            {description}
+                        </p>
+                    ) : null}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function RailItem({
+    icon: Icon,
+    title,
+    description,
+    children,
+    accent = 'text-text-primary',
+}: {
+    icon: ComponentType<{ className?: string; size?: number }>;
+    title: string;
+    description: ReactNode;
+    children?: ReactNode;
+    accent?: string;
+}) {
+    return (
+        <li className="relative flex gap-6">
+            <div className="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-lg border-2 border-border-default bg-bg-elevated text-text-primary">
+                <Icon size={18} className={accent} />
+            </div>
+            <div className="pt-1 pl-16">
+                <h3 className="text-2xl font-heading font-medium text-text-primary">{title}</h3>
+                <p className="mt-1 max-w-2xl text-sm leading-6 text-text-secondary">{description}</p>
+                {children ? <div className="mt-4">{children}</div> : null}
+            </div>
+        </li>
+    );
+}
+
+function CollapsibleSection({
+    icon: Icon,
+    title,
+    description,
+    isOpen,
+    onToggle,
+    children,
+    anchorId,
+}: {
+    icon: ComponentType<{ className?: string; size?: number }>;
+    title: string;
+    description: string;
+    isOpen: boolean;
+    onToggle: () => void;
+    children: ReactNode;
+    anchorId?: string;
+}) {
+    return (
+        <Card id={anchorId} className="scroll-mt-24 p-0 overflow-hidden">
+            <button
+                type="button"
+                onClick={onToggle}
+                className="flex w-full items-center justify-between gap-4 p-6 text-left transition-colors hover:bg-bg-subtle md:p-8"
+                aria-expanded={isOpen}
+            >
+                <SectionTitle icon={Icon} title={title} description={description} />
+                <ChevronDown
+                    size={18}
+                    className={`shrink-0 text-text-muted transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                />
+            </button>
+            {isOpen ? <div className="border-t border-border-subtle px-6 pb-6 md:px-8 md:pb-8">{children}</div> : null}
+        </Card>
+    );
+}
+
 export default function ApiToolsPage() {
     const [projects, setProjects] = useState<Project[]>([]);
     const [apiKeys, setApiKeys] = useState<ApiKeyDisplay[]>([]);
@@ -180,7 +285,10 @@ export default function ApiToolsPage() {
     const [newKey, setNewKey] = useState<string | null>(null);
     const [keyError, setKeyError] = useState<string | null>(null);
     const [docsError, setDocsError] = useState<string | null>(null);
+    const [copiedPrompt, setCopiedPrompt] = useState(false);
     const [copiedSkill, setCopiedSkill] = useState(false);
+    const [isSkillOpen, setIsSkillOpen] = useState(true);
+    const [isDocsOpen, setIsDocsOpen] = useState(true);
 
     const cdn = useMemo(() => {
         const base = 'https://unpkg.com/swagger-ui-dist@5.18.2';
@@ -239,10 +347,7 @@ export default function ApiToolsPage() {
                 SwaggerUIBundle({
                     url: '/api/openapi',
                     dom_id: '#swagger-ui',
-                    presets: [
-                        SwaggerUIBundle.presets.apis,
-                        SwaggerUIStandalonePreset,
-                    ],
+                    presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
                     layout: 'BaseLayout',
                 });
             } catch (err) {
@@ -305,12 +410,18 @@ export default function ApiToolsPage() {
         }
     };
 
-    const copyToClipboard = (text: string) => {
-        navigator.clipboard.writeText(text);
+    const copyToClipboard = async (text: string) => {
+        await navigator.clipboard.writeText(text);
+    };
+
+    const copySetup = async () => {
+        await copyToClipboard(setupPrompt);
+        setCopiedPrompt(true);
+        window.setTimeout(() => setCopiedPrompt(false), 2000);
     };
 
     const copySkillMarkdown = async () => {
-        await navigator.clipboard.writeText(weeklyLogSkillMarkdown);
+        await copyToClipboard(weeklyLogSkillMarkdown);
         setCopiedSkill(true);
         window.setTimeout(() => setCopiedSkill(false), 2000);
     };
@@ -318,164 +429,275 @@ export default function ApiToolsPage() {
     return (
         <div className="flex min-h-screen bg-bg-base font-body text-text-primary">
             <Sidebar projects={projects} />
-            <main className="flex-1 ml-64 p-8">
-                <div className="max-w-5xl space-y-8">
-                    <header>
-                        <h1 className="text-3xl font-heading font-medium">API</h1>
-                    </header>
 
-                    <Card className="p-6">
-                        <div className="flex items-center gap-2 mb-3">
-                            <Workflow size={20} className="text-accent-rose" />
-                            <h2 className="text-xl font-semibold font-body text-text-primary">
-                                How to Use It
-                            </h2>
-                        </div>
-                        <div className="space-y-4 text-sm text-text-secondary">
-                            <p>
-                                This API is built for the same workflow Codex uses internally:
-                                generate a key, send a weekly log, and confirm the entry landed in
-                                your account.
-                            </p>
-
-                            <ol className="relative space-y-4 border-l border-border pl-6">
-                                <li className="relative">
-                                    <span className="absolute -left-[1.625rem] top-0 flex h-8 w-8 items-center justify-center rounded-full border border-border bg-bg-base text-sm font-semibold text-text-primary">
-                                        1
-                                    </span>
-                                    <div className="rounded-lg border border-border bg-bg-base p-4">
-                                        <p className="mb-2 font-medium text-text-primary">
-                                            Create a key
-                                        </p>
-                                        <p>
-                                            Use the API Keys card below. The value is only shown
-                                            once, so copy it immediately.
-                                        </p>
-                                    </div>
-                                </li>
-                                <li className="relative">
-                                    <span className="absolute -left-[1.625rem] top-0 flex h-8 w-8 items-center justify-center rounded-full border border-border bg-bg-base text-sm font-semibold text-text-primary">
-                                        2
-                                    </span>
-                                    <div className="rounded-lg border border-border bg-bg-base p-4">
-                                        <p className="mb-2 font-medium text-text-primary">
-                                            Send a weekly log
-                                        </p>
-                                        <p>
-                                            Call <code className="text-text-primary">POST /api/logs</code>
-                                            with the <code className="text-text-primary">x-api-key</code>
-                                            header and a <code className="text-text-primary">content</code>
-                                            object.
-                                        </p>
-                                    </div>
-                                </li>
-                                <li className="relative">
-                                    <span className="absolute -left-[1.625rem] top-0 flex h-8 w-8 items-center justify-center rounded-full border border-border bg-bg-base text-sm font-semibold text-text-primary">
-                                        3
-                                    </span>
-                                    <div className="rounded-lg border border-border bg-bg-base p-4">
-                                        <p className="mb-2 font-medium text-text-primary">
-                                            Verify the result
-                                        </p>
-                                        <p>
-                                            Check the Logs page or request
-                                            <code className="mx-1 text-text-primary">GET /api/logs</code>
-                                            with a date range to confirm the record is there.
-                                        </p>
-                                    </div>
-                                </li>
-                                <li className="relative">
-                                    <span className="absolute -left-[1.625rem] top-0 flex h-8 w-8 items-center justify-center rounded-full border border-border bg-bg-base text-sm font-semibold text-text-primary">
-                                        4
-                                    </span>
-                                    <div className="rounded-lg border border-border bg-bg-base p-4">
-                                        <p className="mb-2 font-medium text-text-primary">
-                                            Export when needed
-                                        </p>
-                                        <p>
-                                            Admin users can turn a date range into markdown with
-                                            <code className="mx-1 text-text-primary">
-                                                POST /api/export/weekly
-                                            </code>
-                                            .
-                                        </p>
-                                    </div>
-                                </li>
-                            </ol>
-
-                        </div>
-                    </Card>
-
-                    <Card className="p-6">
-                        <div className="flex items-center gap-2 mb-3">
-                            <BookOpen size={20} className="text-accent-rose" />
-                            <h2 className="text-xl font-semibold font-body text-text-primary">
-                                Weekly Log Skill
-                            </h2>
-                        </div>
-                        <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-                            <div className="space-y-4">
-                                    <div className="rounded-lg border border-border bg-bg-base p-4">
-                                        <div className="mb-3 flex items-center gap-2">
-                                        <span className="rounded-full border border-accent-rose bg-bg-subtle px-3 py-1 text-xs font-semibold uppercase tracking-wide text-accent-rose">
-                                            Skill card
-                                        </span>
-                                        <span className="text-xs text-text-muted">
-                                            Codex-style skill summary
-                                        </span>
-                                    </div>
-                                    <dl className="grid gap-3 text-sm">
-                                        <div>
-                                            <dt className="text-text-muted">Name</dt>
-                                            <dd className="font-medium text-text-primary">
-                                                weekly-log
-                                            </dd>
-                                        </div>
-                                        <div>
-                                            <dt className="text-text-muted">Description</dt>
-                                            <dd className="text-text-secondary">
-                                                Create, list, and update Weekly Productivity Log
-                                                entries through the Weekly Productivity Log API
-                                                using the local helper script.
-                                            </dd>
-                                        </div>
-                                        <div>
-                                            <dt className="text-text-muted">Best for</dt>
-                                            <dd className="text-text-secondary">
-                                                Writing daily work logs, reviewing entries, and
-                                                keeping weekly reporting aligned with the API.
-                                            </dd>
-                                        </div>
-                                        <div>
-                                            <dt className="text-text-muted">Bundled resources</dt>
-                                            <dd className="text-text-secondary">
-                                                `scripts/weekly-log.ps1`, `/api/logs`, and
-                                                `/api/export/weekly`
-                                            </dd>
-                                        </div>
-                                    </dl>
+            <main className="flex-1 px-4 py-6 sm:px-6 lg:ml-64 lg:px-8 lg:py-8">
+                <div className="mx-auto flex max-w-5xl flex-col gap-8">
+                    <Card className="w-full overflow-hidden p-0">
+                        <div className="p-8 md:p-12">
+                            <div className="flex items-start gap-4">
+                                <div className="mt-1 flex h-12 w-12 items-center justify-center rounded-full border border-accent-rose bg-bg-elevated text-accent-rose">
+                                    <Lightbulb size={22} />
                                 </div>
-
-                                <div className="space-y-2 text-sm text-text-secondary">
-                                    <p>
-                                        This keeps the page short and shows the same metadata-first
-                                        shape people use for skills: a clear name, a direct
-                                        description, and the workflow it enables.
-                                    </p>
-                                    <p>
-                                        Use the buttons to copy the full skill markdown or download
-                                        it as a <code className="mx-1 text-text-primary">.md</code>
-                                        file.
+                                <div className="space-y-2">
+                                    <h1 className="text-3xl font-heading font-medium md:text-[2.15rem]">
+                                        Implementation Guide
+                                    </h1>
+                                    <p className="max-w-2xl text-sm leading-6 text-text-secondary md:text-base">
+                                        Follow this workflow to integrate the Codex logging engine.
+                                        Designed for the IdeaDump ecosystem.
                                     </p>
                                 </div>
                             </div>
 
-                            <div className="space-y-3">
+                            <div className="my-7 border-t border-dashed border-border-subtle" />
+
+                            <div className="space-y-6">
+                                <div className="rounded-xl border border-info bg-info-bg p-5 md:p-6">
+                                    <div className="flex items-start gap-4">
+                                        <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-info bg-bg-elevated text-info">
+                                            <TerminalSquare size={20} />
+                                        </div>
+                                        <div className="flex-1 space-y-3">
+                                            <div className="space-y-1">
+                                                <h2 className="text-lg font-heading font-medium text-text-primary">
+                                                    Instant Setup
+                                                </h2>
+                                                <p className="max-w-2xl text-sm leading-6 text-text-secondary">
+                                                    Prefer a guided setup? Use our pre-configured
+                                                    agent prompt to get running in seconds.
+                                                </p>
+                                            </div>
+                                            <Button
+                                                variant="secondary"
+                                                onClick={copySetup}
+                                                icon={<Copy size={16} />}
+                                                className="h-10 border-border-default bg-bg-elevated px-4 text-sm hover:bg-bg-subtle"
+                                            >
+                                                {copiedPrompt ? 'Copied' : 'Copy Setup Prompt'}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <ol className="relative space-y-10 before:absolute before:left-[19px] before:top-2 before:h-[calc(100%-0.5rem)] before:w-px before:bg-border-default">
+                                    <RailItem
+                                        icon={KeyRound}
+                                        title="Generate API Key"
+                                        description={
+                                            <>
+                                                Start by minting a secure token in the{' '}
+                                                <Link
+                                                    href="#api-section"
+                                                    className="font-medium text-accent-rose underline decoration-accent-rose/40 underline-offset-2"
+                                                >
+                                                    API Key Section
+                                                </Link>
+                                                .
+                                            </>
+                                        }
+                                    >
+                                        <div className="inline-flex items-center gap-2 rounded-full border border-warning bg-warning-bg px-3 py-1 text-xs text-text-primary">
+                                            <AlertTriangle size={14} className="text-warning" />
+                                            The key is only shown once. Copy it immediately.
+                                        </div>
+                                    </RailItem>
+
+                                    <RailItem
+                                        icon={Download}
+                                        title="Download Weekly Log Skill"
+                                        description="Import the core skill definition into your agent environment to enable logging capabilities."
+                                    >
+                                        <div className="flex flex-wrap gap-2">
+                                            <Button
+                                                variant="secondary"
+                                                onClick={copySkillMarkdown}
+                                                icon={<Copy size={16} />}
+                                                className="h-10 border-border-default bg-bg-elevated px-4 text-sm hover:bg-bg-subtle"
+                                            >
+                                                {copiedSkill ? 'Copied' : 'Copy Skill'}
+                                            </Button>
+                                            <Button
+                                                variant="secondary"
+                                                onClick={() =>
+                                                    downloadTextFile(
+                                                        'weekly-log.skill.md',
+                                                        weeklyLogSkillMarkdown
+                                                    )
+                                                }
+                                                icon={<Download size={16} />}
+                                                className="h-10 border-border-default bg-bg-elevated px-4 text-sm hover:bg-bg-subtle"
+                                            >
+                                                Download .md
+                                            </Button>
+                                        </div>
+                                    </RailItem>
+
+                                    <RailItem
+                                        icon={ShieldCheck}
+                                        title="Authorize Agent"
+                                        description="Provide the generated API key to your agent configuration to establish a secure connection."
+                                    />
+
+                                    <RailItem
+                                        icon={Activity}
+                                        title="Test the System"
+                                        description="Send a test log and verify its appearance on your IdeaDump Dashboard."
+                                    >
+                                        <div className="flex flex-wrap gap-2">
+                                            <Button
+                                                variant="ghost"
+                                                className="h-8 rounded-md border border-accent-sage bg-success-bg px-3 text-[11px] font-medium uppercase tracking-[0.14em] text-accent-sage hover:bg-success-bg hover:text-accent-sage"
+                                            >
+                                                POST /logs
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                className="h-8 rounded-md border border-info bg-info-bg px-3 text-[11px] font-medium uppercase tracking-[0.14em] text-info hover:bg-info-bg hover:text-info"
+                                            >
+                                                Verify Dashboard
+                                            </Button>
+                                        </div>
+                                    </RailItem>
+                                </ol>
+
+                                <div className="flex flex-col gap-3 border-t border-border-subtle pt-6 sm:flex-row sm:items-center sm:justify-between">
+                                    <Link
+                                        href="#docs"
+                                        className="text-sm text-text-secondary underline decoration-border-strong underline-offset-2 transition-colors hover:text-text-primary"
+                                    >
+                                        Need technical help? View Docs.
+                                    </Link>
+
+                                    <Link
+                                        href="/dashboard"
+                                        className="inline-flex items-center justify-center gap-2 rounded-md bg-accent-rose px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-[#D45F73]"
+                                    >
+                                        Open Dashboard
+                                        <LayoutDashboard size={16} />
+                                    </Link>
+                                </div>
+                            </div>
+                        </div>
+                    </Card>
+
+                    <div className="space-y-6">
+                        <Card id="api-section" className="scroll-mt-24 p-6 md:p-8">
+                            <SectionTitle
+                                icon={KeyRound}
+                                title="API Key Section"
+                                description="Generate secure keys, copy the first reveal, and manage active tokens from this section."
+                            />
+
+                            {newKey && (
+                                <div className="mt-6 rounded-2xl border border-accent-sage bg-success-bg p-4">
+                                    <p className="mb-2 flex items-center gap-2 text-sm font-medium text-accent-sage">
+                                        <AlertTriangle size={16} />
+                                        Copy this key now. You will not be able to see it again.
+                                    </p>
+                                    <div className="flex items-center gap-2">
+                                        <code className="flex-1 overflow-x-auto rounded-md border border-border-subtle bg-bg-elevated p-2 text-sm text-text-primary">
+                                            {newKey}
+                                        </code>
+                                        <Button
+                                            variant="secondary"
+                                            onClick={() => copyToClipboard(newKey)}
+                                            icon={<Copy size={16} />}
+                                            className="h-10 border-border-default bg-bg-elevated px-4 text-sm hover:bg-bg-subtle"
+                                        >
+                                            Copy
+                                        </Button>
+                                    </div>
+                                    <Button
+                                        variant="ghost"
+                                        onClick={() => setNewKey(null)}
+                                        className="mt-2 h-auto p-0 text-sm text-text-muted hover:bg-transparent hover:text-text-secondary"
+                                    >
+                                        Dismiss
+                                    </Button>
+                                </div>
+                            )}
+
+                            {keyError && (
+                                <div className="mt-6 rounded-2xl border border-error bg-error-bg p-3">
+                                    <p className="text-sm text-error">{keyError}</p>
+                                </div>
+                            )}
+
+                            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                                <Input
+                                    value={newKeyName}
+                                    onChange={(e) => setNewKeyName(e.target.value)}
+                                    placeholder="Key name (e.g., Antigravity)"
+                                    className="flex-1"
+                                    onKeyDown={(e) => e.key === 'Enter' && handleCreateKey()}
+                                />
+                                <Button
+                                    onClick={handleCreateKey}
+                                    disabled={!newKeyName.trim() || isCreating}
+                                    isLoading={isCreating}
+                                    icon={<KeyRound size={16} />}
+                                    className="h-11"
+                                >
+                                    Generate Key
+                                </Button>
+                            </div>
+
+                            <div className="mt-6 space-y-3">
+                                {keysLoading ? (
+                                    <div className="flex justify-center py-8">
+                                        <Button variant="ghost" isLoading disabled>
+                                            Loading keys...
+                                        </Button>
+                                    </div>
+                                ) : apiKeys.length === 0 ? (
+                                    <p className="py-6 text-center text-sm text-text-muted">
+                                        No API keys yet. Create one to get started.
+                                    </p>
+                                ) : (
+                                    apiKeys.map((key) => (
+                                        <div
+                                            key={key.id}
+                                            className="flex items-center justify-between gap-4 rounded-2xl border border-border-default bg-bg-base px-4 py-4"
+                                        >
+                                            <div>
+                                                <p className="font-medium text-text-primary">
+                                                    {key.name}
+                                                </p>
+                                                <p className="text-sm text-text-muted">
+                                                    Created {formatDate(key.created_at)}
+                                                    {key.last_used_at
+                                                        ? ` | Last used ${formatDate(key.last_used_at)}`
+                                                        : ''}
+                                                </p>
+                                            </div>
+                                            <Button
+                                                variant="ghost"
+                                                onClick={() => handleDeleteKey(key.id)}
+                                                className="h-9 rounded-md border border-border-default bg-bg-elevated px-3 text-sm text-text-muted hover:bg-error-bg hover:text-error"
+                                                icon={<Trash2 size={16} />}
+                                            >
+                                                Delete
+                                            </Button>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </Card>
+
+                        <CollapsibleSection
+                            icon={BookOpen}
+                            title="Weekly Log Skill"
+                            description="Import the skill definition, copy the markdown, or download it for your agent workspace."
+                            isOpen={isSkillOpen}
+                            onToggle={() => setIsSkillOpen((current) => !current)}
+                        >
+                            <div className="mt-6 space-y-4">
                                 <div className="flex flex-wrap gap-2">
                                     <Button
                                         variant="secondary"
                                         onClick={copySkillMarkdown}
                                         icon={<Copy size={16} />}
+                                        className="h-10 border-border-default bg-bg-elevated px-4 text-sm hover:bg-bg-subtle"
                                     >
                                         {copiedSkill ? 'Copied' : 'Copy markdown'}
                                     </Button>
@@ -488,176 +710,55 @@ export default function ApiToolsPage() {
                                             )
                                         }
                                         icon={<Download size={16} />}
+                                        className="h-10 border-border-default bg-bg-elevated px-4 text-sm hover:bg-bg-subtle"
                                     >
                                         Download .md
                                     </Button>
                                 </div>
-                                <div className="rounded-lg border border-border bg-bg-base p-4">
-                                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">
+
+                                <div className="rounded-2xl border border-border-default bg-bg-base p-4">
+                                    <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-text-muted">
                                         Preview
                                     </p>
-                                    <pre className="overflow-x-auto text-xs md:text-sm">
+                                    <pre className="overflow-x-auto text-xs leading-6 md:text-sm">
                                         <code className="whitespace-pre-wrap text-text-secondary">
                                             {weeklyLogSkillPreview}
                                         </code>
                                     </pre>
                                 </div>
-                            </div>
-                        </div>
-                    </Card>
 
-                    <Card className="p-6">
-                        <div className="flex items-center gap-2 mb-4">
-                            <Key size={20} className="text-accent-rose" />
-                            <h2 className="text-xl font-semibold font-body text-text-primary">
-                                API Keys
-                            </h2>
-                        </div>
-                        {newKey && (
-                            <div className="mb-6 p-4 rounded-lg bg-success-bg border border-accent-sage">
-                                <p className="text-sm font-medium mb-2 flex items-center gap-2 text-accent-sage">
-                                    <AlertTriangle size={16} />
-                                    Copy this key now. You will not be able to see it again.
+                                <p className="text-sm leading-6 text-text-secondary">
+                                    This keeps the skill metadata visible at a glance while still
+                                    exposing the full markdown for copy or download.
                                 </p>
-                                <div className="flex items-center gap-2">
-                                    <code className="flex-1 p-2 rounded text-sm font-mono bg-bg-base text-text-primary overflow-x-auto">
-                                        {newKey}
-                                    </code>
-                                    <Button
-                                        variant="secondary"
-                                        onClick={() => copyToClipboard(newKey)}
-                                        icon={<Copy size={16} />}
-                                    >
-                                        Copy
-                                    </Button>
-                                </div>
-                                <Button
-                                    variant="ghost"
-                                    onClick={() => setNewKey(null)}
-                                    className="mt-2 text-text-muted hover:text-text-secondary h-auto p-0 hover:bg-transparent"
-                                >
-                                    Dismiss
-                                </Button>
                             </div>
-                        )}
+                        </CollapsibleSection>
+                    </div>
 
-                        {keyError && (
-                            <div className="mb-6 rounded-lg border border-error bg-error-bg p-3">
-                                <p className="text-sm text-error">{keyError}</p>
-                            </div>
-                        )}
-
-                        <div className="flex gap-2 mb-6">
-                            <Input
-                                value={newKeyName}
-                                onChange={(e) => setNewKeyName(e.target.value)}
-                                placeholder="Key name (e.g., Antigravity)"
-                                className="flex-1"
-                                onKeyDown={(e) => e.key === 'Enter' && handleCreateKey()}
-                            />
-                            <Button
-                                onClick={handleCreateKey}
-                                disabled={!newKeyName.trim() || isCreating}
-                                isLoading={isCreating}
-                                icon={<Plus size={16} />}
-                            >
-                                Generate Key
-                            </Button>
-                        </div>
-
-                        {keysLoading ? (
-                            <div className="flex justify-center py-8">
-                                <Button variant="ghost" isLoading disabled>
-                                    Loading keys...
-                                </Button>
-                            </div>
-                        ) : apiKeys.length === 0 ? (
-                            <p className="text-center py-8 text-text-muted">
-                                No API keys yet. Create one to get started.
-                            </p>
-                        ) : (
-                            <div className="space-y-3">
-                                {apiKeys.map((key) => (
-                                    <div
-                                        key={key.id}
-                                        className="flex items-center justify-between p-4 rounded-lg bg-bg-hover"
-                                    >
-                                        <div>
-                                            <p className="font-medium text-text-primary">
-                                                {key.name}
-                                            </p>
-                                            <p className="text-sm text-text-muted">
-                                                Created {formatDate(key.created_at)}
-                                                {key.last_used_at
-                                                    ? ` | Last used ${formatDate(key.last_used_at)}`
-                                                    : ''}
-                                            </p>
-                                        </div>
-                                        <Button
-                                            variant="ghost"
-                                            onClick={() => handleDeleteKey(key.id)}
-                                            className="text-text-muted hover:bg-error-bg hover:text-error"
-                                            icon={<Trash2 size={18} />}
-                                        />
+                    <CollapsibleSection
+                        icon={BookOpen}
+                        title="API Reference"
+                        description="Swagger/OpenAPI docs for the logging endpoints, served inside the app."
+                        isOpen={isDocsOpen}
+                        onToggle={() => setIsDocsOpen((current) => !current)}
+                        anchorId="docs"
+                    >
+                        <div className="mt-6">
+                            {docsError ? (
+                                <div>
+                                    <div className="rounded-2xl border border-error bg-error-bg p-4">
+                                        <p className="text-sm text-error">{docsError}</p>
                                     </div>
-                                ))}
-                            </div>
-                        )}
-                    </Card>
-
-                    <Card className="p-6">
-                        <div className="flex items-center gap-2 mb-4">
-                            <BookOpen size={20} className="text-accent-rose" />
-                            <h2 className="text-xl font-semibold font-body text-text-primary">
-                                API Example
-                            </h2>
+                                    <p className="mt-3 text-sm text-text-muted">
+                                        If your network blocks CDNs, switch Swagger UI to a local
+                                        dependency.
+                                    </p>
+                                </div>
+                            ) : (
+                                <div id="swagger-ui" className="min-h-[540px] bg-bg-elevated" />
+                            )}
                         </div>
-                        <div className="mb-4 space-y-2 text-sm text-text-secondary">
-                            <p>
-                                If you are sending a weekly log from another client, use the same
-                                payload shape as the skill above. Ownership comes from the API key,
-                                so you do not need to pass a user id.
-                            </p>
-                            <p>
-                                For quick verification, request the same date range back with
-                                <code className="mx-1 text-text-primary">GET /api/logs</code>
-                                after posting.
-                            </p>
-                        </div>
-                        <pre className="p-4 rounded-lg text-sm overflow-x-auto bg-bg-base border border-border">
-                            <code className="text-text-secondary">{`curl -X POST https://idea-dump-alpha.vercel.app/api/logs \\
-  -H "x-api-key: YOUR_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "content": {
-      "date": "2026-02-04",
-      "day": "Tuesday",
-      "operation_task": "Product Led Flow: Implemented API endpoint",
-      "tools_used": "VSCode, Next.js, Supabase, TypeScript",
-      "lesson_learned": "Hybrid auth simplifies multi-client access patterns"
-    }
-  }'`}</code>
-                        </pre>
-                    </Card>
-
-                    <Card className="p-0 overflow-hidden">
-                        <div className="p-6 pb-0">
-                            <h2 className="text-xl font-semibold font-body text-text-primary">
-                                API Reference
-                            </h2>
-                        </div>
-                        {docsError ? (
-                            <div className="p-6">
-                                <p className="text-error">{docsError}</p>
-                                <p className="text-text-muted mt-2">
-                                    If your network blocks CDNs, switch Swagger UI to a local
-                                    dependency.
-                                </p>
-                            </div>
-                        ) : (
-                            <div id="swagger-ui" />
-                        )}
-                    </Card>
+                    </CollapsibleSection>
                 </div>
             </main>
         </div>
