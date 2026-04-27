@@ -20,12 +20,19 @@ const inter = Inter({
 export const metadata: Metadata = {
     title: 'IdeaDump',
     description: 'All in one stop for random ideas',
+    manifest: '/manifest.webmanifest',
     icons: {
         icon: [
             { url: '/logo.png', sizes: '32x32', type: 'image/png' },
             { url: '/logo.png', sizes: '16x16', type: 'image/png' },
         ],
         apple: '/logo.png',
+    },
+    themeColor: '#F2EAD3',
+    appleWebApp: {
+        capable: true,
+        title: 'IdeaDump',
+        statusBarStyle: 'default',
     },
 };
 
