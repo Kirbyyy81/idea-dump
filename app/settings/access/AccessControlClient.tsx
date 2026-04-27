@@ -340,8 +340,8 @@ export function AccessControlClient() {
             </div>
 
             {error && (
-                <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3">
-                    <p className="text-sm text-red-400">{error}</p>
+                <div className="rounded-xl border border-error bg-error-bg px-4 py-3">
+                    <p className="text-sm text-error">{error}</p>
                 </div>
             )}
 
@@ -392,7 +392,7 @@ export function AccessControlClient() {
                                             onClick={() => toggleNewRoleModule(moduleSlug)}
                                             className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
                                                 selected
-                                                    ? 'border-accent-rose bg-accent-rose/10 text-accent-rose'
+                                                    ? 'border-accent-rose bg-bg-subtle text-accent-rose'
                                                     : 'border-border-default bg-transparent text-text-secondary hover:border-border-strong hover:text-text-primary'
                                             }`}
                                         >
@@ -450,7 +450,7 @@ export function AccessControlClient() {
                                                 onClick={() => toggleRoleModule(roleRecord.role, moduleSlug)}
                                                 className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
                                                     selected
-                                                        ? 'border-accent-rose bg-accent-rose/10 text-accent-rose'
+                                                        ? 'border-accent-rose bg-bg-subtle text-accent-rose'
                                                         : 'border-border-default bg-transparent text-text-secondary hover:border-border-strong hover:text-text-primary'
                                                 }`}
                                             >

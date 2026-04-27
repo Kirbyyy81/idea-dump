@@ -90,7 +90,7 @@ export function Sidebar({ projects }: SidebarProps) {
                             className={cn(
                                 'w-full justify-start',
                                 isDashboardActive
-                                    ? 'bg-accent-rose/10 text-accent-rose hover:bg-accent-rose/20 hover:text-accent-rose'
+                                    ? 'bg-bg-hover text-text-primary border-l-2 border-accent-rose rounded-l-none'
                                     : 'text-text-secondary hover:text-text-primary'
                             )}
                             icon={<LayoutDashboard size={18} />}
@@ -109,12 +109,12 @@ export function Sidebar({ projects }: SidebarProps) {
                         <Link href="/projects" className="block relative z-10">
                             <Button
                                 variant="ghost"
-                                className={cn(
-                                    'w-full justify-start',
-                                    isProjectsActive
-                                        ? 'bg-accent-rose/10 text-accent-rose hover:bg-accent-rose/20 hover:text-accent-rose'
-                                        : 'text-text-secondary hover:text-text-primary'
-                                )}
+                                    className={cn(
+                                        'w-full justify-start',
+                                        isProjectsActive
+                                            ? 'bg-bg-hover text-text-primary border-l-2 border-accent-rose rounded-l-none'
+                                            : 'text-text-secondary hover:text-text-primary'
+                                    )}
                                 icon={<FolderKanban size={18} />}
                                 onClick={() => setIsProjectsOpen(!isProjectsOpen)}
                             >
@@ -179,9 +179,7 @@ export function Sidebar({ projects }: SidebarProps) {
                                 (item.module === 'access_control'
                                     ? isAccessControlActive
                                     : pathname === item.href)
-                                    ? item.module === 'logs'
-                                        ? 'bg-accent-rose/10 text-accent-rose hover:bg-accent-rose/20 hover:text-accent-rose'
-                                        : 'bg-bg-hover text-text-primary'
+                                    ? 'bg-bg-hover text-text-primary border-l-2 border-accent-rose rounded-l-none'
                                     : 'text-text-secondary hover:text-text-primary'
                             )}
                             icon={item.icon}

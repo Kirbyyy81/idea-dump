@@ -50,8 +50,8 @@ export default function NewProjectPage() {
             </div>
 
             {error && (
-                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 mb-6">
-                    <p className="text-sm text-red-400">{error}</p>
+                <div className="mb-6 rounded-lg border border-error bg-error-bg p-3">
+                    <p className="text-sm text-error">{error}</p>
                 </div>
             )}
 

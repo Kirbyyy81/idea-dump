@@ -131,7 +131,9 @@ export default function ProjectPage() {
     if (error || !project) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center">
-                <p className="text-red-400 mb-4">{error || 'Project not found'}</p>
+                <p className="mb-4 rounded-lg border border-error bg-error-bg px-4 py-3 text-sm text-error">
+                    {error || 'Project not found'}
+                </p>
                 <Link href="/projects" className="btn-secondary">
                     Back to Projects
                 </Link>
@@ -169,7 +171,7 @@ export default function ProjectPage() {
                     <Button
                         variant="ghost"
                         onClick={handleDelete}
-                        className="text-red-400 hover:text-red-300 hover:bg-red-50"
+                        className="text-error hover:bg-error-bg hover:text-error"
                         icon={<Trash2 size={16} />}
                     >
                         Delete

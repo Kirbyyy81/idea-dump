@@ -121,7 +121,9 @@ export default function DashboardPage() {
     if (error) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-bg-base">
-                <p className="text-red-400 mb-4">{error}</p>
+                <p className="mb-4 rounded-lg border border-error bg-error-bg px-4 py-3 text-sm text-error">
+                    {error}
+                </p>
                 <Button onClick={() => window.location.reload()}>
                     Retry
                 </Button>
@@ -145,9 +147,9 @@ export default function DashboardPage() {
 
                             return (
                                 <Link key={item.moduleSlug} href={item.href} className="block">
-                                    <Card className="p-6 flex h-full flex-col gap-4 transition-colors hover:border-border-strong hover:bg-bg-hover/50 focus-within:border-border-strong">
+                                    <Card className="p-6 flex h-full flex-col gap-4 transition-colors hover:border-border-strong hover:bg-bg-hover focus-within:border-border-strong">
                                         <div className="flex items-center gap-3">
-                                            <div className="rounded-lg bg-accent-rose/10 p-3">
+                                            <div className="rounded-lg border border-border-subtle bg-bg-subtle p-3">
                                                 <Icon size={20} className="text-accent-rose" />
                                             </div>
                                             <div>

@@ -6,6 +6,8 @@ export const designTokens = {
         base: 'bg-base',
         hover: 'bg-hover',
         subtle: 'bg-subtle',
+        surfacePrimary: 'surface-primary',
+        surfaceTertiary: 'surface-tertiary',
     },
     border: {
         default: 'border-default',

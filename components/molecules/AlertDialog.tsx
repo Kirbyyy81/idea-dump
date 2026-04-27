@@ -77,7 +77,7 @@ export function AlertDialog() {
             onClick={hideAlert}
         >
             {/* Backdrop */}
-            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+            <div className="absolute inset-0 bg-text-primary/20" />
 
             {/* Dialog */}
             <div
@@ -88,7 +88,7 @@ export function AlertDialog() {
                 aria-describedby="alert-message"
                 tabIndex={-1}
                 className={cn(
-                    "relative z-10 w-full max-w-md mx-4 p-6 rounded-lg shadow-xl",
+                    "relative z-10 w-full max-w-md mx-4 p-6 rounded-lg",
                     "bg-bg-elevated border",
                     styles.border
                 )}

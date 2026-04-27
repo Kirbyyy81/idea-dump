@@ -12,6 +12,9 @@ module.exports = {
                 'bg-base': 'var(--bg-base)',
                 'bg-elevated': 'var(--bg-elevated)',
                 'bg-hover': 'var(--bg-hover)',
+                'bg-subtle': 'var(--bg-subtle)',
+                'surface-primary': 'var(--surface-primary)',
+                'surface-tertiary': 'var(--surface-tertiary)',
 
                 // Text colors
                 'text-primary': 'var(--text-primary)',
@@ -31,6 +34,16 @@ module.exports = {
                 'status-dev': 'var(--status-dev)',
                 'status-complete': 'var(--status-complete)',
                 'status-archived': 'var(--status-archived)',
+
+                // Semantic colors
+                success: 'var(--success)',
+                warning: 'var(--warning)',
+                error: 'var(--error)',
+                info: 'var(--info)',
+                'success-bg': 'var(--success-bg)',
+                'warning-bg': 'var(--warning-bg)',
+                'error-bg': 'var(--error-bg)',
+                'info-bg': 'var(--info-bg)',
             },
             fontFamily: {
                 sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],

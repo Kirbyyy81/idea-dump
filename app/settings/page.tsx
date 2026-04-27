@@ -133,8 +133,8 @@ export default function SettingsPage() {
                 </Card>
 
                 {error && (
-                    <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                        <p className="text-sm text-red-400">{error}</p>
+                    <div className="rounded-lg border border-error bg-error-bg p-3">
+                        <p className="text-sm text-error">{error}</p>
                     </div>
                 )}
 

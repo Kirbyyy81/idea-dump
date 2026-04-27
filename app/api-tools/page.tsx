@@ -415,9 +415,9 @@ export default function ApiToolsPage() {
                         </div>
                         <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
                             <div className="space-y-4">
-                                <div className="rounded-lg border border-border bg-bg-base p-4">
-                                    <div className="mb-3 flex items-center gap-2">
-                                        <span className="rounded-full bg-accent-rose/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-accent-rose">
+                                    <div className="rounded-lg border border-border bg-bg-base p-4">
+                                        <div className="mb-3 flex items-center gap-2">
+                                        <span className="rounded-full border border-accent-rose bg-bg-subtle px-3 py-1 text-xs font-semibold uppercase tracking-wide text-accent-rose">
                                             Skill card
                                         </span>
                                         <span className="text-xs text-text-muted">
@@ -542,8 +542,8 @@ export default function ApiToolsPage() {
                         )}
 
                         {keyError && (
-                            <div className="mb-6 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                                <p className="text-sm text-red-400">{keyError}</p>
+                            <div className="mb-6 rounded-lg border border-error bg-error-bg p-3">
+                                <p className="text-sm text-error">{keyError}</p>
                             </div>
                         )}
 
@@ -596,7 +596,7 @@ export default function ApiToolsPage() {
                                         <Button
                                             variant="ghost"
                                             onClick={() => handleDeleteKey(key.id)}
-                                            className="text-text-muted hover:text-red-400 hover:bg-red-50"
+                                            className="text-text-muted hover:bg-error-bg hover:text-error"
                                             icon={<Trash2 size={18} />}
                                         />
                                     </div>

@@ -63,7 +63,7 @@ export function LoaderTwo({ className, size = 'md' }: LoaderProps) {
 
     return (
         <div className={cn('relative', sizeClasses[size], className)}>
-            <div className="absolute inset-0 rounded-full border-2 border-accent-rose/20" />
+            <div className="absolute inset-0 rounded-full border-2 border-border-subtle" />
             <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-accent-rose animate-spin" />
         </div>
     );
@@ -81,7 +81,7 @@ export function LoaderThree({ className, size = 'md' }: LoaderProps) {
 
     return (
         <div className={cn('relative', sizeClasses[size], className)}>
-            <div className="absolute inset-0 rounded-full bg-accent-rose/30 animate-ping" />
+            <div className="absolute inset-0 rounded-full bg-accent-rose animate-ping" />
             <div className="absolute inset-1 rounded-full bg-accent-rose" />
         </div>
     );

@@ -65,7 +65,9 @@ export default function ProjectsPage() {
     if (error) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-bg-base">
-                <p className="text-red-400 mb-4">{error}</p>
+                <p className="mb-4 rounded-lg border border-error bg-error-bg px-4 py-3 text-sm text-error">
+                    {error}
+                </p>
                 <Button onClick={() => window.location.reload()}>
                     Retry
                 </Button>
