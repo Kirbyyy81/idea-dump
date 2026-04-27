@@ -3,6 +3,7 @@ import { DM_Serif_Text, Inter } from 'next/font/google';
 import './globals.css';
 import { AlertProvider } from '@/lib/contexts/AlertContext';
 import { AlertDialog } from '@/components/molecules/AlertDialog';
+import { PwaRegister } from '@/components/molecules/PwaRegister';
 
 const dmSerifText = DM_Serif_Text({
     weight: '400',
@@ -47,6 +48,7 @@ export default function RootLayout({
                 <AlertProvider>
                     {children}
                     <AlertDialog />
+                    <PwaRegister />
                 </AlertProvider>
             </body>
         </html>
