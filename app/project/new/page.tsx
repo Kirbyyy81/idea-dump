@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-import { ProjectForm } from '@/components/organisms/ProjectForm';
+import { ProjectForm } from '../_components/ProjectForm';
 import { CreateProjectInput } from '@/lib/types';
 
 export default function NewProjectPage() {
@@ -41,7 +41,7 @@ export default function NewProjectPage() {
             {/* Header */}
             <div className="flex items-center gap-4 mb-8">
                 <Link
-                    href="/"
+                    href="/projects"
                     className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors"
                 >
                     <ArrowLeft size={20} />
@@ -58,7 +58,7 @@ export default function NewProjectPage() {
             <ProjectForm
                 onSubmit={handleSubmit}
                 isSubmitting={isSubmitting}
-                onCancel={() => router.back()}
+                onCancel={() => router.push('/projects')}
                 submitLabel="Create Project"
             />
         </div>

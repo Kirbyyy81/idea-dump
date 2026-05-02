@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
@@ -12,11 +11,12 @@ import {
     type CachedProfile,
     setCachedProfile,
 } from '@/lib/auth/profileCache';
-import { ArrowLeft, LogOut, User as UserIcon } from 'lucide-react';
+import { LogOut, User as UserIcon } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { APP_VERSION, LAST_UPDATED, shortVersionCode, VERSION_CODE } from '@/lib/version';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
+import { AppShell } from '@/components/organisms/AppShell';
 
 export default function SettingsPage() {
     const router = useRouter();
@@ -82,75 +82,69 @@ export default function SettingsPage() {
         'U';
 
     return (
-        <div className="min-h-screen p-8 max-w-3xl mx-auto">
-            <div className="flex items-center gap-4 mb-8">
-                <Link
-                    href="/"
-                    className="flex items-center gap-2 transition-colors text-text-secondary hover:text-text-primary"
-                >
-                    <ArrowLeft size={20} />
-                </Link>
-                <h1 className="text-text-primary">Settings</h1>
-            </div>
+        <AppShell contentClassName="p-8">
+            <div className="max-w-3xl space-y-6">
+                <h1 className="text-text-primary text-3xl font-heading font-medium">Settings</h1>
 
-            <Card className="p-6">
-                <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                        <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-bg-hover text-text-primary">
-                            {profile?.avatarUrl ? (
-                                <Image
-                                    src={profile.avatarUrl}
-                                    alt={profile.displayName ?? profile.email ?? 'User avatar'}
-                                    width={64}
-                                    height={64}
-                                    className="h-full w-full object-cover"
-                                    unoptimized
-                                />
-                            ) : (
-                                <span className="text-lg font-semibold">{profileInitial}</span>
-                            )}
-                        </div>
-
-                        <div>
-                            <div className="flex items-center gap-2 mb-1">
-                                <UserIcon size={18} className="text-accent-rose" />
-                                <h2 className="text-xl font-semibold font-body text-text-primary">
-                                    Profile
-                                </h2>
+                <Card className="p-6">
+                    <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                            <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-bg-hover text-text-primary">
+                                {profile?.avatarUrl ? (
+                                    <Image
+                                        src={profile.avatarUrl}
+                                        alt={profile.displayName ?? profile.email ?? 'User avatar'}
+                                        width={64}
+                                        height={64}
+                                        className="h-full w-full object-cover"
+                                        unoptimized
+                                    />
+                                ) : (
+                                    <span className="text-lg font-semibold">{profileInitial}</span>
+                                )}
                             </div>
-                            <p className="text-text-primary">
-                                {profile?.displayName || 'No display name set'}
-                            </p>
-                            <p className="text-sm text-text-secondary">
-                                {profile?.email || 'No email available'}
-                            </p>
+
+                            <div>
+                                <div className="flex items-center gap-2 mb-1">
+                                    <UserIcon size={18} className="text-accent-rose" />
+                                    <h2 className="text-xl font-semibold font-body text-text-primary">
+                                        Profile
+                                    </h2>
+                                </div>
+                                <p className="text-text-primary">
+                                    {profile?.displayName || 'No display name set'}
+                                </p>
+                                <p className="text-sm text-text-secondary">
+                                    {profile?.email || 'No email available'}
+                                </p>
+                            </div>
                         </div>
+
+                        <Button
+                            variant="secondary"
+                            onClick={handleSignOut}
+                            disabled={isSigningOut}
+                            isLoading={isSigningOut}
+                            icon={<LogOut size={16} />}
+                        >
+                            Sign Out
+                        </Button>
                     </div>
+                </Card>
 
-                    <Button
-                        variant="secondary"
-                        onClick={handleSignOut}
-                        disabled={isSigningOut}
-                        isLoading={isSigningOut}
-                        icon={<LogOut size={16} />}
-                    >
-                        Sign Out
-                    </Button>
+                {error && (
+                    <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                        <p className="text-sm text-red-400">{error}</p>
+                    </div>
+                )}
+
+                <div className="pt-4 text-xs text-text-muted">
+                    <p>
+                        Version {APP_VERSION} ({shortVersionCode(VERSION_CODE)})
+                        {LAST_UPDATED ? ` | Updated ${formatDate(LAST_UPDATED)}` : ''}
+                    </p>
                 </div>
-            </Card>
-
-            {error && (
-                <div className="mt-6 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                    <p className="text-sm text-red-400">{error}</p>
-                </div>
-            )}
-
-            <div className="mt-10 flex items-center justify-center text-xs text-text-muted">
-                <p>
-                    Version {APP_VERSION} ({shortVersionCode(VERSION_CODE)})
-                    {LAST_UPDATED ? ` | Updated ${formatDate(LAST_UPDATED)}` : ''}
-                </p>
             </div>
-        </div>
+        </AppShell>
     );
 }

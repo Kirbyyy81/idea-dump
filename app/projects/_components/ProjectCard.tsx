@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Project, inferStatus, priorityConfig } from '@/lib/types';
 import { formatRelativeTime, truncate } from '@/lib/utils';
 import { Card } from '@/components/atoms/Card';
-import { StatusBadge } from '@/components/molecules/StatusBadge';
+import { StatusBadge } from '../../project/_components/StatusBadge';
 
 interface ProjectCardProps {
     project: Project;

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { authorizeSessionModule } from '@/lib/rbac/guards';
 import { Project } from '@/lib/types';
 
 const demoProject: Project = {
@@ -44,6 +45,11 @@ A Notion-inspired, deployable web app to centralize, track, and manage all your 
 // GET /api/projects - List all projects or get single project by ID
 export async function GET(request: NextRequest) {
     try {
+        const access = await authorizeSessionModule('projects');
+        if ('response' in access) {
+            return access.response;
+        }
+
         const supabase = await createClient();
         const { data: { user } } = await supabase.auth.getUser();
 
@@ -94,6 +100,11 @@ export async function GET(request: NextRequest) {
 // POST /api/projects - Create a new project
 export async function POST(request: NextRequest) {
     try {
+        const access = await authorizeSessionModule('projects');
+        if ('response' in access) {
+            return access.response;
+        }
+
         const supabase = await createClient();
         const { data: { user } } = await supabase.auth.getUser();
 
@@ -137,6 +148,11 @@ export async function POST(request: NextRequest) {
 // PUT /api/projects - Update a project
 export async function PUT(request: NextRequest) {
     try {
+        const access = await authorizeSessionModule('projects');
+        if ('response' in access) {
+            return access.response;
+        }
+
         const supabase = await createClient();
         const { data: { user } } = await supabase.auth.getUser();
 
@@ -172,6 +188,11 @@ export async function PUT(request: NextRequest) {
 // DELETE /api/projects - Delete a project
 export async function DELETE(request: NextRequest) {
     try {
+        const access = await authorizeSessionModule('projects');
+        if ('response' in access) {
+            return access.response;
+        }
+
         const supabase = await createClient();
         const { data: { user } } = await supabase.auth.getUser();
 

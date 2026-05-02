@@ -1,7 +1,16 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, BookOpen, Copy, Key, Plus, Trash2, Workflow } from 'lucide-react';
+import {
+    AlertTriangle,
+    BookOpen,
+    Copy,
+    Download,
+    Key,
+    Plus,
+    Trash2,
+    Workflow,
+} from 'lucide-react';
 import { Sidebar } from '@/components/organisms/Sidebar';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
@@ -21,6 +30,117 @@ interface ApiKeyDisplay {
     name: string;
     created_at: string;
     last_used_at: string | null;
+}
+
+const weeklyLogSkillMarkdown = `---
+name: weekly-log
+description: Create, list, and update Weekly Productivity Log entries through the Weekly Productivity Log API using the local helper script. Use when Codex needs to record daily work logs, review a date range of entries, or revise an existing productivity entry while preserving project-prefix and writing-style rules.
+---
+
+# Weekly Log
+
+Use the bundled PowerShell script for normal operations. Prefer the script over handwritten HTTP requests so authentication, JSON encoding, and project-prefix handling stay consistent.
+
+## Workflow
+
+1. Read the API key from \`WPL_API_KEY\` or \`scripts/.wpl_api_key\`.
+2. Run \`scripts/weekly-log.ps1 create\`, \`list\`, or \`update\`.
+3. Keep \`operation_task\` prefixed with a project label. If none is provided, rely on \`WPL_PROJECT_PREFIX\` or the script default.
+4. Write one task per entry and keep each entry tied to a single workday.
+
+## Setup
+
+Create \`scripts/.wpl_api_key\` with the API key, or export \`WPL_API_KEY\` in the shell before using the script.
+
+Example:
+
+\`\`\`powershell
+$env:WPL_API_KEY = "YOUR_AGENT_API_KEY"
+$env:WPL_PROJECT_PREFIX = "Product Led Flow"
+\`\`\`
+
+## Script Usage
+
+\`\`\`powershell
+powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\\.codex\\skills\\weekly-log\\scripts\\weekly-log.ps1" create 2026-02-04 Tuesday "Implemented API endpoint" "VSCode, Next.js" "Hybrid auth simplifies multi-client access patterns"
+powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\\.codex\\skills\\weekly-log\\scripts\\weekly-log.ps1" list 2026-02-01 2026-02-07 50
+powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\\.codex\\skills\\weekly-log\\scripts\\weekly-log.ps1" update <id> 2026-02-04 Tuesday "Refined dashboard filters" "VSCode, Supabase" "Small query constraints improve UI responsiveness"
+\`\`\`
+
+## API Operations
+
+### Create
+
+Send \`POST /api/logs\` with:
+
+\`\`\`json
+{
+  "content": {
+    "date": "2026-02-04",
+    "day": "Tuesday",
+    "operation_task": "Product Led Flow: Implemented API endpoint",
+    "tools_used": "VSCode, Next.js, Supabase, TypeScript",
+    "lesson_learned": "Hybrid auth simplifies multi-client access patterns"
+  }
+}
+\`\`\`
+
+Required field:
+- \`content.date\`
+
+Optional fields:
+- \`content.day\`
+- \`content.operation_task\`
+- \`content.tools_used\`
+- \`content.lesson_learned\`
+
+### List
+
+Send \`GET /api/logs\` with optional query params:
+- \`from\`
+- \`to\`
+- \`limit\`
+- \`sort\`
+
+### Update
+
+Send \`PATCH /api/logs/{id}\` with a full replacement \`content\` object and \`allow_human_overwrite\` when needed.
+
+## Writing Rules
+
+- Start \`operation_task\` with a concrete technical verb.
+- Keep the project prefix in \`operation_task\`.
+- List only tools directly used for that task.
+- Make \`lesson_learned\` explain the technical, architectural, or business takeaway.
+- Confirm day boundaries before merging work from separate dates.
+`;
+
+const weeklyLogSkillPreview = `---
+name: weekly-log
+description: Create, list, and update Weekly Productivity Log entries through the Weekly Productivity Log API using the local helper script.
+---
+
+# Weekly Log
+
+Use the bundled PowerShell script for normal operations.
+
+## Workflow
+
+1. Read the API key from \`WPL_API_KEY\` or \`scripts/.wpl_api_key\`.
+2. Run \`scripts/weekly-log.ps1 create\`, \`list\`, or \`update\`.
+3. Keep \`operation_task\` prefixed with a project label.`;
+
+function downloadTextFile(filename: string, content: string) {
+    const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.rel = 'noopener';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
 }
 
 function loadStyle(href: string): Promise<void> {
@@ -60,6 +180,7 @@ export default function ApiToolsPage() {
     const [newKey, setNewKey] = useState<string | null>(null);
     const [keyError, setKeyError] = useState<string | null>(null);
     const [docsError, setDocsError] = useState<string | null>(null);
+    const [copiedSkill, setCopiedSkill] = useState(false);
 
     const cdn = useMemo(() => {
         const base = 'https://unpkg.com/swagger-ui-dist@5.18.2';
@@ -188,43 +309,200 @@ export default function ApiToolsPage() {
         navigator.clipboard.writeText(text);
     };
 
+    const copySkillMarkdown = async () => {
+        await navigator.clipboard.writeText(weeklyLogSkillMarkdown);
+        setCopiedSkill(true);
+        window.setTimeout(() => setCopiedSkill(false), 2000);
+    };
+
     return (
         <div className="flex min-h-screen bg-bg-base font-body text-text-primary">
             <Sidebar projects={projects} />
             <main className="flex-1 ml-64 p-8">
                 <div className="max-w-5xl space-y-8">
-                    <header className="space-y-3">
+                    <header>
                         <h1 className="text-3xl font-heading font-medium">API</h1>
-                        <p className="text-text-muted max-w-3xl">
-                            Manage API keys, verify request formats, and inspect the live OpenAPI
-                            surface in one place. Agent-authenticated requests inherit ownership
-                            from the user tied to the submitted
-                            <code className="ml-1 text-text-secondary">x-api-key</code>.
-                        </p>
                     </header>
 
                     <Card className="p-6">
                         <div className="flex items-center gap-2 mb-3">
                             <Workflow size={20} className="text-accent-rose" />
                             <h2 className="text-xl font-semibold font-body text-text-primary">
-                                How It Works
+                                How to Use It
                             </h2>
                         </div>
-                        <div className="space-y-2 text-sm text-text-secondary">
+                        <div className="space-y-4 text-sm text-text-secondary">
                             <p>
-                                Session-authenticated requests create human-owned records for the
-                                signed-in user.
+                                This API is built for the same workflow Codex uses internally:
+                                generate a key, send a weekly log, and confirm the entry landed in
+                                your account.
                             </p>
-                            <p>
-                                API-key-authenticated requests resolve ownership through
-                                <code className="mx-1 text-text-primary">api_keys.user_id</code>,
-                                so agent writes land directly under that user.
-                            </p>
-                            <p>
-                                The logs API no longer accepts
-                                <code className="mx-1 text-text-primary">owner_user_id</code>.
-                                Ownership is derived from authentication.
-                            </p>
+
+                            <ol className="relative space-y-4 border-l border-border pl-6">
+                                <li className="relative">
+                                    <span className="absolute -left-[1.625rem] top-0 flex h-8 w-8 items-center justify-center rounded-full border border-border bg-bg-base text-sm font-semibold text-text-primary">
+                                        1
+                                    </span>
+                                    <div className="rounded-lg border border-border bg-bg-base p-4">
+                                        <p className="mb-2 font-medium text-text-primary">
+                                            Create a key
+                                        </p>
+                                        <p>
+                                            Use the API Keys card below. The value is only shown
+                                            once, so copy it immediately.
+                                        </p>
+                                    </div>
+                                </li>
+                                <li className="relative">
+                                    <span className="absolute -left-[1.625rem] top-0 flex h-8 w-8 items-center justify-center rounded-full border border-border bg-bg-base text-sm font-semibold text-text-primary">
+                                        2
+                                    </span>
+                                    <div className="rounded-lg border border-border bg-bg-base p-4">
+                                        <p className="mb-2 font-medium text-text-primary">
+                                            Send a weekly log
+                                        </p>
+                                        <p>
+                                            Call <code className="text-text-primary">POST /api/logs</code>
+                                            with the <code className="text-text-primary">x-api-key</code>
+                                            header and a <code className="text-text-primary">content</code>
+                                            object.
+                                        </p>
+                                    </div>
+                                </li>
+                                <li className="relative">
+                                    <span className="absolute -left-[1.625rem] top-0 flex h-8 w-8 items-center justify-center rounded-full border border-border bg-bg-base text-sm font-semibold text-text-primary">
+                                        3
+                                    </span>
+                                    <div className="rounded-lg border border-border bg-bg-base p-4">
+                                        <p className="mb-2 font-medium text-text-primary">
+                                            Verify the result
+                                        </p>
+                                        <p>
+                                            Check the Logs page or request
+                                            <code className="mx-1 text-text-primary">GET /api/logs</code>
+                                            with a date range to confirm the record is there.
+                                        </p>
+                                    </div>
+                                </li>
+                                <li className="relative">
+                                    <span className="absolute -left-[1.625rem] top-0 flex h-8 w-8 items-center justify-center rounded-full border border-border bg-bg-base text-sm font-semibold text-text-primary">
+                                        4
+                                    </span>
+                                    <div className="rounded-lg border border-border bg-bg-base p-4">
+                                        <p className="mb-2 font-medium text-text-primary">
+                                            Export when needed
+                                        </p>
+                                        <p>
+                                            Admin users can turn a date range into markdown with
+                                            <code className="mx-1 text-text-primary">
+                                                POST /api/export/weekly
+                                            </code>
+                                            .
+                                        </p>
+                                    </div>
+                                </li>
+                            </ol>
+
+                        </div>
+                    </Card>
+
+                    <Card className="p-6">
+                        <div className="flex items-center gap-2 mb-3">
+                            <BookOpen size={20} className="text-accent-rose" />
+                            <h2 className="text-xl font-semibold font-body text-text-primary">
+                                Weekly Log Skill
+                            </h2>
+                        </div>
+                        <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+                            <div className="space-y-4">
+                                <div className="rounded-lg border border-border bg-bg-base p-4">
+                                    <div className="mb-3 flex items-center gap-2">
+                                        <span className="rounded-full bg-accent-rose/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-accent-rose">
+                                            Skill card
+                                        </span>
+                                        <span className="text-xs text-text-muted">
+                                            Codex-style skill summary
+                                        </span>
+                                    </div>
+                                    <dl className="grid gap-3 text-sm">
+                                        <div>
+                                            <dt className="text-text-muted">Name</dt>
+                                            <dd className="font-medium text-text-primary">
+                                                weekly-log
+                                            </dd>
+                                        </div>
+                                        <div>
+                                            <dt className="text-text-muted">Description</dt>
+                                            <dd className="text-text-secondary">
+                                                Create, list, and update Weekly Productivity Log
+                                                entries through the Weekly Productivity Log API
+                                                using the local helper script.
+                                            </dd>
+                                        </div>
+                                        <div>
+                                            <dt className="text-text-muted">Best for</dt>
+                                            <dd className="text-text-secondary">
+                                                Writing daily work logs, reviewing entries, and
+                                                keeping weekly reporting aligned with the API.
+                                            </dd>
+                                        </div>
+                                        <div>
+                                            <dt className="text-text-muted">Bundled resources</dt>
+                                            <dd className="text-text-secondary">
+                                                `scripts/weekly-log.ps1`, `/api/logs`, and
+                                                `/api/export/weekly`
+                                            </dd>
+                                        </div>
+                                    </dl>
+                                </div>
+
+                                <div className="space-y-2 text-sm text-text-secondary">
+                                    <p>
+                                        This keeps the page short and shows the same metadata-first
+                                        shape people use for skills: a clear name, a direct
+                                        description, and the workflow it enables.
+                                    </p>
+                                    <p>
+                                        Use the buttons to copy the full skill markdown or download
+                                        it as a <code className="mx-1 text-text-primary">.md</code>
+                                        file.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-3">
+                                <div className="flex flex-wrap gap-2">
+                                    <Button
+                                        variant="secondary"
+                                        onClick={copySkillMarkdown}
+                                        icon={<Copy size={16} />}
+                                    >
+                                        {copiedSkill ? 'Copied' : 'Copy markdown'}
+                                    </Button>
+                                    <Button
+                                        variant="secondary"
+                                        onClick={() =>
+                                            downloadTextFile(
+                                                'weekly-log.skill.md',
+                                                weeklyLogSkillMarkdown
+                                            )
+                                        }
+                                        icon={<Download size={16} />}
+                                    >
+                                        Download .md
+                                    </Button>
+                                </div>
+                                <div className="rounded-lg border border-border bg-bg-base p-4">
+                                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">
+                                        Preview
+                                    </p>
+                                    <pre className="overflow-x-auto text-xs md:text-sm">
+                                        <code className="whitespace-pre-wrap text-text-secondary">
+                                            {weeklyLogSkillPreview}
+                                        </code>
+                                    </pre>
+                                </div>
+                            </div>
                         </div>
                     </Card>
 
@@ -235,11 +513,6 @@ export default function ApiToolsPage() {
                                 API Keys
                             </h2>
                         </div>
-                        <p className="text-sm mb-6 text-text-secondary">
-                            Generate per-user API keys for external tools and agents. Keys are
-                            shown once at creation time.
-                        </p>
-
                         {newKey && (
                             <div className="mb-6 p-4 rounded-lg bg-success-bg border border-accent-sage">
                                 <p className="text-sm font-medium mb-2 flex items-center gap-2 text-accent-sage">
@@ -336,17 +609,33 @@ export default function ApiToolsPage() {
                         <div className="flex items-center gap-2 mb-4">
                             <BookOpen size={20} className="text-accent-rose" />
                             <h2 className="text-xl font-semibold font-body text-text-primary">
-                                Usage
+                                API Example
                             </h2>
                         </div>
-                        <pre className="p-4 rounded-lg text-sm overflow-x-auto bg-bg-base">
-                            <code className="text-text-secondary">{`curl -X POST https://your-app.vercel.app/api/ingest \\
-  -H "Content-Type: application/json" \\
+                        <div className="mb-4 space-y-2 text-sm text-text-secondary">
+                            <p>
+                                If you are sending a weekly log from another client, use the same
+                                payload shape as the skill above. Ownership comes from the API key,
+                                so you do not need to pass a user id.
+                            </p>
+                            <p>
+                                For quick verification, request the same date range back with
+                                <code className="mx-1 text-text-primary">GET /api/logs</code>
+                                after posting.
+                            </p>
+                        </div>
+                        <pre className="p-4 rounded-lg text-sm overflow-x-auto bg-bg-base border border-border">
+                            <code className="text-text-secondary">{`curl -X POST https://idea-dump-alpha.vercel.app/api/logs \\
   -H "x-api-key: YOUR_API_KEY" \\
+  -H "Content-Type: application/json" \\
   -d '{
-    "title": "My New PRD",
-    "prd_content": "# PRD Content...",
-    "tags": ["ai", "web"]
+    "content": {
+      "date": "2026-02-04",
+      "day": "Tuesday",
+      "operation_task": "Product Led Flow: Implemented API endpoint",
+      "tools_used": "VSCode, Next.js, Supabase, TypeScript",
+      "lesson_learned": "Hybrid auth simplifies multi-client access patterns"
+    }
   }'`}</code>
                         </pre>
                     </Card>
@@ -356,10 +645,6 @@ export default function ApiToolsPage() {
                             <h2 className="text-xl font-semibold font-body text-text-primary">
                                 API Reference
                             </h2>
-                            <p className="text-text-muted mt-1">
-                                Interactive docs powered by{' '}
-                                <code className="text-text-secondary">/api/openapi</code>.
-                            </p>
                         </div>
                         {docsError ? (
                             <div className="p-6">

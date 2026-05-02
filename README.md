@@ -1,41 +1,45 @@
 # IdeaDump
 
-IdeaDump is a Next.js app for keeping projects, writing weekly work logs, managing API keys, and handling lightweight role-based access in one place. It is built around a private workspace feel: sign in, open the modules you have access to, and manage work from a single dashboard.
+IdeaDump is a Next.js app for managing product ideas, PRDs, and lightweight delivery logs in one place. It combines a project workspace, markdown-based PRD storage, personal API keys, and a weekly productivity log with export support.
 
-## What The Project Includes
+## Current Features
 
-- Project tracking with create, edit, view, and delete flows
-- Weekly productivity logs with filtering, editing, and markdown export
-- API key management for external clients and agent-style workflows
-- Access control for roles, module permissions, and per-user exceptions
-- Small article-creation helper tools for content support tasks
-- Supabase authentication with login, signup, callback, and password reset
-- In-app API reference inside the API module
+- Project dashboard with search and status filters
+- Create, edit, archive, and review projects
+- Markdown PRD storage and rendering
+- Project notes for ongoing context and updates
+- Status inference from project metadata:
+  - `Ideation` when a project has no GitHub or deploy URL
+  - `Development` when a GitHub URL is present
+  - `Deployed` when a deploy URL is present
+  - `Archived` when a project is archived
+- Weekly productivity log with:
+  - manual entry creation
+  - agent vs human source tracking
+  - edit and delete support
+  - date-range, source, and text filtering
+  - markdown export with clipboard copy
+- API key management from the Settings page
+- API ingestion endpoint for creating projects from external tools
+- In-app API documentation via Swagger UI at `/docs`
+- Supabase magic-link auth with signup, login, callback, and reset-password flows
 
-## Main Modules
+## Repo Overview
 
-The current app is organized around these modules:
+- `app/`: Next.js App Router pages and API routes
+- `components/`: atomic-design UI components
+- `lib/`: Supabase clients, shared types, OpenAPI helpers, auth cache, and utilities
+- `document/`: product docs and SQL migrations
+- `scripts/`: local helper scripts, including Windows Git Bash npm wrapper
 
-- `Dashboard`  
-  Landing area after login. It loads the modules the current user can access and links into them.
+## Tech Stack
 
-- `Projects`  
-  Project list plus project detail and edit flows. Projects can include title, description, PRD content, GitHub URL, deploy URL, priority, notes, and archive/completion state.
-
-- `Weekly Logs`  
-  Create and review daily or weekly work entries, filter by date/source/search, and export a selected range to markdown.
-
-- `API`  
-  Generate and revoke API keys, review example usage, and browse the OpenAPI/Swagger reference. The old `/docs` route now redirects here.
-
-- `Access Control`  
-  Admin-facing module for role assignment, module access, and per-user allow/deny overrides.
-
-- `Article Creation`  
-  Small productivity helpers for article work, including minute-read estimation, slug/image-name generation, and table-of-contents anchor generation.
-
-- `Settings`  
-  Profile details, sign-out flow, and version/build metadata.
+- Next.js 14
+- TypeScript
+- Tailwind CSS
+- Supabase Auth + PostgreSQL
+- Swagger UI for API docs
+- Vercel-friendly build metadata and deployment flow
 
 ## Local Setup
 
@@ -45,7 +49,7 @@ The current app is organized around these modules:
 npm install
 ```
 
-### 2. Create local environment variables
+### 2. Configure environment
 
 Copy `.env.example` to `.env.local` and fill in your Supabase values:
 
@@ -55,11 +59,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
 ```
 
-Notes:
-
-- `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are required for auth and normal app usage.
-- `SUPABASE_SERVICE_ROLE_KEY` is required for admin-style server operations such as API key management and access-control management.
-- Optional build metadata can also be set if you want the Settings page to show custom version info:
+Optional build metadata:
 
 ```env
 GIT_COMMIT_SHA=your-commit-sha
@@ -68,12 +68,15 @@ BUILD_TIME=2026-03-16T00:00:00.000Z
 
 ### 3. Prepare Supabase
 
-Create a Supabase project and apply the SQL files in [document/migrations](D:\Ash Stuff\Coding\idea-dump\document\migrations) so the required tables, role mappings, and log structures exist.
+Create a Supabase project, then apply the project schema and migrations used by this repo.
 
-You should also configure your Supabase auth redirect URLs, including:
+- Core project and note tables are documented below in this README.
+- Daily log support is defined in `document/migrations/20260316_daily_logs.sql`.
+
+In Supabase Auth URL configuration, add:
 
 - `http://localhost:3000/auth/callback`
-- your deployed domain callback URL, for example `https://your-domain.com/auth/callback`
+- `https://YOUR_DOMAIN/auth/callback`
 
 ### 4. Run the app
 
@@ -81,84 +84,128 @@ You should also configure your Supabase auth redirect URLs, including:
 npm run dev
 ```
 
-Then open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000).
 
 ### Windows note
 
-If `npm` is easier to run through Git Bash on your machine, the repo includes a helper script:
+If `npm` is not available in PowerShell, use the helper script:
 
 ```powershell
-.\scripts\npm-gitbash.ps1 run dev
 .\scripts\npm-gitbash.ps1 run lint
 .\scripts\npm-gitbash.ps1 run build
 ```
 
-## Important Routes
+## Available Routes
 
-### App routes
+### App pages
 
-- `/` redirects to login or dashboard depending on session state
-- `/dashboard`
-- `/projects`
-- `/project/new`
-- `/project/[id]`
-- `/project/[id]/edit`
-- `/logs`
-- `/api-tools`
-- `/docs` redirects to `/api-tools`
-- `/settings`
-- `/settings/access`
-- `/article-creation`
-- `/login`
-- `/signup`
-- `/reset-password`
-- `/auth/callback`
+- `/dashboard`: main project list with filters
+- `/project/new`: create a project
+- `/project/[id]`: project detail view
+- `/project/[id]/edit`: edit an existing project
+- `/logs`: weekly productivity log
+- `/docs`: interactive API docs
+- `/settings`: API keys, profile, and version footer
+- `/login`, `/signup`, `/reset-password`: auth flows
 
 ### API routes
 
-- `/api/projects`
-- `/api/notes`
-- `/api/logs`
-- `/api/logs/[id]`
-- `/api/export/weekly`
-- `/api/keys`
-- `/api/ingest`
-- `/api/openapi`
-- `/api/access/me`
-- `/api/access/users`
-- `/api/access/users/[userId]`
-- `/api/access/roles`
-- `/api/access/roles/[role]`
+- `POST /api/ingest`: create a project from an external tool using an API key
+- `GET /api/projects`: list projects
+- `GET|POST|DELETE /api/keys`: manage API keys
+- `GET|POST /api/logs`: list and create daily log entries
+- `PATCH|DELETE /api/logs/[id]`: update or delete a log entry
+- `POST /api/export/weekly`: export logs as markdown
+- `GET /api/openapi`: OpenAPI spec consumed by the docs page
+- `GET|POST /api/notes`: note management
 
-## Project Structure
+## Versioning And Releases
 
-- `app/`  
-  App Router pages, layouts, and API route handlers.
+- `APP_VERSION` is sourced from `package.json` and shown in Settings.
+- `VERSION_CODE` is derived from `NEXT_PUBLIC_VERSION_CODE`, `VERCEL_GIT_COMMIT_SHA`, `GIT_COMMIT_SHA`, or local git state.
+- `LAST_UPDATED` is derived from `NEXT_PUBLIC_LAST_UPDATED`, `BUILD_TIME`, or the build timestamp.
+- GitHub release automation is handled by `release-please` on pushes to `main`.
+- Commit messages merged into `main` should follow Conventional Commits so version bumps stay predictable.
 
-- `components/`  
-  Reusable UI pieces organized into atoms, molecules, and organisms.
+## GitHub Automation
 
-- `lib/`  
-  Shared types, auth helpers, RBAC logic, Supabase clients, logging helpers, utility functions, and article-creation utilities.
+- `.github/workflows/auto-pr.yml` opens a PR into `main` when a non-`main` branch is pushed and no PR already exists.
+- `.github/workflows/release-please.yml` runs on pushes to `main` and manages release PRs, semantic version bumps, tags, and GitHub Releases.
 
-- `document/`  
-  Product docs, design notes, and database migration files.
+## Database Schema
 
-- `public/`  
-  Static assets.
+```sql
+CREATE TABLE projects (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  description TEXT,
+  prd_content TEXT,
+  github_url TEXT,
+  deploy_url TEXT,
+  priority TEXT DEFAULT 'medium',
+  tags TEXT[],
+  completed BOOLEAN DEFAULT FALSE,
+  archived BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-- `scripts/`  
-  Small local helper scripts.
+CREATE TABLE notes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+  content TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-## Stack
+CREATE TABLE api_keys (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  key_hash TEXT NOT NULL,
+  name TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  last_used_at TIMESTAMPTZ
+);
 
-- Next.js 14
-- React 18
-- TypeScript
-- Tailwind CSS
-- Supabase Auth and database
-- React Markdown
-- Swagger UI loaded in the API module
+CREATE TABLE daily_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL,
+  source TEXT NOT NULL CHECK (source IN ('agent', 'human')),
+  content JSONB NOT NULL,
+  effective_date DATE NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE api_keys ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own projects" ON projects
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own projects" ON projects
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own projects" ON projects
+  FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own projects" ON projects
+  FOR DELETE USING (auth.uid() = user_id);
+```
+
+## API Example
+
+```bash
+curl -X POST https://idea-dump-alpha.vercel.app/api/ingest \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: YOUR_API_KEY" \
+  -d '{
+    "title": "My New PRD",
+    "prd_content": "# PRD Content...",
+    "tags": ["ai", "web"]
+  }'
+```
 
 ## License
 
