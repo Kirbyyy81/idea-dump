@@ -16,6 +16,9 @@ import {
     ClipboardList,
     BookOpen,
     FilePenLine,
+    Ticket,
+    Plus,
+    Settings2,
 } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
 
@@ -25,7 +28,16 @@ interface SidebarProps {
 
 const DEFAULT_ALLOWED_MODULES: AppModuleSlug[] = ['dashboard', 'settings'];
 
-const MODULE_NAV_ITEMS: Array<{ href: string; icon: JSX.Element; module: AppModuleSlug }> = [
+const MODULE_NAV_ITEMS: Array<{
+    href: string;
+    icon: JSX.Element;
+    module: AppModuleSlug;
+    label?: string;
+    requiresManager?: boolean;
+}> = [
+    { href: '/tickets', icon: <Ticket size={18} />, module: 'tickets', label: 'My Tickets' },
+    { href: '/tickets/new', icon: <Plus size={18} />, module: 'tickets', label: 'Raise Ticket' },
+    { href: '/tickets/manage', icon: <Settings2 size={18} />, module: 'tickets', label: 'Manage Tickets', requiresManager: true },
     { href: '/logs', icon: <ClipboardList size={18} />, module: 'logs' },
     { href: '/api-tools', icon: <BookOpen size={18} />, module: 'api' },
     { href: '/settings/access', icon: <ShieldCheck size={18} />, module: 'access_control' },
@@ -36,6 +48,7 @@ export function Sidebar({ projects }: SidebarProps) {
     const pathname = usePathname();
     const [isProjectsOpen, setIsProjectsOpen] = useState(false);
     const [allowedModules, setAllowedModules] = useState<AppModuleSlug[]>(DEFAULT_ALLOWED_MODULES);
+    const [canManageAccess, setCanManageAccess] = useState(false);
 
     useEffect(() => {
         let cancelled = false;
@@ -48,6 +61,7 @@ export function Sidebar({ projects }: SidebarProps) {
                 const payload = await res.json();
                 if (!cancelled && payload.data?.allowed_modules) {
                     setAllowedModules(payload.data.allowed_modules);
+                    setCanManageAccess(Boolean(payload.data.can_manage_access));
                 }
             } catch {
                 // Keep safe defaults if access loading fails.
@@ -170,8 +184,11 @@ export function Sidebar({ projects }: SidebarProps) {
                     </div>
                 )}
 
-                {MODULE_NAV_ITEMS.filter((item) => canAccessModule(item.module)).map((item) => (
-                    <Link key={item.module} href={item.href} className="block">
+                {MODULE_NAV_ITEMS
+                    .filter((item) => canAccessModule(item.module))
+                    .filter((item) => !item.requiresManager || canManageAccess)
+                    .map((item) => (
+                    <Link key={item.href} href={item.href} className="block">
                         <Button
                             variant="ghost"
                             className={cn(
@@ -179,14 +196,14 @@ export function Sidebar({ projects }: SidebarProps) {
                                 (item.module === 'access_control'
                                     ? isAccessControlActive
                                     : pathname === item.href)
-                                    ? item.module === 'logs'
+                                    ? item.module === 'logs' || item.module === 'tickets'
                                         ? 'bg-accent-rose/10 text-accent-rose hover:bg-accent-rose/20 hover:text-accent-rose'
                                         : 'bg-bg-hover text-text-primary'
                                     : 'text-text-secondary hover:text-text-primary'
                             )}
                             icon={item.icon}
                         >
-                            {MODULE_LABELS[item.module]}
+                            {item.label ?? MODULE_LABELS[item.module]}
                         </Button>
                     </Link>
                 ))}
