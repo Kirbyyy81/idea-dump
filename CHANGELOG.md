@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.4.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.3.0...idea-dump-v0.4.0) (2026-05-02)
+
+
+### Features
+
+* add ticket data and api ([bb61ee1](https://github.com/Kirbyyy81/idea-dump/commit/bb61ee126518615e1be75f85fa35a9ac86945b98))
+* add ticket navigation ([d841cdd](https://github.com/Kirbyyy81/idea-dump/commit/d841cdd6a2bd251a137a9ed5ab2a5bb8e72a5f37))
+* add ticket pages and components ([a8e2a2b](https://github.com/Kirbyyy81/idea-dump/commit/a8e2a2bd97f71213f1ac67fe4a188eb160c6a53b))
+* integrate tickets into projects ([fc2fc13](https://github.com/Kirbyyy81/idea-dump/commit/fc2fc138f45f7053992420289bb2c096682ce2d4))
+
 ## [0.3.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.2.0...idea-dump-v0.3.0) (2026-04-24)
 
 
