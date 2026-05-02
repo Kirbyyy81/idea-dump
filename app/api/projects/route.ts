@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { authorizeSessionModule } from '@/lib/rbac/guards';
+import { canAccessModule, getUserAppAccess } from '@/lib/rbac/access';
 import { Project } from '@/lib/types';
 
 const demoProject: Project = {
@@ -45,11 +46,6 @@ A Notion-inspired, deployable web app to centralize, track, and manage all your 
 // GET /api/projects - List all projects or get single project by ID
 export async function GET(request: NextRequest) {
     try {
-        const access = await authorizeSessionModule('projects');
-        if ('response' in access) {
-            return access.response;
-        }
-
         const supabase = await createClient();
         const { data: { user } } = await supabase.auth.getUser();
 
@@ -63,6 +59,14 @@ export async function GET(request: NextRequest) {
                 return NextResponse.json({ data: null });
             }
             return NextResponse.json({ data: [demoProject] });
+        }
+
+        const access = await getUserAppAccess(user.id);
+        if (!canAccessModule(access, 'projects') && !canAccessModule(access, 'tickets')) {
+            return NextResponse.json(
+                { error: 'Forbidden', message: 'You do not have access to this module' },
+                { status: 403 }
+            );
         }
 
         // If ID is provided, fetch single project
