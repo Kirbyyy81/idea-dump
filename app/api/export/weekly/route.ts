@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveIdentity, AuthError } from '@/lib/auth/resolveIdentity';
 import { listAccessibleLogs } from '@/lib/logs/access';
+import { authorizeIdentityModule } from '@/lib/rbac/guards';
 import { DailyLogEntry } from '@/lib/types';
 
 interface ExportRequest {
@@ -12,6 +13,10 @@ interface ExportRequest {
 export async function POST(request: NextRequest) {
     try {
         const identity = await resolveIdentity(request);
+        const access = await authorizeIdentityModule(identity, 'logs');
+        if ('response' in access) {
+            return access.response;
+        }
 
         // Only admin can export
         if (identity.role !== 'admin') {

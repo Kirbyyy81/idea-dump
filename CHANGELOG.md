@@ -1,0 +1,76 @@
+# Changelog
+
+## [0.3.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.2.0...idea-dump-v0.3.0) (2026-04-24)
+
+
+### Features
+
+* add description for each module ([23eeae6](https://github.com/Kirbyyy81/idea-dump/commit/23eeae6720fc0c9f081c9ab49d8fa67b33456fdb))
+* refine api guide ([20b6603](https://github.com/Kirbyyy81/idea-dump/commit/20b6603cca9c0beff6c0a1097fd3d1a5cdb26057))
+
+## [0.2.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.1.0...idea-dump-v0.2.0) (2026-04-17)
+
+
+### Features
+
+* add access control module ([f70f688](https://github.com/Kirbyyy81/idea-dump/commit/f70f6883e7a32f59f9c581ddbb01b680c6554dc7))
+* add api docs ([a90aac6](https://github.com/Kirbyyy81/idea-dump/commit/a90aac67f9f3b8a4a66eb02baabd5fd815420119))
+* add log filters ([c7f18ca](https://github.com/Kirbyyy81/idea-dump/commit/c7f18cae6ece047f20deb9d9aaaa43290ef1d8b2))
+* add logo and favicon ([c196366](https://github.com/Kirbyyy81/idea-dump/commit/c196366ddd816e4668836aee3255ae811054e8f8))
+* add module rbac ([076d00f](https://github.com/Kirbyyy81/idea-dump/commit/076d00f222cd006511d5b7ca34a77ccc9ca381bb))
+* add role creation ([ff08042](https://github.com/Kirbyyy81/idea-dump/commit/ff08042e93fb059105cd7a88458e8d6d27aac9be))
+* add settings app shell ([153d952](https://github.com/Kirbyyy81/idea-dump/commit/153d9525670241334bb3cc29ad87799320a666d6))
+* add shared AlertDialog component with global error handling ([6a9ac88](https://github.com/Kirbyyy81/idea-dump/commit/6a9ac882533b0d3f944c8808de34c47e31f9b270))
+* add ui components and library utilities ([cc505ee](https://github.com/Kirbyyy81/idea-dump/commit/cc505ee2d5067ff5f8852760e599f84a421f0943))
+* **auth:** add middleware and login page with magic link support ([4500f67](https://github.com/Kirbyyy81/idea-dump/commit/4500f67266b9a8a600530c38a86c21846dc18ca3))
+* **auth:** add password authentication support ([f96fa11](https://github.com/Kirbyyy81/idea-dump/commit/f96fa115388990b8a460783929690d120fe57be9))
+* **auth:** add signup and reset flows to make password login usable ([9d2f0dd](https://github.com/Kirbyyy81/idea-dump/commit/9d2f0ddd8da74d15c0bf4ad4b75a2a3f17ea8419))
+* **auth:** enforce authentication on all routes ([85c0deb](https://github.com/Kirbyyy81/idea-dump/commit/85c0debe060b14fcac3cd29451921af1c4275303))
+* **auth:** switch from magic link to OTP code verification ([3cc7f78](https://github.com/Kirbyyy81/idea-dump/commit/3cc7f78aba6823d5e590f4f1b72bfe025a86e8e3))
+* **dashboard:** add search filter, status filter, and New Project button ([8350ee4](https://github.com/Kirbyyy81/idea-dump/commit/8350ee4287b0cf5831f4becc609963708b286c5a))
+* **dashboard:** connect frontend to backend API with CRUD operations ([82bef36](https://github.com/Kirbyyy81/idea-dump/commit/82bef36d812345ce74b475235f44401f295b6109))
+* ideate new prd for aem article creation [#004](https://github.com/Kirbyyy81/idea-dump/issues/004) ([3294565](https://github.com/Kirbyyy81/idea-dump/commit/32945652efcc02595e009b64d597d506da458105))
+* implement new article creation page with tools ([f47548a](https://github.com/Kirbyyy81/idea-dump/commit/f47548aae85f82310c9fb0c97aaa0802f6cdc936))
+* implement weekly productivity log feature ([de604c9](https://github.com/Kirbyyy81/idea-dump/commit/de604c9ef4545e6af889175b900ea6a5804d3425))
+* initialize app directory structure ([fb59fb2](https://github.com/Kirbyyy81/idea-dump/commit/fb59fb283e2e3e718fc2f5349c438c8487afb0f4))
+* **logs:** move export markdown to header next to New Entry button ([74bf24e](https://github.com/Kirbyyy81/idea-dump/commit/74bf24e8726eed93bbd970992f9b0c7907922cb7))
+* **notes:** render markdown ([2d6c588](https://github.com/Kirbyyy81/idea-dump/commit/2d6c588c760da9117a21e35b0dddbae6461ef6e2))
+* **prd:** drag drop import ([895e966](https://github.com/Kirbyyy81/idea-dump/commit/895e966619e689de9584c78a46bab57f6218527b))
+* redesign access control ([4093a8d](https://github.com/Kirbyyy81/idea-dump/commit/4093a8d5e687972ce0d984465e9b79f6aa7f501b))
+* refine access table ([1146592](https://github.com/Kirbyyy81/idea-dump/commit/1146592c46d5003a3c1f342dee5b2aff37f39edc))
+* **settings:** add API keys endpoint with secure hash storage ([55a18c2](https://github.com/Kirbyyy81/idea-dump/commit/55a18c28885a3ac38fe703e3129e0ab38fcccee4))
+* **settings:** show version footer ([e84b908](https://github.com/Kirbyyy81/idea-dump/commit/e84b9084d543928c0562174425ea61378eced5bf))
+* **sidebar:** replace status filters with collapsible project list ([66cadce](https://github.com/Kirbyyy81/idea-dump/commit/66cadceca1a49ee297c50e4893a8641c0aa80ee7))
+* **status:** add deployed workflow ([cb79e91](https://github.com/Kirbyyy81/idea-dump/commit/cb79e91b37e0345ba0c5b0737bf07235af32629b))
+* toggle new role row ([6e12b05](https://github.com/Kirbyyy81/idea-dump/commit/6e12b05af2f53f9d7ac6e0b71e142ca2aa5a48de))
+* **ui:** add Aceternity-style loaders and use PageLoader across all pages ([1079600](https://github.com/Kirbyyy81/idea-dump/commit/1079600bcec5bd461c7d9b7e812025223a252215))
+* unify api hub ([6434ae7](https://github.com/Kirbyyy81/idea-dump/commit/6434ae7208a244b3be536d75df2127b8013bbf18))
+* **weekly-log:** improve CLI scripts and secure API key handling ([c7d0885](https://github.com/Kirbyyy81/idea-dump/commit/c7d0885ea749c2bf51ff1e8452fe6a177ef99686))
+
+
+### Bug Fixes
+
+* add missing formatDate import ([c0eaae0](https://github.com/Kirbyyy81/idea-dump/commit/c0eaae030858cf497f63d1f76a1e2ce87001cb9d))
+* add missing inferStatus import ([749b902](https://github.com/Kirbyyy81/idea-dump/commit/749b9021621b3406c74aa040a16cacda5ee4fc1c))
+* add missing Project and Note type imports ([6757af4](https://github.com/Kirbyyy81/idea-dump/commit/6757af43b92b46a9e878bb235112cccb63641072))
+* align rbac access ([57074be](https://github.com/Kirbyyy81/idea-dump/commit/57074be9aac0f1b1e06e30ddcaac77b22ba9f5a5))
+* allow for api key generation ([5343bc6](https://github.com/Kirbyyy81/idea-dump/commit/5343bc6f80eda726468bdf00b89232a3d91acdbf))
+* **api:** return empty data for unauthenticated users on /api/logs ([bd7a61f](https://github.com/Kirbyyy81/idea-dump/commit/bd7a61fcacf26b25fa42ce5c75996b006b2c4152))
+* **auth:** avoid export prerender ([58920e1](https://github.com/Kirbyyy81/idea-dump/commit/58920e1fae382e6699f31ee3423c7afef5bf61f0))
+* **auth:** complete magic link login ([ae3bd26](https://github.com/Kirbyyy81/idea-dump/commit/ae3bd260563b60944552e2c2e5aae3adc9023f44))
+* **auth:** handle login code ([2297d6a](https://github.com/Kirbyyy81/idea-dump/commit/2297d6ad06c5455d11fe1f4551d54ec2154d61d4))
+* **auth:** handle Supabase error query params in callback ([8eda9c0](https://github.com/Kirbyyy81/idea-dump/commit/8eda9c00bb839bfe2662954dd6579eda8eef80de))
+* **auth:** improve error logging in callback route ([82ba889](https://github.com/Kirbyyy81/idea-dump/commit/82ba889d3a5045832725918ea13648f66822ce59))
+* **auth:** reload after login ([b43dd9c](https://github.com/Kirbyyy81/idea-dump/commit/b43dd9c5864c65302ec80fd41aa5be470f0184e5))
+* **auth:** stabilize session flow ([b9ac481](https://github.com/Kirbyyy81/idea-dump/commit/b9ac481501ea30c5785de843c7914af3bd405e90))
+* **build:** add missing lib/icons module ([ba0e639](https://github.com/Kirbyyy81/idea-dump/commit/ba0e6399a4cbc61e8538e5eedee031deb5dac817))
+* CookieOptions to set and removeOptions ([218c880](https://github.com/Kirbyyy81/idea-dump/commit/218c880eb14021a9e0c4a66711d58722452e4856))
+* implement design tokens ([f78a5c0](https://github.com/Kirbyyy81/idea-dump/commit/f78a5c0bce61fec1e017679b15eb48bc22d2a4a0))
+* **middleware:** add explicit type for cookiesToSet parameter ([78e90a9](https://github.com/Kirbyyy81/idea-dump/commit/78e90a91465b79278725d365614d63466a122645))
+* normalize log content ([f220145](https://github.com/Kirbyyy81/idea-dump/commit/f220145ab15ad0c53d40104b976921d298e46136))
+* scope agent logs ([695ad09](https://github.com/Kirbyyy81/idea-dump/commit/695ad0976d0cc22f83d2b0c41a9c676f0671a154))
+* show agent logs ([4d770fa](https://github.com/Kirbyyy81/idea-dump/commit/4d770fa036f5bbd414699b2e5b9277c2058c649d))
+* stabilize auth flow ([1ad7111](https://github.com/Kirbyyy81/idea-dump/commit/1ad7111ba9826cc4d840c0c537ae9aed77f670b4))
+* type cookie adapter ([1cbd290](https://github.com/Kirbyyy81/idea-dump/commit/1cbd290672e5dafe8807e0ff1b0ae13faac64910))
+* use bg-bg-elevated for AlertDialog background ([148ed7a](https://github.com/Kirbyyy81/idea-dump/commit/148ed7a9d0264f28776c916f4e809fe157feed4a))
+* use service role client for agent API operations ([5f33ea1](https://github.com/Kirbyyy81/idea-dump/commit/5f33ea14b98dbb6cfa46033dca0ea489b89bdd01))

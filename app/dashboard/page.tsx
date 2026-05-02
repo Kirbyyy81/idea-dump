@@ -1,67 +1,118 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import {
+    ShieldCheck,
+    BookOpen,
+    ClipboardList,
+    FilePenLine,
+    FolderKanban,
+    LayoutDashboard,
+    LucideIcon,
+    Settings,
+} from 'lucide-react';
 import { Sidebar } from '@/components/organisms/Sidebar';
-import { ProjectCard } from '@/components/organisms/ProjectCard';
-import { Project, Status, statusConfig, inferStatus } from '@/lib/types';
-import { Plus, Search, X } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
-import { cn } from '@/lib/utils';
-import { iconMap } from '@/lib/icons';
+import { Card } from '@/components/atoms/Card';
 import { PageLoader } from '@/components/atoms/Loader';
+import { AppModuleSlug, MODULE_LABELS, MODULE_PATHS } from '@/lib/rbac/constants';
+import { Project } from '@/lib/types';
+
+interface AccessPayload {
+    allowed_modules: AppModuleSlug[];
+}
+
+const MODULE_CARD_META: Partial<Record<AppModuleSlug, { description: string; icon: LucideIcon }>> = {
+    dashboard: {
+        description: 'Review your available modules and jump into the areas you can access.',
+        icon: LayoutDashboard,
+    },
+    projects: {
+        description: 'Manage project records and open individual project detail pages.',
+        icon: FolderKanban,
+    },
+    logs: {
+        description: 'View, add, edit, and export your weekly productivity logs.',
+        icon: ClipboardList,
+    },
+    api: {
+        description: 'Manage API keys and review the API usage and documentation.',
+        icon: BookOpen,
+    },
+    access_control: {
+        description: 'Manage roles, module access, and user-specific exceptions.',
+        icon: ShieldCheck,
+    },
+    article_creation: {
+        description: 'Use the built-in helpers for article planning and content support.',
+        icon: FilePenLine,
+    },
+    settings: {
+        description: 'Manage your personal account settings and sign-out actions.',
+        icon: Settings,
+    },
+};
 
 export default function DashboardPage() {
+    const [allowedModules, setAllowedModules] = useState<AppModuleSlug[]>(['dashboard', 'settings']);
     const [projects, setProjects] = useState<Project[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // Filter state
-    const [searchQuery, setSearchQuery] = useState('');
-    const [selectedStatus, setSelectedStatus] = useState<Status | 'all'>('all');
-
-    // Fetch projects
     useEffect(() => {
-        async function fetchProjects() {
+        let cancelled = false;
+
+        async function loadDashboard() {
             try {
-                const res = await fetch('/api/projects');
-                if (!res.ok) throw new Error('Failed to fetch projects');
-                const { data } = await res.json();
-                setProjects(data || []);
+                const accessRes = await fetch('/api/access/me');
+                if (!accessRes.ok) {
+                    throw new Error('Failed to load dashboard access');
+                }
+
+                const accessPayload = await accessRes.json();
+                const modules = (accessPayload.data as AccessPayload).allowed_modules ?? ['dashboard', 'settings'];
+
+                if (cancelled) return;
+                setAllowedModules(modules);
+
+                if (modules.includes('projects')) {
+                    const projectsRes = await fetch('/api/projects');
+                    if (projectsRes.ok && !cancelled) {
+                        const projectsPayload = await projectsRes.json();
+                        setProjects(projectsPayload.data || []);
+                    }
+                }
             } catch (err) {
-                setError(err instanceof Error ? err.message : 'An error occurred');
+                if (!cancelled) {
+                    setError(err instanceof Error ? err.message : 'Failed to load dashboard');
+                }
             } finally {
-                setIsLoading(false);
+                if (!cancelled) {
+                    setIsLoading(false);
+                }
             }
         }
-        fetchProjects();
+
+        loadDashboard();
+
+        return () => {
+            cancelled = true;
+        };
     }, []);
 
-    // Filter projects
-    const filteredProjects = useMemo(() => {
-        return projects.filter(project => {
-            // Search filter
-            const matchesSearch = searchQuery === '' ||
-                project.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                project.description?.toLowerCase().includes(searchQuery.toLowerCase());
-
-            // Status filter
-            const projectStatus = inferStatus(project);
-            const matchesStatus = selectedStatus === 'all' || projectStatus === selectedStatus;
-
-            return matchesSearch && matchesStatus;
-        });
-    }, [projects, searchQuery, selectedStatus]);
-
-    // Status counts for filter badges
-    const statusCounts = useMemo(() => {
-        const counts: Record<string, number> = { all: projects.length };
-        projects.forEach(p => {
-            const status = inferStatus(p);
-            counts[status] = (counts[status] || 0) + 1;
-        });
-        return counts;
-    }, [projects]);
+    const quickLinks = useMemo(
+        () =>
+            allowedModules
+                .filter((moduleSlug) => moduleSlug !== 'dashboard')
+                .map((moduleSlug) => ({
+                    ...MODULE_CARD_META[moduleSlug]!,
+                    href: MODULE_PATHS[moduleSlug],
+                    label: MODULE_LABELS[moduleSlug],
+                    moduleSlug,
+                })),
+        [allowedModules]
+    );
 
     if (isLoading) {
         return <PageLoader />;
@@ -83,105 +134,45 @@ export default function DashboardPage() {
             <Sidebar projects={projects} />
 
             <main className="flex-1 ml-64 p-8">
-                {/* Header */}
-                <header className="flex items-center justify-between mb-6">
-                    <h1 className="text-3xl font-heading font-medium">My Projects</h1>
-                    <Link href="/project/new">
-                        <Button icon={<Plus size={18} />}>
-                            New Project
-                        </Button>
-                    </Link>
-                </header>
+                <div className="max-w-5xl space-y-8">
+                    <header>
+                        <h1 className="text-3xl font-heading font-medium">Dashboard</h1>
+                    </header>
 
-                {/* Filter Bar */}
-                <div className="mb-6 space-y-4">
-                    {/* Search */}
-                    <div className="relative max-w-md">
-                        <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-                        <input
-                            type="text"
-                            placeholder="Search projects..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="input w-full pl-10 pr-10"
-                        />
-                        {searchQuery && (
-                            <button
-                                onClick={() => setSearchQuery('')}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary"
-                            >
-                                <X size={16} />
-                            </button>
-                        )}
-                    </div>
-
-                    {/* Status Filter */}
-                    <div className="flex flex-wrap gap-2">
-                        <button
-                            onClick={() => setSelectedStatus('all')}
-                            className={cn(
-                                "px-3 py-1.5 rounded-full text-sm font-medium transition-colors",
-                                selectedStatus === 'all'
-                                    ? "bg-accent-rose text-white"
-                                    : "bg-bg-hover text-text-secondary hover:bg-bg-subtle"
-                            )}
-                        >
-                            All ({statusCounts.all || 0})
-                        </button>
-                        {(Object.keys(statusConfig) as Status[]).map((status) => {
-                            const config = statusConfig[status];
-                            const IconComponent = iconMap[config.icon];
-                            const count = statusCounts[status] || 0;
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                        {quickLinks.map((item) => {
+                            const Icon = item.icon;
 
                             return (
-                                <button
-                                    key={status}
-                                    onClick={() => setSelectedStatus(status)}
-                                    className={cn(
-                                        "px-3 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5",
-                                        selectedStatus === status
-                                            ? "bg-accent-rose text-white"
-                                            : "bg-bg-hover text-text-secondary hover:bg-bg-subtle"
-                                    )}
-                                >
-                                    {IconComponent && <IconComponent size={14} />}
-                                    {config.label} ({count})
-                                </button>
+                                <Link key={item.moduleSlug} href={item.href} className="block">
+                                    <Card className="p-6 flex h-full flex-col gap-4 transition-colors hover:border-border-strong hover:bg-bg-hover/50 focus-within:border-border-strong">
+                                        <div className="flex items-center gap-3">
+                                            <div className="rounded-lg bg-accent-rose/10 p-3">
+                                                <Icon size={20} className="text-accent-rose" />
+                                            </div>
+                                            <div>
+                                                <h2 className="text-lg font-semibold text-text-primary">
+                                                    {item.label}
+                                                </h2>
+                                            </div>
+                                        </div>
+                                        <p className="text-sm leading-6 text-text-secondary">
+                                            {item.description}
+                                        </p>
+                                    </Card>
+                                </Link>
                             );
                         })}
                     </div>
-                </div>
 
-                {/* Projects Grid */}
-                {filteredProjects.length === 0 ? (
-                    <div className="text-center py-12 text-text-muted">
-                        {projects.length === 0 ? (
-                            <>
-                                <p>No projects yet.</p>
-                                <p className="mt-2">Create your first project to get started!</p>
-                            </>
-                        ) : (
-                            <>
-                                <p>No projects match your filters.</p>
-                                <button
-                                    onClick={() => {
-                                        setSearchQuery('');
-                                        setSelectedStatus('all');
-                                    }}
-                                    className="mt-2 text-accent-rose hover:underline"
-                                >
-                                    Clear filters
-                                </button>
-                            </>
-                        )}
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        {filteredProjects.map((project) => (
-                            <ProjectCard key={project.id} project={project} />
-                        ))}
-                    </div>
-                )}
+                    {!allowedModules.includes('projects') && (
+                        <Card className="p-6">
+                            <h2 className="text-lg font-semibold text-text-primary">
+                                Projects Access
+                            </h2>
+                        </Card>
+                    )}
+                </div>
             </main>
         </div>
     );
