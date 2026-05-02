@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.2.0...idea-dump-v0.3.0) (2026-04-24)
+
+
+### Features
+
+* add description for each module ([23eeae6](https://github.com/Kirbyyy81/idea-dump/commit/23eeae6720fc0c9f081c9ab49d8fa67b33456fdb))
+* refine api guide ([20b6603](https://github.com/Kirbyyy81/idea-dump/commit/20b6603cca9c0beff6c0a1097fd3d1a5cdb26057))
+
 ## [0.2.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.1.0...idea-dump-v0.2.0) (2026-04-17)
 
 
