@@ -38,7 +38,7 @@ export function AppShell({ children, contentClassName = 'p-8' }: AppShellProps) 
     return (
         <div className="flex min-h-screen bg-bg-base font-body text-text-primary">
             <Sidebar projects={projects} />
-            <main className={`flex-1 ml-64 ${contentClassName}`}>{children}</main>
+      <main className={`flex-1 ml-[var(--sidebar-width)] transition-[margin] duration-200 ${contentClassName}`}>{children}</main>
         </div>
     );
 }

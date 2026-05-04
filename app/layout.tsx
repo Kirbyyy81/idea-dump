@@ -35,6 +35,9 @@ export const metadata: Metadata = {
         title: 'IdeaDump',
         statusBarStyle: 'default',
     },
+    other: {
+        'mobile-web-app-capable': 'yes',
+    },
 };
 
 export default function RootLayout({
