@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { buildCachedProfile, clearCachedProfile, setCachedProfile } from '@/lib/auth/profileCache';
-import { Mail, ArrowLeft, CheckCircle, Lock } from 'lucide-react';
+import { Mail, CheckCircle, Lock } from 'lucide-react';
 import { LoaderOne } from '@/components/atoms/Loader';
 
 export default function LoginPage() {
@@ -185,28 +185,21 @@ export default function LoginPage() {
     return (
         <div className="min-h-screen flex flex-col items-center justify-center px-6">
             <div className="w-full max-w-md">
-                {/* Back to Home */}
-                <Link
-                    href="/"
-                    className="flex items-center gap-2 mb-8 text-text-secondary hover:text-text-primary transition-colors"
-                >
-                    <ArrowLeft size={20} />
-                    Back to Home
-                </Link>
+                <div className="mb-8 text-center">
+                    <h1 className="text-3xl">
+                        <span className="text-text-primary">Idea</span>
+                        <span className="text-accent-rose">Dump</span>
+                    </h1>
+                </div>
 
-                {/* Card */}
                 <div className="card p-8">
                     {/* Header */}
                     <div className="text-center mb-8">
-                        <h1 className="text-3xl mb-2">
-                            <span className="text-text-primary">Idea</span>
-                            <span className="text-accent-rose">Dump</span>
-                        </h1>
                         <p className="text-text-secondary">
                             {isSent
                                 ? 'Check your email!'
                                 : authMethod === 'otp'
-                                    ? 'Sign in with magic link'
+                                    ? 'Sign In'
                                     : 'Sign in with password'}
                         </p>
                     </div>
@@ -406,13 +399,6 @@ export default function LoginPage() {
                         </form>
                     )}
                 </div>
-
-                {/* Footer */}
-                <p className="text-center text-sm text-text-muted mt-6">
-                    {authMethod === 'otp'
-                        ? "No password needed. We'll email you a secure login link."
-                        : "Enter your secure password to access your account."}
-                </p>
             </div>
         </div>
     );

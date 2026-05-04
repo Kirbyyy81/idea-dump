@@ -16,8 +16,8 @@ export default function OfflinePage() {
                         this page once you are back online.
                     </p>
                     <div className="flex justify-center">
-                        <Link href="/dashboard">
-                            <Button>Go to Dashboard</Button>
+                        <Link href="/dashboard" className="btn-primary">
+                            Go to Dashboard
                         </Link>
                     </div>
                 </Card>

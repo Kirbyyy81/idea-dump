@@ -9,12 +9,13 @@ import {
     ChevronDown,
     Copy,
     Download,
+    DownloadCloud,
     KeyRound,
     Lightbulb,
     LayoutDashboard,
-    ShieldCheck,
     TerminalSquare,
     Trash2,
+    UserCheck,
 } from 'lucide-react';
 import { Sidebar } from '@/components/organisms/Sidebar';
 import { Button } from '@/components/atoms/Button';
@@ -219,24 +220,32 @@ function RailItem({
     description,
     children,
     accent = 'text-text-primary',
+    isLast = false,
 }: {
     icon: ComponentType<{ className?: string; size?: number }>;
     title: string;
     description: ReactNode;
     children?: ReactNode;
     accent?: string;
+    isLast?: boolean;
 }) {
     return (
-        <li className="relative flex gap-6">
-            <div className="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-lg border-2 border-border-default bg-bg-elevated text-text-primary">
+        <div className={`relative flex gap-6 ${isLast ? '' : 'mb-10'} group`}>
+            <div className="relative z-10 flex h-10 w-10 min-w-10 items-center justify-center rounded-md border-2 border-border-default bg-white text-text-primary">
                 <Icon size={18} className={accent} />
             </div>
-            <div className="pt-1 pl-16">
-                <h3 className="text-2xl font-heading font-medium text-text-primary">{title}</h3>
-                <p className="mt-1 max-w-2xl text-sm leading-6 text-text-secondary">{description}</p>
-                {children ? <div className="mt-4">{children}</div> : null}
+            <div className="flex-1 pt-1">
+                <h3 className="mb-1 text-2xl font-heading font-medium text-text-primary">{title}</h3>
+                <p
+                    className={`max-w-2xl text-sm leading-6 text-text-secondary ${
+                        children ? 'mb-4' : ''
+                    }`}
+                >
+                    {description}
+                </p>
+                {children ? <div>{children}</div> : null}
             </div>
-        </li>
+        </div>
     );
 }
 
@@ -430,31 +439,27 @@ export default function ApiToolsPage() {
         <div className="flex min-h-screen bg-bg-base font-body text-text-primary">
             <Sidebar projects={projects} />
 
-            <main className="flex-1 px-4 py-6 sm:px-6 lg:ml-64 lg:px-8 lg:py-8">
-                <div className="mx-auto flex max-w-5xl flex-col gap-8">
+            <main className="ml-[var(--sidebar-width)] flex-1 px-4 py-6 transition-[margin] duration-200 sm:px-6 lg:px-8 lg:py-8">
+                <div className="mx-auto flex max-w-6xl flex-col gap-8">
                     <Card className="w-full overflow-hidden p-0">
                         <div className="p-8 md:p-12">
-                            <div className="flex items-start gap-4">
-                                <div className="mt-1 flex h-12 w-12 items-center justify-center rounded-full border border-accent-rose bg-bg-elevated text-accent-rose">
-                                    <Lightbulb size={22} />
-                                </div>
-                                <div className="space-y-2">
+                            <header className="border-b border-dashed border-border-default pb-8">
+                                <div className="flex items-center gap-3">
+                                    <Lightbulb size={30} className="shrink-0 text-accent-rose" />
                                     <h1 className="text-3xl font-heading font-medium md:text-[2.15rem]">
                                         Implementation Guide
                                     </h1>
-                                    <p className="max-w-2xl text-sm leading-6 text-text-secondary md:text-base">
-                                        Follow this workflow to integrate the Codex logging engine.
-                                        Designed for the IdeaDump ecosystem.
-                                    </p>
                                 </div>
-                            </div>
+                                <p className="mt-4 max-w-2xl text-sm leading-6 text-text-secondary md:text-base">
+                                    Follow this workflow to integrate the Codex logging engine.
+                                    Designed for the IdeaDump ecosystem.
+                                </p>
+                            </header>
 
-                            <div className="my-7 border-t border-dashed border-border-subtle" />
-
-                            <div className="space-y-6">
+                            <div className="space-y-6 pt-8">
                                 <div className="rounded-xl border border-info bg-info-bg p-5 md:p-6">
                                     <div className="flex items-start gap-4">
-                                        <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-info bg-bg-elevated text-info">
+                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-info bg-bg-elevated text-info">
                                             <TerminalSquare size={20} />
                                         </div>
                                         <div className="flex-1 space-y-3">
@@ -479,7 +484,8 @@ export default function ApiToolsPage() {
                                     </div>
                                 </div>
 
-                                <ol className="relative space-y-10 before:absolute before:left-[19px] before:top-2 before:h-[calc(100%-0.5rem)] before:w-px before:bg-border-default">
+                                <div className="relative">
+                                    <div className="absolute bottom-2 left-[19px] top-2 w-[2px] bg-border-default" />
                                     <RailItem
                                         icon={KeyRound}
                                         title="Generate API Key"
@@ -491,19 +497,19 @@ export default function ApiToolsPage() {
                                                     className="font-medium text-accent-rose underline decoration-accent-rose/40 underline-offset-2"
                                                 >
                                                     API Key Section
-                                                </Link>
-                                                .
-                                            </>
-                                        }
+                                            </Link>
+                                            .
+                                        </>
+                                    }
                                     >
-                                        <div className="inline-flex items-center gap-2 rounded-full border border-warning bg-warning-bg px-3 py-1 text-xs text-text-primary">
+                                        <div className="inline-flex items-center gap-2 rounded-lg border border-accent-apricot bg-warning-bg px-3 py-2 text-xs text-text-primary">
                                             <AlertTriangle size={14} className="text-warning" />
                                             The key is only shown once. Copy it immediately.
                                         </div>
                                     </RailItem>
 
                                     <RailItem
-                                        icon={Download}
+                                        icon={DownloadCloud}
                                         title="Download Weekly Log Skill"
                                         description="Import the core skill definition into your agent environment to enable logging capabilities."
                                     >
@@ -533,7 +539,7 @@ export default function ApiToolsPage() {
                                     </RailItem>
 
                                     <RailItem
-                                        icon={ShieldCheck}
+                                        icon={UserCheck}
                                         title="Authorize Agent"
                                         description="Provide the generated API key to your agent configuration to establish a secure connection."
                                     />
@@ -542,6 +548,7 @@ export default function ApiToolsPage() {
                                         icon={Activity}
                                         title="Test the System"
                                         description="Send a test log and verify its appearance on your IdeaDump Dashboard."
+                                        isLast
                                     >
                                         <div className="flex flex-wrap gap-2">
                                             <Button
@@ -558,7 +565,7 @@ export default function ApiToolsPage() {
                                             </Button>
                                         </div>
                                     </RailItem>
-                                </ol>
+                                </div>
 
                                 <div className="flex flex-col gap-3 border-t border-border-subtle pt-6 sm:flex-row sm:items-center sm:justify-between">
                                     <Link

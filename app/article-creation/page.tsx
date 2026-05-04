@@ -49,7 +49,7 @@ export default function ArticleCreationPage() {
     return (
         <div className="flex min-h-screen bg-bg-base font-body text-text-primary">
             <Sidebar projects={projects} />
-            <main className="flex-1 ml-64 p-8">
+            <main className="ml-[var(--sidebar-width)] flex-1 p-8 transition-[margin] duration-200">
                 <div className="max-w-5xl space-y-8">
                     <header className="space-y-3">
                         <div className="flex items-center gap-3">

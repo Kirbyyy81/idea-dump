@@ -79,13 +79,17 @@ export default function ProjectsPage() {
         <div className="flex min-h-screen bg-bg-base font-body text-text-primary">
             <Sidebar projects={projects} />
 
-            <main className="flex-1 ml-64 p-8">
+            <main className="ml-[var(--sidebar-width)] flex-1 p-8 transition-[margin] duration-200">
                 <header className="flex items-center justify-between mb-6">
                     <h1 className="text-3xl font-heading font-medium">Projects</h1>
-                    <Link href="/project/new">
-                        <Button icon={<Plus size={18} />}>
-                            New Project
-                        </Button>
+                    <Link
+                        href="/project/new"
+                        className="btn-primary inline-flex items-center justify-center"
+                    >
+                        <span className="mr-2">
+                            <Plus size={18} />
+                        </span>
+                        <span>New Project</span>
                     </Link>
                 </header>
 

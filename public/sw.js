@@ -1,9 +1,16 @@
-const CACHE_NAME = 'ideadump-shell-v1';
+const CACHE_NAME = 'ideadump-shell-v2';
 const STATIC_ASSETS = ['/', '/offline', '/manifest.webmanifest', '/logo.png'];
 
 self.addEventListener('install', (event) => {
     event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS)).then(() => self.skipWaiting())
+        caches
+            .open(CACHE_NAME)
+            .then((cache) =>
+                Promise.allSettled(
+                    STATIC_ASSETS.map((asset) => cache.add(new Request(asset, { cache: 'reload' })))
+                )
+            )
+            .then(() => self.skipWaiting())
     );
 });
 

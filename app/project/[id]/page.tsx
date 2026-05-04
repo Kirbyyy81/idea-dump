@@ -7,16 +7,20 @@ import { StatusBadge } from '../_components/StatusBadge';
 import { PriorityBadge } from '../_components/PriorityBadge';
 import { MarkdownRenderer } from '../_components/MarkdownRenderer';
 import { NotesPanel } from '../_components/NotesPanel';
+import { TicketForm } from '@/app/tickets/_components/TicketForm';
+import { TicketCard } from '@/app/tickets/_components/TicketCard';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
-import { Project, Note, inferStatus } from '@/lib/types';
+import { CreateTicketInput, Project, Note, Ticket, inferStatus } from '@/lib/types';
 import {
     ArrowLeft,
     ExternalLink,
     Archive,
     Pencil,
     FileText,
+    Plus,
     Rocket,
+    Ticket as TicketIcon,
     Trash2
 } from 'lucide-react';
 import { PageLoader } from '@/components/atoms/Loader';
@@ -29,9 +33,16 @@ export default function ProjectPage() {
 
     const [project, setProject] = useState<Project | null>(null);
     const [notes, setNotes] = useState<Note[]>([]);
+    const [tickets, setTickets] = useState<Ticket[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isUpdating, setIsUpdating] = useState(false);
+    const [showTicketForm, setShowTicketForm] = useState(false);
+    const [editingTicket, setEditingTicket] = useState<Ticket | null>(null);
+    const [isSavingTicket, setIsSavingTicket] = useState(false);
+    const [canUseTickets, setCanUseTickets] = useState(false);
+    const [canManageTickets, setCanManageTickets] = useState(false);
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
     // Fetch project and notes
     useEffect(() => {
@@ -39,8 +50,12 @@ export default function ProjectPage() {
             try {
                 setIsLoading(true);
 
-                // Fetch project
-                const projectRes = await fetch(`/api/projects?id=${projectId}`);
+                const [projectRes, notesRes, accessRes] = await Promise.all([
+                    fetch(`/api/projects?id=${projectId}`),
+                    fetch(`/api/notes?project_id=${projectId}`),
+                    fetch('/api/access/me'),
+                ]);
+
                 if (!projectRes.ok) throw new Error('Failed to fetch project');
                 const projectData = await projectRes.json();
 
@@ -50,11 +65,31 @@ export default function ProjectPage() {
 
                 setProject(projectData.data);
 
-                // Fetch notes
-                const notesRes = await fetch(`/api/notes?project_id=${projectId}`);
                 if (notesRes.ok) {
                     const notesData = await notesRes.json();
                     setNotes(notesData.data || []);
+                }
+
+                if (accessRes.ok) {
+                    const accessData = await accessRes.json();
+                    const allowedModules = accessData.data?.allowed_modules || [];
+                    const role = accessData.data?.role || 'member';
+                    const nextCanUseTickets = allowedModules.includes('tickets');
+                    const nextCanManageTickets = role === 'owner' || role === 'admin';
+
+                    setCanUseTickets(nextCanUseTickets);
+                    setCanManageTickets(nextCanManageTickets);
+                    setCurrentUserId(accessData.data?.user_id || null);
+
+                    if (nextCanUseTickets) {
+                        const scope = nextCanManageTickets ? 'manage' : 'mine';
+                        const ticketsRes = await fetch(`/api/tickets?project_id=${projectId}&scope=${scope}`);
+
+                        if (ticketsRes.ok) {
+                            const ticketsData = await ticketsRes.json();
+                            setTickets(ticketsData.data || []);
+                        }
+                    }
                 }
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'An error occurred');
@@ -142,6 +177,70 @@ export default function ProjectPage() {
     }
 
     const status = inferStatus(project);
+
+    const handleCreateTicket = async (data: CreateTicketInput) => {
+        setIsSavingTicket(true);
+        try {
+            const res = await fetch('/api/tickets', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data),
+            });
+
+            if (!res.ok) throw new Error('Failed to create ticket');
+            const payload = await res.json();
+            setTickets((current) => [payload.data, ...current]);
+            setShowTicketForm(false);
+        } catch (err) {
+            console.error('Failed to create ticket:', err);
+        } finally {
+            setIsSavingTicket(false);
+        }
+    };
+
+    const handleUpdateTicket = async (data: CreateTicketInput) => {
+        if (!editingTicket) return;
+
+        setIsSavingTicket(true);
+        try {
+            const res = await fetch(`/api/tickets/${editingTicket.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: data.title,
+                    description: data.description,
+                    notes: data.notes,
+                    status: data.status,
+                    priority: data.priority,
+                    source: data.source,
+                    tags: data.tags,
+                }),
+            });
+
+            if (!res.ok) throw new Error('Failed to update ticket');
+            const payload = await res.json();
+            setTickets((current) =>
+                current.map((ticket) => (ticket.id === editingTicket.id ? payload.data : ticket))
+            );
+            setEditingTicket(null);
+        } catch (err) {
+            console.error('Failed to update ticket:', err);
+        } finally {
+            setIsSavingTicket(false);
+        }
+    };
+
+    const handleDeleteTicket = async (id: string) => {
+        if (!confirm('Are you sure you want to delete this ticket?')) return;
+
+        try {
+            const res = await fetch(`/api/tickets/${id}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error('Failed to delete ticket');
+            setTickets((current) => current.filter((ticket) => ticket.id !== id));
+        } catch (err) {
+            console.error('Failed to delete ticket:', err);
+        }
+    };
 
     return (
         <div className="min-h-screen p-8 max-w-5xl mx-auto">
@@ -267,6 +366,78 @@ export default function ProjectPage() {
                     <NotesPanel notes={notes} onAddNote={handleAddNote} />
                 </Card>
             </section>
+
+            {canUseTickets && (
+                <section className="mt-6">
+                    <Card className="p-6">
+                        <div className="mb-4 flex items-center justify-between">
+                            <h2 className="flex items-center gap-2 font-body text-xl font-semibold text-text-primary">
+                                <TicketIcon size={20} className="text-accent-rose" />
+                                Tickets
+                                <span className="text-sm font-normal text-text-muted">
+                                    ({tickets.length})
+                                </span>
+                            </h2>
+                            <Button
+                                variant="secondary"
+                                icon={<Plus size={16} />}
+                                onClick={() => {
+                                    setShowTicketForm(true);
+                                    setEditingTicket(null);
+                                }}
+                            >
+                                Add Ticket
+                            </Button>
+                        </div>
+
+                        {showTicketForm && (
+                            <TicketForm
+                                projects={[project]}
+                                lockedProjectId={project.id}
+                                onSave={handleCreateTicket}
+                                onCancel={() => setShowTicketForm(false)}
+                                isLoading={isSavingTicket}
+                                title="New Ticket"
+                            />
+                        )}
+
+                        {editingTicket && (
+                            <TicketForm
+                                projects={[project]}
+                                initialData={editingTicket}
+                                lockedProjectId={project.id}
+                                onSave={handleUpdateTicket}
+                                onCancel={() => setEditingTicket(null)}
+                                isLoading={isSavingTicket}
+                                title="Edit Ticket"
+                            />
+                        )}
+
+                        {tickets.length === 0 ? (
+                            <p className="py-6 text-center text-sm text-text-muted">
+                                No tickets yet.
+                            </p>
+                        ) : (
+                            <div className="space-y-3">
+                                {tickets.map((ticket) => {
+                                    const canEditTicket =
+                                        canManageTickets || ticket.user_id === currentUserId;
+
+                                    return (
+                                        <TicketCard
+                                            key={ticket.id}
+                                            ticket={ticket}
+                                            canManage={canEditTicket}
+                                            onEdit={canEditTicket ? setEditingTicket : undefined}
+                                            onDelete={canEditTicket ? handleDeleteTicket : undefined}
+                                        />
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </Card>
+                </section>
+            )}
         </div>
     );
 }
