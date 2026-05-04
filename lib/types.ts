@@ -120,3 +120,55 @@ export interface UpdateDailyLogInput {
     content: DailyLogContent;
     allow_human_overwrite?: boolean;
 }
+
+export type TicketStatus = 'todo' | 'in_progress' | 'to_review' | 'done' | 'closed';
+export type TicketSource = 'self' | 'user_tester';
+
+export interface Ticket {
+    id: string;
+    project_id: string;
+    user_id: string;
+    title: string;
+    description: string | null;
+    notes: string | null;
+    status: TicketStatus;
+    priority: Priority;
+    source: TicketSource;
+    tags: string[];
+    created_at: string;
+    updated_at: string;
+}
+
+export interface CreateTicketInput {
+    project_id: string;
+    title: string;
+    description?: string;
+    notes?: string;
+    status?: TicketStatus;
+    priority?: Priority;
+    source?: TicketSource;
+    tags?: string[];
+}
+
+export interface UpdateTicketInput {
+    title?: string;
+    description?: string;
+    notes?: string;
+    status?: TicketStatus;
+    priority?: Priority;
+    source?: TicketSource;
+    tags?: string[];
+}
+
+export const ticketStatusConfig: Record<TicketStatus, { label: string; color: string }> = {
+    todo: { label: 'To Do', color: 'var(--text-muted)' },
+    in_progress: { label: 'In Progress', color: 'var(--accent-blue)' },
+    to_review: { label: 'To Review', color: 'var(--accent-apricot)' },
+    done: { label: 'Done', color: 'var(--accent-sage)' },
+    closed: { label: 'Closed', color: 'var(--status-archived)' },
+};
+
+export const ticketSourceConfig: Record<TicketSource, { label: string }> = {
+    self: { label: 'Self' },
+    user_tester: { label: 'User/Tester' },
+};
