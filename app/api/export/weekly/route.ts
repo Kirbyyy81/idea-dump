@@ -51,6 +51,11 @@ export async function POST(request: NextRequest) {
     }
 }
 
+function formatDateDDMMYYYY(dateStr: string): string {
+    const [year, month, day] = dateStr.split('-');
+    return `${day}/${month}/${year}`;
+}
+
 function generateMarkdownTable(logs: DailyLogEntry[]): string {
     if (logs.length === 0) {
         return 'No logs found for the specified date range.';
@@ -61,7 +66,8 @@ function generateMarkdownTable(logs: DailyLogEntry[]): string {
 
     const rows = logs.map(log => {
         const content = log.content || ({ date: log.effective_date } as DailyLogEntry['content']);
-        const dateDay = content.day ? `${content.date} / ${content.day}` : content.date;
+        const formattedDate = formatDateDDMMYYYY(content.date || log.effective_date);
+        const dateDay = content.day ? `${content.day} ${formattedDate}` : formattedDate;
         const task = content.operation_task || '';
         const tools = content.tools_used || '';
         const lesson = content.lesson_learned || '';
