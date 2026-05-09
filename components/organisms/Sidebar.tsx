@@ -35,9 +35,6 @@ const MODULE_NAV_ITEMS: Array<{
     label?: string;
     requiresManager?: boolean;
 }> = [
-    { href: '/tickets', icon: <Ticket size={18} />, module: 'tickets', label: 'My Tickets' },
-    { href: '/tickets/new', icon: <Plus size={18} />, module: 'tickets', label: 'Raise Ticket' },
-    { href: '/tickets/manage', icon: <Settings2 size={18} />, module: 'tickets', label: 'Manage Tickets', requiresManager: true },
     { href: '/logs', icon: <ClipboardList size={18} />, module: 'logs' },
     { href: '/api-tools', icon: <BookOpen size={18} />, module: 'api' },
     { href: '/settings/access', icon: <ShieldCheck size={18} />, module: 'access_control' },
@@ -47,6 +44,7 @@ const MODULE_NAV_ITEMS: Array<{
 export function Sidebar({ projects }: SidebarProps) {
     const pathname = usePathname();
     const [isProjectsOpen, setIsProjectsOpen] = useState(false);
+    const [isTicketsOpen, setIsTicketsOpen] = useState(false);
     const [allowedModules, setAllowedModules] = useState<AppModuleSlug[]>(DEFAULT_ALLOWED_MODULES);
     const [canManageAccess, setCanManageAccess] = useState(false);
 
@@ -77,6 +75,7 @@ export function Sidebar({ projects }: SidebarProps) {
     const canAccessModule = (moduleSlug: AppModuleSlug) => allowedModules.includes(moduleSlug);
     const isDashboardActive = pathname === '/' || pathname.startsWith('/dashboard');
     const isProjectsActive = pathname === '/projects' || pathname.startsWith('/project/');
+    const isTicketsActive = pathname === '/tickets' || pathname.startsWith('/tickets/');
     const isAccessControlActive = pathname.startsWith('/settings/access');
 
     return (
@@ -177,6 +176,92 @@ export function Sidebar({ projects }: SidebarProps) {
                                                 </Button>
                                             </Link>
                                         ))
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {canAccessModule('tickets') && (
+                    <div
+                        className="space-y-1 mb-6"
+                        onMouseEnter={() => setIsTicketsOpen(true)}
+                        onMouseLeave={() => setIsTicketsOpen(false)}
+                    >
+                        <Link href="/tickets" className="block relative z-10">
+                            <Button
+                                variant="ghost"
+                                className={cn(
+                                    'w-full justify-start',
+                                    isTicketsActive
+                                        ? 'bg-accent-rose/10 text-accent-rose hover:bg-accent-rose/20 hover:text-accent-rose'
+                                        : 'text-text-secondary hover:text-text-primary'
+                                )}
+                                icon={<Ticket size={18} />}
+                                onClick={() => setIsTicketsOpen(!isTicketsOpen)}
+                            >
+                                <span className="flex-1 text-left">My Tickets</span>
+                                <ChevronRight
+                                    size={14}
+                                    className={cn(
+                                        'transition-transform text-text-muted',
+                                        isTicketsOpen && 'rotate-90'
+                                    )}
+                                />
+                            </Button>
+                        </Link>
+
+                        <div
+                            className={cn(
+                                'transition-all duration-200 ease-in-out overflow-hidden',
+                                isTicketsOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
+                            )}
+                        >
+                            <div className="pl-4 space-y-1 pt-1">
+                                <div className="space-y-0.5">
+                                    <Link href="/tickets" className="block">
+                                        <Button
+                                            variant="ghost"
+                                            className={cn(
+                                                'w-full justify-start text-sm py-1.5 h-8 font-normal',
+                                                pathname === '/tickets'
+                                                    ? 'bg-bg-hover text-text-primary border-l-2 border-accent-rose rounded-l-none'
+                                                    : 'text-text-secondary hover:text-text-primary'
+                                            )}
+                                        >
+                                            View Tickets
+                                        </Button>
+                                    </Link>
+                                    <Link href="/tickets/new" className="block">
+                                        <Button
+                                            variant="ghost"
+                                            className={cn(
+                                                'w-full justify-start text-sm py-1.5 h-8 font-normal',
+                                                pathname === '/tickets/new'
+                                                    ? 'bg-bg-hover text-text-primary border-l-2 border-accent-rose rounded-l-none'
+                                                    : 'text-text-secondary hover:text-text-primary'
+                                            )}
+                                            icon={<Plus size={14} />}
+                                        >
+                                            Raise Ticket
+                                        </Button>
+                                    </Link>
+                                    {canManageAccess && (
+                                        <Link href="/tickets/manage" className="block">
+                                            <Button
+                                                variant="ghost"
+                                                className={cn(
+                                                    'w-full justify-start text-sm py-1.5 h-8 font-normal',
+                                                    pathname === '/tickets/manage'
+                                                        ? 'bg-bg-hover text-text-primary border-l-2 border-accent-rose rounded-l-none'
+                                                        : 'text-text-secondary hover:text-text-primary'
+                                                )}
+                                                icon={<Settings2 size={14} />}
+                                            >
+                                                Manage Tickets
+                                            </Button>
+                                        </Link>
                                     )}
                                 </div>
                             </div>
