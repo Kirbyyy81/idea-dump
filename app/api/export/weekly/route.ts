@@ -69,13 +69,22 @@ function generateMarkdownTable(logs: DailyLogEntry[]): string {
         const formattedDate = formatDateDDMMYYYY(content.date || log.effective_date);
         const dateDay = content.day ? `${content.day} ${formattedDate}` : formattedDate;
         const task = content.operation_task || '';
+        
+        // Convert comma-separated tools to bullet points
         const tools = content.tools_used || '';
+        const formattedTools = tools
+            .split(',')
+            .map(t => t.trim())
+            .filter(Boolean)
+            .map(t => `• ${t}`)
+            .join('<br>');
+        
         const lesson = content.lesson_learned || '';
 
         // Escape pipe characters in content
         const escape = (str: string) => str.replace(/\|/g, '\\|').replace(/\n/g, ' ');
 
-        return `| ${escape(dateDay)} | ${escape(task)} | ${escape(tools)} | ${escape(lesson)} |`;
+        return `| ${escape(dateDay)} | ${escape(task)} | ${escape(formattedTools)} | ${escape(lesson)} |`;
     });
 
     return [header, separator, ...rows].join('\n');
