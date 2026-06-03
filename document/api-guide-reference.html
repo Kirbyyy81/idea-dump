@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Implementation Guide - IdeaDump</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Importing Design System Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Text&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Using Lucide Icons via CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            /* Base Colors */
+            --bg-base: #F2EAD3;
+            --bg-elevated: #FFFFFF;
+            --bg-hover: #E8DDBF;
+            --bg-subtle: #F7F2E5;
+
+            /* Text */
+            --text-primary: #2C2416;
+            --text-secondary: #5C5346;
+            --text-muted: #8B8375;
+
+            /* Borders */
+            --border-default: #D4C9B3;
+            --border-strong: #C4B89D;
+            --border-subtle: #E5DCC8;
+
+            /* Accents */
+            --accent-rose: #E37083;
+            --accent-blue: #89B7C2;
+            --accent-sage: #A8BF8A;
+            --accent-apricot: #FCCD86;
+
+            /* Fonts */
+            --font-heading: 'DM Serif Text', serif;
+            --font-body: 'Inter', sans-serif;
+        }
+
+        body {
+            font-family: var(--font-body);
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            line-height: 1.5;
+        }
+
+        h1, h2, h3 {
+            font-family: var(--font-heading);
+            letter-spacing: -0.01em;
+        }
+
+        .card {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-default);
+            border-radius: 12px;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .card:hover {
+            border-color: var(--border-strong);
+            transform: translateY(-2px);
+        }
+
+        .btn-primary {
+            background-color: var(--accent-rose);
+            color: white;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary:hover {
+            background-color: #D45F73;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-primary);
+            border: 1px solid var(--border-default);
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-hover);
+            border-color: var(--border-strong);
+        }
+
+        .stepper-line {
+            width: 2px;
+            background-color: var(--border-default);
+        }
+
+        .step-icon {
+            width: 40px;
+            height: 40px;
+            border: 2px solid var(--border-default);
+            background: var(--bg-elevated);
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            z-index: 10;
+        }
+
+        .code-container {
+            background-color: var(--bg-subtle);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body class="p-6 md:p-12 min-h-screen flex items-center justify-center">
+
+<div class="max-w-3xl w-full">
+    <!-- Main Container -->
+    <div class="card p-8 md:p-12">
+
+        <!-- Header Section -->
+        <header class="mb-12 border-b border-dashed border-[var(--border-default)] pb-8">
+            <div class="flex items-center gap-3 mb-4">
+                <i data-lucide="lightbulb" class="text-[var(--accent-rose)] w-8 h-8"></i>
+                <h1 class="text-4xl">Implementation Guide</h1>
+            </div>
+            <p class="text-[var(--text-secondary)] text-lg max-w-xl">
+                Follow this workflow to integrate the Codex logging engine. Designed for the IdeaDump ecosystem.
+            </p>
+        </header>
+
+        <!-- Quick Option: Prompt Setup -->
+        <div class="mb-12 p-6 bg-[var(--info-bg)] border border-[var(--accent-blue)] rounded-xl">
+            <div class="flex items-start gap-4">
+                <div class="p-2 bg-white border border-[var(--accent-blue)] rounded-lg">
+                    <i data-lucide="terminal" class="text-[var(--accent-blue)] w-5 h-5"></i>
+                </div>
+                <div>
+                    <h4 class="font-bold mb-1">Instant Setup</h4>
+                    <p class="text-sm text-[var(--text-secondary)] mb-3">Prefer a guided setup? Use our pre-configured agent prompt to get running in seconds.</p>
+                    <button class="btn-secondary px-4 py-2 text-xs font-bold flex items-center gap-2">
+                        Copy Setup Prompt <i data-lucide="copy" class="w-3 h-3"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stepper -->
+        <div class="relative">
+            <div class="absolute left-[19px] top-2 bottom-2 stepper-line"></div>
+
+            <!-- Step 1 -->
+            <div class="relative flex gap-6 mb-10 group">
+                <div class="step-icon">
+                    <i data-lucide="key" class="w-5 h-5"></i>
+                </div>
+                <div class="pt-1">
+                    <h3 class="text-2xl mb-1">Generate API Key</h3>
+                    <p class="text-[var(--text-secondary)] text-sm mb-3">
+                        Start by minting a secure token in the <a href="#api-section" class="text-[var(--accent-rose)] font-semibold underline decoration-2 underline-offset-4">API Key Section</a>.
+                    </p>
+                    <div class="inline-flex items-center gap-2 px-3 py-2 bg-[var(--warning-bg)] border border-[var(--accent-apricot)] rounded-lg text-xs">
+                        <i data-lucide="shield-alert" class="w-4 h-4 text-[var(--accent-apricot)]"></i>
+                        <span>The key is only shown once. Copy it immediately.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="relative flex gap-6 mb-10 group">
+                <div class="step-icon">
+                    <i data-lucide="download-cloud" class="w-5 h-5"></i>
+                </div>
+                <div class="pt-1">
+                    <h3 class="text-2xl mb-1">Download Weekly Log Skill</h3>
+                    <p class="text-[var(--text-secondary)] text-sm">
+                        Import the core skill definition into your agent environment to enable logging capabilities.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="relative flex gap-6 mb-10 group">
+                <div class="step-icon">
+                    <i data-lucide="user-check" class="w-5 h-5"></i>
+                </div>
+                <div class="pt-1">
+                    <h3 class="text-2xl mb-1">Authorize Agent</h3>
+                    <p class="text-[var(--text-secondary)] text-sm">
+                        Provide the generated API Key to your agent configuration to establish a secure connection.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Step 4 -->
+            <div class="relative flex gap-6 group">
+                <div class="step-icon">
+                    <i data-lucide="activity" class="w-5 h-5"></i>
+                </div>
+                <div class="pt-1">
+                    <h3 class="text-2xl mb-1">Test the System</h3>
+                    <p class="text-[var(--text-secondary)] text-sm mb-4">
+                        Send a test log and verify its appearance on your <span class="font-semibold text-[var(--text-primary)]">IdeaDump Dashboard</span>.
+                    </p>
+                    <div class="flex gap-2">
+                        <div class="px-3 py-1 bg-[var(--success-bg)] border border-[var(--accent-sage)] rounded text-[10px] font-bold text-[var(--accent-sage)] uppercase">POST /logs</div>
+                        <div class="px-3 py-1 bg-[var(--info-bg)] border border-[var(--accent-blue)] rounded text-[10px] font-bold text-[var(--accent-blue)] uppercase">Verify Dashboard</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer Action -->
+        <div class="mt-12 pt-8 border-t border-[var(--border-subtle)] flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="text-sm text-[var(--text-muted)]">
+                Need technical help? <span class="underline cursor-pointer">View Docs</span>.
+            </div>
+            <button class="btn-primary px-6 py-3 font-semibold flex items-center gap-2">
+                Open Dashboard <i data-lucide="layout" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </div>
+
+    <p class="text-center mt-8 text-[var(--text-muted)] text-xs uppercase tracking-widest">
+        IdeaDump Design System v1.0
+    </p>
+</div>
+
+<script>
+    lucide.createIcons();
+</script>
+</body>
+</html>
