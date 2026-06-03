@@ -11,6 +11,7 @@ import {
     LayoutDashboard,
     LucideIcon,
     Settings,
+    Ticket,
 } from 'lucide-react';
 import { Sidebar } from '@/components/organisms/Sidebar';
 import { Button } from '@/components/atoms/Button';
@@ -35,6 +36,10 @@ const MODULE_CARD_META: Partial<Record<AppModuleSlug, { description: string; ico
     logs: {
         description: 'View, add, edit, and export your weekly productivity logs.',
         icon: ClipboardList,
+    },
+    tickets: {
+        description: 'Create tickets, review your own submissions, and manage ticket work.',
+        icon: Ticket,
     },
     api: {
         description: 'Manage API keys and review the API usage and documentation.',
