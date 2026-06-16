@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.4.0...idea-dump-v0.4.1) (2026-06-16)
+
+
+### Bug Fixes
+
+* changed tickets side bar display to be sub page for raising and managing ([1248709](https://github.com/Kirbyyy81/idea-dump/commit/12487096e58ff40ae64702685b051749efbc2fd5))
+
 ## [0.4.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.3.0...idea-dump-v0.4.0) (2026-05-09)
 
 
