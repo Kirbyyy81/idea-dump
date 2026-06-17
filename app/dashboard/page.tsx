@@ -7,6 +7,7 @@ import {
     BookOpen,
     ClipboardList,
     FilePenLine,
+    Film,
     FolderKanban,
     LayoutDashboard,
     LucideIcon,
@@ -52,6 +53,10 @@ const MODULE_CARD_META: Partial<Record<AppModuleSlug, { description: string; ico
     article_creation: {
         description: 'Use the built-in helpers for article planning and content support.',
         icon: FilePenLine,
+    },
+    film_journal: {
+        description: 'Browse film rolls as a journal, open photobook entries, and review shooting costs.',
+        icon: Film,
     },
     settings: {
         description: 'Manage your personal account settings and sign-out actions.',

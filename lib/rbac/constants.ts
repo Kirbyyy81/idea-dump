@@ -10,6 +10,7 @@ export const APP_MODULE_SLUGS = [
     'api',
     'access_control',
     'article_creation',
+    'film_journal',
     'settings',
 ] as const;
 export type AppModuleSlug = (typeof APP_MODULE_SLUGS)[number];
@@ -23,6 +24,7 @@ export const MANAGED_MODULE_SLUGS: AppModuleSlug[] = [
     'api',
     'access_control',
     'article_creation',
+    'film_journal',
 ];
 export const ACCESS_MANAGER_ROLES: AppRoleSlug[] = ['owner', 'admin'];
 
@@ -34,6 +36,7 @@ export const MODULE_PATHS: Record<AppModuleSlug, string> = {
     api: '/api-tools',
     access_control: '/settings/access',
     article_creation: '/article-creation',
+    film_journal: '/film',
     settings: '/settings',
 };
 
@@ -41,6 +44,7 @@ export const MODULE_REDIRECT_ORDER: AppModuleSlug[] = [
     'dashboard',
     'projects',
     'tickets',
+    'film_journal',
     'logs',
     'api',
     'access_control',
@@ -48,9 +52,9 @@ export const MODULE_REDIRECT_ORDER: AppModuleSlug[] = [
 ];
 
 export const DEFAULT_ROLE_MODULES: Record<BuiltInAppRoleSlug, AppModuleSlug[]> = {
-    owner: ['projects', 'tickets', 'logs', 'api', 'access_control', 'article_creation'],
-    admin: ['projects', 'tickets', 'logs', 'api', 'access_control', 'article_creation'],
-    member: ['tickets', 'logs', 'api'],
+    owner: ['projects', 'tickets', 'logs', 'api', 'access_control', 'article_creation', 'film_journal'],
+    admin: ['projects', 'tickets', 'logs', 'api', 'access_control', 'article_creation', 'film_journal'],
+    member: ['tickets', 'logs', 'api', 'film_journal'],
 };
 
 export const MODULE_LABELS: Record<AppModuleSlug, string> = {
@@ -61,5 +65,6 @@ export const MODULE_LABELS: Record<AppModuleSlug, string> = {
     api: 'API',
     access_control: 'Access Control',
     article_creation: 'Article Creation',
+    film_journal: 'Film Journal',
     settings: 'Settings',
 };
