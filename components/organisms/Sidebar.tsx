@@ -16,6 +16,7 @@ import {
     ClipboardList,
     BookOpen,
     FilePenLine,
+    Film,
     Ticket,
     Plus,
     Settings2,
@@ -39,6 +40,7 @@ const MODULE_NAV_ITEMS: Array<{
     { href: '/api-tools', icon: <BookOpen size={18} />, module: 'api' },
     { href: '/settings/access', icon: <ShieldCheck size={18} />, module: 'access_control' },
     { href: '/article-creation', icon: <FilePenLine size={18} />, module: 'article_creation' },
+    { href: '/film', icon: <Film size={18} />, module: 'film_journal' },
 ];
 
 export function Sidebar({ projects }: SidebarProps) {
@@ -280,7 +282,9 @@ export function Sidebar({ projects }: SidebarProps) {
                                 'w-full justify-start',
                                 (item.module === 'access_control'
                                     ? isAccessControlActive
-                                    : pathname === item.href)
+                                    : item.module === 'film_journal'
+                                        ? pathname.startsWith('/film')
+                                        : pathname === item.href)
                                     ? item.module === 'logs' || item.module === 'tickets'
                                         ? 'bg-accent-rose/10 text-accent-rose hover:bg-accent-rose/20 hover:text-accent-rose'
                                         : 'bg-bg-hover text-text-primary'
