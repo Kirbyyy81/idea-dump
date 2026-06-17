@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.4.1](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.4.0...idea-dump-v0.4.1) (2026-06-16)
+
+
+### Bug Fixes
+
+* changed tickets side bar display to be sub page for raising and managing ([1248709](https://github.com/Kirbyyy81/idea-dump/commit/12487096e58ff40ae64702685b051749efbc2fd5))
+
+## [0.4.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.3.0...idea-dump-v0.4.0) (2026-05-09)
+
+
+### Features
+
+* add ticket data and api ([bb61ee1](https://github.com/Kirbyyy81/idea-dump/commit/bb61ee126518615e1be75f85fa35a9ac86945b98))
+* add ticket navigation ([d841cdd](https://github.com/Kirbyyy81/idea-dump/commit/d841cdd6a2bd251a137a9ed5ab2a5bb8e72a5f37))
+* add ticket pages and components ([a8e2a2b](https://github.com/Kirbyyy81/idea-dump/commit/a8e2a2bd97f71213f1ac67fe4a188eb160c6a53b))
+* integrate tickets into projects ([fc2fc13](https://github.com/Kirbyyy81/idea-dump/commit/fc2fc138f45f7053992420289bb2c096682ce2d4))
+
+
+### Bug Fixes
+
+* change fate formatting for markdown table to be DDMMYYYY ([421914d](https://github.com/Kirbyyy81/idea-dump/commit/421914dac8f906930280cde184b48f9c4edfe8c7))
+* update equipment and tools to show as bullet points ([53e6ad2](https://github.com/Kirbyyy81/idea-dump/commit/53e6ad21e711c75295ce0ed0a1df3b76cc703144))
+
+## [0.3.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.2.0...idea-dump-v0.3.0) (2026-04-24)
+
+
+### Features
+
+* add description for each module ([23eeae6](https://github.com/Kirbyyy81/idea-dump/commit/23eeae6720fc0c9f081c9ab49d8fa67b33456fdb))
+* refine api guide ([20b6603](https://github.com/Kirbyyy81/idea-dump/commit/20b6603cca9c0beff6c0a1097fd3d1a5cdb26057))
+
 ## [0.2.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.1.0...idea-dump-v0.2.0) (2026-04-17)
 
 
