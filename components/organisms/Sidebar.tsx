@@ -14,6 +14,7 @@ import {
     ShieldCheck,
     ChevronRight,
     ClipboardList,
+    FileSearch,
     BookOpen,
     FilePenLine,
     Film,
@@ -37,6 +38,7 @@ const MODULE_NAV_ITEMS: Array<{
     requiresManager?: boolean;
 }> = [
     { href: '/logs', icon: <ClipboardList size={18} />, module: 'logs' },
+    { href: '/log-viewer', icon: <FileSearch size={18} />, module: 'logs', label: 'Log Viewer' },
     { href: '/api-tools', icon: <BookOpen size={18} />, module: 'api' },
     { href: '/settings/access', icon: <ShieldCheck size={18} />, module: 'access_control' },
     { href: '/article-creation', icon: <FilePenLine size={18} />, module: 'article_creation' },

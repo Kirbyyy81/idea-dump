@@ -43,10 +43,16 @@ export default function LogViewerPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-bg-base">
+    <div className="flex min-h-screen bg-bg-base font-body text-text-primary">
       <Sidebar projects={projects} />
       <main className="flex-1 ml-64 p-8">
-        <LogViewer />
+        <div className="max-w-6xl space-y-8">
+          <header>
+            <h1 className="text-3xl font-heading font-medium">Log Viewer</h1>
+          </header>
+
+          <LogViewer />
+        </div>
       </main>
     </div>
   );

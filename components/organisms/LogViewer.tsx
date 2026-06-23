@@ -1,15 +1,16 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/atoms/Button';
+import { Badge } from '@/components/atoms/Badge';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
 import { Textarea } from '@/components/atoms/Textarea';
 import { cn } from '@/lib/utils';
 import { parseLogText } from '@/lib/logViewer/parse';
 import { buildTransactions, transactionHasError } from '@/lib/logViewer/transactions';
-import { LogEvent, Transaction } from '@/lib/logViewer/types';
-import { AlertTriangle, FileText, Search, X } from 'lucide-react';
+import { LogEvent, Transaction, UnparsedLogLine } from '@/lib/logViewer/types';
+import { AlertTriangle, FileText, Search, Upload, X } from 'lucide-react';
 
 function formatMsDuration(ms: number): string {
   const s = Math.max(0, Math.round(ms / 100) / 10);
@@ -17,6 +18,49 @@ function formatMsDuration(ms: number): string {
   const m = Math.floor(s / 60);
   const rem = Math.round((s - m * 60) * 10) / 10;
   return `${m}m ${rem}s`;
+}
+
+function JsonTree({
+  value,
+  depth = 0,
+}: {
+  value: unknown;
+  depth?: number;
+}) {
+  if (value == null || typeof value !== 'object') {
+    return <span className="text-text-primary">{JSON.stringify(value)}</span>;
+  }
+
+  if (Array.isArray(value)) {
+    return (
+      <details open={depth < 2} className="font-mono text-xs">
+        <summary className="cursor-pointer text-text-secondary">Array ({value.length})</summary>
+        <div className="pl-4 border-l border-border-subtle space-y-1">
+          {value.map((item, index) => (
+            <div key={index}>
+              <span className="text-text-muted">{index}: </span>
+              <JsonTree value={item} depth={depth + 1} />
+            </div>
+          ))}
+        </div>
+      </details>
+    );
+  }
+
+  const entries = Object.entries(value as Record<string, unknown>);
+  return (
+    <details open={depth < 2} className="font-mono text-xs">
+      <summary className="cursor-pointer text-text-secondary">Object ({entries.length})</summary>
+      <div className="pl-4 border-l border-border-subtle space-y-1">
+        {entries.map(([key, item]) => (
+          <div key={key}>
+            <span className="text-text-muted">{key}: </span>
+            <JsonTree value={item} depth={depth + 1} />
+          </div>
+        ))}
+      </div>
+    </details>
+  );
 }
 
 function JsonOrText({
@@ -39,13 +83,16 @@ function JsonOrText({
       </summary>
       <div className="px-3 pb-3 pt-0">
         {hasJson ? (
-          <pre className="text-xs whitespace-pre-wrap break-words font-mono text-text-primary">
-            {JSON.stringify(event.bodyJson, null, 2)}
-          </pre>
+          <JsonTree value={event.bodyJson} />
         ) : (
-          <pre className="text-xs whitespace-pre-wrap break-words font-mono text-text-primary">
-            {raw || '(No Body)'}
-          </pre>
+          <div className="space-y-2">
+            {event.bodyParseError && (
+              <p className="text-xs text-error">JSON parse failed; showing extracted raw payload.</p>
+            )}
+            <pre className="text-xs whitespace-pre-wrap break-words font-mono text-text-primary">
+              {raw || '(No Body)'}
+            </pre>
+          </div>
         )}
       </div>
     </details>
@@ -55,9 +102,12 @@ function JsonOrText({
 function EventHeader({ event }: { event: LogEvent }) {
   return (
     <div className="flex flex-wrap items-center gap-2 text-xs text-text-muted">
-      <span className="font-mono">{event.timestamp || '—'}</span>
+      <span className="font-mono">{event.timestamp || '-'}</span>
       <span className="px-2 py-0.5 rounded border border-border-subtle bg-bg-subtle text-text-secondary">
         {event.eventType || 'UNKNOWN'}
+      </span>
+      <span className="px-2 py-0.5 rounded border border-border-subtle bg-bg-base text-text-secondary">
+        {event.lineType}
       </span>
       {event.httpStatus != null && (
         <span className="font-mono text-text-secondary">({event.httpStatus})</span>
@@ -65,10 +115,17 @@ function EventHeader({ event }: { event: LogEvent }) {
       {event.method && (
         <span className="font-mono text-text-secondary">{event.method}</span>
       )}
+      {event.endpointKey && (
+        <span className="font-mono text-text-secondary">{event.endpointKey}</span>
+      )}
       {event.url && (
         <span className="truncate max-w-[520px]">{event.url}</span>
       )}
-      <span className="ml-auto font-mono">L{event.lineNumber}</span>
+      <span className="ml-auto font-mono">
+        L{event.endLineNumber && event.endLineNumber !== event.lineNumber
+          ? `${event.lineNumber}-${event.endLineNumber}`
+          : event.lineNumber}
+      </span>
     </div>
   );
 }
@@ -85,6 +142,16 @@ function TransactionRow({
   const lastResponse = tx.responses[tx.responses.length - 1];
   const status = lastResponse?.httpStatus;
   const isError = transactionHasError(tx);
+  const statusText =
+    tx.orphanKind === 'request'
+      ? 'no response'
+      : tx.orphanKind === 'response'
+        ? 'orphan'
+        : isError
+          ? 'error'
+          : status != null
+            ? String(status)
+            : 'ok';
   const durationMs =
     tx.startedAtMs != null && tx.endedAtMs != null ? tx.endedAtMs - tx.startedAtMs : undefined;
 
@@ -93,32 +160,34 @@ function TransactionRow({
       type="button"
       onClick={onSelect}
       className={cn(
-        'w-full text-left px-3 py-2 rounded-md border transition-colors',
+        'w-full text-left rounded-lg border p-4 transition-colors',
         selected
           ? 'border-accent-rose bg-accent-rose/10'
-          : 'border-border-subtle hover:bg-bg-hover',
+          : 'border-border-subtle bg-bg-base hover:bg-bg-hover',
       )}
     >
       <div className="flex items-center gap-2">
-        <span
-          className={cn(
-            'text-xs font-mono px-2 py-0.5 rounded border',
-            isError ? 'border-error text-error' : 'border-border-subtle text-text-secondary',
-          )}
-          title={isError ? 'Has error' : 'No error detected'}
+        <Badge
+          variant={isError ? 'archived' : tx.orphanKind ? 'default' : 'complete'}
+          className={cn(isError && 'border-error bg-error-bg text-error')}
+          title={tx.orphanKind ? `Orphan ${tx.orphanKind}` : isError ? 'Has error' : 'No error detected'}
         >
-          {status != null ? status : tx.orphanResponse ? 'orphan' : '—'}
-        </span>
+          {statusText}
+        </Badge>
         <span className="text-xs font-mono text-text-secondary">
-          {tx.method ?? tx.request?.method ?? '—'}
+          {tx.method ?? tx.request?.method ?? '-'}
         </span>
-        <span className="truncate text-sm text-text-primary flex-1">{tx.url ?? 'Unknown URL'}</span>
+        <span className="truncate text-sm text-text-primary flex-1">
+          {tx.endpointKey ?? tx.url ?? 'Unknown endpoint'}
+        </span>
       </div>
-      <div className="mt-1 flex items-center gap-2 text-xs text-text-muted">
+      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-text-muted">
         <span>{tx.responses.length} resp</span>
-        {durationMs != null && <span>· {formatMsDuration(durationMs)}</span>}
-        {tx.hadConcurrency && <span title="Multiple outstanding requests on same URL">· low conf</span>}
-        {!tx.hadConcurrency && tx.confidence !== 'unknown' && <span>· {tx.confidence} conf</span>}
+        {durationMs != null && <span>- {formatMsDuration(durationMs)}</span>}
+        {tx.lineRefs.length > 0 && <span>- lines {tx.lineRefs.join(', ')}</span>}
+        {tx.contentData && <span>- content data</span>}
+        {tx.hadConcurrency && <span title="Multiple outstanding requests on same endpoint">- low conf</span>}
+        {!tx.hadConcurrency && tx.confidence !== 'unknown' && <span>- {tx.confidence} conf</span>}
         {isError && (
           <span className="ml-auto inline-flex items-center gap-1 text-error">
             <AlertTriangle size={12} />
@@ -130,16 +199,63 @@ function TransactionRow({
   );
 }
 
+function StandaloneLines({
+  unparsedLines,
+  unmatchedContentData,
+}: {
+  unparsedLines: UnparsedLogLine[];
+  unmatchedContentData: LogEvent[];
+}) {
+  if (unparsedLines.length === 0 && unmatchedContentData.length === 0) return null;
+
+  return (
+    <details className="rounded-lg border border-border-subtle bg-bg-base">
+      <summary className="cursor-pointer select-none px-3 py-2 text-sm text-text-secondary">
+        Unparsed / standalone lines ({unparsedLines.length + unmatchedContentData.length})
+      </summary>
+      <div className="px-3 pb-3 space-y-3">
+        {unmatchedContentData.map((event) => (
+          <div key={event.id} className="space-y-1">
+            <EventHeader event={event} />
+            <Textarea
+              className="w-full text-xs font-mono min-h-[70px]"
+              value={event.rawLine}
+              readOnly
+            />
+          </div>
+        ))}
+        {unparsedLines.map((line) => (
+          <div key={line.lineNumber} className="space-y-1">
+            <div className="flex items-center justify-between text-xs text-text-muted">
+              <span>L{line.lineNumber}</span>
+              {line.reason && <span>{line.reason}</span>}
+            </div>
+            <Textarea
+              className="w-full text-xs font-mono min-h-[70px]"
+              value={line.rawLine}
+              readOnly
+            />
+          </div>
+        ))}
+      </div>
+    </details>
+  );
+}
+
 export function LogViewer() {
   const [fileName, setFileName] = useState<string>('');
   const [rawText, setRawText] = useState<string>('');
   const [events, setEvents] = useState<LogEvent[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [unparsedLines, setUnparsedLines] = useState<UnparsedLogLine[]>([]);
+  const [unmatchedContentData, setUnmatchedContentData] = useState<LogEvent[]>([]);
   const [selectedTxId, setSelectedTxId] = useState<string | null>(null);
+  const [isAutoParsing, setIsAutoParsing] = useState(false);
+  const [autoParseSource, setAutoParseSource] = useState<string>('Pasted log');
 
-  const [timeoutSeconds, setTimeoutSeconds] = useState<number>(10);
   const [query, setQuery] = useState<string>('');
   const [errorsOnly, setErrorsOnly] = useState<boolean>(false);
+  const [endpointFilter, setEndpointFilter] = useState<string>('');
 
   const selectedTx = useMemo(
     () => transactions.find((t) => t.id === selectedTxId) ?? null,
@@ -147,18 +263,20 @@ export function LogViewer() {
   );
 
   const indexed = useMemo(() => {
-    const rows = transactions.map((tx) => {
+    return transactions.map((tx) => {
       const searchParts: string[] = [];
+      if (tx.endpointKey) searchParts.push(tx.endpointKey);
       if (tx.url) searchParts.push(tx.url);
+      if (tx.contentData?.bodyRaw) searchParts.push(tx.contentData.bodyRaw);
+      if (tx.contentData?.rawLine) searchParts.push(tx.contentData.rawLine);
       if (tx.request?.bodyRaw) searchParts.push(tx.request.bodyRaw);
-      for (const r of tx.responses) {
-        if (r.bodyRaw) searchParts.push(r.bodyRaw);
-        if (r.rawLine) searchParts.push(r.rawLine);
-      }
       if (tx.request?.rawLine) searchParts.push(tx.request.rawLine);
+      for (const response of tx.responses) {
+        if (response.bodyRaw) searchParts.push(response.bodyRaw);
+        if (response.rawLine) searchParts.push(response.rawLine);
+      }
       return { tx, searchText: searchParts.join('\n').toLowerCase() };
     });
-    return rows;
   }, [transactions]);
 
   const filteredTransactions = useMemo(() => {
@@ -166,62 +284,165 @@ export function LogViewer() {
     return indexed
       .filter(({ tx, searchText }) => {
         if (errorsOnly && !transactionHasError(tx)) return false;
+        if (endpointFilter && (tx.endpointKey ?? tx.url ?? '') !== endpointFilter) return false;
         if (!q) return true;
         return searchText.includes(q);
       })
       .map(({ tx }) => tx);
-  }, [indexed, query, errorsOnly]);
+  }, [indexed, query, errorsOnly, endpointFilter]);
 
-  const handleFile = async (file: File) => {
-    setFileName(file.name);
-    const text = await file.text();
-    setRawText(text);
+  const endpointOptions = useMemo(() => {
+    return Array.from(
+      new Set(
+        transactions
+          .map((tx) => tx.endpointKey ?? tx.url)
+          .filter((value): value is string => Boolean(value)),
+      ),
+    ).sort((a, b) => a.localeCompare(b));
+  }, [transactions]);
+
+  const hasParsedOutput =
+    transactions.length > 0 || unparsedLines.length > 0 || unmatchedContentData.length > 0;
+
+  const processText = useCallback((text: string, sourceName: string, syncRawText = true) => {
+    if (syncRawText) setRawText(text);
     const parsedEvents = parseLogText(text);
     setEvents(parsedEvents);
-    const { transactions: txs } = buildTransactions(parsedEvents, {
-      inactivityTimeoutMs: Math.max(0, Math.round(timeoutSeconds * 1000)),
+    const {
+      transactions: txs,
+      unparsedLines: nextUnparsedLines,
+      unmatchedContentData: nextUnmatchedContentData,
+    } = buildTransactions(parsedEvents, {
+      inactivityTimeoutMs: 0,
     });
     setTransactions(txs);
+    setUnparsedLines(nextUnparsedLines);
+    setUnmatchedContentData(nextUnmatchedContentData);
     setSelectedTxId(txs[0]?.id ?? null);
+    setEndpointFilter('');
+  }, []);
+
+  const clearParsedState = useCallback(() => {
+    setEvents([]);
+    setTransactions([]);
+    setUnparsedLines([]);
+    setUnmatchedContentData([]);
+    setSelectedTxId(null);
+    setEndpointFilter('');
+  }, []);
+
+  const handleFile = async (file: File) => {
+    const text = await file.text();
+    setFileName(file.name);
+    setAutoParseSource(file.name);
+    processText(text, file.name);
   };
 
-  const rebuildTransactions = () => {
-    const { transactions: txs } = buildTransactions(events, {
-      inactivityTimeoutMs: Math.max(0, Math.round(timeoutSeconds * 1000)),
-    });
-    setTransactions(txs);
-    if (selectedTxId && !txs.some((t) => t.id === selectedTxId)) {
-      setSelectedTxId(txs[0]?.id ?? null);
+  useEffect(() => {
+    const trimmed = rawText.trim();
+
+    if (!trimmed) {
+      clearParsedState();
+      setIsAutoParsing(false);
+      return;
     }
-  };
+
+    setIsAutoParsing(true);
+    const timer = window.setTimeout(() => {
+      processText(rawText, autoParseSource, false);
+      setFileName(autoParseSource);
+      setIsAutoParsing(false);
+    }, 250);
+
+    return () => window.clearTimeout(timer);
+  }, [rawText, autoParseSource, clearParsedState, processText]);
 
   return (
-    <div className="space-y-4">
-      <Card className="p-4">
-        <div className="flex flex-wrap items-center gap-3 justify-between">
-          <div className="flex items-center gap-2">
-            <FileText size={18} className="text-text-muted" />
-            <h1 className="font-heading text-lg text-text-primary">Log Viewer</h1>
-            {fileName && <span className="text-sm text-text-muted truncate max-w-[420px]">{fileName}</span>}
+    <div className="space-y-6">
+      <Card className="p-6">
+        <div className="mb-4 flex items-center gap-2">
+          <FileText size={20} className="text-accent-rose" />
+          <h2 className="text-xl font-semibold font-body text-text-primary">
+            Import Logs
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
+          <div>
+            <label className="mb-2 block text-sm font-medium text-text-primary">Paste raw log text</label>
+            <Textarea
+              className="min-h-[180px] w-full text-xs font-mono"
+              value={rawText}
+              onChange={(e) => {
+                const nextText = e.target.value;
+                setRawText(nextText);
+                if (fileName && fileName !== 'Pasted log') setFileName('');
+                setAutoParseSource('Pasted log');
+              }}
+              placeholder="Paste raw API logs here..."
+            />
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <p className="text-xs text-text-muted">
+                Paste manually and it will parse automatically. Uploaded files also populate this box.
+              </p>
+              {isAutoParsing && <span className="text-xs text-text-muted">Parsing...</span>}
+            </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="text-xs text-text-muted flex items-center gap-2">
-              Timeout (s)
-              <Input
-                type="number"
-                min={0}
-                value={timeoutSeconds}
-                onChange={(e) => setTimeoutSeconds(Number(e.target.value))}
-                className="w-20"
-              />
-            </label>
+          <div className="rounded-lg border border-border-subtle bg-bg-base p-4">
+            <div className="mb-3 flex items-center gap-2">
+              <Upload size={18} className="text-accent-rose" />
+              <h3 className="text-sm font-semibold text-text-primary">Upload file</h3>
+            </div>
+            <label className="mb-2 block text-xs text-text-muted">.txt or .log</label>
+            <input
+              type="file"
+              accept=".txt,.log,text/plain"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void handleFile(file);
+              }}
+              className="block w-full text-sm text-text-secondary"
+            />
+          </div>
+        </div>
+      </Card>
 
-            <Button variant="ghost" onClick={rebuildTransactions} title="Rebuild pairing">
-              Rebuild
-            </Button>
+      {hasParsedOutput && (
+        <Card className="p-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-end">
+            <div className="flex-1 min-w-[220px]">
+              <label className="mb-1 block text-xs text-text-muted">Search</label>
+              <div className="relative">
+                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
+                <Input
+                  type="text"
+                  placeholder="Search endpoint / payload..."
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  className="pl-7 text-sm"
+                />
+              </div>
+            </div>
 
-            <label className="inline-flex items-center gap-2 text-xs text-text-muted cursor-pointer select-none">
+            <div className="min-w-[220px]">
+              <label className="mb-1 block text-xs text-text-muted">Endpoint</label>
+              <select
+                value={endpointFilter}
+                onChange={(e) => setEndpointFilter(e.target.value)}
+                className="input py-2 text-sm"
+                title="Filter by endpoint"
+              >
+                <option value="">All endpoints</option>
+                {endpointOptions.map((endpoint) => (
+                  <option key={endpoint} value={endpoint}>
+                    {endpoint}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <label className="inline-flex h-10 items-center gap-2 text-sm text-text-secondary">
               <input
                 type="checkbox"
                 checked={errorsOnly}
@@ -230,25 +451,12 @@ export function LogViewer() {
               Errors only
             </label>
 
-            <div className="relative">
-              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
-              <Input
-                type="text"
-                placeholder="Search URL / payload..."
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                className="pl-7 w-64"
-              />
-            </div>
-
             <Button
               variant="ghost"
               onClick={() => {
                 setFileName('');
                 setRawText('');
-                setEvents([]);
-                setTransactions([]);
-                setSelectedTxId(null);
+                clearParsedState();
                 setQuery('');
                 setErrorsOnly(false);
               }}
@@ -258,34 +466,18 @@ export function LogViewer() {
               Clear
             </Button>
           </div>
-        </div>
+        </Card>
+      )}
 
-        <div className="mt-4 flex flex-col gap-2">
-          <input
-            type="file"
-            accept=".txt,text/plain"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) void handleFile(file);
-            }}
-          />
-          <p className="text-xs text-text-muted">
-            Client-only: the file is processed in your browser and never uploaded.
-          </p>
-        </div>
-      </Card>
-
-      {transactions.length === 0 ? (
+      {!hasParsedOutput ? (
         <Card className="p-12 text-center">
-          <p className="text-text-muted">Upload a log file to begin.</p>
+          <p className="text-text-muted">Upload a log file or paste raw log text to begin.</p>
         </Card>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <Card className="p-3">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="font-heading text-sm text-text-secondary">
-                Transactions
-              </h2>
+          <Card className="p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-xl font-semibold font-body text-text-primary">Transactions</h2>
               <span className="text-xs text-text-muted">
                 {filteredTransactions.length} / {transactions.length}
               </span>
@@ -303,16 +495,22 @@ export function LogViewer() {
             </div>
           </Card>
 
-          <Card className="p-3">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="font-heading text-sm text-text-secondary">Details</h2>
+          <Card className="p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-xl font-semibold font-body text-text-primary">Details</h2>
               {selectedTx && (
                 <span className="text-xs text-text-muted font-mono">{selectedTx.id}</span>
               )}
             </div>
 
             {!selectedTx ? (
-              <p className="text-sm text-text-muted">Select a transaction.</p>
+              <div className="space-y-3">
+                <p className="text-sm text-text-muted">Select a transaction.</p>
+                <StandaloneLines
+                  unparsedLines={unparsedLines}
+                  unmatchedContentData={unmatchedContentData}
+                />
+              </div>
             ) : (
               <div className="space-y-3 max-h-[70vh] overflow-y-auto custom-scrollbar pr-1">
                 {selectedTx.request ? (
@@ -338,6 +536,26 @@ export function LogViewer() {
                   </div>
                 )}
 
+                {selectedTx.contentData && (
+                  <div className="space-y-2 pt-2 border-t border-border-subtle">
+                    <h3 className="font-heading text-sm text-text-secondary">Content Data</h3>
+                    <EventHeader event={selectedTx.contentData} />
+                    <JsonOrText title="Content data payload" event={selectedTx.contentData} />
+                    <details className="border border-border-subtle rounded-md bg-bg-base">
+                      <summary className="cursor-pointer select-none px-3 py-2 text-sm text-text-secondary">
+                        Raw content data line
+                      </summary>
+                      <div className="px-3 pb-3">
+                        <Textarea
+                          className="w-full text-xs font-mono min-h-[90px]"
+                          value={selectedTx.contentData.rawLine}
+                          readOnly
+                        />
+                      </div>
+                    </details>
+                  </div>
+                )}
+
                 <div className="pt-2 border-t border-border-subtle">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="font-heading text-sm text-text-secondary">
@@ -355,10 +573,10 @@ export function LogViewer() {
                     <p className="text-sm text-text-muted">No responses paired.</p>
                   ) : (
                     <div className="space-y-3">
-                      {selectedTx.responses.map((r) => (
-                        <div key={`${r.lineNumber}-${r.timestamp}`} className="space-y-2">
-                          <EventHeader event={r} />
-                          <JsonOrText title="Response body" event={r} />
+                      {selectedTx.responses.map((response) => (
+                        <div key={`${response.lineNumber}-${response.timestamp}`} className="space-y-2">
+                          <EventHeader event={response} />
+                          <JsonOrText title="Response body" event={response} />
                           <details className="border border-border-subtle rounded-md bg-bg-base">
                             <summary className="cursor-pointer select-none px-3 py-2 text-sm text-text-secondary">
                               Raw response line
@@ -366,7 +584,7 @@ export function LogViewer() {
                             <div className="px-3 pb-3">
                               <Textarea
                                 className="w-full text-xs font-mono min-h-[90px]"
-                                value={r.rawLine}
+                                value={response.rawLine}
                                 readOnly
                               />
                             </div>
@@ -380,7 +598,7 @@ export function LogViewer() {
                 {rawText && (
                   <details className="border border-border-subtle rounded-md bg-bg-base">
                     <summary className="cursor-pointer select-none px-3 py-2 text-sm text-text-secondary">
-                      Raw file (preview)
+                      Raw input (preview)
                     </summary>
                     <div className="px-3 pb-3">
                       <Textarea
@@ -396,6 +614,11 @@ export function LogViewer() {
                     </div>
                   </details>
                 )}
+
+                <StandaloneLines
+                  unparsedLines={unparsedLines}
+                  unmatchedContentData={unmatchedContentData}
+                />
               </div>
             )}
           </Card>
@@ -404,4 +627,3 @@ export function LogViewer() {
     </div>
   );
 }
-
