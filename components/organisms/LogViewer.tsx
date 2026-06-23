@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 import { parseLogText } from '@/lib/logViewer/parse';
 import { buildTransactions, transactionHasError } from '@/lib/logViewer/transactions';
 import { LogEvent, Transaction, UnparsedLogLine } from '@/lib/logViewer/types';
-import { AlertTriangle, FileText, Search, Upload, X } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronRight, FileText, Search, Upload, X } from 'lucide-react';
 
 function formatMsDuration(ms: number): string {
   const s = Math.max(0, Math.round(ms / 100) / 10);
@@ -132,12 +132,12 @@ function EventHeader({ event }: { event: LogEvent }) {
 
 function TransactionRow({
   tx,
-  selected,
-  onSelect,
+  expanded,
+  onToggle,
 }: {
   tx: Transaction;
-  selected: boolean;
-  onSelect: () => void;
+  expanded: boolean;
+  onToggle: () => void;
 }) {
   const lastResponse = tx.responses[tx.responses.length - 1];
   const status = lastResponse?.httpStatus;
@@ -156,46 +156,145 @@ function TransactionRow({
     tx.startedAtMs != null && tx.endedAtMs != null ? tx.endedAtMs - tx.startedAtMs : undefined;
 
   return (
-    <button
-      type="button"
-      onClick={onSelect}
+    <div
       className={cn(
-        'w-full text-left rounded-lg border p-4 transition-colors',
-        selected
+        'rounded-lg border transition-colors',
+        expanded
           ? 'border-accent-rose bg-accent-rose/10'
-          : 'border-border-subtle bg-bg-base hover:bg-bg-hover',
+          : 'border-border-subtle bg-bg-base',
       )}
     >
-      <div className="flex items-center gap-2">
-        <Badge
-          variant={isError ? 'archived' : tx.orphanKind ? 'default' : 'complete'}
-          className={cn(isError && 'border-error bg-error-bg text-error')}
-          title={tx.orphanKind ? `Orphan ${tx.orphanKind}` : isError ? 'Has error' : 'No error detected'}
-        >
-          {statusText}
-        </Badge>
-        <span className="text-xs font-mono text-text-secondary">
-          {tx.method ?? tx.request?.method ?? '-'}
-        </span>
-        <span className="truncate text-sm text-text-primary flex-1">
-          {tx.endpointKey ?? tx.url ?? 'Unknown endpoint'}
-        </span>
-      </div>
-      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-text-muted">
-        <span>{tx.responses.length} resp</span>
-        {durationMs != null && <span>- {formatMsDuration(durationMs)}</span>}
-        {tx.lineRefs.length > 0 && <span>- lines {tx.lineRefs.join(', ')}</span>}
-        {tx.contentData && <span>- content data</span>}
-        {tx.hadConcurrency && <span title="Multiple outstanding requests on same endpoint">- low conf</span>}
-        {!tx.hadConcurrency && tx.confidence !== 'unknown' && <span>- {tx.confidence} conf</span>}
-        {isError && (
-          <span className="ml-auto inline-flex items-center gap-1 text-error">
-            <AlertTriangle size={12} />
-            error
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full p-4 text-left"
+      >
+        <div className="flex items-center gap-2">
+          <Badge
+            variant={isError ? 'archived' : tx.orphanKind ? 'default' : 'complete'}
+            className={cn(isError && 'border-error bg-error-bg text-error')}
+            title={tx.orphanKind ? `Orphan ${tx.orphanKind}` : isError ? 'Has error' : 'No error detected'}
+          >
+            {statusText}
+          </Badge>
+          <span className="text-xs font-mono text-text-secondary">
+            {tx.method ?? tx.request?.method ?? '-'}
           </span>
+          <span className="truncate text-sm text-text-primary flex-1">
+            {tx.endpointKey ?? tx.url ?? 'Unknown endpoint'}
+          </span>
+          {expanded ? (
+            <ChevronDown size={16} className="shrink-0 text-text-muted" aria-hidden="true" />
+          ) : (
+            <ChevronRight size={16} className="shrink-0 text-text-muted" aria-hidden="true" />
+          )}
+        </div>
+        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-text-muted">
+          <span>{tx.responses.length} resp</span>
+          {durationMs != null && <span>- {formatMsDuration(durationMs)}</span>}
+          {tx.lineRefs.length > 0 && <span>- lines {tx.lineRefs.join(', ')}</span>}
+          {tx.contentData && <span>- content data</span>}
+          {tx.hadConcurrency && <span title="Multiple outstanding requests on same endpoint">- low conf</span>}
+          {!tx.hadConcurrency && tx.confidence !== 'unknown' && <span>- {tx.confidence} conf</span>}
+          {isError && (
+            <span className="ml-auto inline-flex items-center gap-1 text-error">
+              <AlertTriangle size={12} />
+              error
+            </span>
+          )}
+        </div>
+      </button>
+
+      {expanded && <TransactionDetails tx={tx} />}
+    </div>
+  );
+}
+
+function TransactionDetails({ tx }: { tx: Transaction }) {
+  return (
+    <div className="space-y-3 border-t border-border-subtle p-4">
+      {tx.request ? (
+        <div className="space-y-2">
+          <EventHeader event={tx.request} />
+          <JsonOrText title="Request body" event={tx.request} />
+          <details className="border border-border-subtle rounded-md bg-bg-base">
+            <summary className="cursor-pointer select-none px-3 py-2 text-sm text-text-secondary">
+              Raw request line
+            </summary>
+            <div className="px-3 pb-3">
+              <Textarea
+                className="w-full text-xs font-mono min-h-[90px]"
+                value={tx.request.rawLine}
+                readOnly
+              />
+            </div>
+          </details>
+        </div>
+      ) : (
+        <div className="text-sm text-text-muted">
+          No matching request (orphan response).
+        </div>
+      )}
+
+      {tx.contentData && (
+        <div className="space-y-2 pt-2 border-t border-border-subtle">
+          <h3 className="font-heading text-sm text-text-secondary">Content Data</h3>
+          <EventHeader event={tx.contentData} />
+          <JsonOrText title="Content data payload" event={tx.contentData} />
+          <details className="border border-border-subtle rounded-md bg-bg-base">
+            <summary className="cursor-pointer select-none px-3 py-2 text-sm text-text-secondary">
+              Raw content data line
+            </summary>
+            <div className="px-3 pb-3">
+              <Textarea
+                className="w-full text-xs font-mono min-h-[90px]"
+                value={tx.contentData.rawLine}
+                readOnly
+              />
+            </div>
+          </details>
+        </div>
+      )}
+
+      <div className="pt-2 border-t border-border-subtle">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="font-heading text-sm text-text-secondary">
+            Responses ({tx.responses.length})
+          </h3>
+          {transactionHasError(tx) && (
+            <span className="text-xs text-error inline-flex items-center gap-1">
+              <AlertTriangle size={12} />
+              error detected
+            </span>
+          )}
+        </div>
+
+        {tx.responses.length === 0 ? (
+          <p className="text-sm text-text-muted">No responses paired.</p>
+        ) : (
+          <div className="space-y-3">
+            {tx.responses.map((response) => (
+              <div key={`${response.lineNumber}-${response.timestamp}`} className="space-y-2">
+                <EventHeader event={response} />
+                <JsonOrText title="Response body" event={response} />
+                <details className="border border-border-subtle rounded-md bg-bg-base">
+                  <summary className="cursor-pointer select-none px-3 py-2 text-sm text-text-secondary">
+                    Raw response line
+                  </summary>
+                  <div className="px-3 pb-3">
+                    <Textarea
+                      className="w-full text-xs font-mono min-h-[90px]"
+                      value={response.rawLine}
+                      readOnly
+                    />
+                  </div>
+                </details>
+              </div>
+            ))}
+          </div>
         )}
       </div>
-    </button>
+    </div>
   );
 }
 
@@ -250,17 +349,13 @@ export function LogViewer() {
   const [unparsedLines, setUnparsedLines] = useState<UnparsedLogLine[]>([]);
   const [unmatchedContentData, setUnmatchedContentData] = useState<LogEvent[]>([]);
   const [selectedTxId, setSelectedTxId] = useState<string | null>(null);
+  const [isImportOpen, setIsImportOpen] = useState<boolean>(true);
   const [isAutoParsing, setIsAutoParsing] = useState(false);
   const [autoParseSource, setAutoParseSource] = useState<string>('Pasted log');
 
   const [query, setQuery] = useState<string>('');
   const [errorsOnly, setErrorsOnly] = useState<boolean>(false);
   const [endpointFilter, setEndpointFilter] = useState<string>('');
-
-  const selectedTx = useMemo(
-    () => transactions.find((t) => t.id === selectedTxId) ?? null,
-    [transactions, selectedTxId],
-  );
 
   const indexed = useMemo(() => {
     return transactions.map((tx) => {
@@ -319,6 +414,7 @@ export function LogViewer() {
     setUnparsedLines(nextUnparsedLines);
     setUnmatchedContentData(nextUnmatchedContentData);
     setSelectedTxId(txs[0]?.id ?? null);
+    setIsImportOpen(txs.length === 0 && nextUnparsedLines.length === 0 && nextUnmatchedContentData.length === 0);
     setEndpointFilter('');
   }, []);
 
@@ -328,6 +424,7 @@ export function LogViewer() {
     setUnparsedLines([]);
     setUnmatchedContentData([]);
     setSelectedTxId(null);
+    setIsImportOpen(true);
     setEndpointFilter('');
   }, []);
 
@@ -359,18 +456,67 @@ export function LogViewer() {
 
   return (
     <div className="space-y-6">
-      <Card className="p-6">
-        <div className="mb-4 flex items-center gap-2">
-          <FileText size={20} className="text-accent-rose" />
-          <h2 className="text-xl font-semibold font-body text-text-primary">
-            Import Logs
-          </h2>
-        </div>
+      <Card className="overflow-hidden p-0">
+        <button
+          type="button"
+          onClick={() => setIsImportOpen((current) => !current)}
+          className="flex w-full items-center justify-between gap-4 px-6 py-4 text-left"
+          aria-expanded={isImportOpen}
+        >
+          <div className="flex min-w-0 items-center gap-2">
+            <FileText size={20} className="shrink-0 text-accent-rose" />
+            <div className="min-w-0">
+              <h2 className="text-xl font-semibold font-body text-text-primary">
+                Import Logs
+              </h2>
+              {!isImportOpen && (
+                <p className="truncate text-xs text-text-muted">
+                  {fileName || autoParseSource}
+                  {rawText ? ` - ${rawText.length.toLocaleString()} characters` : ''}
+                </p>
+              )}
+            </div>
+          </div>
+          {isImportOpen ? (
+            <ChevronDown size={18} className="shrink-0 text-text-muted" aria-hidden="true" />
+          ) : (
+            <ChevronRight size={18} className="shrink-0 text-text-muted" aria-hidden="true" />
+          )}
+        </button>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
-          <div>
-            <label className="mb-2 block text-sm font-medium text-text-primary">Paste raw log text</label>
+        {isImportOpen && (
+          <div className="border-t border-border-subtle px-6 pb-6 pt-4">
+            <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <label className="text-sm font-medium text-text-primary" htmlFor="log-viewer-raw-input">
+                Paste raw log text
+              </label>
+              <div className="flex flex-wrap items-center gap-2">
+                {fileName && fileName !== 'Pasted log' && (
+                  <span className="max-w-[220px] truncate text-xs text-text-muted">
+                    {fileName}
+                  </span>
+                )}
+                <label
+                  htmlFor="log-viewer-file-input"
+                  className="btn-secondary inline-flex cursor-pointer items-center"
+                >
+                  <Upload size={16} className="mr-2" />
+                  Upload .txt/.log
+                </label>
+                <input
+                  id="log-viewer-file-input"
+                  type="file"
+                  accept=".txt,.log,text/plain"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) void handleFile(file);
+                  }}
+                  className="sr-only"
+                />
+              </div>
+            </div>
             <Textarea
+              id="log-viewer-raw-input"
               className="min-h-[180px] w-full text-xs font-mono"
               value={rawText}
               onChange={(e) => {
@@ -381,31 +527,11 @@ export function LogViewer() {
               }}
               placeholder="Paste raw API logs here..."
             />
-            <div className="mt-3 flex items-center justify-between gap-3">
-              <p className="text-xs text-text-muted">
-                Paste manually and it will parse automatically. Uploaded files also populate this box.
-              </p>
-              {isAutoParsing && <span className="text-xs text-text-muted">Parsing...</span>}
-            </div>
+            {isAutoParsing && (
+              <div className="mt-3 text-right text-xs text-text-muted">Parsing...</div>
+            )}
           </div>
-
-          <div className="rounded-lg border border-border-subtle bg-bg-base p-4">
-            <div className="mb-3 flex items-center gap-2">
-              <Upload size={18} className="text-accent-rose" />
-              <h3 className="text-sm font-semibold text-text-primary">Upload file</h3>
-            </div>
-            <label className="mb-2 block text-xs text-text-muted">.txt or .log</label>
-            <input
-              type="file"
-              accept=".txt,.log,text/plain"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) void handleFile(file);
-              }}
-              className="block w-full text-sm text-text-secondary"
-            />
-          </div>
-        </div>
+        )}
       </Card>
 
       {hasParsedOutput && (
@@ -474,155 +600,58 @@ export function LogViewer() {
           <p className="text-text-muted">Upload a log file or paste raw log text to begin.</p>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <Card className="p-6">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-xl font-semibold font-body text-text-primary">Transactions</h2>
-              <span className="text-xs text-text-muted">
-                {filteredTransactions.length} / {transactions.length}
-              </span>
-            </div>
+        <Card className="p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-xl font-semibold font-body text-text-primary">Logs</h2>
+            <span className="text-xs text-text-muted">
+              {filteredTransactions.length} / {transactions.length}
+            </span>
+          </div>
 
-            <div className="space-y-2 max-h-[70vh] overflow-y-auto custom-scrollbar pr-1">
-              {filteredTransactions.map((tx) => (
-                <TransactionRow
-                  key={tx.id}
-                  tx={tx}
-                  selected={tx.id === selectedTxId}
-                  onSelect={() => setSelectedTxId(tx.id)}
-                />
-              ))}
-            </div>
-          </Card>
+          <div className="space-y-3">
+            {filteredTransactions.map((tx) => (
+              <TransactionRow
+                key={tx.id}
+                tx={tx}
+                expanded={tx.id === selectedTxId}
+                onToggle={() =>
+                  setSelectedTxId((current) => (current === tx.id ? null : tx.id))
+                }
+              />
+            ))}
 
-          <Card className="p-6">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-xl font-semibold font-body text-text-primary">Details</h2>
-              {selectedTx && (
-                <span className="text-xs text-text-muted font-mono">{selectedTx.id}</span>
-              )}
-            </div>
+            {filteredTransactions.length === 0 && (
+              <p className="rounded-lg border border-border-subtle bg-bg-base p-4 text-sm text-text-muted">
+                No logs match the current filters.
+              </p>
+            )}
 
-            {!selectedTx ? (
-              <div className="space-y-3">
-                <p className="text-sm text-text-muted">Select a transaction.</p>
-                <StandaloneLines
-                  unparsedLines={unparsedLines}
-                  unmatchedContentData={unmatchedContentData}
-                />
-              </div>
-            ) : (
-              <div className="space-y-3 max-h-[70vh] overflow-y-auto custom-scrollbar pr-1">
-                {selectedTx.request ? (
-                  <div className="space-y-2">
-                    <EventHeader event={selectedTx.request} />
-                    <JsonOrText title="Request body" event={selectedTx.request} />
-                    <details className="border border-border-subtle rounded-md bg-bg-base">
-                      <summary className="cursor-pointer select-none px-3 py-2 text-sm text-text-secondary">
-                        Raw request line
-                      </summary>
-                      <div className="px-3 pb-3">
-                        <Textarea
-                          className="w-full text-xs font-mono min-h-[90px]"
-                          value={selectedTx.request.rawLine}
-                          readOnly
-                        />
-                      </div>
-                    </details>
-                  </div>
-                ) : (
-                  <div className="text-sm text-text-muted">
-                    No matching request (orphan response).
-                  </div>
-                )}
+            <StandaloneLines
+              unparsedLines={unparsedLines}
+              unmatchedContentData={unmatchedContentData}
+            />
 
-                {selectedTx.contentData && (
-                  <div className="space-y-2 pt-2 border-t border-border-subtle">
-                    <h3 className="font-heading text-sm text-text-secondary">Content Data</h3>
-                    <EventHeader event={selectedTx.contentData} />
-                    <JsonOrText title="Content data payload" event={selectedTx.contentData} />
-                    <details className="border border-border-subtle rounded-md bg-bg-base">
-                      <summary className="cursor-pointer select-none px-3 py-2 text-sm text-text-secondary">
-                        Raw content data line
-                      </summary>
-                      <div className="px-3 pb-3">
-                        <Textarea
-                          className="w-full text-xs font-mono min-h-[90px]"
-                          value={selectedTx.contentData.rawLine}
-                          readOnly
-                        />
-                      </div>
-                    </details>
-                  </div>
-                )}
-
-                <div className="pt-2 border-t border-border-subtle">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-heading text-sm text-text-secondary">
-                      Responses ({selectedTx.responses.length})
-                    </h3>
-                    {transactionHasError(selectedTx) && (
-                      <span className="text-xs text-error inline-flex items-center gap-1">
-                        <AlertTriangle size={12} />
-                        error detected
-                      </span>
-                    )}
-                  </div>
-
-                  {selectedTx.responses.length === 0 ? (
-                    <p className="text-sm text-text-muted">No responses paired.</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {selectedTx.responses.map((response) => (
-                        <div key={`${response.lineNumber}-${response.timestamp}`} className="space-y-2">
-                          <EventHeader event={response} />
-                          <JsonOrText title="Response body" event={response} />
-                          <details className="border border-border-subtle rounded-md bg-bg-base">
-                            <summary className="cursor-pointer select-none px-3 py-2 text-sm text-text-secondary">
-                              Raw response line
-                            </summary>
-                            <div className="px-3 pb-3">
-                              <Textarea
-                                className="w-full text-xs font-mono min-h-[90px]"
-                                value={response.rawLine}
-                                readOnly
-                              />
-                            </div>
-                          </details>
-                        </div>
-                      ))}
-                    </div>
+            {rawText && (
+              <details className="rounded-lg border border-border-subtle bg-bg-base">
+                <summary className="cursor-pointer select-none px-3 py-2 text-sm text-text-secondary">
+                  Raw input preview
+                </summary>
+                <div className="px-3 pb-3">
+                  <Textarea
+                    className="w-full text-xs font-mono min-h-[180px]"
+                    value={rawText.slice(0, 50000)}
+                    readOnly
+                  />
+                  {rawText.length > 50000 && (
+                    <p className="text-xs text-text-muted mt-2">
+                      Showing first 50,000 characters.
+                    </p>
                   )}
                 </div>
-
-                {rawText && (
-                  <details className="border border-border-subtle rounded-md bg-bg-base">
-                    <summary className="cursor-pointer select-none px-3 py-2 text-sm text-text-secondary">
-                      Raw input (preview)
-                    </summary>
-                    <div className="px-3 pb-3">
-                      <Textarea
-                        className="w-full text-xs font-mono min-h-[180px]"
-                        value={rawText.slice(0, 50000)}
-                        readOnly
-                      />
-                      {rawText.length > 50000 && (
-                        <p className="text-xs text-text-muted mt-2">
-                          Showing first 50,000 characters.
-                        </p>
-                      )}
-                    </div>
-                  </details>
-                )}
-
-                <StandaloneLines
-                  unparsedLines={unparsedLines}
-                  unmatchedContentData={unmatchedContentData}
-                />
-              </div>
+              </details>
             )}
-          </Card>
-        </div>
+          </div>
+        </Card>
       )}
     </div>
   );
