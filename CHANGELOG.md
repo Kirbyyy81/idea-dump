@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.4.1...idea-dump-v0.5.0) (2026-06-17)
+
+
+### Features
+
+* add film journal module ([e5ba986](https://github.com/Kirbyyy81/idea-dump/commit/e5ba98607176aa31dd3044c439dd23eab77cb5ec))
+
 ## [0.4.1](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.4.0...idea-dump-v0.4.1) (2026-06-16)
 
 
