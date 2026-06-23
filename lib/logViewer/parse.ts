@@ -23,6 +23,7 @@ function classifyLine(text: string): LogLineType {
   if (upper.includes('CONTENT DATA')) return 'content_data';
   if (upper.includes('RESPONSE')) return 'response';
   if (upper.includes('REQUEST')) return 'request';
+  if (upper.includes('ERROR')) return 'error';
   return 'other';
 }
 
@@ -33,7 +34,13 @@ function startsTimestampedKnownEvent(line: string): boolean {
   if (!match) return false;
 
   const type = classifyLine(match[1]);
-  return type === 'request' || type === 'response' || type === 'content_data' || type === 'crash';
+  return (
+    type === 'request' ||
+    type === 'response' ||
+    type === 'content_data' ||
+    type === 'crash' ||
+    type === 'error'
+  );
 }
 
 function extractJsonCandidate(text: string): string | undefined {
@@ -197,7 +204,9 @@ export function parseLogLine(line: string, lineNumber: number, endLineNumber?: n
     url,
     endpointKey: lineType === 'crash'
       ? `Crash${extractCrashContext(rest) ? `: ${extractCrashContext(rest)}` : ''}`
-      : normalizeEndpointKey(url),
+      : lineType === 'error'
+        ? 'Error'
+        : normalizeEndpointKey(url),
     httpStatus,
     functionName: lineType === 'content_data'
       ? extractContentDataFunction(rest)
@@ -219,18 +228,20 @@ export function parseLogText(text: string): LogEvent[] {
     const line = lines[i];
     if (!line.trim()) continue;
 
-    if (classifyLine(line) === 'crash') {
-      const crashLines = [line];
+    const lineType = classifyLine(line);
+
+    if (lineType === 'crash' || lineType === 'error') {
+      const blockLines = [line];
       let endIndex = i;
 
       for (let j = i + 1; j < lines.length; j += 1) {
         const nextLine = lines[j];
         if (nextLine.trim() && startsTimestampedKnownEvent(nextLine)) break;
-        crashLines.push(nextLine);
+        blockLines.push(nextLine);
         endIndex = j;
       }
 
-      events.push(parseLogLine(crashLines.join('\n'), i + 1, endIndex + 1));
+      events.push(parseLogLine(blockLines.join('\n'), i + 1, endIndex + 1));
       i = endIndex;
       continue;
     }

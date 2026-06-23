@@ -28,16 +28,16 @@ function JsonTree({
   depth?: number;
 }) {
   if (value == null || typeof value !== 'object') {
-    return <span className="text-text-primary">{JSON.stringify(value)}</span>;
+    return <span className="break-all text-text-primary">{JSON.stringify(value)}</span>;
   }
 
   if (Array.isArray(value)) {
     return (
-      <details open={depth < 2} className="font-mono text-xs">
+      <details open={depth < 2} className="min-w-0 font-mono text-xs">
         <summary className="cursor-pointer text-text-secondary">Array ({value.length})</summary>
-        <div className="pl-4 border-l border-border-subtle space-y-1">
+        <div className="min-w-0 space-y-1 border-l border-border-subtle pl-4">
           {value.map((item, index) => (
-            <div key={index}>
+            <div key={index} className="min-w-0 break-words">
               <span className="text-text-muted">{index}: </span>
               <JsonTree value={item} depth={depth + 1} />
             </div>
@@ -49,12 +49,12 @@ function JsonTree({
 
   const entries = Object.entries(value as Record<string, unknown>);
   return (
-    <details open={depth < 2} className="font-mono text-xs">
+    <details open={depth < 2} className="min-w-0 font-mono text-xs">
       <summary className="cursor-pointer text-text-secondary">Object ({entries.length})</summary>
-      <div className="pl-4 border-l border-border-subtle space-y-1">
+      <div className="min-w-0 space-y-1 border-l border-border-subtle pl-4">
         {entries.map(([key, item]) => (
-          <div key={key}>
-            <span className="text-text-muted">{key}: </span>
+          <div key={key} className="min-w-0 break-words">
+            <span className="break-all text-text-muted">{key}: </span>
             <JsonTree value={item} depth={depth + 1} />
           </div>
         ))}
@@ -74,14 +74,14 @@ function JsonOrText({
   const raw = event.bodyRaw ?? '';
 
   return (
-    <details className="border border-border-subtle rounded-md bg-bg-base">
-      <summary className="cursor-pointer select-none px-3 py-2 text-sm text-text-secondary flex items-center justify-between">
+    <details className="min-w-0 rounded-md border border-border-subtle bg-bg-base">
+      <summary className="flex cursor-pointer select-none items-center justify-between gap-3 px-3 py-2 text-sm text-text-secondary">
         <span className="font-medium">{title}</span>
         <span className="text-xs text-text-muted">
           {hasJson ? 'json' : event.bodyKind === 'none' ? 'no body' : 'text'}
         </span>
       </summary>
-      <div className="px-3 pb-3 pt-0">
+      <div className="min-w-0 overflow-x-auto px-3 pb-3 pt-0">
         {hasJson ? (
           <JsonTree value={event.bodyJson} />
         ) : (
@@ -89,7 +89,7 @@ function JsonOrText({
             {event.bodyParseError && (
               <p className="text-xs text-error">JSON parse failed; showing extracted raw payload.</p>
             )}
-            <pre className="text-xs whitespace-pre-wrap break-words font-mono text-text-primary">
+            <pre className="whitespace-pre-wrap break-all font-mono text-xs text-text-primary">
               {raw || '(No Body)'}
             </pre>
           </div>
@@ -101,7 +101,7 @@ function JsonOrText({
 
 function EventHeader({ event }: { event: LogEvent }) {
   return (
-    <div className="flex flex-wrap items-center gap-2 text-xs text-text-muted">
+    <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-text-muted">
       <span className="font-mono">{event.timestamp || '-'}</span>
       <span className="px-2 py-0.5 rounded border border-border-subtle bg-bg-subtle text-text-secondary">
         {event.eventType || 'UNKNOWN'}
@@ -116,18 +116,24 @@ function EventHeader({ event }: { event: LogEvent }) {
         <span className="font-mono text-text-secondary">{event.method}</span>
       )}
       {event.endpointKey && (
-        <span className="font-mono text-text-secondary">{event.endpointKey}</span>
+        <span className="min-w-0 max-w-full break-all font-mono text-text-secondary">{event.endpointKey}</span>
       )}
       {event.url && (
-        <span className="truncate max-w-[520px]">{event.url}</span>
+        <span className="min-w-0 max-w-full break-all sm:max-w-[520px]">{event.url}</span>
       )}
-      <span className="ml-auto font-mono">
+      <span className="ml-auto shrink-0 font-mono">
         L{event.endLineNumber && event.endLineNumber !== event.lineNumber
           ? `${event.lineNumber}-${event.endLineNumber}`
           : event.lineNumber}
       </span>
     </div>
   );
+}
+
+function getStandaloneTimelineEvent(tx: Transaction): LogEvent | undefined {
+  const event = tx.responses.length === 1 ? tx.responses[0] : undefined;
+  if (!event || tx.request) return undefined;
+  return event.lineType === 'crash' || event.lineType === 'error' ? event : undefined;
 }
 
 function TransactionRow({
@@ -140,6 +146,7 @@ function TransactionRow({
   onToggle: () => void;
 }) {
   const lastResponse = tx.responses[tx.responses.length - 1];
+  const standaloneEvent = getStandaloneTimelineEvent(tx);
   const status = lastResponse?.httpStatus;
   const isError = transactionHasError(tx);
   const statusText =
@@ -158,7 +165,7 @@ function TransactionRow({
   return (
     <div
       className={cn(
-        'rounded-lg border transition-colors',
+        'min-w-0 rounded-lg border transition-colors',
         expanded
           ? 'border-accent-rose bg-accent-rose/10'
           : 'border-border-subtle bg-bg-base',
@@ -167,9 +174,9 @@ function TransactionRow({
       <button
         type="button"
         onClick={onToggle}
-        className="w-full p-4 text-left"
+        className="w-full min-w-0 p-4 text-left"
       >
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-start gap-2">
           <Badge
             variant={isError ? 'archived' : tx.orphanKind ? 'default' : 'complete'}
             className={cn(isError && 'border-error bg-error-bg text-error')}
@@ -177,10 +184,10 @@ function TransactionRow({
           >
             {statusText}
           </Badge>
-          <span className="text-xs font-mono text-text-secondary">
+          <span className="shrink-0 text-xs font-mono text-text-secondary">
             {tx.method ?? tx.request?.method ?? '-'}
           </span>
-          <span className="truncate text-sm text-text-primary flex-1">
+          <span className="min-w-0 flex-1 break-all text-sm text-text-primary">
             {tx.endpointKey ?? tx.url ?? 'Unknown endpoint'}
           </span>
           {expanded ? (
@@ -190,7 +197,11 @@ function TransactionRow({
           )}
         </div>
         <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-text-muted">
-          <span>{tx.responses.length} resp</span>
+          <span>
+            {standaloneEvent
+              ? `${standaloneEvent.lineType} event`
+              : `${tx.responses.length} resp`}
+          </span>
           {durationMs != null && <span>- {formatMsDuration(durationMs)}</span>}
           {tx.lineRefs.length > 0 && <span>- lines {tx.lineRefs.join(', ')}</span>}
           {tx.contentData && <span>- content data</span>}
@@ -211,19 +222,41 @@ function TransactionRow({
 }
 
 function TransactionDetails({ tx }: { tx: Transaction }) {
+  const standaloneEvent = getStandaloneTimelineEvent(tx);
+
   return (
-    <div className="space-y-3 border-t border-border-subtle p-4">
-      {tx.request ? (
+    <div className="min-w-0 space-y-3 border-t border-border-subtle p-4">
+      {standaloneEvent ? (
+        <div className="space-y-2">
+          <EventHeader event={standaloneEvent} />
+          <JsonOrText
+            title={standaloneEvent.lineType === 'crash' ? 'Crash details' : 'Error details'}
+            event={standaloneEvent}
+          />
+          <details className="min-w-0 rounded-md border border-border-subtle bg-bg-base">
+            <summary className="cursor-pointer select-none px-3 py-2 text-sm text-text-secondary">
+              Raw {standaloneEvent.lineType} line
+            </summary>
+            <div className="px-3 pb-3">
+              <Textarea
+                className="min-h-[120px] w-full min-w-0 text-xs font-mono"
+                value={standaloneEvent.rawLine}
+                readOnly
+              />
+            </div>
+          </details>
+        </div>
+      ) : tx.request ? (
         <div className="space-y-2">
           <EventHeader event={tx.request} />
           <JsonOrText title="Request body" event={tx.request} />
-          <details className="border border-border-subtle rounded-md bg-bg-base">
+          <details className="min-w-0 rounded-md border border-border-subtle bg-bg-base">
             <summary className="cursor-pointer select-none px-3 py-2 text-sm text-text-secondary">
               Raw request line
             </summary>
             <div className="px-3 pb-3">
               <Textarea
-                className="w-full text-xs font-mono min-h-[90px]"
+                className="min-h-[120px] w-full min-w-0 text-xs font-mono"
                 value={tx.request.rawLine}
                 readOnly
               />
@@ -241,13 +274,13 @@ function TransactionDetails({ tx }: { tx: Transaction }) {
           <h3 className="font-heading text-sm text-text-secondary">Content Data</h3>
           <EventHeader event={tx.contentData} />
           <JsonOrText title="Content data payload" event={tx.contentData} />
-          <details className="border border-border-subtle rounded-md bg-bg-base">
+          <details className="min-w-0 rounded-md border border-border-subtle bg-bg-base">
             <summary className="cursor-pointer select-none px-3 py-2 text-sm text-text-secondary">
               Raw content data line
             </summary>
             <div className="px-3 pb-3">
               <Textarea
-                className="w-full text-xs font-mono min-h-[90px]"
+                className="min-h-[120px] w-full min-w-0 text-xs font-mono"
                 value={tx.contentData.rawLine}
                 readOnly
               />
@@ -256,6 +289,7 @@ function TransactionDetails({ tx }: { tx: Transaction }) {
         </div>
       )}
 
+      {!standaloneEvent && (
       <div className="pt-2 border-t border-border-subtle">
         <div className="flex items-center justify-between mb-2">
           <h3 className="font-heading text-sm text-text-secondary">
@@ -277,13 +311,13 @@ function TransactionDetails({ tx }: { tx: Transaction }) {
               <div key={`${response.lineNumber}-${response.timestamp}`} className="space-y-2">
                 <EventHeader event={response} />
                 <JsonOrText title="Response body" event={response} />
-                <details className="border border-border-subtle rounded-md bg-bg-base">
+                <details className="min-w-0 rounded-md border border-border-subtle bg-bg-base">
                   <summary className="cursor-pointer select-none px-3 py-2 text-sm text-text-secondary">
                     Raw response line
                   </summary>
                   <div className="px-3 pb-3">
                     <Textarea
-                      className="w-full text-xs font-mono min-h-[90px]"
+                      className="min-h-[120px] w-full min-w-0 text-xs font-mono"
                       value={response.rawLine}
                       readOnly
                     />
@@ -294,6 +328,7 @@ function TransactionDetails({ tx }: { tx: Transaction }) {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }
@@ -308,29 +343,29 @@ function StandaloneLines({
   if (unparsedLines.length === 0 && unmatchedContentData.length === 0) return null;
 
   return (
-    <details className="rounded-lg border border-border-subtle bg-bg-base">
+    <details className="min-w-0 rounded-lg border border-border-subtle bg-bg-base">
       <summary className="cursor-pointer select-none px-3 py-2 text-sm text-text-secondary">
         Unparsed / standalone lines ({unparsedLines.length + unmatchedContentData.length})
       </summary>
-      <div className="px-3 pb-3 space-y-3">
+      <div className="min-w-0 space-y-3 px-3 pb-3">
         {unmatchedContentData.map((event) => (
-          <div key={event.id} className="space-y-1">
+          <div key={event.id} className="min-w-0 space-y-1">
             <EventHeader event={event} />
             <Textarea
-              className="w-full text-xs font-mono min-h-[70px]"
+              className="min-h-[70px] w-full min-w-0 text-xs font-mono"
               value={event.rawLine}
               readOnly
             />
           </div>
         ))}
         {unparsedLines.map((line) => (
-          <div key={line.lineNumber} className="space-y-1">
-            <div className="flex items-center justify-between text-xs text-text-muted">
+          <div key={line.lineNumber} className="min-w-0 space-y-1">
+            <div className="flex min-w-0 items-center justify-between gap-3 text-xs text-text-muted">
               <span>L{line.lineNumber}</span>
-              {line.reason && <span>{line.reason}</span>}
+              {line.reason && <span className="min-w-0 break-words text-right">{line.reason}</span>}
             </div>
             <Textarea
-              className="w-full text-xs font-mono min-h-[70px]"
+              className="min-h-[70px] w-full min-w-0 text-xs font-mono"
               value={line.rawLine}
               readOnly
             />
@@ -455,12 +490,12 @@ export function LogViewer() {
   }, [rawText, autoParseSource, clearParsedState, processText]);
 
   return (
-    <div className="space-y-6">
-      <Card className="overflow-hidden p-0">
+    <div className="w-full min-w-0 max-w-full space-y-6 overflow-x-hidden">
+      <Card className="min-w-0 max-w-full p-0">
         <button
           type="button"
           onClick={() => setIsImportOpen((current) => !current)}
-          className="flex w-full items-center justify-between gap-4 px-6 py-4 text-left"
+          className="flex w-full min-w-0 items-center justify-between gap-4 px-6 py-4 text-left"
           aria-expanded={isImportOpen}
         >
           <div className="flex min-w-0 items-center gap-2">
@@ -485,12 +520,12 @@ export function LogViewer() {
         </button>
 
         {isImportOpen && (
-          <div className="border-t border-border-subtle px-6 pb-6 pt-4">
-            <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0 border-t border-border-subtle px-6 pb-6 pt-4">
+            <div className="mb-2 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <label className="text-sm font-medium text-text-primary" htmlFor="log-viewer-raw-input">
                 Paste raw log text
               </label>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
                 {fileName && fileName !== 'Pasted log' && (
                   <span className="max-w-[220px] truncate text-xs text-text-muted">
                     {fileName}
@@ -517,7 +552,7 @@ export function LogViewer() {
             </div>
             <Textarea
               id="log-viewer-raw-input"
-              className="min-h-[180px] w-full text-xs font-mono"
+              className="min-h-[180px] w-full min-w-0 text-xs font-mono"
               value={rawText}
               onChange={(e) => {
                 const nextText = e.target.value;
@@ -535,9 +570,9 @@ export function LogViewer() {
       </Card>
 
       {hasParsedOutput && (
-        <Card className="p-4">
-          <div className="flex flex-col gap-3 md:flex-row md:items-end">
-            <div className="flex-1 min-w-[220px]">
+        <Card className="min-w-0 max-w-full p-4">
+          <div className="flex min-w-0 flex-col gap-3 md:flex-row md:flex-wrap md:items-end">
+            <div className="min-w-0 flex-1 md:min-w-[220px]">
               <label className="mb-1 block text-xs text-text-muted">Search</label>
               <div className="relative">
                 <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
@@ -551,12 +586,12 @@ export function LogViewer() {
               </div>
             </div>
 
-            <div className="min-w-[220px]">
+            <div className="min-w-0 md:min-w-[220px]">
               <label className="mb-1 block text-xs text-text-muted">Endpoint</label>
               <select
                 value={endpointFilter}
                 onChange={(e) => setEndpointFilter(e.target.value)}
-                className="input py-2 text-sm"
+                className="input w-full min-w-0 py-2 text-sm"
                 title="Filter by endpoint"
               >
                 <option value="">All endpoints</option>
@@ -596,19 +631,19 @@ export function LogViewer() {
       )}
 
       {!hasParsedOutput ? (
-        <Card className="p-12 text-center">
+        <Card className="min-w-0 max-w-full p-12 text-center">
           <p className="text-text-muted">Upload a log file or paste raw log text to begin.</p>
         </Card>
       ) : (
-        <Card className="p-6">
-          <div className="mb-4 flex items-center justify-between">
+        <Card className="min-w-0 max-w-full p-6">
+          <div className="mb-4 flex min-w-0 items-center justify-between gap-3">
             <h2 className="text-xl font-semibold font-body text-text-primary">Logs</h2>
             <span className="text-xs text-text-muted">
               {filteredTransactions.length} / {transactions.length}
             </span>
           </div>
 
-          <div className="space-y-3">
+          <div className="min-w-0 space-y-3">
             {filteredTransactions.map((tx) => (
               <TransactionRow
                 key={tx.id}
@@ -632,13 +667,13 @@ export function LogViewer() {
             />
 
             {rawText && (
-              <details className="rounded-lg border border-border-subtle bg-bg-base">
+              <details className="min-w-0 rounded-lg border border-border-subtle bg-bg-base">
                 <summary className="cursor-pointer select-none px-3 py-2 text-sm text-text-secondary">
                   Raw input preview
                 </summary>
-                <div className="px-3 pb-3">
+                <div className="min-w-0 px-3 pb-3">
                   <Textarea
-                    className="w-full text-xs font-mono min-h-[180px]"
+                    className="min-h-[180px] w-full min-w-0 text-xs font-mono"
                     value={rawText.slice(0, 50000)}
                     readOnly
                   />

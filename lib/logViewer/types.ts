@@ -1,5 +1,5 @@
 export type LogBodyKind = 'json' | 'text' | 'none';
-export type LogLineType = 'request' | 'response' | 'content_data' | 'crash' | 'other';
+export type LogLineType = 'request' | 'response' | 'content_data' | 'crash' | 'error' | 'other';
 export type OrphanKind = 'request' | 'response' | 'content_data' | null;
 
 export type LogEvent = {

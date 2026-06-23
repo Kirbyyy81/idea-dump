@@ -14,6 +14,10 @@ function isResponseLike(event: LogEvent): boolean {
   return event.lineType === 'response';
 }
 
+function isTimelineError(event: LogEvent): boolean {
+  return event.lineType === 'error';
+}
+
 function confidenceFromQueueDepth(depth: number): PairingConfidence {
   if (depth <= 0) return 'unknown';
   if (depth === 1) return 'high';
@@ -34,6 +38,40 @@ function appendLineRef(tx: Transaction, event: LogEvent) {
     tx.lineRefs.push(event.lineNumber);
     tx.lineRefs.sort((a, b) => a - b);
   }
+}
+
+function firstLineRef(tx: Transaction): number {
+  return tx.lineRefs.length > 0 ? Math.min(...tx.lineRefs) : Number.MAX_SAFE_INTEGER;
+}
+
+function sortTransactionsByTimeline(transactions: Transaction[]): Transaction[] {
+  return [...transactions].sort((a, b) => firstLineRef(a) - firstLineRef(b));
+}
+
+function getOpenEntries(openByEndpoint: Map<string, Transaction[]>): Array<{
+  key: string;
+  tx: Transaction;
+}> {
+  const entries: Array<{ key: string; tx: Transaction }> = [];
+
+  for (const [key, queue] of Array.from(openByEndpoint.entries())) {
+    for (const tx of queue) entries.push({ key, tx });
+  }
+
+  return entries;
+}
+
+function pairResponseToTransaction(
+  tx: Transaction,
+  event: LogEvent,
+  confidence: PairingConfidence,
+) {
+  tx.responses.push(event);
+  appendLineRef(tx, event);
+  tx.endedAtMs = event.timestampMs ?? tx.endedAtMs;
+  tx.orphanKind = null;
+  tx.closedReason = 'paired';
+  tx.confidence = tx.responses.length === 1 ? confidence : tx.confidence;
 }
 
 function contentDataMatches(contentData: LogEvent, request: LogEvent): boolean {
@@ -88,7 +126,7 @@ function hasFailurePayload(value: unknown): boolean {
 }
 
 function eventHasError(event: LogEvent): boolean {
-  if (event.lineType === 'crash') return true;
+  if (event.lineType === 'crash' || event.lineType === 'error') return true;
   const t = `${event.eventType} ${event.rawLine}`.toUpperCase();
   if (t.includes('ERROR')) return true;
   if (event.httpStatus != null && (event.httpStatus < 200 || event.httpStatus > 299)) return true;
@@ -144,6 +182,26 @@ export function buildTransactions(
     }
 
     if (event.lineType === 'crash') {
+      const tx: Transaction = {
+        id: txId(++txCounter),
+        endpointKey: event.endpointKey,
+        responses: [event],
+        lineRefs: event.endLineNumber
+          ? [event.lineNumber, event.endLineNumber]
+          : [event.lineNumber],
+        orphanKind: null,
+        orphanResponse: false,
+        startedAtMs: event.timestampMs,
+        endedAtMs: event.timestampMs,
+        confidence: 'high',
+        hadConcurrency: false,
+        closedReason: 'paired',
+      };
+      transactions.push(tx);
+      continue;
+    }
+
+    if (isTimelineError(event)) {
       const tx: Transaction = {
         id: txId(++txCounter),
         endpointKey: event.endpointKey,
@@ -224,17 +282,39 @@ export function buildTransactions(
 
       const tx = queue[0];
       tx.hadConcurrency ||= queue.length > 1;
-      tx.responses.push(event);
-      appendLineRef(tx, event);
-      tx.endedAtMs = event.timestampMs ?? tx.endedAtMs;
-      tx.orphanKind = null;
-      tx.closedReason = 'paired';
-      tx.confidence =
-        tx.responses.length === 1
-          ? confidenceFromQueueDepth(queue.length)
-          : tx.confidence;
+      pairResponseToTransaction(tx, event, confidenceFromQueueDepth(queue.length));
       queue.shift();
       if (queue.length === 0) openByEndpoint.delete(key);
+      continue;
+    }
+
+    if (isResponseLike(event) && !key) {
+      const openEntries = getOpenEntries(openByEndpoint);
+
+      if (openEntries.length === 1) {
+        const [{ key: openKey, tx }] = openEntries;
+        pairResponseToTransaction(tx, event, 'low');
+        const queue = openByEndpoint.get(openKey) ?? [];
+        const index = queue.indexOf(tx);
+        if (index >= 0) queue.splice(index, 1);
+        if (queue.length === 0) openByEndpoint.delete(openKey);
+        continue;
+      }
+
+      const orphan: Transaction = {
+        id: txId(++txCounter),
+        responses: [event],
+        lineRefs: [event.lineNumber],
+        orphanKind: 'response',
+        orphanResponse: true,
+        startedAtMs: event.timestampMs,
+        endedAtMs: event.timestampMs,
+        confidence: 'unknown',
+        hadConcurrency: openEntries.length > 1,
+        closedReason: 'orphan',
+      };
+      orphanResponses.push(orphan);
+      transactions.push(orphan);
       continue;
     }
 
@@ -259,8 +339,8 @@ export function buildTransactions(
   }
 
   return {
-    transactions,
-    orphanResponses,
+    transactions: sortTransactionsByTimeline(transactions),
+    orphanResponses: sortTransactionsByTimeline(orphanResponses),
     unparsedLines,
     unmatchedContentData: pendingContentData,
   };
