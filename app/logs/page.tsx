@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { Sidebar } from '@/components/organisms/Sidebar';
-import { LogForm } from '@/components/organisms/LogForm';
-import { LogEntryCard } from '@/components/organisms/LogEntryCard';
+import { LogForm } from './_components/LogForm';
+import { LogEntryCard } from './_components/LogEntryCard';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { DailyLogEntry, DailyLogContent, Project } from '@/lib/types';

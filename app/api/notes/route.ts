@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { authorizeSessionModule } from '@/lib/rbac/guards';
 import { Note } from '@/lib/types';
 
 const demoNotes: Note[] = [
@@ -20,6 +21,11 @@ const demoNotes: Note[] = [
 // GET /api/notes?project_id=xxx - List notes for a project
 export async function GET(request: NextRequest) {
     try {
+        const access = await authorizeSessionModule('projects');
+        if ('response' in access) {
+            return access.response;
+        }
+
         const supabase = await createClient();
         const { data: { user } } = await supabase.auth.getUser();
 
@@ -57,6 +63,11 @@ export async function GET(request: NextRequest) {
 // POST /api/notes - Create a new note
 export async function POST(request: NextRequest) {
     try {
+        const access = await authorizeSessionModule('projects');
+        if ('response' in access) {
+            return access.response;
+        }
+
         const supabase = await createClient();
         const { data: { user } } = await supabase.auth.getUser();
 
@@ -103,6 +114,11 @@ export async function POST(request: NextRequest) {
 // DELETE /api/notes?id=xxx - Delete a note
 export async function DELETE(request: NextRequest) {
     try {
+        const access = await authorizeSessionModule('projects');
+        if ('response' in access) {
+            return access.response;
+        }
+
         const supabase = await createClient();
         const { data: { user } } = await supabase.auth.getUser();
 

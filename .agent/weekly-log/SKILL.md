@@ -147,7 +147,7 @@ Updates an existing log entry. Content is fully replaced.
 ## Example: cURL
 
 ```bash
-curl -X POST https://your-app.vercel.app/api/logs \
+curl -X POST https://idea-dump-alpha.vercel.app/api/logs \
   -H "Content-Type: application/json" \
   -H "x-api-key: YOUR_API_KEY" \
   -d '{

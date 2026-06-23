@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Upload, Save } from 'lucide-react';
 import { CreateProjectInput, Priority } from '@/lib/types';
 import { Button } from '@/components/atoms/Button';
-import { FormField } from '@/components/molecules/FormField';
+import { FormField } from './FormField';
 import { Card } from '@/components/atoms/Card';
 import { cn } from '@/lib/utils';
 

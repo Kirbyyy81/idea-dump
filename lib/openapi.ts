@@ -36,6 +36,79 @@ export function getOpenApiSpec() {
         },
     };
 
+    const ticketSchema = {
+        type: 'object',
+        required: ['id', 'project_id', 'user_id', 'title', 'status', 'priority', 'source', 'tags', 'created_at', 'updated_at'],
+        properties: {
+            id: { type: 'string', format: 'uuid' },
+            project_id: { type: 'string', format: 'uuid' },
+            user_id: { type: 'string', format: 'uuid' },
+            title: { type: 'string' },
+            description: { type: 'string', nullable: true },
+            notes: { type: 'string', nullable: true },
+            status: { type: 'string', enum: ['todo', 'in_progress', 'to_review', 'done', 'closed'] },
+            priority: { type: 'string', enum: ['low', 'medium', 'high'] },
+            source: { type: 'string', enum: ['self', 'user_tester'] },
+            tags: { type: 'array', items: { type: 'string' } },
+            created_at: { type: 'string', format: 'date-time' },
+            updated_at: { type: 'string', format: 'date-time' },
+        },
+    };
+
+    const filmCameraSchema = {
+        type: 'object',
+        required: ['id', 'user_id', 'name', 'created_at', 'updated_at'],
+        properties: {
+            id: { type: 'string', format: 'uuid' },
+            user_id: { type: 'string', format: 'uuid' },
+            name: { type: 'string' },
+            brand: { type: 'string', nullable: true },
+            model: { type: 'string', nullable: true },
+            purchase_date: { type: 'string', format: 'date', nullable: true },
+            notes: { type: 'string', nullable: true },
+            created_at: { type: 'string', format: 'date-time' },
+            updated_at: { type: 'string', format: 'date-time' },
+        },
+    };
+
+    const filmRollSchema = {
+        type: 'object',
+        required: ['id', 'user_id', 'film_name', 'brand', 'format', 'iso', 'status', 'created_at', 'updated_at'],
+        properties: {
+            id: { type: 'string', format: 'uuid' },
+            user_id: { type: 'string', format: 'uuid' },
+            camera_id: { type: 'string', format: 'uuid', nullable: true },
+            film_name: { type: 'string' },
+            brand: { type: 'string' },
+            format: { type: 'string', enum: ['35mm', '120', 'Large Format'] },
+            iso: { type: 'integer' },
+            status: { type: 'string', enum: ['UNUSED', 'LOADED', 'SHOOTING', 'AWAITING_PROCESSING', 'PROCESSING', 'PROCESSED', 'ARCHIVED'] },
+            purchase_price: { type: 'number' },
+            location_name: { type: 'string', nullable: true },
+            frames_taken: { type: 'integer' },
+            successful_photos: { type: 'integer' },
+            notes: { type: 'string', nullable: true },
+            drive_folder_id: { type: 'string', nullable: true },
+            cover_photo_id: { type: 'string', format: 'uuid', nullable: true },
+            created_at: { type: 'string', format: 'date-time' },
+            updated_at: { type: 'string', format: 'date-time' },
+        },
+    };
+
+    const filmDashboardSchema = {
+        type: 'object',
+        properties: {
+            total_pictures_taken: { type: 'integer' },
+            total_money_spent: { type: 'number' },
+            total_cameras: { type: 'integer' },
+            total_rolls: { type: 'integer' },
+            processed_rolls: { type: 'integer' },
+            unprocessed_rolls: { type: 'integer' },
+            favorite_photos: { type: 'integer' },
+            average_spend_per_roll: { type: 'number' },
+        },
+    };
+
     return {
         openapi: '3.0.3',
         info: {
@@ -58,6 +131,10 @@ export function getOpenApiSpec() {
                 DailyLogContent: dailyLogContentSchema,
                 DailyLogEntry: dailyLogEntrySchema,
                 Error: errorSchema,
+                Ticket: ticketSchema,
+                FilmCamera: filmCameraSchema,
+                FilmRoll: filmRollSchema,
+                FilmDashboard: filmDashboardSchema,
             },
         },
         paths: {
@@ -103,6 +180,8 @@ export function getOpenApiSpec() {
                 },
                 post: {
                     summary: 'Create a log entry',
+                    description:
+                        'Creates a human log for the current session user or an agent log for the user that owns the provided x-api-key.',
                     requestBody: {
                         required: true,
                         content: {
@@ -252,6 +331,225 @@ export function getOpenApiSpec() {
                         201: { description: 'Created' },
                         401: { description: 'Unauthorized' },
                         500: { description: 'Server error' },
+                    },
+                },
+            },
+            '/api/tickets': {
+                get: {
+                    summary: 'List tickets',
+                    parameters: [
+                        { name: 'project_id', in: 'query', schema: { type: 'string', format: 'uuid' } },
+                        { name: 'status', in: 'query', schema: { type: 'string' } },
+                        { name: 'priority', in: 'query', schema: { type: 'string' } },
+                        { name: 'source', in: 'query', schema: { type: 'string' } },
+                        { name: 'scope', in: 'query', schema: { type: 'string', enum: ['mine', 'manage'] } },
+                    ],
+                    responses: {
+                        200: {
+                            description: 'List of tickets',
+                            content: {
+                                'application/json': {
+                                    schema: {
+                                        type: 'object',
+                                        properties: {
+                                            data: { type: 'array', items: { $ref: '#/components/schemas/Ticket' } },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        403: { description: 'Forbidden', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+                    },
+                },
+                post: {
+                    summary: 'Create a ticket',
+                    requestBody: {
+                        required: true,
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    required: ['project_id', 'title'],
+                                    properties: {
+                                        project_id: { type: 'string', format: 'uuid' },
+                                        title: { type: 'string' },
+                                        description: { type: 'string' },
+                                        notes: { type: 'string' },
+                                        status: { type: 'string', enum: ['todo', 'in_progress', 'to_review', 'done', 'closed'] },
+                                        priority: { type: 'string', enum: ['low', 'medium', 'high'] },
+                                        source: { type: 'string', enum: ['self', 'user_tester'] },
+                                        tags: { type: 'array', items: { type: 'string' } },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    responses: {
+                        201: {
+                            description: 'Created ticket',
+                            content: {
+                                'application/json': {
+                                    schema: {
+                                        type: 'object',
+                                        properties: {
+                                            data: { $ref: '#/components/schemas/Ticket' },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        400: { description: 'Validation error', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+                    },
+                },
+            },
+            '/api/tickets/{id}': {
+                patch: {
+                    summary: 'Update a ticket',
+                    parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+                    responses: {
+                        200: {
+                            description: 'Updated ticket',
+                            content: {
+                                'application/json': {
+                                    schema: {
+                                        type: 'object',
+                                        properties: {
+                                            data: { $ref: '#/components/schemas/Ticket' },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        401: { description: 'Unauthorized', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+                        403: { description: 'Forbidden', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+                        404: { description: 'Not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+                    },
+                },
+                delete: {
+                    summary: 'Delete a ticket',
+                    parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+                    responses: {
+                        200: { description: 'Deleted' },
+                        401: { description: 'Unauthorized', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+                        403: { description: 'Forbidden', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+                        404: { description: 'Not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+                    },
+                },
+            },
+            '/api/film/rolls': {
+                get: {
+                    summary: 'List film rolls',
+                    parameters: [
+                        { name: 'status', in: 'query', schema: { type: 'string' } },
+                        { name: 'camera_id', in: 'query', schema: { type: 'string', format: 'uuid' } },
+                        { name: 'q', in: 'query', schema: { type: 'string' } },
+                    ],
+                    responses: {
+                        200: {
+                            description: 'List of film rolls',
+                            content: {
+                                'application/json': {
+                                    schema: {
+                                        type: 'object',
+                                        properties: {
+                                            data: { type: 'array', items: { $ref: '#/components/schemas/FilmRoll' } },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+                post: {
+                    summary: 'Create a film roll',
+                    responses: {
+                        201: { description: 'Created film roll' },
+                        400: { description: 'Validation error', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+                    },
+                },
+                put: {
+                    summary: 'Update a film roll',
+                    responses: {
+                        200: { description: 'Updated film roll' },
+                        400: { description: 'Validation error', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+                    },
+                },
+                delete: {
+                    summary: 'Delete a film roll',
+                    parameters: [{ name: 'id', in: 'query', required: true, schema: { type: 'string', format: 'uuid' } }],
+                    responses: {
+                        200: { description: 'Deleted film roll' },
+                    },
+                },
+            },
+            '/api/film/cameras': {
+                get: {
+                    summary: 'List film cameras',
+                    responses: {
+                        200: {
+                            description: 'List of film cameras',
+                            content: {
+                                'application/json': {
+                                    schema: {
+                                        type: 'object',
+                                        properties: {
+                                            data: { type: 'array', items: { $ref: '#/components/schemas/FilmCamera' } },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+                post: {
+                    summary: 'Create a film camera',
+                    responses: {
+                        201: { description: 'Created film camera' },
+                        400: { description: 'Validation error', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+                    },
+                },
+            },
+            '/api/film/dashboard': {
+                get: {
+                    summary: 'Film journal dashboard summary',
+                    responses: {
+                        200: {
+                            description: 'Film summary metrics',
+                            content: {
+                                'application/json': {
+                                    schema: {
+                                        type: 'object',
+                                        properties: {
+                                            data: { $ref: '#/components/schemas/FilmDashboard' },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+            '/api/film/integrations/google/sync': {
+                post: {
+                    summary: 'Sync Google Drive folder image metadata for a film roll',
+                    requestBody: {
+                        required: true,
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    required: ['film_roll_id', 'folder'],
+                                    properties: {
+                                        film_roll_id: { type: 'string', format: 'uuid' },
+                                        folder: { type: 'string', description: 'Google Drive folder URL or ID' },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    responses: {
+                        200: { description: 'Synced Drive metadata' },
+                        400: { description: 'Validation or Drive connection error', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
                     },
                 },
             },

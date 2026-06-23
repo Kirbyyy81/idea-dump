@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getClientForIdentity } from '@/lib/supabase/getClient';
 import { resolveIdentity, AuthError, canModifyLog, canDeleteLog } from '@/lib/auth/resolveIdentity';
+import { deleteAccessibleLog, findAccessibleLog, updateAccessibleLog } from '@/lib/logs/access';
+import { authorizeIdentityModule } from '@/lib/rbac/guards';
 import { UpdateDailyLogInput } from '@/lib/types';
-import { normalizeDailyLogEntry } from '@/lib/dailyLogs';
 
 interface RouteParams {
     params: Promise<{
@@ -14,48 +14,42 @@ interface RouteParams {
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
     try {
         const identity = await resolveIdentity(request);
-        const supabase = await getClientForIdentity(identity);
-
+        const access = await authorizeIdentityModule(identity, 'logs');
+        if ('response' in access) {
+            return access.response;
+        }
         const { id } = await params;
         const body: UpdateDailyLogInput = await request.json();
 
-        // Fetch existing log
-        const { data: existingLog, error: fetchError } = await supabase
-            .from('daily_logs')
-            .select('*')
-            .eq('id', id)
-            .eq('user_id', identity.user_id)
-            .single();
+        if (!body.content || !body.content.date) {
+            return NextResponse.json(
+                { error: 'Validation error', message: 'content.date is required' },
+                { status: 400 }
+            );
+        }
 
-        if (fetchError || !existingLog) {
+        const existingLog = await findAccessibleLog(identity, id);
+        if (!existingLog) {
             return NextResponse.json({ error: 'Not found', message: 'Log entry not found' }, { status: 404 });
         }
 
         // Check permissions
-        if (!canModifyLog(identity, existingLog.source, body.allow_human_overwrite)) {
+        if (!canModifyLog(identity, existingLog.log.source, body.allow_human_overwrite)) {
             return NextResponse.json({
                 error: 'Forbidden',
                 message: 'Agent cannot overwrite human logs without allow_human_overwrite=true'
             }, { status: 403 });
         }
 
-        // Update log (full content replacement)
-        const { data, error } = await supabase
-            .from('daily_logs')
-            .update({
-                content: body.content,
-                effective_date: body.content.date || existingLog.effective_date,
-                updated_at: new Date().toISOString(),
-            })
-            .eq('id', id)
-            .select()
-            .single();
-
-        if (error) {
-            return NextResponse.json({ error: 'Database error', message: error.message }, { status: 500 });
+        const result = await updateAccessibleLog(identity, existingLog, body.content);
+        if (result.error) {
+            return NextResponse.json(
+                { error: result.error, message: result.message },
+                { status: result.status }
+            );
         }
 
-        return NextResponse.json({ data: normalizeDailyLogEntry(data) });
+        return NextResponse.json({ data: result.data }, { status: result.status });
     } catch (err) {
         if (err instanceof AuthError) {
             return NextResponse.json({ error: 'Unauthorized', message: err.message }, { status: err.statusCode });
@@ -68,8 +62,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
     try {
         const identity = await resolveIdentity(request);
-        const supabase = await getClientForIdentity(identity);
-
+        const access = await authorizeIdentityModule(identity, 'logs');
+        if ('response' in access) {
+            return access.response;
+        }
         const { id } = await params;
 
         // Check permissions
@@ -80,17 +76,20 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             }, { status: 403 });
         }
 
-        const { error } = await supabase
-            .from('daily_logs')
-            .delete()
-            .eq('id', id)
-            .eq('user_id', identity.user_id);
-
-        if (error) {
-            return NextResponse.json({ error: 'Database error', message: error.message }, { status: 500 });
+        const existingLog = await findAccessibleLog(identity, id);
+        if (!existingLog) {
+            return NextResponse.json({ error: 'Not found', message: 'Log entry not found' }, { status: 404 });
         }
 
-        return new NextResponse(null, { status: 204 });
+        const result = await deleteAccessibleLog(existingLog);
+        if ('error' in result) {
+            return NextResponse.json(
+                { error: result.error, message: result.message },
+                { status: result.status }
+            );
+        }
+
+        return new NextResponse(null, { status: result.status });
     } catch (err) {
         if (err instanceof AuthError) {
             return NextResponse.json({ error: 'Unauthorized', message: err.message }, { status: err.statusCode });

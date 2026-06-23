@@ -1,4 +1,4 @@
-import { createServerClient } from '@supabase/ssr';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function GET(request: NextRequest) {
@@ -41,13 +41,14 @@ export async function GET(request: NextRequest) {
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
             {
                 cookies: {
-                    getAll() {
-                        return request.cookies.getAll();
+                    get(name: string) {
+                        return request.cookies.get(name)?.value;
                     },
-                    setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
-                        cookiesToSet.forEach(({ name, value, options }) =>
-                            response.cookies.set(name, value, options)
-                        );
+                    set(name: string, value: string, options: CookieOptions) {
+                        response.cookies.set({ name, value, ...options });
+                    },
+                    remove(name: string, options: CookieOptions) {
+                        response.cookies.set({ name, value: '', ...options });
                     },
                 },
             }

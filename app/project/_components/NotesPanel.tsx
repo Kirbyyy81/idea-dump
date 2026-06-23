@@ -7,7 +7,7 @@ import { Plus, Send, StickyNote } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
 import { Textarea } from '@/components/atoms/Textarea';
 import { Card } from '@/components/atoms/Card';
-import { MarkdownRenderer } from '@/components/molecules/MarkdownRenderer';
+import { MarkdownRenderer } from './MarkdownRenderer';
 
 interface NotesPanelProps {
     notes: Note[];

@@ -18,8 +18,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-    title: 'IdeaDump - Personal PRD Management Hub',
-    description: 'Centralize, track, and manage all your PRDs and project ideas in one place.',
+    title: 'IdeaDump',
+    description: 'All in one stop for random ideas',
     icons: {
         icon: [
             { url: '/logo.png', sizes: '32x32', type: 'image/png' },

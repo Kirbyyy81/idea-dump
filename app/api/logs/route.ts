@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getClientForIdentity } from '@/lib/supabase/getClient';
 import { resolveIdentity, AuthError } from '@/lib/auth/resolveIdentity';
+import { createLogForIdentity, listAccessibleLogs } from '@/lib/logs/access';
+import { authorizeIdentityModule } from '@/lib/rbac/guards';
 import { CreateDailyLogInput } from '@/lib/types';
-import { normalizeDailyLogEntry } from '@/lib/dailyLogs';
 
 // Pagination constants
 const DEFAULT_LIMIT = 200;
@@ -13,7 +13,10 @@ const DEFAULT_SORT = 'created_at.desc';
 export async function GET(request: NextRequest) {
     try {
         const identity = await resolveIdentity(request);
-        const supabase = await getClientForIdentity(identity);
+        const access = await authorizeIdentityModule(identity, 'logs');
+        if ('response' in access) {
+            return access.response;
+        }
 
         const { searchParams } = new URL(request.url);
         const from = searchParams.get('from');
@@ -22,41 +25,15 @@ export async function GET(request: NextRequest) {
         const cursor = searchParams.get('cursor');
         const sort = searchParams.get('sort') || DEFAULT_SORT;
 
-        let query = supabase
-            .from('daily_logs')
-            .select('*')
-            .eq('user_id', identity.user_id)
-            .limit(limit);
+        const { data, nextCursor } = await listAccessibleLogs(identity, {
+            cursor,
+            from,
+            limit,
+            sort,
+            to,
+        });
 
-        // Apply date filters
-        if (from) {
-            query = query.gte('effective_date', from);
-        }
-        if (to) {
-            query = query.lte('effective_date', to);
-        }
-
-        // Apply cursor for pagination
-        if (cursor) {
-            query = query.lt('created_at', cursor);
-        }
-
-        // Apply sorting
-        const [sortField, sortOrder] = sort.split('.');
-        query = query.order(sortField, { ascending: sortOrder === 'asc' });
-
-        const { data, error } = await query;
-
-        if (error) {
-            return NextResponse.json({ error: 'Database error', message: error.message }, { status: 500 });
-        }
-
-        const normalized = (data || []).map(normalizeDailyLogEntry);
-
-        // Determine next cursor
-        const nextCursor = data && data.length === limit ? data[data.length - 1].created_at : null;
-
-        return NextResponse.json({ data: normalized, next_cursor: nextCursor });
+        return NextResponse.json({ data, next_cursor: nextCursor });
     } catch (err) {
         if (err instanceof AuthError) {
             // Return empty data for unauthenticated users (demo mode)
@@ -70,37 +47,21 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         const identity = await resolveIdentity(request);
-        const supabase = await getClientForIdentity(identity);
-
+        const access = await authorizeIdentityModule(identity, 'logs');
+        if ('response' in access) {
+            return access.response;
+        }
         const body: CreateDailyLogInput = await request.json();
+        const result = await createLogForIdentity(identity, body);
 
-        // Validate content
-        if (!body.content || !body.content.date) {
-            return NextResponse.json({ error: 'Validation error', message: 'content.date is required' }, { status: 400 });
+        if (result.error) {
+            return NextResponse.json(
+                { error: result.error, message: result.message },
+                { status: result.status }
+            );
         }
 
-        // Determine effective_date
-        const effectiveDate = body.effective_date || body.content.date;
-
-        // Determine source based on identity
-        const source = identity.role === 'agent' ? 'agent' : 'human';
-
-        const { data, error } = await supabase
-            .from('daily_logs')
-            .insert({
-                user_id: identity.user_id,
-                source,
-                content: body.content,
-                effective_date: effectiveDate,
-            })
-            .select()
-            .single();
-
-        if (error) {
-            return NextResponse.json({ error: 'Database error', message: error.message }, { status: 500 });
-        }
-
-        return NextResponse.json({ data: normalizeDailyLogEntry(data) }, { status: 201 });
+        return NextResponse.json({ data: result.data }, { status: result.status });
     } catch (err) {
         if (err instanceof AuthError) {
             return NextResponse.json({ error: 'Unauthorized', message: err.message }, { status: err.statusCode });

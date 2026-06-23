@@ -35,3 +35,4 @@ Thumbs.db
 
 # Agent secrets
 .agent/**/.wpl_api_key
+AGENTS.md

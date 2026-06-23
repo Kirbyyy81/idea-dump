@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { resolveIdentity, AuthError } from '@/lib/auth/resolveIdentity';
+import { listAccessibleLogs } from '@/lib/logs/access';
+import { authorizeIdentityModule } from '@/lib/rbac/guards';
 import { DailyLogEntry } from '@/lib/types';
-import { normalizeDailyLogEntry } from '@/lib/dailyLogs';
 
 interface ExportRequest {
     from: string;
@@ -13,6 +13,10 @@ interface ExportRequest {
 export async function POST(request: NextRequest) {
     try {
         const identity = await resolveIdentity(request);
+        const access = await authorizeIdentityModule(identity, 'logs');
+        if ('response' in access) {
+            return access.response;
+        }
 
         // Only admin can export
         if (identity.role !== 'admin') {
@@ -22,7 +26,6 @@ export async function POST(request: NextRequest) {
             }, { status: 403 });
         }
 
-        const supabase = await createClient();
         const body: ExportRequest = await request.json();
 
         if (!body.from || !body.to) {
@@ -32,23 +35,12 @@ export async function POST(request: NextRequest) {
             }, { status: 400 });
         }
 
-        // Fetch logs in date range
-        const { data: logs, error } = await supabase
-            .from('daily_logs')
-            .select('*')
-            .eq('user_id', identity.user_id)
-            .gte('effective_date', body.from)
-            .lte('effective_date', body.to)
-            .order('effective_date', { ascending: true })
-            .order('created_at', { ascending: true });
-
-        if (error) {
-            return NextResponse.json({ error: 'Database error', message: error.message }, { status: 500 });
-        }
-
-        // Generate markdown table
-        const normalized = (logs || []).map(normalizeDailyLogEntry);
-        const markdown = generateMarkdownTable(normalized);
+        const { data } = await listAccessibleLogs(identity, {
+            from: body.from,
+            sort: 'effective_date.asc',
+            to: body.to,
+        });
+        const markdown = generateMarkdownTable(data);
 
         return NextResponse.json({ markdown });
     } catch (err) {
@@ -57,6 +49,11 @@ export async function POST(request: NextRequest) {
         }
         return NextResponse.json({ error: 'Internal error', message: 'An unexpected error occurred' }, { status: 500 });
     }
+}
+
+function formatDateDDMMYYYY(dateStr: string): string {
+    const [year, month, day] = dateStr.split('-');
+    return `${day}/${month}/${year}`;
 }
 
 function generateMarkdownTable(logs: DailyLogEntry[]): string {
@@ -69,15 +66,25 @@ function generateMarkdownTable(logs: DailyLogEntry[]): string {
 
     const rows = logs.map(log => {
         const content = log.content || ({ date: log.effective_date } as DailyLogEntry['content']);
-        const dateDay = content.day ? `${content.date} / ${content.day}` : content.date;
+        const formattedDate = formatDateDDMMYYYY(content.date || log.effective_date);
+        const dateDay = content.day ? `${content.day} ${formattedDate}` : formattedDate;
         const task = content.operation_task || '';
+        
+        // Convert comma-separated tools to bullet points
         const tools = content.tools_used || '';
+        const formattedTools = tools
+            .split(',')
+            .map(t => t.trim())
+            .filter(Boolean)
+            .map(t => `• ${t}`)
+            .join('<br>');
+        
         const lesson = content.lesson_learned || '';
 
         // Escape pipe characters in content
         const escape = (str: string) => str.replace(/\|/g, '\\|').replace(/\n/g, ' ');
 
-        return `| ${escape(dateDay)} | ${escape(task)} | ${escape(tools)} | ${escape(lesson)} |`;
+        return `| ${escape(dateDay)} | ${escape(task)} | ${escape(formattedTools)} | ${escape(lesson)} |`;
     });
 
     return [header, separator, ...rows].join('\n');
