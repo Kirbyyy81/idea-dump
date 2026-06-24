@@ -5,6 +5,6 @@ export default async function LogViewerLayout({
 }: {
     children: React.ReactNode;
 }) {
-    await requirePageModuleAccess('logs');
+    await requirePageModuleAccess('log_viewer');
     return children;
 }

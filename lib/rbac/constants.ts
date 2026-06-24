@@ -7,6 +7,7 @@ export const APP_MODULE_SLUGS = [
     'projects',
     'tickets',
     'logs',
+    'log_viewer',
     'api',
     'access_control',
     'article_creation',
@@ -21,6 +22,7 @@ export const MANAGED_MODULE_SLUGS: AppModuleSlug[] = [
     'projects',
     'tickets',
     'logs',
+    'log_viewer',
     'api',
     'access_control',
     'article_creation',
@@ -33,6 +35,7 @@ export const MODULE_PATHS: Record<AppModuleSlug, string> = {
     projects: '/projects',
     tickets: '/tickets',
     logs: '/logs',
+    log_viewer: '/log-viewer',
     api: '/api-tools',
     access_control: '/settings/access',
     article_creation: '/article-creation',
@@ -46,15 +49,16 @@ export const MODULE_REDIRECT_ORDER: AppModuleSlug[] = [
     'tickets',
     'film_journal',
     'logs',
+    'log_viewer',
     'api',
     'access_control',
     'settings',
 ];
 
 export const DEFAULT_ROLE_MODULES: Record<BuiltInAppRoleSlug, AppModuleSlug[]> = {
-    owner: ['projects', 'tickets', 'logs', 'api', 'access_control', 'article_creation', 'film_journal'],
-    admin: ['projects', 'tickets', 'logs', 'api', 'access_control', 'article_creation', 'film_journal'],
-    member: ['tickets', 'logs', 'api', 'film_journal'],
+    owner: ['projects', 'tickets', 'logs', 'log_viewer', 'api', 'access_control', 'article_creation', 'film_journal'],
+    admin: ['projects', 'tickets', 'logs', 'log_viewer', 'api', 'access_control', 'article_creation', 'film_journal'],
+    member: ['tickets', 'logs', 'log_viewer', 'api', 'film_journal'],
 };
 
 export const MODULE_LABELS: Record<AppModuleSlug, string> = {
@@ -62,6 +66,7 @@ export const MODULE_LABELS: Record<AppModuleSlug, string> = {
     projects: 'Projects',
     tickets: 'Tickets',
     logs: 'Weekly Logs',
+    log_viewer: 'Log Viewer',
     api: 'API',
     access_control: 'Access Control',
     article_creation: 'Article Creation',
