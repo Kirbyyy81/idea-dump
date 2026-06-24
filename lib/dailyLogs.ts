@@ -59,10 +59,13 @@ export function normalizeDailyLogEntry(row: unknown): DailyLogEntry {
     const normalizedEffectiveDate = content.date || effectiveDate || '';
 
     return {
-        ...(raw as DailyLogEntry),
+        id: asString(raw.id) ?? '',
+        user_id: asString(raw.user_id) ?? '',
         source: coerceLogSource(raw.source),
         content,
         effective_date: normalizedEffectiveDate,
+        created_at: asString(raw.created_at) ?? '',
+        updated_at: asString(raw.updated_at) ?? '',
     };
 }
 
