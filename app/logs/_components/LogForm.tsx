@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { DailyLogContent } from '@/lib/types';
+import { LogContentFields } from './LogContentFields';
 import { Save } from 'lucide-react';
 
 interface LogFormProps {
@@ -49,55 +50,7 @@ export function LogForm({
     return (
         <Card className="p-6 mb-6">
             <h3 className="font-heading text-lg mb-4">{title}</h3>
-            <div className="grid grid-cols-2 gap-4 mb-4">
-                <div>
-                    <label className="block text-sm text-text-secondary mb-1">Date</label>
-                    <input
-                        type="date"
-                        value={content.date}
-                        onChange={(e) => setContent({ ...content, date: e.target.value })}
-                        className="input w-full"
-                    />
-                </div>
-                <div>
-                    <label className="block text-sm text-text-secondary mb-1">Day</label>
-                    <input
-                        type="text"
-                        value={content.day || ''}
-                        onChange={(e) => setContent({ ...content, day: e.target.value })}
-                        className="input w-full"
-                        placeholder="e.g., Monday"
-                    />
-                </div>
-            </div>
-            <div className="mb-4">
-                <label className="block text-sm text-text-secondary mb-1">Operation / Task</label>
-                <textarea
-                    value={content.operation_task || ''}
-                    onChange={(e) => setContent({ ...content, operation_task: e.target.value })}
-                    className="input w-full min-h-[80px] resize-y"
-                    placeholder="What did you work on?"
-                />
-            </div>
-            <div className="mb-4">
-                <label className="block text-sm text-text-secondary mb-1">Tools Used</label>
-                <input
-                    type="text"
-                    value={content.tools_used || ''}
-                    onChange={(e) => setContent({ ...content, tools_used: e.target.value })}
-                    className="input w-full"
-                    placeholder="e.g., VSCode, Supabase, Postman"
-                />
-            </div>
-            <div className="mb-4">
-                <label className="block text-sm text-text-secondary mb-1">Lesson Learned</label>
-                <textarea
-                    value={content.lesson_learned || ''}
-                    onChange={(e) => setContent({ ...content, lesson_learned: e.target.value })}
-                    className="input w-full min-h-[60px] resize-y"
-                    placeholder="What did you learn today?"
-                />
-            </div>
+            <LogContentFields content={content} onChange={setContent} />
             <div className="flex gap-2">
                 <Button variant="primary" onClick={handleSubmit} isLoading={isLoading} icon={<Save size={16} />}>
                     Save Entry

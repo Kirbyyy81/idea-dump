@@ -35,23 +35,6 @@ function parseSort(sort?: string | null) {
     return { ascending, field };
 }
 
-function compareLogValues(left: DailyLogEntry, right: DailyLogEntry, field: string, ascending: boolean) {
-    const leftValue = String(left[field as keyof DailyLogEntry] || '');
-    const rightValue = String(right[field as keyof DailyLogEntry] || '');
-    const valueOrder = leftValue.localeCompare(rightValue);
-
-    if (valueOrder !== 0) {
-        return ascending ? valueOrder : -valueOrder;
-    }
-
-    return right.created_at.localeCompare(left.created_at);
-}
-
-function sortLogs(logs: DailyLogEntry[], sort?: string | null) {
-    const { ascending, field } = parseSort(sort);
-    return logs.slice().sort((left, right) => compareLogValues(left, right, field, ascending));
-}
-
 async function fetchLogsForIdentity(identity: ResolvedIdentity, options: LogListOptions) {
     const client = createAdminClient();
     const { ascending, field } = parseSort(options.sort);
@@ -91,14 +74,13 @@ async function fetchLogsForIdentity(identity: ResolvedIdentity, options: LogList
 export async function listAccessibleLogs(identity: ResolvedIdentity, options: LogListOptions) {
     const logs = await fetchLogsForIdentity(identity, options);
 
-    const sorted = sortLogs(logs, options.sort);
-    const merged = options.limit !== undefined ? sorted.slice(0, options.limit) : sorted;
-    const nextCursor = options.limit !== undefined && merged.length === options.limit
-        ? merged[merged.length - 1].created_at
+    // DB already handles sort and limit; cursor is derived from the sorted results
+    const nextCursor = options.limit !== undefined && logs.length === options.limit
+        ? logs[logs.length - 1].created_at
         : null;
 
     return {
-        data: merged,
+        data: logs,
         nextCursor,
     };
 }

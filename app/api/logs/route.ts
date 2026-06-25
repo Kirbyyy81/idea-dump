@@ -21,7 +21,8 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         const from = searchParams.get('from');
         const to = searchParams.get('to');
-        const limit = Math.min(parseInt(searchParams.get('limit') || String(DEFAULT_LIMIT)), MAX_LIMIT);
+        const parsedLimit = parseInt(searchParams.get('limit') || String(DEFAULT_LIMIT), 10);
+        const limit = Math.min(Number.isNaN(parsedLimit) ? DEFAULT_LIMIT : parsedLimit, MAX_LIMIT);
         const cursor = searchParams.get('cursor');
         const sort = searchParams.get('sort') || DEFAULT_SORT;
 
@@ -39,6 +40,7 @@ export async function GET(request: NextRequest) {
             // Return empty data for unauthenticated users (demo mode)
             return NextResponse.json({ data: [], next_cursor: null });
         }
+        console.error('[GET /api/logs] Unexpected error:', err);
         return NextResponse.json({ error: 'Internal error', message: 'An unexpected error occurred' }, { status: 500 });
     }
 }
@@ -66,6 +68,7 @@ export async function POST(request: NextRequest) {
         if (err instanceof AuthError) {
             return NextResponse.json({ error: 'Unauthorized', message: err.message }, { status: err.statusCode });
         }
+        console.error('[POST /api/logs] Unexpected error:', err);
         return NextResponse.json({ error: 'Internal error', message: 'An unexpected error occurred' }, { status: 500 });
     }
 }

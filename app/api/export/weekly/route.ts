@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
         if (err instanceof AuthError) {
             return NextResponse.json({ error: 'Unauthorized', message: err.message }, { status: err.statusCode });
         }
+        console.error('[POST /api/export/weekly] Unexpected error:', err);
         return NextResponse.json({ error: 'Internal error', message: 'An unexpected error occurred' }, { status: 500 });
     }
 }

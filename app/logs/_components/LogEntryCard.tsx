@@ -3,6 +3,7 @@
 import { DailyLogEntry, DailyLogContent } from '@/lib/types';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
+import { LogContentFields } from './LogContentFields';
 import { Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -36,51 +37,7 @@ export function LogEntryCard({
         return (
             <Card className="p-4">
                 <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <label className="block text-xs text-text-muted mb-1">Date</label>
-                            <input
-                                type="date"
-                                value={editContent.date}
-                                onChange={(e) => onEditContentChange({ ...editContent, date: e.target.value })}
-                                className="input w-full text-sm py-1"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs text-text-muted mb-1">Day</label>
-                            <input
-                                type="text"
-                                value={editContent.day || ''}
-                                onChange={(e) => onEditContentChange({ ...editContent, day: e.target.value })}
-                                className="input w-full text-sm py-1"
-                            />
-                        </div>
-                    </div>
-                    <div>
-                        <label className="block text-xs text-text-muted mb-1">Task</label>
-                        <textarea
-                            value={editContent.operation_task || ''}
-                            onChange={(e) => onEditContentChange({ ...editContent, operation_task: e.target.value })}
-                            className="input w-full text-sm py-1 min-h-[60px]"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-xs text-text-muted mb-1">Tools</label>
-                        <input
-                            type="text"
-                            value={editContent.tools_used || ''}
-                            onChange={(e) => onEditContentChange({ ...editContent, tools_used: e.target.value })}
-                            className="input w-full text-sm py-1"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-xs text-text-muted mb-1">Lesson</label>
-                        <textarea
-                            value={editContent.lesson_learned || ''}
-                            onChange={(e) => onEditContentChange({ ...editContent, lesson_learned: e.target.value })}
-                            className="input w-full text-sm py-1 min-h-[40px]"
-                        />
-                    </div>
+                    <LogContentFields content={editContent} onChange={onEditContentChange} compact />
                     <div className="flex gap-2">
                         <Button variant="primary" onClick={onSaveEdit} isLoading={isSaving} className="text-sm py-1">
                             Save
