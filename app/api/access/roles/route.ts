@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { canAccessModule, getSessionUserAppAccess, isManagedModuleSlug } from '@/lib/rbac/access';
-import { ACCESS_MANAGER_ROLES } from '@/lib/rbac/constants';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 interface CreateRoleBody {
@@ -27,7 +26,7 @@ export async function POST(request: NextRequest) {
 
     if (
         !canAccessModule(session.access, 'access_control') ||
-        !ACCESS_MANAGER_ROLES.includes(session.access.role)
+        !session.access.canManageAccess
     ) {
         return NextResponse.json(
             { error: 'Forbidden', message: 'You do not have access to this module' },

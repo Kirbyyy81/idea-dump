@@ -2,12 +2,10 @@ import { User } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import {
-    ACCESS_MANAGER_ROLES,
     ALWAYS_ALLOWED_MODULES,
     APP_MODULE_SLUGS,
     AppModuleSlug,
     AppRoleSlug,
-    DEFAULT_ROLE_MODULES,
     DEFAULT_APP_ROLE,
     MANAGED_MODULE_SLUGS,
     MODULE_PATHS,
@@ -98,12 +96,6 @@ export async function getUserAppAccess(userId: string): Promise<UserAppAccess> {
     const allowed = new Set<AppModuleSlug>(ALWAYS_ALLOWED_MODULES);
     const roleModules = (roleModulesResult.data || []) as RoleModuleRow[];
 
-    if (roleModules.length === 0) {
-        for (const moduleSlug of DEFAULT_ROLE_MODULES[resolvedRole as keyof typeof DEFAULT_ROLE_MODULES] || []) {
-            allowed.add(moduleSlug);
-        }
-    }
-
     for (const row of roleModules) {
         const moduleSlug = unwrapMaybeArray(row.DIM_modules)?.modules;
         if (isAppModuleSlug(moduleSlug)) {
@@ -130,7 +122,7 @@ export async function getUserAppAccess(userId: string): Promise<UserAppAccess> {
 
     return {
         allowedModules: APP_MODULE_SLUGS.filter((slug) => allowed.has(slug)),
-        canManageAccess: ACCESS_MANAGER_ROLES.includes(resolvedRole),
+        canManageAccess: allowed.has('access_control'),
         overrides,
         role: resolvedRole,
         userId,
@@ -182,15 +174,7 @@ export async function getRoleModuleAssignments(): Promise<AccessAdminRoleRecord[
 
     return orderedRoles.map((roleRow) => {
         const roleSlug = roleRow.role;
-        const roleModulesForRole = roleRow ? modulesByRoleId.get(roleRow.id) : null;
-        const moduleSet =
-            roleModulesForRole && roleModulesForRole.size > 0
-                ? roleModulesForRole
-                : new Set(
-                    (DEFAULT_ROLE_MODULES[roleSlug as keyof typeof DEFAULT_ROLE_MODULES] || []).filter((moduleSlug) =>
-                        isManagedModuleSlug(moduleSlug)
-                    )
-                );
+        const moduleSet = modulesByRoleId.get(roleRow.id) ?? new Set<AppModuleSlug>();
 
         return {
             modules: MANAGED_MODULE_SLUGS.filter((moduleSlug) => moduleSet.has(moduleSlug)),

@@ -28,7 +28,6 @@ export const MANAGED_MODULE_SLUGS: AppModuleSlug[] = [
     'article_creation',
     'film_journal',
 ];
-export const ACCESS_MANAGER_ROLES: AppRoleSlug[] = ['owner', 'admin'];
 
 export const MODULE_PATHS: Record<AppModuleSlug, string> = {
     dashboard: '/dashboard',
@@ -54,12 +53,6 @@ export const MODULE_REDIRECT_ORDER: AppModuleSlug[] = [
     'access_control',
     'settings',
 ];
-
-export const DEFAULT_ROLE_MODULES: Record<BuiltInAppRoleSlug, AppModuleSlug[]> = {
-    owner: ['projects', 'tickets', 'logs', 'log_viewer', 'api', 'access_control', 'article_creation', 'film_journal'],
-    admin: ['projects', 'tickets', 'logs', 'log_viewer', 'api', 'access_control', 'article_creation', 'film_journal'],
-    member: ['tickets', 'logs', 'log_viewer', 'api', 'film_journal'],
-};
 
 export const MODULE_LABELS: Record<AppModuleSlug, string> = {
     dashboard: 'Dashboard',

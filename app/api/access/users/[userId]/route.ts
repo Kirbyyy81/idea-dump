@@ -4,7 +4,7 @@ import {
     getSessionUserAppAccess,
     isManagedModuleSlug,
 } from '@/lib/rbac/access';
-import { ACCESS_MANAGER_ROLES, AppModuleSlug } from '@/lib/rbac/constants';
+import { AppModuleSlug } from '@/lib/rbac/constants';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { ModuleOverrideEffect } from '@/lib/rbac/types';
 
@@ -27,7 +27,7 @@ export async function PUT(
 
     if (
         !canAccessModule(session.access, 'access_control') ||
-        !ACCESS_MANAGER_ROLES.includes(session.access.role)
+        !session.access.canManageAccess
     ) {
         return NextResponse.json(
             { error: 'Forbidden', message: 'You do not have access to this module' },
