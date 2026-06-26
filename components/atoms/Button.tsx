@@ -26,7 +26,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
             >
                 {isLoading ? (
                     <>
-                        <LoaderOne size="sm" />
+                        <LoaderOne size="sm" dotClassName="bg-white" />
                         <span className="sr-only">{children}</span>
                     </>
                 ) : icon ? (

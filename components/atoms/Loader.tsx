@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 
 interface LoaderProps {
     className?: string;
+    dotClassName?: string;
     size?: 'sm' | 'md' | 'lg';
 }
 
@@ -11,7 +12,7 @@ interface LoaderProps {
  * LoaderOne - A simple, elegant loader inspired by Aceternity UI
  * Three bouncing dots with staggered animation
  */
-export function LoaderOne({ className, size = 'md' }: LoaderProps) {
+export function LoaderOne({ className, dotClassName, size = 'md' }: LoaderProps) {
     const sizeClasses = {
         sm: 'h-1.5 w-1.5',
         md: 'h-2.5 w-2.5',
@@ -29,21 +30,24 @@ export function LoaderOne({ className, size = 'md' }: LoaderProps) {
             <div
                 className={cn(
                     'rounded-full bg-accent-rose animate-bounce',
-                    sizeClasses[size]
+                    sizeClasses[size],
+                    dotClassName
                 )}
                 style={{ animationDelay: '0ms', animationDuration: '600ms' }}
             />
             <div
                 className={cn(
                     'rounded-full bg-accent-rose animate-bounce',
-                    sizeClasses[size]
+                    sizeClasses[size],
+                    dotClassName
                 )}
                 style={{ animationDelay: '150ms', animationDuration: '600ms' }}
             />
             <div
                 className={cn(
                     'rounded-full bg-accent-rose animate-bounce',
-                    sizeClasses[size]
+                    sizeClasses[size],
+                    dotClassName
                 )}
                 style={{ animationDelay: '300ms', animationDuration: '600ms' }}
             />
