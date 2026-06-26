@@ -15,6 +15,7 @@ export async function GET() {
         data: {
             allowed_modules: session.access.allowedModules,
             can_manage_access: session.access.canManageAccess,
+            modules: session.access.modules,
             overrides: session.access.overrides,
             role: session.access.role,
             user_id: session.user.id,

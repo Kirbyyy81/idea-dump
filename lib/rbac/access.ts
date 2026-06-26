@@ -2,18 +2,12 @@ import { User } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import {
-    ACCESS_MANAGER_ROLES,
-    ALWAYS_ALLOWED_MODULES,
     APP_MODULE_SLUGS,
     AppModuleSlug,
     AppRoleSlug,
-    DEFAULT_ROLE_MODULES,
     DEFAULT_APP_ROLE,
-    MANAGED_MODULE_SLUGS,
-    MODULE_PATHS,
-    MODULE_REDIRECT_ORDER,
 } from '@/lib/rbac/constants';
-import { AccessAdminRoleRecord, ModuleOverrideEffect, UserAppAccess } from '@/lib/rbac/types';
+import { AccessAdminRoleRecord, AppModuleMetadata, ModuleOverrideEffect, UserAppAccess } from '@/lib/rbac/types';
 
 interface RoleRow {
     id: string;
@@ -28,6 +22,18 @@ interface OverrideRow {
 interface RoleModuleRow {
     role_id: string;
     DIM_modules: { modules: AppModuleSlug } | { modules: AppModuleSlug }[] | null;
+}
+
+interface ModuleRow {
+    description: string | null;
+    enabled: boolean | null;
+    icon: string | null;
+    is_always_allowed: boolean | null;
+    is_managed: boolean | null;
+    modules: string;
+    name: string;
+    path: string | null;
+    sort_order: number | null;
 }
 
 export async function getSessionUser() {
@@ -51,15 +57,18 @@ export async function getSessionUserAppAccess() {
 export async function getUserAppAccess(userId: string): Promise<UserAppAccess> {
     const admin = createAdminClient();
 
-    const { data: roles, error: rolesError } = await admin
+    const [rolesResult, modules] = await Promise.all([
+        admin
         .from('DIM_roles')
-        .select('id, role');
+            .select('id, role'),
+        getAppModules(),
+    ]);
 
-    if (rolesError) {
-        throw new Error(rolesError.message);
+    if (rolesResult.error) {
+        throw new Error(rolesResult.error.message);
     }
 
-    const typedRoles = (roles || []) as RoleRow[];
+    const typedRoles = (rolesResult.data || []) as RoleRow[];
     const roleBySlug = new Map(typedRoles.map((role) => [role.role, role]));
 
     const { data: userRoleRow, error: userRoleError } = await admin
@@ -95,14 +104,9 @@ export async function getUserAppAccess(userId: string): Promise<UserAppAccess> {
         throw new Error(overridesResult.error.message);
     }
 
-    const allowed = new Set<AppModuleSlug>(ALWAYS_ALLOWED_MODULES);
+    const alwaysAllowed = modules.filter((moduleRow) => moduleRow.isAlwaysAllowed).map((moduleRow) => moduleRow.slug);
+    const allowed = new Set<AppModuleSlug>(alwaysAllowed);
     const roleModules = (roleModulesResult.data || []) as RoleModuleRow[];
-
-    if (roleModules.length === 0) {
-        for (const moduleSlug of DEFAULT_ROLE_MODULES[resolvedRole as keyof typeof DEFAULT_ROLE_MODULES] || []) {
-            allowed.add(moduleSlug);
-        }
-    }
 
     for (const row of roleModules) {
         const moduleSlug = unwrapMaybeArray(row.DIM_modules)?.modules;
@@ -124,13 +128,16 @@ export async function getUserAppAccess(userId: string): Promise<UserAppAccess> {
         }
     }
 
-    for (const moduleSlug of ALWAYS_ALLOWED_MODULES) {
+    for (const moduleSlug of alwaysAllowed) {
         allowed.add(moduleSlug);
     }
 
+    const allowedModules = modules.filter((moduleRow) => allowed.has(moduleRow.slug));
+
     return {
-        allowedModules: APP_MODULE_SLUGS.filter((slug) => allowed.has(slug)),
-        canManageAccess: ACCESS_MANAGER_ROLES.includes(resolvedRole),
+        allowedModules: allowedModules.map((moduleRow) => moduleRow.slug),
+        canManageAccess: allowed.has('access_control'),
+        modules: allowedModules,
         overrides,
         role: resolvedRole,
         userId,
@@ -140,16 +147,19 @@ export async function getUserAppAccess(userId: string): Promise<UserAppAccess> {
 export async function getRoleModuleAssignments(): Promise<AccessAdminRoleRecord[]> {
     const admin = createAdminClient();
 
-    const { data: roles, error: rolesError } = await admin
-        .from('DIM_roles')
-        .select('id, role')
-        .order('role', { ascending: true });
+    const [rolesResult, managedModules] = await Promise.all([
+        admin
+            .from('DIM_roles')
+            .select('id, role')
+            .order('role', { ascending: true }),
+        getManagedAppModules(),
+    ]);
 
-    if (rolesError) {
-        throw new Error(rolesError.message);
+    if (rolesResult.error) {
+        throw new Error(rolesResult.error.message);
     }
 
-    const typedRoles = (roles || []) as RoleRow[];
+    const typedRoles = (rolesResult.data || []) as RoleRow[];
     const roleIds = typedRoles.map((role) => role.id);
 
     const { data: roleModules, error: roleModulesError } = roleIds.length
@@ -182,21 +192,35 @@ export async function getRoleModuleAssignments(): Promise<AccessAdminRoleRecord[
 
     return orderedRoles.map((roleRow) => {
         const roleSlug = roleRow.role;
-        const roleModulesForRole = roleRow ? modulesByRoleId.get(roleRow.id) : null;
-        const moduleSet =
-            roleModulesForRole && roleModulesForRole.size > 0
-                ? roleModulesForRole
-                : new Set(
-                    (DEFAULT_ROLE_MODULES[roleSlug as keyof typeof DEFAULT_ROLE_MODULES] || []).filter((moduleSlug) =>
-                        isManagedModuleSlug(moduleSlug)
-                    )
-                );
+        const moduleSet = modulesByRoleId.get(roleRow.id) ?? new Set<AppModuleSlug>();
 
         return {
-            modules: MANAGED_MODULE_SLUGS.filter((moduleSlug) => moduleSet.has(moduleSlug)),
+            modules: managedModules.map((moduleRow) => moduleRow.slug).filter((moduleSlug) => moduleSet.has(moduleSlug)),
             role: roleSlug,
         };
     });
+}
+
+export async function getAppModules(): Promise<AppModuleMetadata[]> {
+    const admin = createAdminClient();
+    const { data, error } = await admin
+        .from('DIM_modules')
+        .select('modules, name, path, sort_order, is_managed, is_always_allowed, icon, description, enabled')
+        .eq('enabled', true)
+        .order('sort_order', { ascending: true })
+        .order('name', { ascending: true });
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    return ((data || []) as ModuleRow[])
+        .map(toModuleMetadata)
+        .filter((moduleRow): moduleRow is AppModuleMetadata => Boolean(moduleRow));
+}
+
+export async function getManagedAppModules(): Promise<AppModuleMetadata[]> {
+    return (await getAppModules()).filter((moduleRow) => moduleRow.isManaged);
 }
 
 export function canAccessModule(access: UserAppAccess, moduleSlug: AppModuleSlug) {
@@ -204,11 +228,7 @@ export function canAccessModule(access: UserAppAccess, moduleSlug: AppModuleSlug
 }
 
 export function getFirstAllowedModulePath(access: UserAppAccess) {
-    const firstModule =
-        MODULE_REDIRECT_ORDER.find((moduleSlug) => canAccessModule(access, moduleSlug)) ??
-        'settings';
-
-    return MODULE_PATHS[firstModule];
+    return access.modules[0]?.path ?? '/settings';
 }
 
 export function normalizeRoleSlug(value?: string | null): AppRoleSlug {
@@ -220,7 +240,7 @@ export function isAppModuleSlug(value?: string | null): value is AppModuleSlug {
 }
 
 export function isManagedModuleSlug(value?: string | null): value is AppModuleSlug {
-    return MANAGED_MODULE_SLUGS.includes(value as AppModuleSlug);
+    return isAppModuleSlug(value);
 }
 
 export function getDisplayName(user: User) {
@@ -237,4 +257,25 @@ export function getDisplayName(user: User) {
 function unwrapMaybeArray<T>(value: T | T[] | null | undefined): T | null {
     if (!value) return null;
     return Array.isArray(value) ? value[0] ?? null : value;
+}
+
+function toModuleMetadata(row: ModuleRow): AppModuleMetadata | null {
+    if (!isAppModuleSlug(row.modules) || !isSafeInternalPath(row.path)) {
+        return null;
+    }
+
+    return {
+        description: row.description,
+        icon: row.icon,
+        isAlwaysAllowed: Boolean(row.is_always_allowed),
+        isManaged: Boolean(row.is_managed),
+        label: row.name,
+        path: row.path,
+        slug: row.modules,
+        sortOrder: row.sort_order ?? 0,
+    };
+}
+
+function isSafeInternalPath(value?: string | null): value is string {
+    return Boolean(value && value.startsWith('/') && !value.startsWith('//') && !value.includes('://'));
 }
