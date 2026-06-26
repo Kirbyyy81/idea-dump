@@ -6,6 +6,7 @@ import {
     ShieldCheck,
     BookOpen,
     ClipboardList,
+    FileSearch,
     FilePenLine,
     Film,
     FolderKanban,
@@ -37,6 +38,10 @@ const MODULE_CARD_META: Partial<Record<AppModuleSlug, { description: string; ico
     logs: {
         description: 'View, add, edit, and export your weekly productivity logs.',
         icon: ClipboardList,
+    },
+    log_viewer: {
+        description: 'Search and review captured logs across the workspace.',
+        icon: FileSearch,
     },
     tickets: {
         description: 'Raise tickets, review your own queue, and manage ticket workflows across the workspace.',
@@ -115,6 +120,7 @@ export default function DashboardPage() {
         () =>
             allowedModules
                 .filter((moduleSlug) => moduleSlug !== 'dashboard')
+                .filter((moduleSlug) => MODULE_CARD_META[moduleSlug])
                 .map((moduleSlug) => ({
                     ...MODULE_CARD_META[moduleSlug]!,
                     href: MODULE_PATHS[moduleSlug],
