@@ -4,7 +4,7 @@ import {
     getSessionUserAppAccess,
     isManagedModuleSlug,
 } from '@/lib/rbac/access';
-import { ACCESS_MANAGER_ROLES } from '@/lib/rbac/constants';
+import { ACCESS_MANAGER_ROLES, AppModuleSlug } from '@/lib/rbac/constants';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { ModuleOverrideEffect } from '@/lib/rbac/types';
 
@@ -39,9 +39,24 @@ export async function PUT(
     const body = (await request.json()) as UpdateAccessBody;
     const admin = createAdminClient();
     const roleSlug = body.role?.trim();
+    const overrides = body.overrides ?? {};
+    const overrideEntries = Object.entries(overrides);
 
     if (!roleSlug) {
         return NextResponse.json({ error: 'Validation error', message: 'Invalid role' }, { status: 400 });
+    }
+
+    const hasInvalidOverride = overrideEntries.some(
+        ([moduleSlug, effect]) =>
+            !isManagedModuleSlug(moduleSlug) ||
+            (effect !== 'allow' && effect !== 'deny' && effect !== null)
+    );
+
+    if (hasInvalidOverride) {
+        return NextResponse.json(
+            { error: 'Validation error', message: 'Invalid module override' },
+            { status: 400 }
+        );
     }
 
     const { data: roleRow, error: roleError } = await admin
@@ -54,6 +69,36 @@ export async function PUT(
         return NextResponse.json({ error: 'Validation error', message: 'Invalid role' }, { status: 400 });
     }
 
+    const overrideModuleSlugs = Array.from(new Set(overrideEntries.map(([moduleSlug]) => moduleSlug)));
+    const moduleRowsBySlug = new Map<AppModuleSlug, string>();
+
+    if (overrideModuleSlugs.length > 0) {
+        const { data: moduleRows, error: moduleError } = await admin
+            .from('DIM_modules')
+            .select('id, modules')
+            .in('modules', overrideModuleSlugs);
+
+        if (moduleError) {
+            return NextResponse.json(
+                { error: 'Failed to load modules', message: moduleError.message },
+                { status: 500 }
+            );
+        }
+
+        for (const moduleRow of (moduleRows || []) as Array<{ id: string; modules: string }>) {
+            if (isManagedModuleSlug(moduleRow.modules)) {
+                moduleRowsBySlug.set(moduleRow.modules, moduleRow.id);
+            }
+        }
+
+        if (moduleRowsBySlug.size !== overrideModuleSlugs.length) {
+            return NextResponse.json(
+                { error: 'Validation error', message: 'Invalid module override' },
+                { status: 400 }
+            );
+        }
+    }
+
     const { error: upsertRoleError } = await admin
         .from('BRIDGE_user_roles')
         .upsert({ user_id: userId, role_id: roleRow.id }, { onConflict: 'user_id' });
@@ -62,28 +107,17 @@ export async function PUT(
         return NextResponse.json({ error: 'Failed to update role', message: upsertRoleError.message }, { status: 500 });
     }
 
-    const overrides = body.overrides ?? {};
-    for (const [moduleSlug, effect] of Object.entries(overrides)) {
-        if (!isManagedModuleSlug(moduleSlug)) {
-            continue;
-        }
+    for (const [moduleSlug, effect] of overrideEntries) {
+        if (!isManagedModuleSlug(moduleSlug)) continue;
+        const moduleId = moduleRowsBySlug.get(moduleSlug);
+        if (!moduleId) continue;
 
-        const { data: moduleRow, error: moduleError } = await admin
-            .from('DIM_modules')
-            .select('id')
-            .eq('modules', moduleSlug)
-            .single();
-
-        if (moduleError || !moduleRow) {
-            continue;
-        }
-
-        if (!effect) {
+        if (effect === null) {
             const { error: deleteError } = await admin
                 .from('app_user_module_overrides')
                 .delete()
                 .eq('user_id', userId)
-                .eq('module_id', moduleRow.id);
+                .eq('module_id', moduleId);
 
             if (deleteError) {
                 return NextResponse.json({ error: 'Failed to remove override', message: deleteError.message }, { status: 500 });
@@ -91,32 +125,12 @@ export async function PUT(
             continue;
         }
 
-        const { data: existingOverride, error: existingOverrideError } = await admin
+        const { error: upsertOverrideError } = await admin
             .from('app_user_module_overrides')
-            .select('id')
-            .eq('user_id', userId)
-            .eq('module_id', moduleRow.id)
-            .maybeSingle();
-
-        if (existingOverrideError) {
-            return NextResponse.json(
-                { error: 'Failed to load existing override', message: existingOverrideError.message },
-                { status: 500 }
+            .upsert(
+                { effect, module_id: moduleId, user_id: userId },
+                { onConflict: 'user_id,module_id' }
             );
-        }
-
-        const upsertOverrideError = existingOverride
-            ? (
-                await admin
-                    .from('app_user_module_overrides')
-                    .update({ effect })
-                    .eq('id', existingOverride.id)
-            ).error
-            : (
-                await admin
-                    .from('app_user_module_overrides')
-                    .insert({ user_id: userId, module_id: moduleRow.id, effect })
-            ).error;
 
         if (upsertOverrideError) {
             return NextResponse.json({ error: 'Failed to save override', message: upsertOverrideError.message }, { status: 500 });

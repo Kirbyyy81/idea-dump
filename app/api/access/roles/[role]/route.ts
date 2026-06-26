@@ -4,7 +4,7 @@ import {
     getSessionUserAppAccess,
     isManagedModuleSlug,
 } from '@/lib/rbac/access';
-import { ACCESS_MANAGER_ROLES, MANAGED_MODULE_SLUGS } from '@/lib/rbac/constants';
+import { ACCESS_MANAGER_ROLES, AppModuleSlug, MANAGED_MODULE_SLUGS } from '@/lib/rbac/constants';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 interface UpdateRoleModulesBody {
@@ -36,7 +36,8 @@ export async function PUT(
     const { role } = await params;
     const roleSlug = role.trim();
     const body = (await request.json()) as UpdateRoleModulesBody;
-    const requestedModules = Array.from(new Set((body.modules || []).filter(isManagedModuleSlug)));
+    const rawModules = body.modules || [];
+    const requestedModules = Array.from(new Set(rawModules));
 
     if (!roleSlug) {
         return NextResponse.json(
@@ -45,7 +46,7 @@ export async function PUT(
         );
     }
 
-    if ((body.modules || []).length !== requestedModules.length) {
+    if (rawModules.some((moduleSlug) => !isManagedModuleSlug(moduleSlug))) {
         return NextResponse.json(
             { error: 'Validation error', message: 'Invalid module selection' },
             { status: 400 }
@@ -67,20 +68,10 @@ export async function PUT(
         );
     }
 
-    const { error: deleteError } = await admin
-        .from('BRIDGE_role_modules')
-        .delete()
-        .eq('role_id', roleRow.id);
-
-    if (deleteError) {
-        return NextResponse.json(
-            { error: 'Failed to update role modules', message: deleteError.message },
-            { status: 500 }
-        );
-    }
+    let moduleRows: Array<{ id: string; modules: AppModuleSlug }> = [];
 
     if (requestedModules.length > 0) {
-        const { data: moduleRows, error: moduleError } = await admin
+        const { data, error: moduleError } = await admin
             .from('DIM_modules')
             .select('id, modules')
             .in('modules', requestedModules);
@@ -92,35 +83,72 @@ export async function PUT(
             );
         }
 
-        const validModules = (moduleRows || [])
-            .map((moduleRow) => moduleRow.modules)
-            .filter((moduleSlug) => isManagedModuleSlug(moduleSlug));
+        moduleRows = ((data || []) as Array<{ id: string; modules: string }>).filter(
+            (moduleRow): moduleRow is { id: string; modules: AppModuleSlug } =>
+                isManagedModuleSlug(moduleRow.modules)
+        );
 
-        if (validModules.length !== requestedModules.length) {
+        if (moduleRows.length !== requestedModules.length) {
             return NextResponse.json(
                 { error: 'Validation error', message: 'Invalid module selection' },
                 { status: 400 }
             );
         }
 
-        const { error: insertError } = await admin.from('BRIDGE_role_modules').insert(
-            (moduleRows || []).map((moduleRow) => ({
+        const { error: upsertError } = await admin.from('BRIDGE_role_modules').upsert(
+            moduleRows.map((moduleRow) => ({
                 module_id: moduleRow.id,
                 role_id: roleRow.id,
-            }))
+            })),
+            { onConflict: 'role_id,module_id' }
         );
 
-        if (insertError) {
+        if (upsertError) {
             return NextResponse.json(
-                { error: 'Failed to update role modules', message: insertError.message },
+                { error: 'Failed to update role modules', message: upsertError.message },
                 { status: 500 }
             );
         }
     }
 
+    const requestedModuleIds = moduleRows.map((moduleRow) => moduleRow.id);
+    const deleteQuery = admin
+        .from('BRIDGE_role_modules')
+        .delete()
+        .eq('role_id', roleRow.id);
+    const { error: deleteError } = requestedModuleIds.length > 0
+        ? await deleteQuery.not('module_id', 'in', `(${requestedModuleIds.join(',')})`)
+        : await deleteQuery;
+
+    if (deleteError) {
+        return NextResponse.json(
+            { error: 'Failed to update role modules', message: deleteError.message },
+            { status: 500 }
+        );
+    }
+
+    const { data: persistedRows, error: persistedError } = await admin
+        .from('BRIDGE_role_modules')
+        .select('DIM_modules!inner(modules)')
+        .eq('role_id', roleRow.id);
+
+    if (persistedError) {
+        return NextResponse.json(
+            { error: 'Failed to load role modules', message: persistedError.message },
+            { status: 500 }
+        );
+    }
+
+    const persistedModules = ((persistedRows || []) as Array<{ DIM_modules: { modules: string } | { modules: string }[] | null }>)
+        .map((row) => {
+            const moduleRecord = Array.isArray(row.DIM_modules) ? row.DIM_modules[0] : row.DIM_modules;
+            return moduleRecord?.modules;
+        })
+        .filter((moduleSlug): moduleSlug is AppModuleSlug => isManagedModuleSlug(moduleSlug));
+
     return NextResponse.json({
         data: {
-            modules: MANAGED_MODULE_SLUGS.filter((moduleSlug) => requestedModules.includes(moduleSlug)),
+            modules: MANAGED_MODULE_SLUGS.filter((moduleSlug) => persistedModules.includes(moduleSlug)),
             role: roleSlug,
         },
         success: true,
