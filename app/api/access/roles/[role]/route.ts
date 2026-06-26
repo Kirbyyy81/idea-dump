@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
     canAccessModule,
+    getManagedAppModules,
     getSessionUserAppAccess,
-    isManagedModuleSlug,
 } from '@/lib/rbac/access';
-import { AppModuleSlug, MANAGED_MODULE_SLUGS } from '@/lib/rbac/constants';
+import { AppModuleSlug } from '@/lib/rbac/constants';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 interface UpdateRoleModulesBody {
@@ -38,6 +38,8 @@ export async function PUT(
     const body = (await request.json()) as UpdateRoleModulesBody;
     const rawModules = body.modules || [];
     const requestedModules = Array.from(new Set(rawModules));
+    const managedModules = await getManagedAppModules();
+    const managedModuleSlugs = new Set<AppModuleSlug>(managedModules.map((moduleRow) => moduleRow.slug));
 
     if (!roleSlug) {
         return NextResponse.json(
@@ -46,7 +48,7 @@ export async function PUT(
         );
     }
 
-    if (rawModules.some((moduleSlug) => !isManagedModuleSlug(moduleSlug))) {
+    if (rawModules.some((moduleSlug) => !managedModuleSlugs.has(moduleSlug as AppModuleSlug))) {
         return NextResponse.json(
             { error: 'Validation error', message: 'Invalid module selection' },
             { status: 400 }
@@ -85,7 +87,7 @@ export async function PUT(
 
         moduleRows = ((data || []) as Array<{ id: string; modules: string }>).filter(
             (moduleRow): moduleRow is { id: string; modules: AppModuleSlug } =>
-                isManagedModuleSlug(moduleRow.modules)
+                managedModuleSlugs.has(moduleRow.modules as AppModuleSlug)
         );
 
         if (moduleRows.length !== requestedModules.length) {
@@ -144,11 +146,11 @@ export async function PUT(
             const moduleRecord = Array.isArray(row.DIM_modules) ? row.DIM_modules[0] : row.DIM_modules;
             return moduleRecord?.modules;
         })
-        .filter((moduleSlug): moduleSlug is AppModuleSlug => isManagedModuleSlug(moduleSlug));
+        .filter((moduleSlug): moduleSlug is AppModuleSlug => managedModuleSlugs.has(moduleSlug as AppModuleSlug));
 
     return NextResponse.json({
         data: {
-            modules: MANAGED_MODULE_SLUGS.filter((moduleSlug) => persistedModules.includes(moduleSlug)),
+            modules: managedModules.map((moduleRow) => moduleRow.slug).filter((moduleSlug) => persistedModules.includes(moduleSlug)),
             role: roleSlug,
         },
         success: true,

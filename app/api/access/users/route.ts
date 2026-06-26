@@ -2,11 +2,11 @@ import { NextResponse } from 'next/server';
 import {
     canAccessModule,
     getDisplayName,
+    getManagedAppModules,
     getRoleModuleAssignments,
     getSessionUserAppAccess,
     getUserAppAccess,
 } from '@/lib/rbac/access';
-import { MANAGED_MODULE_SLUGS } from '@/lib/rbac/constants';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { AccessAdminRoleRecord, AccessAdminUserRecord } from '@/lib/rbac/types';
 
@@ -39,7 +39,8 @@ export async function GET() {
         return NextResponse.json({ error: 'Failed to load users', message: error.message }, { status: 500 });
     }
 
-    const [roleAssignments, roleRows, users] = await Promise.all([
+    const [modules, roleAssignments, roleRows, users] = await Promise.all([
+        getManagedAppModules(),
         getRoleModuleAssignments(),
         admin.from('DIM_roles').select('role').order('role', { ascending: true }),
         Promise.all(
@@ -72,7 +73,7 @@ export async function GET() {
 
     return NextResponse.json({
         data: {
-            modules: MANAGED_MODULE_SLUGS,
+            modules,
             roles: orderedRoles,
             roleAssignments: roleAssignments satisfies AccessAdminRoleRecord[],
             users,

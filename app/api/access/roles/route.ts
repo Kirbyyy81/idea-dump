@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { canAccessModule, getSessionUserAppAccess, isManagedModuleSlug } from '@/lib/rbac/access';
+import { canAccessModule, getManagedAppModules, getSessionUserAppAccess } from '@/lib/rbac/access';
+import { AppModuleSlug } from '@/lib/rbac/constants';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 interface CreateRoleBody {
@@ -36,7 +37,10 @@ export async function POST(request: NextRequest) {
 
     const body = (await request.json()) as CreateRoleBody;
     const roleSlug = normalizeNewRole(body.role);
-    const requestedModules = Array.from(new Set((body.modules || []).filter(isManagedModuleSlug)));
+    const rawModules = body.modules || [];
+    const requestedModules = Array.from(new Set(rawModules));
+    const managedModules = await getManagedAppModules();
+    const managedModuleSlugs = new Set<AppModuleSlug>(managedModules.map((moduleRow) => moduleRow.slug));
 
     if (!roleSlug) {
         return NextResponse.json(
@@ -52,7 +56,7 @@ export async function POST(request: NextRequest) {
         );
     }
 
-    if ((body.modules || []).length !== requestedModules.length) {
+    if (rawModules.some((moduleSlug) => !managedModuleSlugs.has(moduleSlug as AppModuleSlug))) {
         return NextResponse.json(
             { error: 'Validation error', message: 'Invalid module selection' },
             { status: 400 }

@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Plus, Search, X } from 'lucide-react';
-import { AppModuleSlug, AppRoleSlug, MANAGED_MODULE_SLUGS, MODULE_LABELS } from '@/lib/rbac/constants';
-import { AccessAdminRoleRecord, AccessAdminUserRecord, ModuleOverrideEffect } from '@/lib/rbac/types';
+import { AppModuleSlug, AppRoleSlug } from '@/lib/rbac/constants';
+import { AccessAdminRoleRecord, AccessAdminUserRecord, AppModuleMetadata, ModuleOverrideEffect } from '@/lib/rbac/types';
 import { Badge } from '@/components/atoms/Badge';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
@@ -12,7 +12,7 @@ import { Input } from '@/components/atoms/Input';
 import { PageLoader } from '@/components/atoms/Loader';
 
 interface AccessUsersResponse {
-    modules: AppModuleSlug[];
+    modules: AppModuleMetadata[];
     roleAssignments: AccessAdminRoleRecord[];
     roles: AppRoleSlug[];
     users: AccessAdminUserRecord[];
@@ -111,6 +111,13 @@ export function AccessControlClient() {
         );
     }, [data, search]);
 
+    const moduleSlugs = useMemo(() => data?.modules.map((moduleRow) => moduleRow.slug) ?? [], [data]);
+    const moduleLabels = useMemo(
+        () => new Map(data?.modules.map((moduleRow) => [moduleRow.slug, moduleRow.label]) ?? []),
+        [data]
+    );
+    const getModuleLabel = (moduleSlug: AppModuleSlug) => moduleLabels.get(moduleSlug) ?? moduleSlug;
+
     const getRoleDraft = (roleRecord: AccessAdminRoleRecord) =>
         roleDrafts[roleRecord.role] ?? [...roleRecord.modules];
 
@@ -128,7 +135,7 @@ export function AccessControlClient() {
 
             return {
                 ...current,
-                [role]: MANAGED_MODULE_SLUGS.filter((managedModule) => next.includes(managedModule)),
+                [role]: moduleSlugs.filter((managedModule) => next.includes(managedModule)),
             };
         });
     };
@@ -382,21 +389,21 @@ export function AccessControlClient() {
                             </div>
 
                             <div className="flex flex-wrap gap-2 pt-6">
-                                {data?.modules.map((moduleSlug) => {
-                                    const selected = newRoleDraft.modules.includes(moduleSlug);
+                                {data?.modules.map((moduleRow) => {
+                                    const selected = newRoleDraft.modules.includes(moduleRow.slug);
 
                                     return (
                                         <button
-                                            key={`new-role-${moduleSlug}`}
+                                            key={`new-role-${moduleRow.slug}`}
                                             type="button"
-                                            onClick={() => toggleNewRoleModule(moduleSlug)}
+                                            onClick={() => toggleNewRoleModule(moduleRow.slug)}
                                             className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
                                                 selected
                                                     ? 'border-accent-rose bg-accent-rose/10 text-accent-rose'
                                                     : 'border-border-default bg-transparent text-text-secondary hover:border-border-strong hover:text-text-primary'
                                             }`}
                                         >
-                                            {MODULE_LABELS[moduleSlug]}
+                                            {moduleRow.label}
                                         </button>
                                     );
                                 })}
@@ -440,21 +447,21 @@ export function AccessControlClient() {
                                 </div>
 
                                 <div className="flex flex-wrap gap-2">
-                                    {data.modules.map((moduleSlug) => {
-                                        const selected = draftModules.includes(moduleSlug);
+                                    {data.modules.map((moduleRow) => {
+                                        const selected = draftModules.includes(moduleRow.slug);
 
                                         return (
                                             <button
-                                                key={`${roleRecord.role}-${moduleSlug}`}
+                                                key={`${roleRecord.role}-${moduleRow.slug}`}
                                                 type="button"
-                                                onClick={() => toggleRoleModule(roleRecord.role, moduleSlug)}
+                                                onClick={() => toggleRoleModule(roleRecord.role, moduleRow.slug)}
                                                 className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
                                                     selected
                                                         ? 'border-accent-rose bg-accent-rose/10 text-accent-rose'
                                                         : 'border-border-default bg-transparent text-text-secondary hover:border-border-strong hover:text-text-primary'
                                                 }`}
                                             >
-                                                {MODULE_LABELS[moduleSlug]}
+                                                {moduleRow.label}
                                             </button>
                                         );
                                     })}
@@ -490,11 +497,11 @@ export function AccessControlClient() {
                     {filteredUsers.map((user) => {
                         const draft = getUserDraft(user);
                         const newOverride = getNewOverrideDraft(user.id);
-                        const overrideEntries = MANAGED_MODULE_SLUGS.filter(
+                        const overrideEntries = moduleSlugs.filter(
                             (moduleSlug) => draft.overrides[moduleSlug]
                         );
                         const availableModules = data?.modules.filter(
-                            (moduleSlug) => !overrideEntries.includes(moduleSlug)
+                            (moduleRow) => !overrideEntries.includes(moduleRow.slug)
                         ) ?? [];
                         const userLabel = getUserLabel(user);
 
@@ -535,7 +542,7 @@ export function AccessControlClient() {
                                                     key={`${user.id}-${moduleSlug}`}
                                                     className="flex items-center gap-2 rounded-xl border border-border-default bg-bg-hover px-3 py-2"
                                                 >
-                                                    <Badge className="shrink-0">{MODULE_LABELS[moduleSlug]}</Badge>
+                                                    <Badge className="shrink-0">{getModuleLabel(moduleSlug)}</Badge>
                                                     <select
                                                         value={draft.overrides[moduleSlug] ?? 'allow'}
                                                         onChange={(e) =>
@@ -554,7 +561,7 @@ export function AccessControlClient() {
                                                         type="button"
                                                         onClick={() => removeUserOverride(user, moduleSlug)}
                                                         className="ml-auto rounded-full p-1 text-text-muted transition-colors hover:bg-bg-hover hover:text-text-primary"
-                                                        aria-label={`Remove ${MODULE_LABELS[moduleSlug]} override`}
+                                                        aria-label={`Remove ${getModuleLabel(moduleSlug)} override`}
                                                     >
                                                         <X size={14} />
                                                     </button>
@@ -581,9 +588,9 @@ export function AccessControlClient() {
                                                 className="input h-9 min-w-[150px] text-xs"
                                             >
                                                 <option value="">Add module</option>
-                                                {availableModules.map((moduleSlug) => (
-                                                    <option key={`${user.id}-new-${moduleSlug}`} value={moduleSlug}>
-                                                        {MODULE_LABELS[moduleSlug]}
+                                                {availableModules.map((moduleRow) => (
+                                                    <option key={`${user.id}-new-${moduleRow.slug}`} value={moduleRow.slug}>
+                                                        {moduleRow.label}
                                                     </option>
                                                 ))}
                                             </select>

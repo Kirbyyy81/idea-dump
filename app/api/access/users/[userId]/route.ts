@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
     canAccessModule,
+    getManagedAppModules,
     getSessionUserAppAccess,
-    isManagedModuleSlug,
 } from '@/lib/rbac/access';
 import { AppModuleSlug } from '@/lib/rbac/constants';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -41,6 +41,8 @@ export async function PUT(
     const roleSlug = body.role?.trim();
     const overrides = body.overrides ?? {};
     const overrideEntries = Object.entries(overrides);
+    const managedModules = await getManagedAppModules();
+    const managedModuleSlugs = new Set<AppModuleSlug>(managedModules.map((moduleRow) => moduleRow.slug));
 
     if (!roleSlug) {
         return NextResponse.json({ error: 'Validation error', message: 'Invalid role' }, { status: 400 });
@@ -48,7 +50,7 @@ export async function PUT(
 
     const hasInvalidOverride = overrideEntries.some(
         ([moduleSlug, effect]) =>
-            !isManagedModuleSlug(moduleSlug) ||
+            !managedModuleSlugs.has(moduleSlug as AppModuleSlug) ||
             (effect !== 'allow' && effect !== 'deny' && effect !== null)
     );
 
@@ -86,8 +88,8 @@ export async function PUT(
         }
 
         for (const moduleRow of (moduleRows || []) as Array<{ id: string; modules: string }>) {
-            if (isManagedModuleSlug(moduleRow.modules)) {
-                moduleRowsBySlug.set(moduleRow.modules, moduleRow.id);
+            if (managedModuleSlugs.has(moduleRow.modules as AppModuleSlug)) {
+                moduleRowsBySlug.set(moduleRow.modules as AppModuleSlug, moduleRow.id);
             }
         }
 
@@ -108,8 +110,8 @@ export async function PUT(
     }
 
     for (const [moduleSlug, effect] of overrideEntries) {
-        if (!isManagedModuleSlug(moduleSlug)) continue;
-        const moduleId = moduleRowsBySlug.get(moduleSlug);
+        if (!managedModuleSlugs.has(moduleSlug as AppModuleSlug)) continue;
+        const moduleId = moduleRowsBySlug.get(moduleSlug as AppModuleSlug);
         if (!moduleId) continue;
 
         if (effect === null) {
