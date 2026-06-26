@@ -10,6 +10,7 @@ import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
 import { PageLoader } from '@/components/atoms/Loader';
+import { useAlert } from '@/lib/contexts/AlertContext';
 
 interface AccessUsersResponse {
     modules: AppModuleMetadata[];
@@ -64,6 +65,7 @@ function getInitials(value: string) {
 }
 
 export function AccessControlClient() {
+    const { showSuccess } = useAlert();
     const [data, setData] = useState<AccessUsersResponse | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -232,6 +234,7 @@ export function AccessControlClient() {
                 return next;
             });
             await loadAccessData();
+            showSuccess(`${roleRecord.role} modules were updated.`, 'Access saved');
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to save role modules');
         } finally {
@@ -267,6 +270,7 @@ export function AccessControlClient() {
             setNewRoleDraft(DEFAULT_NEW_ROLE);
             setShowNewRoleRow(false);
             await loadAccessData();
+            showSuccess(`${role} was created.`, 'Role created');
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to create role');
         } finally {
@@ -311,6 +315,7 @@ export function AccessControlClient() {
                 return next;
             });
             await loadAccessData();
+            showSuccess(`${getUserLabel(user)} access was updated.`, 'Access saved');
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to save access');
         } finally {
