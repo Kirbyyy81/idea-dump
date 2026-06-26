@@ -21,14 +21,18 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
                 ref={ref}
                 className={cn(variantClass, className)}
                 disabled={disabled || isLoading}
+                aria-busy={isLoading || undefined}
                 {...props}
             >
                 {isLoading ? (
-                    <LoaderOne size="sm" className="mr-2" />
+                    <>
+                        <LoaderOne size="sm" />
+                        <span className="sr-only">{children}</span>
+                    </>
                 ) : icon ? (
                     <span className="mr-2">{icon}</span>
                 ) : null}
-                {children}
+                {!isLoading && children}
             </button>
         );
     }
