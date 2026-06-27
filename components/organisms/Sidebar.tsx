@@ -112,6 +112,29 @@ export function Sidebar({ projects }: SidebarProps) {
         </Link>
     );
 
+    const renderModuleLink = ({
+        active,
+        href,
+        icon,
+        label,
+    }: {
+        active: boolean;
+        href: string;
+        icon: JSX.Element;
+        label: string;
+    }) => (
+        <Link
+            href={href}
+            className={cn(
+                'btn-ghost w-full justify-start relative z-10',
+                active ? GROUP_ACTIVE_CLASS : GROUP_INACTIVE_CLASS
+            )}
+        >
+            <span className="mr-2">{icon}</span>
+            <span className="flex-1 text-left truncate">{label}</span>
+        </Link>
+    );
+
     const renderModuleGroup = ({
         active,
         children,
@@ -131,7 +154,7 @@ export function Sidebar({ projects }: SidebarProps) {
 
         return (
             <div
-                className="space-y-1 mb-6"
+                className="space-y-1"
                 onMouseEnter={() => setOpenGroups((current) => ({ ...current, [group]: true }))}
                 onMouseLeave={() => setOpenGroups((current) => ({ ...current, [group]: false }))}
             >
@@ -181,18 +204,14 @@ export function Sidebar({ projects }: SidebarProps) {
                 </Link>
             </div>
 
-            <nav className="flex-1 p-4 overflow-y-auto">
+            <nav className="flex-1 p-4 overflow-y-auto space-y-1">
                 {canAccessModule('dashboard') && (
-                    <Link
-                        href="/dashboard"
-                        className={cn(
-                            'btn-ghost mb-2 w-full justify-start',
-                            isDashboardActive ? GROUP_ACTIVE_CLASS : GROUP_INACTIVE_CLASS
-                        )}
-                    >
-                        <span className="mr-2"><LayoutDashboard size={18} /></span>
-                        {SHELL_MODULES.dashboard.label}
-                    </Link>
+                    renderModuleLink({
+                        active: isDashboardActive,
+                        href: '/dashboard',
+                        icon: <LayoutDashboard size={18} />,
+                        label: SHELL_MODULES.dashboard.label,
+                    })
                 )}
 
                 {canAccessModule('projects') && renderModuleGroup({
@@ -203,20 +222,6 @@ export function Sidebar({ projects }: SidebarProps) {
                     label: getModuleLabel('projects', 'Projects'),
                     children: (
                         <>
-                            <div className="space-y-0.5">
-                                {renderSubItem({
-                                    href: '/projects',
-                                    icon: <FolderKanban size={14} />,
-                                    isActive: isExactPath(pathname, '/projects'),
-                                    label: 'All Projects',
-                                })}
-                                {renderSubItem({
-                                    href: '/projects/new',
-                                    icon: <Plus size={14} />,
-                                    isActive: isExactPath(pathname, '/projects/new'),
-                                    label: 'New Project',
-                                })}
-                            </div>
                             <div className="space-y-0.5 max-h-[260px] overflow-y-auto custom-scrollbar">
                                 {projects.length === 0 ? (
                                     <p className="px-3 py-1.5 text-xs text-text-muted italic">
@@ -297,39 +302,26 @@ export function Sidebar({ projects }: SidebarProps) {
                 })}
 
                 {navModules.map((item) => (
-                    <Link
-                        key={item.slug}
-                        href={item.path}
-                        className={cn(
-                            'btn-ghost w-full justify-start',
-                            (item.slug === 'access_control' ? isAccessControlActive : pathname === item.path)
-                                ? item.slug === 'logs' || item.slug === 'log_viewer'
-                                    ? GROUP_ACTIVE_CLASS
-                                    : 'bg-bg-hover text-text-primary'
-                                : GROUP_INACTIVE_CLASS
-                        )}
-                    >
-                        {item.icon && MODULE_ICONS[item.icon] && (
-                            <span className="mr-2">{MODULE_ICONS[item.icon]}</span>
-                        )}
-                        {item.label}
-                    </Link>
+                    <div key={item.slug}>
+                        {renderModuleLink({
+                            active: item.slug === 'access_control' ? isAccessControlActive : pathname === item.path,
+                            href: item.path,
+                            icon: item.icon && MODULE_ICONS[item.icon]
+                                ? MODULE_ICONS[item.icon]
+                                : <LayoutDashboard size={18} />,
+                            label: item.label,
+                        })}
+                    </div>
                 ))}
             </nav>
 
             <div className="p-4 border-t border-border-subtle">
-                <Link
-                    href={SHELL_MODULES.settings.href}
-                    className={cn(
-                        'btn-ghost w-full justify-start',
-                        pathname === '/settings'
-                            ? 'bg-bg-hover text-text-primary'
-                            : 'text-text-secondary'
-                    )}
-                >
-                    <span className="mr-2"><Settings size={18} /></span>
-                    {SHELL_MODULES.settings.label}
-                </Link>
+                {renderModuleLink({
+                    active: pathname === '/settings',
+                    href: SHELL_MODULES.settings.href,
+                    icon: <Settings size={18} />,
+                    label: SHELL_MODULES.settings.label,
+                })}
             </div>
         </aside>
     );
