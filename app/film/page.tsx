@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Film, Search, X } from 'lucide-react';
 import { AppShell } from '@/components/organisms/AppShell';
 import { Input } from '@/components/atoms/Input';
+import { Select } from '@/components/atoms/Select';
 import { FilmCamera, FilmRoll, FilmRollStatus, filmRollStatusConfig } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -98,14 +99,27 @@ export default function FilmJournalPage() {
                                     <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search film, camera, location, notes" className="pl-9 pr-9" />
                                     {query && <button type="button" onClick={() => setQuery('')} aria-label="Clear search" className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted"><X size={16} /></button>}
                                 </div>
-                                <select className="input min-w-48 xl:w-48" value={status} onChange={(event) => setStatus(event.target.value as FilmRollStatus | 'all')}>
-                                    <option value="all">All stages</option>
-                                    {Object.entries(filmRollStatusConfig).map(([value, config]) => <option key={value} value={value}>{config.label}</option>)}
-                                </select>
-                                <select className="input min-w-48 xl:w-48" value={cameraId} onChange={(event) => setCameraId(event.target.value)}>
-                                    <option value="">All cameras</option>
-                                    {cameras.map((camera) => <option key={camera.id} value={camera.id}>{camera.name}</option>)}
-                                </select>
+                                <Select
+                                    value={status}
+                                    onChange={(nextValue) => setStatus(nextValue as FilmRollStatus | 'all')}
+                                    className="min-w-48 xl:w-48"
+                                    options={[
+                                        { value: 'all', label: 'All stages' },
+                                        ...Object.entries(filmRollStatusConfig).map(([value, config]) => ({
+                                            value,
+                                            label: config.label,
+                                        })),
+                                    ]}
+                                />
+                                <Select
+                                    value={cameraId}
+                                    onChange={setCameraId}
+                                    className="min-w-48 xl:w-48"
+                                    options={[
+                                        { value: '', label: 'All cameras' },
+                                        ...cameras.map((camera) => ({ value: camera.id, label: camera.name })),
+                                    ]}
+                                />
                             </div>
                         </div>
                     </div>

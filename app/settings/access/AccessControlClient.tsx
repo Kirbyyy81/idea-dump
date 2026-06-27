@@ -9,6 +9,7 @@ import { Badge } from '@/components/atoms/Badge';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
+import { Select } from '@/components/atoms/Select';
 import { useAlert } from '@/lib/contexts/AlertContext';
 import {
     AccessUsersResponse,
@@ -475,17 +476,13 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                                 </div>
 
                                 <div className="pt-0.5">
-                                    <select
+                                    <Select
                                         value={draft.role}
-                                        onChange={(e) => updateUserRole(user, e.target.value as AppRoleSlug)}
-                                        className="input h-10 min-w-[160px] text-sm"
-                                    >
-                                        {data?.roles.map((role) => (
-                                            <option key={role} value={role}>
-                                                {role}
-                                            </option>
-                                        ))}
-                                    </select>
+                                        onChange={(nextValue) => updateUserRole(user, nextValue as AppRoleSlug)}
+                                        className="min-w-[160px]"
+                                        buttonClassName="h-10 text-sm"
+                                        options={(data?.roles ?? []).map((role) => ({ value: role, label: role }))}
+                                    />
                                 </div>
 
                                 <div className="space-y-3">
@@ -497,20 +494,22 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                                                     className="flex items-center gap-2 rounded-xl border border-border-default bg-bg-hover px-3 py-2"
                                                 >
                                                     <Badge className="shrink-0">{getModuleLabel(moduleSlug)}</Badge>
-                                                    <select
+                                                    <Select
                                                         value={draft.overrides[moduleSlug] ?? 'allow'}
-                                                        onChange={(e) =>
+                                                        onChange={(nextValue) =>
                                                             updateUserOverride(
                                                                 user,
                                                                 moduleSlug,
-                                                                e.target.value as ModuleOverrideEffect
+                                                                nextValue as ModuleOverrideEffect
                                                             )
                                                         }
-                                                        className="input h-8 min-w-[110px] border-0 bg-transparent px-2 text-xs"
-                                                    >
-                                                        <option value="allow">Allow</option>
-                                                        <option value="deny">Deny</option>
-                                                    </select>
+                                                        className="min-w-[110px]"
+                                                        buttonClassName="h-8 border-0 bg-transparent px-2 text-xs"
+                                                        options={[
+                                                            { value: 'allow', label: 'Allow' },
+                                                            { value: 'deny', label: 'Deny' },
+                                                        ]}
+                                                    />
                                                     <button
                                                         type="button"
                                                         onClick={() => removeUserOverride(user, moduleSlug)}
@@ -530,38 +529,41 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
 
                                     {availableModules.length > 0 && (
                                         <div className="flex flex-wrap items-center gap-2">
-                                            <select
+                                            <Select
                                                 value={newOverride.module}
-                                                onChange={(e) =>
+                                                onChange={(nextValue) =>
                                                     updateNewOverrideDraft(
                                                         user.id,
                                                         'module',
-                                                        e.target.value as AppModuleSlug | ''
+                                                        nextValue as AppModuleSlug | ''
                                                     )
                                                 }
-                                                className="input h-9 min-w-[150px] text-xs"
-                                            >
-                                                <option value="">Add module</option>
-                                                {availableModules.map((moduleRow) => (
-                                                    <option key={`${user.id}-new-${moduleRow.slug}`} value={moduleRow.slug}>
-                                                        {moduleRow.label}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                            <select
+                                                className="min-w-[150px]"
+                                                buttonClassName="h-9 text-xs"
+                                                options={[
+                                                    { value: '', label: 'Add module' },
+                                                    ...availableModules.map((moduleRow) => ({
+                                                        value: moduleRow.slug,
+                                                        label: moduleRow.label,
+                                                    })),
+                                                ]}
+                                            />
+                                            <Select
                                                 value={newOverride.effect}
-                                                onChange={(e) =>
+                                                onChange={(nextValue) =>
                                                     updateNewOverrideDraft(
                                                         user.id,
                                                         'effect',
-                                                        e.target.value as ModuleOverrideEffect
+                                                        nextValue as ModuleOverrideEffect
                                                     )
                                                 }
-                                                className="input h-9 min-w-[110px] text-xs"
-                                            >
-                                                <option value="allow">Allow</option>
-                                                <option value="deny">Deny</option>
-                                            </select>
+                                                className="min-w-[110px]"
+                                                buttonClassName="h-9 text-xs"
+                                                options={[
+                                                    { value: 'allow', label: 'Allow' },
+                                                    { value: 'deny', label: 'Deny' },
+                                                ]}
+                                            />
                                             <Button
                                                 type="button"
                                                 variant="ghost"

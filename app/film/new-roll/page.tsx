@@ -7,6 +7,7 @@ import { AppShell } from '@/components/organisms/AppShell';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
+import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
 import { FilmCamera, FilmFormat, filmFormats } from '@/lib/types';
 
@@ -62,10 +63,10 @@ export default function NewFilmRollPage() {
                         <div className="grid grid-cols-1 gap-5 p-6 md:grid-cols-2">
                             <label className="space-y-2"><span className="text-sm text-text-secondary">Film name *</span><Input required value={form.film_name} onChange={(event) => setForm({ ...form, film_name: event.target.value })} placeholder="Portra 400" /></label>
                             <label className="space-y-2"><span className="text-sm text-text-secondary">Brand *</span><Input required value={form.brand} onChange={(event) => setForm({ ...form, brand: event.target.value })} placeholder="Kodak" /></label>
-                            <label className="space-y-2"><span className="text-sm text-text-secondary">Format *</span><select className="input w-full" value={form.format} onChange={(event) => setForm({ ...form, format: event.target.value as FilmFormat })}>{filmFormats.map((format) => <option key={format}>{format}</option>)}</select></label>
+                            <label className="space-y-2"><span className="text-sm text-text-secondary">Format *</span><Select value={form.format} onChange={(nextValue) => setForm({ ...form, format: nextValue as FilmFormat })} options={filmFormats.map((format) => ({ value: format, label: format }))} /></label>
                             <label className="space-y-2"><span className="text-sm text-text-secondary">ISO *</span><Input required type="number" min="1" value={form.iso} onChange={(event) => setForm({ ...form, iso: event.target.value })} /></label>
                             <label className="space-y-2"><span className="text-sm text-text-secondary">Purchase price</span><Input type="number" min="0" step="0.01" value={form.purchase_price} onChange={(event) => setForm({ ...form, purchase_price: event.target.value })} placeholder="0.00" /></label>
-                            <label className="space-y-2"><span className="text-sm text-text-secondary">Camera (optional)</span><select className="input w-full" value={form.camera_id} onChange={(event) => setForm({ ...form, camera_id: event.target.value })}><option value="">Assign later</option>{cameras.map((camera) => <option key={camera.id} value={camera.id}>{camera.name}</option>)}</select></label>
+                            <label className="space-y-2"><span className="text-sm text-text-secondary">Camera (optional)</span><Select value={form.camera_id} onChange={(nextValue) => setForm({ ...form, camera_id: nextValue })} options={[{ value: '', label: 'Assign later' }, ...cameras.map((camera) => ({ value: camera.id, label: camera.name }))]} /></label>
                             <label className="space-y-2 md:col-span-2"><span className="text-sm text-text-secondary">Purchase notes</span><Textarea value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} placeholder="Where you bought it, expiry, storage notes..." /></label>
                         </div>
                         <div className="flex justify-end gap-3 border-t border-border-default px-6 py-4"><Button type="button" variant="ghost" onClick={() => router.push('/film')}>Cancel</Button><Button type="submit" isLoading={isSaving}>Place on Shelf</Button></div>
