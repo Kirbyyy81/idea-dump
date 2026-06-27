@@ -11,7 +11,7 @@ import {
     Trash2,
     Workflow,
 } from 'lucide-react';
-import { Sidebar } from '@/components/organisms/Sidebar';
+import { AppShell } from '@/components/organisms/AppShell';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
@@ -175,6 +175,7 @@ export default function ApiToolsPage() {
     const [projects, setProjects] = useState<Project[]>([]);
     const [apiKeys, setApiKeys] = useState<ApiKeyDisplay[]>([]);
     const [keysLoading, setKeysLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(true);
     const [isCreating, setIsCreating] = useState(false);
     const [newKeyName, setNewKeyName] = useState('');
     const [newKey, setNewKey] = useState<string | null>(null);
@@ -220,6 +221,7 @@ export default function ApiToolsPage() {
             } finally {
                 if (!cancelled) {
                     setKeysLoading(false);
+                    setIsLoading(false);
                 }
             }
         }
@@ -316,9 +318,7 @@ export default function ApiToolsPage() {
     };
 
     return (
-        <div className="flex min-h-screen bg-bg-base font-body text-text-primary">
-            <Sidebar projects={projects} />
-            <main className="flex-1 ml-64 p-8">
+        <AppShell projects={projects} isLoading={isLoading}>
                 <div className="max-w-5xl space-y-8">
                     <header>
                         <h1 className="text-3xl font-heading font-medium">API</h1>
@@ -659,7 +659,6 @@ export default function ApiToolsPage() {
                         )}
                     </Card>
                 </div>
-            </main>
-        </div>
+        </AppShell>
     );
 }
