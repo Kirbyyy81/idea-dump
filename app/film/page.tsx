@@ -6,7 +6,6 @@ import { Film, Search, X } from 'lucide-react';
 import { AppShell } from '@/components/organisms/AppShell';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
-import { PageLoader } from '@/components/atoms/Loader';
 import { FilmCamera, FilmRoll, FilmRollStatus, filmRollStatusConfig } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -64,7 +63,13 @@ export default function FilmJournalPage() {
         });
     }, [cameraId, query, rolls, status]);
 
-    if (isLoading) return <PageLoader message="Opening the film cupboard..." />;
+    if (isLoading) {
+        return (
+            <AppShell isLoading loadingMessage="Opening the film cupboard..." contentClassName="p-5 md:p-8">
+                <div />
+            </AppShell>
+        );
+    }
 
     return (
         <AppShell contentClassName="p-5 md:p-8">

@@ -7,7 +7,6 @@ import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
 import { Textarea } from '@/components/atoms/Textarea';
-import { PageLoader } from '@/components/atoms/Loader';
 import { FilmCamera, FilmMaintenanceRecord } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -170,7 +169,13 @@ export default function FilmCamerasPage() {
         setMaintenance((records) => records.filter((record) => record.id !== id));
     }
 
-    if (isLoading) return <PageLoader message="Opening camera cabinet..." />;
+    if (isLoading) {
+        return (
+            <AppShell isLoading loadingMessage="Opening camera cabinet..." >
+                <div />
+            </AppShell>
+        );
+    }
 
     return (
         <AppShell contentClassName="p-5 md:p-8">

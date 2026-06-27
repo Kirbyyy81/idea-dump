@@ -10,7 +10,6 @@ import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
 import { Textarea } from '@/components/atoms/Textarea';
-import { PageLoader } from '@/components/atoms/Loader';
 import {
     FilmCamera,
     FilmFormat,
@@ -265,7 +264,11 @@ export default function FilmRollDetailPage({ params }: RollDetailPageProps) {
     };
 
     if (isLoading) {
-        return <PageLoader message="Opening photobook..." />;
+        return (
+            <AppShell isLoading loadingMessage="Opening photobook..." contentClassName="p-8">
+                <div />
+            </AppShell>
+        );
     }
 
     if (!roll || !rollForm) {
