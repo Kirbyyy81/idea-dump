@@ -24,7 +24,6 @@ import {
     Trash2,
     Plus,
 } from 'lucide-react';
-import { PageLoader } from '@/components/atoms/Loader';
 import { formatDate } from '@/lib/utils';
 import { useAccess } from '@/lib/contexts/AccessContext';
 
@@ -39,6 +38,7 @@ export default function ProjectPage() {
     const [tickets, setTickets] = useState<Ticket[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [projects, setProjects] = useState<Project[]>([]);
     const [isUpdating, setIsUpdating] = useState(false);
     const [showTicketForm, setShowTicketForm] = useState(false);
     const [editingTicket, setEditingTicket] = useState<Ticket | null>(null);
@@ -51,6 +51,14 @@ export default function ProjectPage() {
         async function fetchData() {
             try {
                 setIsLoading(true);
+                setError(null);
+
+                // First fetch projects for AppShell sidebar navigation
+                const projectsRes = await fetch('/api/projects');
+                if (projectsRes.ok) {
+                    const projectsData = await projectsRes.json();
+                    setProjects(projectsData.data || []);
+                }
 
                 const [projectRes, notesRes] = await Promise.all([
                     fetch(`/api/projects?id=${projectId}`),
@@ -200,28 +208,32 @@ export default function ProjectPage() {
     };
 
     if (isLoading) {
-        return <PageLoader />;
+        return (
+            <AppShell projects={projects} isLoading loadingMessage="Loading project..." contentClassName="p-8">
+                <div />
+            </AppShell>
+        );
     }
 
     if (error || !project) {
         return (
-            <AppShell contentClassName="p-8">
-                <div className="flex min-h-[60vh] flex-col items-center justify-center">
-                    <p className="text-red-400 mb-4">{error || 'Project not found'}</p>
-                    <Link href="/projects" className="btn-secondary">
-                        Back to Projects
-                    </Link>
+            <AppShell projects={projects} isLoading={false} contentClassName="p-8">
+                <div className="max-w-5xl mx-auto">
+                    <div className="flex flex-col items-center justify-center py-16">
+                        <p className="text-red-400 mb-4">{error || 'Project not found'}</p>
+                        <Link href="/projects" className="btn-secondary">
+                            Back to Projects
+                        </Link>
+                    </div>
                 </div>
             </AppShell>
         );
     }
 
-    const status = inferStatus(project);
-
     return (
-        <AppShell contentClassName="p-8">
-            <div className="max-w-5xl">
-            <div className="flex items-center justify-between mb-8">
+        <AppShell projects={projects} isLoading={isLoading} loadingMessage="Loading project..." contentClassName="p-8">
+            <div className="max-w-5xl mx-auto">
+                <div className="flex items-center justify-between mb-8">
                 <Link
                     href="/projects"
                     className="flex items-center gap-2 transition-colors text-text-secondary hover:text-text-primary"
@@ -257,7 +269,7 @@ export default function ProjectPage() {
             <div className="mb-8">
                 <div className="flex items-start justify-between gap-4 mb-4">
                     <h1 className="text-text-primary text-3xl font-heading font-medium">{project.title}</h1>
-                    <StatusBadge status={status} className="px-3 py-1 text-sm" />
+                    <StatusBadge status={inferStatus(project)} className="px-3 py-1 text-sm" />
                 </div>
 
                 {project.description && (

@@ -9,7 +9,6 @@ import { Plus, Search, X } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
 import { cn } from '@/lib/utils';
 import { iconMap } from '@/lib/icons';
-import { PageLoader } from '@/components/atoms/Loader';
 
 export default function ProjectsPage() {
     const [projects, setProjects] = useState<Project[]>([]);
@@ -58,10 +57,6 @@ export default function ProjectsPage() {
         return counts;
     }, [projects]);
 
-    if (isLoading) {
-        return <PageLoader />;
-    }
-
     if (error) {
         return (
             <AppShell contentClassName="p-8">
@@ -76,8 +71,8 @@ export default function ProjectsPage() {
     }
 
     return (
-        <AppShell contentClassName="p-8">
-            <div className="space-y-6">
+        <AppShell projects={projects} isLoading={isLoading} loadingMessage="Loading projects...">
+            <div>
                 <header className="flex items-center justify-between mb-6">
                     <h1 className="text-3xl font-heading font-medium">Projects</h1>
                     <Link href="/projects/new">
