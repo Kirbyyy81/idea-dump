@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authorizeFilmJournal, getMaintenanceCost, getRollCost, jsonError } from '@/lib/film/api';
-import { FilmCamera, FilmMaintenanceRecord, FilmProcessingRecord, FilmRoll } from '@/lib/types';
+import { FilmCamera, FilmMaintenanceRecord, FilmRoll } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,10 +11,9 @@ export async function GET() {
         if ('response' in session) return session.response;
 
         const admin = createAdminClient();
-        const [rollsResult, camerasResult, processingResult, maintenanceResult, photosResult, favoritesResult] = await Promise.all([
+        const [rollsResult, camerasResult, maintenanceResult, photosResult, favoritesResult] = await Promise.all([
             admin.from('film_rolls').select('*').eq('user_id', session.user.id),
             admin.from('film_cameras').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false }),
-            admin.from('film_processing_records').select('*').eq('user_id', session.user.id),
             admin.from('film_maintenance_records').select('*').eq('user_id', session.user.id),
             admin.from('film_photos').select('id', { count: 'exact', head: true }).eq('user_id', session.user.id),
             admin.from('film_photos').select('id', { count: 'exact', head: true }).eq('user_id', session.user.id).eq('is_favorite', true),
@@ -22,24 +21,15 @@ export async function GET() {
 
         if (rollsResult.error) throw rollsResult.error;
         if (camerasResult.error) throw camerasResult.error;
-        if (processingResult.error) throw processingResult.error;
         if (maintenanceResult.error) throw maintenanceResult.error;
         if (photosResult.error) throw photosResult.error;
         if (favoritesResult.error) throw favoritesResult.error;
 
         const rolls = (rollsResult.data || []) as FilmRoll[];
         const cameras = (camerasResult.data || []) as FilmCamera[];
-        const processingRecords = (processingResult.data || []) as FilmProcessingRecord[];
         const maintenanceRecords = (maintenanceResult.data || []) as FilmMaintenanceRecord[];
-        const processingByRoll = new Map<string, FilmProcessingRecord[]>();
         const camerasById = new Map(cameras.map((camera) => [camera.id, camera]));
         const rollCountsByCamera = new Map<string, number>();
-
-        for (const record of processingRecords) {
-            const records = processingByRoll.get(record.film_roll_id) ?? [];
-            records.push(record);
-            processingByRoll.set(record.film_roll_id, records);
-        }
 
         for (const roll of rolls) {
             if (!roll.camera_id) continue;
@@ -47,11 +37,11 @@ export async function GET() {
         }
 
         const rollCost = rolls.reduce(
-            (total, roll) => total + getRollCost(roll, processingByRoll.get(roll.id) ?? []),
+            (total, roll) => total + getRollCost(roll),
             0
         );
         const maintenanceCost = getMaintenanceCost(maintenanceRecords);
-        const totalMoneySpent = rollCost + maintenanceCost;
+        const totalMoneySpent = rollCost;
         const successfulPhotos = rolls.reduce((total, roll) => total + Number(roll.successful_photos || 0), 0);
         const mostUsedCameraId = Array.from(rollCountsByCamera.entries())
             .sort(([, countA], [, countB]) => countB - countA)[0]?.[0];
