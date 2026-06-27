@@ -222,20 +222,6 @@ export function Sidebar({ projects }: SidebarProps) {
                     label: getModuleLabel('projects', 'Projects'),
                     children: (
                         <>
-                            <div className="space-y-0.5">
-                                {renderSubItem({
-                                    href: '/projects',
-                                    icon: <FolderKanban size={14} />,
-                                    isActive: isExactPath(pathname, '/projects'),
-                                    label: 'All Projects',
-                                })}
-                                {renderSubItem({
-                                    href: '/projects/new',
-                                    icon: <Plus size={14} />,
-                                    isActive: isExactPath(pathname, '/projects/new'),
-                                    label: 'New Project',
-                                })}
-                            </div>
                             <div className="space-y-0.5 max-h-[260px] overflow-y-auto custom-scrollbar">
                                 {projects.length === 0 ? (
                                     <p className="px-3 py-1.5 text-xs text-text-muted italic">
