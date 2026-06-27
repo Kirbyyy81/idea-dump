@@ -11,6 +11,7 @@ import { TicketCard } from '@/components/organisms/TicketCard';
 import { TicketForm } from '@/components/organisms/TicketForm';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
+import { AppShell } from '@/components/organisms/AppShell';
 import { CreateTicketInput, Note, Project, Ticket, inferStatus } from '@/lib/types';
 import {
     ArrowLeft,
@@ -23,7 +24,6 @@ import {
     Trash2,
     Plus,
 } from 'lucide-react';
-import { PageLoader } from '@/components/atoms/Loader';
 import { formatDate } from '@/lib/utils';
 
 export default function ProjectPage() {
@@ -36,6 +36,7 @@ export default function ProjectPage() {
     const [tickets, setTickets] = useState<Ticket[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [projects, setProjects] = useState<Project[]>([]);
     const [isUpdating, setIsUpdating] = useState(false);
     const [showTicketForm, setShowTicketForm] = useState(false);
     const [editingTicket, setEditingTicket] = useState<Ticket | null>(null);
@@ -47,8 +48,14 @@ export default function ProjectPage() {
     useEffect(() => {
         async function fetchData() {
             try {
-                setIsLoading(true);
+                // First fetch projects for AppShell sidebar navigation
+                const projectsRes = await fetch('/api/projects');
+                if (projectsRes.ok) {
+                    const projectsData = await projectsRes.json();
+                    setProjects(projectsData.data || []);
+                }
 
+                // Then fetch access permissions
                 const accessRes = await fetch('/api/access/me');
                 let nextCanAccessTickets = false;
                 let nextCanManageTickets = false;
@@ -212,26 +219,25 @@ export default function ProjectPage() {
         }
     };
 
-    if (isLoading) {
-        return <PageLoader />;
-    }
-
     if (error || !project) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center">
-                <p className="text-red-400 mb-4">{error || 'Project not found'}</p>
-                <Link href="/projects" className="btn-secondary">
-                    Back to Projects
-                </Link>
-            </div>
+            <AppShell projects={projects} isLoading={false} contentClassName="p-8">
+                <div className="max-w-5xl mx-auto">
+                    <div className="flex flex-col items-center justify-center py-16">
+                        <p className="text-red-400 mb-4">{error || 'Project not found'}</p>
+                        <Link href="/projects" className="btn-secondary">
+                            Back to Projects
+                        </Link>
+                    </div>
+                </div>
+            </AppShell>
         );
     }
 
-    const status = inferStatus(project);
-
     return (
-        <div className="min-h-screen p-8 max-w-5xl mx-auto">
-            <div className="flex items-center justify-between mb-8">
+        <AppShell projects={projects} isLoading={isLoading} loadingMessage="Loading project..." contentClassName="p-8">
+            <div className="max-w-5xl mx-auto">
+                <div className="flex items-center justify-between mb-8">
                 <Link
                     href="/projects"
                     className="flex items-center gap-2 transition-colors text-text-secondary hover:text-text-primary"
@@ -267,7 +273,7 @@ export default function ProjectPage() {
             <div className="mb-8">
                 <div className="flex items-start justify-between gap-4 mb-4">
                     <h1 className="text-text-primary text-3xl font-heading font-medium">{project.title}</h1>
-                    <StatusBadge status={status} className="px-3 py-1 text-sm" />
+                    <StatusBadge status={inferStatus(project)} className="px-3 py-1 text-sm" />
                 </div>
 
                 {project.description && (
@@ -401,6 +407,7 @@ export default function ProjectPage() {
                     </Card>
                 </section>
             )}
-        </div>
+                    </div>
+        </AppShell>
     );
 }
