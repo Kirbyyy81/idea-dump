@@ -19,14 +19,9 @@ import { Sidebar } from '@/components/organisms/Sidebar';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { PageLoader } from '@/components/atoms/Loader';
-import { AppModuleSlug } from '@/lib/rbac/constants';
 import { AppModuleMetadata } from '@/lib/rbac/types';
+import { useAccess } from '@/lib/contexts/AccessContext';
 import { Project } from '@/lib/types';
-
-interface AccessPayload {
-    allowed_modules: AppModuleSlug[];
-    modules?: AppModuleMetadata[];
-}
 
 const MODULE_ICONS: Record<string, LucideIcon> = {
     BookOpen,
@@ -42,8 +37,9 @@ const MODULE_ICONS: Record<string, LucideIcon> = {
 };
 
 export default function DashboardPage() {
-    const [allowedModules, setAllowedModules] = useState<AppModuleSlug[]>(['dashboard', 'settings']);
-    const [modules, setModules] = useState<AppModuleMetadata[]>([]);
+    const access = useAccess();
+    const allowedModules = useMemo(() => access?.allowedModules ?? ['dashboard', 'settings'], [access]);
+    const modules = useMemo(() => access?.modules ?? [], [access]);
     const [projects, setProjects] = useState<Project[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -51,21 +47,9 @@ export default function DashboardPage() {
     useEffect(() => {
         let cancelled = false;
 
-        async function loadDashboard() {
+        async function loadProjects() {
             try {
-                const accessRes = await fetch('/api/access/me');
-                if (!accessRes.ok) {
-                    throw new Error('Failed to load dashboard access');
-                }
-
-                const accessPayload = await accessRes.json();
-                const modules = (accessPayload.data as AccessPayload).allowed_modules ?? ['dashboard', 'settings'];
-
-                if (cancelled) return;
-                setAllowedModules(modules);
-                setModules((accessPayload.data as AccessPayload).modules ?? []);
-
-                if (modules.includes('projects')) {
+                if (allowedModules.includes('projects')) {
                     const projectsRes = await fetch('/api/projects');
                     if (projectsRes.ok && !cancelled) {
                         const projectsPayload = await projectsRes.json();
@@ -83,12 +67,12 @@ export default function DashboardPage() {
             }
         }
 
-        loadDashboard();
+        loadProjects();
 
         return () => {
             cancelled = true;
         };
-    }, []);
+    }, [allowedModules]);
 
     const quickLinks = useMemo(
         () =>

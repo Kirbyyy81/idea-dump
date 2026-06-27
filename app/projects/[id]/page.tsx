@@ -26,11 +26,13 @@ import {
 } from 'lucide-react';
 import { PageLoader } from '@/components/atoms/Loader';
 import { formatDate } from '@/lib/utils';
+import { useAccess } from '@/lib/contexts/AccessContext';
 
 export default function ProjectPage() {
     const params = useParams();
     const router = useRouter();
     const projectId = params.id as string;
+    const access = useAccess();
 
     const [project, setProject] = useState<Project | null>(null);
     const [notes, setNotes] = useState<Note[]>([]);
@@ -41,30 +43,14 @@ export default function ProjectPage() {
     const [showTicketForm, setShowTicketForm] = useState(false);
     const [editingTicket, setEditingTicket] = useState<Ticket | null>(null);
     const [isSavingTicket, setIsSavingTicket] = useState(false);
-    const [canAccessTickets, setCanAccessTickets] = useState(false);
-    const [canManageTickets, setCanManageTickets] = useState(false);
-    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+    const canAccessTickets = access?.allowedModules.includes('tickets') ?? false;
+    const canManageTickets = Boolean(access?.canManageAccess) && canAccessTickets;
+    const currentUserId = access?.userId ?? null;
 
     useEffect(() => {
         async function fetchData() {
             try {
                 setIsLoading(true);
-
-                const accessRes = await fetch('/api/access/me');
-                let nextCanAccessTickets = false;
-                let nextCanManageTickets = false;
-                let nextUserId: string | null = null;
-
-                if (accessRes.ok) {
-                    const accessPayload = await accessRes.json();
-                    const allowedModules = accessPayload.data?.allowed_modules || [];
-                    nextCanAccessTickets = allowedModules.includes('tickets');
-                    nextCanManageTickets = Boolean(accessPayload.data?.can_manage_access) && nextCanAccessTickets;
-                    nextUserId = accessPayload.data?.user_id ?? null;
-                    setCanAccessTickets(nextCanAccessTickets);
-                    setCanManageTickets(nextCanManageTickets);
-                    setCurrentUserId(nextUserId);
-                }
 
                 const [projectRes, notesRes] = await Promise.all([
                     fetch(`/api/projects?id=${projectId}`),
@@ -85,8 +71,8 @@ export default function ProjectPage() {
                     setNotes(notesData.data || []);
                 }
 
-                if (nextCanAccessTickets) {
-                    const scope = nextCanManageTickets ? 'manage' : 'mine';
+                if (canAccessTickets) {
+                    const scope = canManageTickets ? 'manage' : 'mine';
                     const ticketsRes = await fetch(`/api/tickets?project_id=${projectId}&scope=${scope}`);
                     if (ticketsRes.ok) {
                         const ticketsData = await ticketsRes.json();
@@ -101,7 +87,7 @@ export default function ProjectPage() {
         }
 
         fetchData();
-    }, [projectId]);
+    }, [projectId, canAccessTickets, canManageTickets]);
 
     const handleAddNote = async (content: string) => {
         try {
