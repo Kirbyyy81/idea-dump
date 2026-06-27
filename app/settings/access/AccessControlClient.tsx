@@ -1,23 +1,22 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Plus, Search, X } from 'lucide-react';
 import { AppModuleSlug, AppRoleSlug } from '@/lib/rbac/constants';
-import { AccessAdminRoleRecord, AccessAdminUserRecord, AppModuleMetadata, ModuleOverrideEffect } from '@/lib/rbac/types';
+import { AccessAdminRoleRecord, AccessAdminUserRecord, ModuleOverrideEffect } from '@/lib/rbac/types';
 import { Badge } from '@/components/atoms/Badge';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
-import { PageLoader } from '@/components/atoms/Loader';
 import { useAlert } from '@/lib/contexts/AlertContext';
-
-interface AccessUsersResponse {
-    modules: AppModuleMetadata[];
-    roleAssignments: AccessAdminRoleRecord[];
-    roles: AppRoleSlug[];
-    users: AccessAdminUserRecord[];
-}
+import {
+    AccessUsersResponse,
+    createRole as createRoleAction,
+    getAccessAdminData,
+    saveRoleModules,
+    saveUserAccess,
+} from './actions';
 
 interface UserDraftState {
     overrides: Partial<Record<AppModuleSlug, ModuleOverrideEffect | null>>;
@@ -64,11 +63,14 @@ function getInitials(value: string) {
     return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase();
 }
 
-export function AccessControlClient() {
+interface AccessControlClientProps {
+    initialData: AccessUsersResponse;
+}
+
+export function AccessControlClient({ initialData }: AccessControlClientProps) {
     const { showSuccess } = useAlert();
-    const [data, setData] = useState<AccessUsersResponse | null>(null);
+    const [data, setData] = useState<AccessUsersResponse>(initialData);
     const [error, setError] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
     const [savingRole, setSavingRole] = useState<AppRoleSlug | null>(null);
     const [savingUserId, setSavingUserId] = useState<string | null>(null);
     const [search, setSearch] = useState('');
@@ -79,26 +81,10 @@ export function AccessControlClient() {
     const [isCreatingRole, setIsCreatingRole] = useState(false);
     const [showNewRoleRow, setShowNewRoleRow] = useState(false);
 
-    async function loadAccessData() {
-        try {
-            const res = await fetch('/api/access/users');
-            if (!res.ok) {
-                const payload = await res.json();
-                throw new Error(payload.message || 'Failed to load access data');
-            }
-
-            const payload = await res.json();
-            setData(payload.data);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to load access data');
-        } finally {
-            setIsLoading(false);
-        }
+    async function reloadData() {
+        const fresh = await getAccessAdminData();
+        setData(fresh);
     }
-
-    useEffect(() => {
-        loadAccessData();
-    }, []);
 
     const filteredUsers = useMemo(() => {
         if (!data) return [];
@@ -217,23 +203,14 @@ export function AccessControlClient() {
         setError(null);
 
         try {
-            const res = await fetch(`/api/access/roles/${roleRecord.role}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ modules }),
-            });
-
-            if (!res.ok) {
-                const payload = await res.json();
-                throw new Error(payload.message || 'Failed to save role modules');
-            }
+            await saveRoleModules(roleRecord.role, modules);
 
             setRoleDrafts((current) => {
                 const next = { ...current };
                 delete next[roleRecord.role];
                 return next;
             });
-            await loadAccessData();
+            await reloadData();
             showSuccess(`${roleRecord.role} modules were updated.`, 'Access saved');
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to save role modules');
@@ -253,23 +230,11 @@ export function AccessControlClient() {
         setError(null);
 
         try {
-            const res = await fetch('/api/access/roles', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    role,
-                    modules: newRoleDraft.modules,
-                }),
-            });
-
-            if (!res.ok) {
-                const payload = await res.json();
-                throw new Error(payload.message || 'Failed to create role');
-            }
+            await createRoleAction(role, newRoleDraft.modules);
 
             setNewRoleDraft(DEFAULT_NEW_ROLE);
             setShowNewRoleRow(false);
-            await loadAccessData();
+            await reloadData();
             showSuccess(`${role} was created.`, 'Role created');
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to create role');
@@ -290,19 +255,7 @@ export function AccessControlClient() {
         setError(null);
 
         try {
-            const res = await fetch(`/api/access/users/${user.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    overrides: draft.overrides,
-                    role: draft.role,
-                }),
-            });
-
-            if (!res.ok) {
-                const payload = await res.json();
-                throw new Error(payload.message || 'Failed to save access');
-            }
+            await saveUserAccess(user.id, draft.role, draft.overrides);
 
             setUserDrafts((current) => {
                 const next = { ...current };
@@ -314,7 +267,7 @@ export function AccessControlClient() {
                 delete next[user.id];
                 return next;
             });
-            await loadAccessData();
+            await reloadData();
             showSuccess(`${getUserLabel(user)} access was updated.`, 'Access saved');
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to save access');
@@ -322,10 +275,6 @@ export function AccessControlClient() {
             setSavingUserId(null);
         }
     };
-
-    if (isLoading) {
-        return <PageLoader message="Loading access controls..." />;
-    }
 
     return (
         <div className="mx-auto min-h-screen max-w-7xl space-y-8 p-8">

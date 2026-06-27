@@ -42,25 +42,17 @@ create table if not exists public.film_rolls (
     )
   ),
   purchase_price numeric(10, 2) not null default 0,
+  lab_name text,
+  processing_cost numeric(10, 2) not null default 0 check (processing_cost >= 0),
+  scanning_cost numeric(10, 2) not null default 0 check (scanning_cost >= 0),
+  shipping_cost numeric(10, 2) not null default 0 check (shipping_cost >= 0),
+  processing_date date,
   location_name text,
   frames_taken integer not null default 0 check (frames_taken >= 0),
   successful_photos integer not null default 0 check (successful_photos >= 0),
   notes text,
   drive_folder_id text,
   cover_photo_id uuid,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-create table if not exists public.film_processing_records (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
-  film_roll_id uuid not null references public.film_rolls(id) on delete cascade,
-  lab_name text,
-  processing_cost numeric(10, 2) not null default 0,
-  scanning_cost numeric(10, 2) not null default 0,
-  shipping_cost numeric(10, 2) not null default 0,
-  processing_date date,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -123,7 +115,6 @@ create table if not exists public.film_drive_connections (
 create index if not exists film_cameras_user_id_idx on public.film_cameras(user_id);
 create index if not exists film_rolls_user_id_idx on public.film_rolls(user_id);
 create index if not exists film_rolls_camera_id_idx on public.film_rolls(camera_id);
-create index if not exists film_processing_records_roll_id_idx on public.film_processing_records(film_roll_id);
 create index if not exists film_maintenance_records_camera_id_idx on public.film_maintenance_records(camera_id);
 create index if not exists film_maintenance_records_user_id_idx on public.film_maintenance_records(user_id);
 create index if not exists film_photos_roll_id_idx on public.film_photos(film_roll_id);

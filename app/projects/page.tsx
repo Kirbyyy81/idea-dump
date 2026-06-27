@@ -59,12 +59,14 @@ export default function ProjectsPage() {
 
     if (error) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-bg-base">
-                <p className="text-red-400 mb-4">{error}</p>
-                <Button onClick={() => window.location.reload()}>
-                    Retry
-                </Button>
-            </div>
+            <AppShell contentClassName="p-8">
+                <div className="flex min-h-[60vh] flex-col items-center justify-center">
+                    <p className="text-red-400 mb-4">{error}</p>
+                    <Button onClick={() => window.location.reload()}>
+                        Retry
+                    </Button>
+                </div>
+            </AppShell>
         );
     }
 
@@ -73,7 +75,7 @@ export default function ProjectsPage() {
             <div>
                 <header className="flex items-center justify-between mb-6">
                     <h1 className="text-3xl font-heading font-medium">Projects</h1>
-                    <Link href="/project/new">
+                    <Link href="/projects/new">
                         <Button icon={<Plus size={18} />}>
                             New Project
                         </Button>

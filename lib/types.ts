@@ -196,19 +196,6 @@ export interface FilmCamera {
     updated_at: string;
 }
 
-export interface FilmProcessingRecord {
-    id: string;
-    user_id: string;
-    film_roll_id: string;
-    lab_name: string | null;
-    processing_cost: number;
-    scanning_cost: number;
-    shipping_cost: number;
-    processing_date: string | null;
-    created_at: string;
-    updated_at: string;
-}
-
 export interface FilmMaintenanceRecord {
     id: string;
     user_id: string;
@@ -249,6 +236,11 @@ export interface FilmRoll {
     iso: number;
     status: FilmRollStatus;
     purchase_price: number;
+    lab_name: string | null;
+    processing_cost: number;
+    scanning_cost: number;
+    shipping_cost: number;
+    processing_date: string | null;
     location_name: string | null;
     frames_taken: number;
     successful_photos: number;
@@ -258,7 +250,6 @@ export interface FilmRoll {
     created_at: string;
     updated_at: string;
     camera?: FilmCamera | null;
-    processing_records?: FilmProcessingRecord[];
     photos?: FilmPhoto[];
 }
 
@@ -282,6 +273,11 @@ export interface CreateFilmRollInput {
     camera_id?: string;
     status?: FilmRollStatus;
     purchase_price?: number;
+    lab_name?: string;
+    processing_cost?: number;
+    scanning_cost?: number;
+    shipping_cost?: number;
+    processing_date?: string;
     location_name?: string;
     frames_taken?: number;
     successful_photos?: number;
@@ -291,19 +287,6 @@ export interface CreateFilmRollInput {
 }
 
 export interface UpdateFilmRollInput extends Partial<CreateFilmRollInput> {
-    id: string;
-}
-
-export interface CreateFilmProcessingInput {
-    film_roll_id: string;
-    lab_name?: string;
-    processing_cost?: number;
-    scanning_cost?: number;
-    shipping_cost?: number;
-    processing_date?: string;
-}
-
-export interface UpdateFilmProcessingInput extends Partial<CreateFilmProcessingInput> {
     id: string;
 }
 

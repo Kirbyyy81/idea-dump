@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import { AppShell } from '@/components/organisms/AppShell';
 import { StatusBadge } from '../_components/StatusBadge';
 import { PriorityBadge } from '../_components/PriorityBadge';
 import { MarkdownRenderer } from '../_components/MarkdownRenderer';
@@ -25,11 +26,13 @@ import {
     Plus,
 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import { useAccess } from '@/lib/contexts/AccessContext';
 
 export default function ProjectPage() {
     const params = useParams();
     const router = useRouter();
     const projectId = params.id as string;
+    const access = useAccess();
 
     const [project, setProject] = useState<Project | null>(null);
     const [notes, setNotes] = useState<Note[]>([]);
@@ -41,9 +44,9 @@ export default function ProjectPage() {
     const [showTicketForm, setShowTicketForm] = useState(false);
     const [editingTicket, setEditingTicket] = useState<Ticket | null>(null);
     const [isSavingTicket, setIsSavingTicket] = useState(false);
-    const [canAccessTickets, setCanAccessTickets] = useState(false);
-    const [canManageTickets, setCanManageTickets] = useState(false);
-    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+    const canAccessTickets = access?.allowedModules.includes('tickets') ?? false;
+    const canManageTickets = Boolean(access?.canManageAccess) && canAccessTickets;
+    const currentUserId = access?.userId ?? null;
 
     useEffect(() => {
         async function fetchData() {
@@ -55,7 +58,6 @@ export default function ProjectPage() {
                     setProjects(projectsData.data || []);
                 }
 
-                // Then fetch access permissions
                 const accessRes = await fetch('/api/access/me');
                 let nextCanAccessTickets = false;
                 let nextCanManageTickets = false;
@@ -91,8 +93,8 @@ export default function ProjectPage() {
                     setNotes(notesData.data || []);
                 }
 
-                if (nextCanAccessTickets) {
-                    const scope = nextCanManageTickets ? 'manage' : 'mine';
+                if (canAccessTickets) {
+                    const scope = canManageTickets ? 'manage' : 'mine';
                     const ticketsRes = await fetch(`/api/tickets?project_id=${projectId}&scope=${scope}`);
                     if (ticketsRes.ok) {
                         const ticketsData = await ticketsRes.json();
@@ -107,7 +109,7 @@ export default function ProjectPage() {
         }
 
         fetchData();
-    }, [projectId]);
+    }, [projectId, canAccessTickets, canManageTickets]);
 
     const handleAddNote = async (content: string) => {
         try {
@@ -246,7 +248,7 @@ export default function ProjectPage() {
                     Back to Projects
                 </Link>
                 <div className="flex gap-2">
-                    <Link href={`/project/${project.id}/edit`}>
+                    <Link href={`/projects/${project.id}/edit`}>
                         <Button variant="secondary" icon={<Pencil size={16} />}>
                             Edit
                         </Button>
@@ -407,7 +409,7 @@ export default function ProjectPage() {
                     </Card>
                 </section>
             )}
-                    </div>
+            </div>
         </AppShell>
     );
 }

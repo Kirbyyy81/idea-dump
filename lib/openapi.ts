@@ -84,6 +84,11 @@ export function getOpenApiSpec() {
             iso: { type: 'integer' },
             status: { type: 'string', enum: ['UNUSED', 'LOADED', 'SHOOTING', 'AWAITING_PROCESSING', 'PROCESSING', 'PROCESSED', 'ARCHIVED'] },
             purchase_price: { type: 'number' },
+            lab_name: { type: 'string', nullable: true },
+            processing_cost: { type: 'number', minimum: 0 },
+            scanning_cost: { type: 'number', minimum: 0 },
+            shipping_cost: { type: 'number', minimum: 0 },
+            processing_date: { type: 'string', format: 'date', nullable: true },
             location_name: { type: 'string', nullable: true },
             frames_taken: { type: 'integer' },
             successful_photos: { type: 'integer' },
@@ -106,6 +111,11 @@ export function getOpenApiSpec() {
             unprocessed_rolls: { type: 'integer' },
             favorite_photos: { type: 'integer' },
             average_spend_per_roll: { type: 'number' },
+            maintenance_cost: { type: 'number' },
+            total_photos: { type: 'integer' },
+            successful_photos: { type: 'integer' },
+            average_cost_per_photo: { type: 'number' },
+            rolls_loaded_or_shooting: { type: 'integer' },
         },
     };
 
@@ -462,6 +472,7 @@ export function getOpenApiSpec() {
                 },
                 post: {
                     summary: 'Create a film roll',
+                    description: 'Creates one physical roll. New inventory defaults to UNUSED and processing fields may be filled later.',
                     responses: {
                         201: { description: 'Created film roll' },
                         400: { description: 'Validation error', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
@@ -469,6 +480,7 @@ export function getOpenApiSpec() {
                 },
                 put: {
                     summary: 'Update a film roll',
+                    description: 'Updates roll lifecycle, shooting, cost, and single processing-summary fields.',
                     responses: {
                         200: { description: 'Updated film roll' },
                         400: { description: 'Validation error', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
