@@ -179,9 +179,6 @@ export default function FilmCamerasPage() {
                     <div>
                         <p className="text-sm uppercase tracking-[0.22em] text-text-muted">Gear cabinet</p>
                         <h1 className="mt-1">Cameras & Maintenance</h1>
-                        <p className="mt-2 text-text-secondary">
-                            Keep each camera separate from the rolls it has photographed.
-                        </p>
                     </div>
                 </header>
 
