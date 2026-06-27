@@ -73,9 +73,6 @@ export default function FilmJournalPage() {
                     <div>
                         <p className="text-sm uppercase tracking-[0.22em] text-text-muted">Film Photography</p>
                         <h1 className="mt-1">The Film Cupboard</h1>
-                        <p className="mt-2 max-w-2xl text-text-secondary">
-                            Every box is one physical roll, from unopened stock to finished photobook.
-                        </p>
                     </div>
                 </header>
 

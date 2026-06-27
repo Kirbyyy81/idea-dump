@@ -53,7 +53,7 @@ export default function NewFilmRollPage() {
         <AppShell contentClassName="p-5 md:p-8">
             <div className="mx-auto max-w-5xl space-y-7">
                 <header className="space-y-5">
-                    <div><p className="text-sm uppercase tracking-[0.22em] text-text-muted">Inventory</p><h1 className="mt-1">Register a Film Roll</h1><p className="mt-2 text-text-secondary">Add one physical roll now. Shooting and processing details can wait until you use it.</p></div>
+                    <div><p className="text-sm uppercase tracking-[0.22em] text-text-muted">Inventory</p><h1 className="mt-1">Register a Film Roll</h1></div>
                 </header>
                 {error && <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">{error}</div>}
                 <form onSubmit={handleSubmit}>

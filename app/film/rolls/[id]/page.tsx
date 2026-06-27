@@ -299,9 +299,6 @@ export default function FilmRollDetailPage({ params }: RollDetailPageProps) {
                                 {filmRollStatusConfig[roll.status].label}
                             </span>
                         </div>
-                        <p className="mt-1 text-text-secondary">
-                            {roll.brand} · {roll.format} · ISO {roll.iso}
-                        </p>
                     </div>
                     <Button icon={<Save size={16} />} onClick={handleSaveRoll} isLoading={isSaving}>
                         Save Photobook
