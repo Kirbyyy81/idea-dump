@@ -80,7 +80,7 @@ export default function ProjectsPage() {
             <div className="space-y-6">
                 <header className="flex items-center justify-between mb-6">
                     <h1 className="text-3xl font-heading font-medium">Projects</h1>
-                    <Link href="/project/new">
+                    <Link href="/projects/new">
                         <Button icon={<Plus size={18} />}>
                             New Project
                         </Button>

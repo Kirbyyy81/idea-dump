@@ -30,7 +30,7 @@ export default function NewProjectPage() {
             }
 
             const { data: project } = await res.json();
-            router.push(`/project/${project.id}`);
+            router.push(`/projects/${project.id}`);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An error occurred');
             setIsSubmitting(false);

@@ -70,7 +70,7 @@ function isExactPath(pathname: string, href: string) {
 }
 
 function isProjectRoute(pathname: string) {
-    return pathname === '/projects' || pathname.startsWith('/project/');
+    return pathname === '/projects' || pathname.startsWith('/projects/');
 }
 
 function isFilmRoute(pathname: string) {
@@ -242,9 +242,9 @@ export function Sidebar({ projects }: SidebarProps) {
                                     label: 'All Projects',
                                 })}
                                 {renderSubItem({
-                                    href: '/project/new',
+                                    href: '/projects/new',
                                     icon: <Plus size={14} />,
-                                    isActive: isExactPath(pathname, '/project/new'),
+                                    isActive: isExactPath(pathname, '/projects/new'),
                                     label: 'New Project',
                                 })}
                             </div>
@@ -255,10 +255,10 @@ export function Sidebar({ projects }: SidebarProps) {
                                     </p>
                                 ) : (
                                     projects.map((project) => renderSubItem({
-                                        href: `/project/${project.id}`,
+                                        href: `/projects/${project.id}`,
                                         isActive:
-                                            pathname === `/project/${project.id}` ||
-                                            pathname === `/project/${project.id}/edit`,
+                                            pathname === `/projects/${project.id}` ||
+                                            pathname === `/projects/${project.id}/edit`,
                                         label: project.title,
                                     }))
                                 )}
