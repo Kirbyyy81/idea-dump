@@ -1,6 +1,6 @@
 'use client';
 
-import { JSX, useEffect, useState } from 'react';
+import { JSX, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
@@ -8,6 +8,7 @@ import { Project } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { AppModuleSlug } from '@/lib/rbac/constants';
 import { AppModuleMetadata } from '@/lib/rbac/types';
+import { useAccess } from '@/lib/contexts/AccessContext';
 import {
     BarChart3,
     BookOpen,
@@ -30,12 +31,6 @@ interface SidebarProps {
     projects: Project[];
 }
 
-interface AccessPayload {
-    allowed_modules?: AppModuleSlug[];
-    can_manage_access?: boolean;
-    modules?: AppModuleMetadata[];
-}
-
 interface SidebarSubItem {
     href: string;
     icon?: JSX.Element;
@@ -43,7 +38,6 @@ interface SidebarSubItem {
     label: string;
 }
 
-const DEFAULT_ALLOWED_MODULES: AppModuleSlug[] = ['dashboard', 'settings'];
 const SHELL_MODULES: Record<'dashboard' | 'settings', { href: string; label: string }> = {
     dashboard: { href: '/dashboard', label: 'Dashboard' },
     settings: { href: '/settings', label: 'Settings' },
@@ -80,35 +74,10 @@ function isFilmRoute(pathname: string) {
 export function Sidebar({ projects }: SidebarProps) {
     const pathname = usePathname();
     const [openGroups, setOpenGroups] = useState<Partial<Record<'projects' | 'tickets' | 'film', boolean>>>({});
-    const [allowedModules, setAllowedModules] = useState<AppModuleSlug[]>(DEFAULT_ALLOWED_MODULES);
-    const [modules, setModules] = useState<AppModuleMetadata[]>([]);
-    const [canManageAccess, setCanManageAccess] = useState(false);
-
-    useEffect(() => {
-        let cancelled = false;
-
-        async function loadAccess() {
-            try {
-                const res = await fetch('/api/access/me');
-                if (!res.ok) return;
-
-                const payload = await res.json();
-                const accessData = payload.data as AccessPayload;
-                if (!cancelled && accessData.allowed_modules) {
-                    setAllowedModules(accessData.allowed_modules);
-                    setModules(accessData.modules ?? []);
-                    setCanManageAccess(Boolean(accessData.can_manage_access));
-                }
-            } catch {
-                // Keep safe defaults if access loading fails.
-            }
-        }
-
-        loadAccess();
-        return () => {
-            cancelled = true;
-        };
-    }, []);
+    const access = useAccess();
+    const allowedModules = access?.allowedModules ?? [];
+    const modules = access?.modules ?? [];
+    const canManageAccess = access?.canManageAccess ?? false;
 
     const canAccessModule = (moduleSlug: AppModuleSlug) => allowedModules.includes(moduleSlug);
     const isDashboardActive = pathname === '/' || pathname.startsWith('/dashboard');
