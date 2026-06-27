@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { AppShell } from '@/components/organisms/AppShell';
 import { ProjectForm } from '../_components/ProjectForm';
 import { CreateProjectInput } from '@/lib/types';
 
@@ -29,7 +30,7 @@ export default function NewProjectPage() {
             }
 
             const { data: project } = await res.json();
-            router.push(`/project/${project.id}`);
+            router.push(`/projects/${project.id}`);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An error occurred');
             setIsSubmitting(false);
@@ -37,30 +38,31 @@ export default function NewProjectPage() {
     };
 
     return (
-        <div className="min-h-screen p-8 max-w-3xl mx-auto">
-            {/* Header */}
-            <div className="flex items-center gap-4 mb-8">
-                <Link
-                    href="/projects"
-                    className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors"
-                >
-                    <ArrowLeft size={20} />
-                </Link>
-                <h1 className="text-text-primary">New Project</h1>
-            </div>
-
-            {error && (
-                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 mb-6">
-                    <p className="text-sm text-red-400">{error}</p>
+        <AppShell contentClassName="p-8">
+            <div className="max-w-3xl">
+                <div className="flex items-center gap-4 mb-8">
+                    <Link
+                        href="/projects"
+                        className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors"
+                    >
+                        <ArrowLeft size={20} />
+                    </Link>
+                    <h1 className="text-text-primary">New Project</h1>
                 </div>
-            )}
 
-            <ProjectForm
-                onSubmit={handleSubmit}
-                isSubmitting={isSubmitting}
-                onCancel={() => router.push('/projects')}
-                submitLabel="Create Project"
-            />
-        </div>
+                {error && (
+                    <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 mb-6">
+                        <p className="text-sm text-red-400">{error}</p>
+                    </div>
+                )}
+
+                <ProjectForm
+                    onSubmit={handleSubmit}
+                    isSubmitting={isSubmitting}
+                    onCancel={() => router.push('/projects')}
+                    submitLabel="Create Project"
+                />
+            </div>
+        </AppShell>
     );
 }

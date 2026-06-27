@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authorizeSessionModule } from '@/lib/rbac/guards';
-import { FilmCamera, FilmMaintenanceRecord, FilmProcessingRecord, FilmRoll } from '@/lib/types';
+import { FilmCamera, FilmMaintenanceRecord, FilmRoll } from '@/lib/types';
 
 export async function authorizeFilmJournal() {
     const access = await authorizeSessionModule('film_journal');
@@ -42,13 +42,13 @@ export async function getOwnedFilmCamera(userId: string, cameraId: string) {
     return data as FilmCamera | null;
 }
 
-export function getRollCost(roll: Pick<FilmRoll, 'purchase_price'>, records: FilmProcessingRecord[]) {
-    return Number(roll.purchase_price || 0) + records.reduce((total, record) => {
-        return total
-            + Number(record.processing_cost || 0)
-            + Number(record.scanning_cost || 0)
-            + Number(record.shipping_cost || 0);
-    }, 0);
+export function getRollCost(
+    roll: Pick<FilmRoll, 'purchase_price' | 'processing_cost' | 'scanning_cost' | 'shipping_cost'>
+) {
+    return Number(roll.purchase_price || 0)
+        + Number(roll.processing_cost || 0)
+        + Number(roll.scanning_cost || 0)
+        + Number(roll.shipping_cost || 0);
 }
 
 export function getMaintenanceCost(records: Pick<FilmMaintenanceRecord, 'maintenance_cost'>[]) {

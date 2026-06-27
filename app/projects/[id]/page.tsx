@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import { AppShell } from '@/components/organisms/AppShell';
 import { StatusBadge } from '../_components/StatusBadge';
 import { PriorityBadge } from '../_components/PriorityBadge';
 import { MarkdownRenderer } from '../_components/MarkdownRenderer';
@@ -218,19 +219,22 @@ export default function ProjectPage() {
 
     if (error || !project) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center">
-                <p className="text-red-400 mb-4">{error || 'Project not found'}</p>
-                <Link href="/projects" className="btn-secondary">
-                    Back to Projects
-                </Link>
-            </div>
+            <AppShell contentClassName="p-8">
+                <div className="flex min-h-[60vh] flex-col items-center justify-center">
+                    <p className="text-red-400 mb-4">{error || 'Project not found'}</p>
+                    <Link href="/projects" className="btn-secondary">
+                        Back to Projects
+                    </Link>
+                </div>
+            </AppShell>
         );
     }
 
     const status = inferStatus(project);
 
     return (
-        <div className="min-h-screen p-8 max-w-5xl mx-auto">
+        <AppShell contentClassName="p-8">
+            <div className="max-w-5xl">
             <div className="flex items-center justify-between mb-8">
                 <Link
                     href="/projects"
@@ -240,7 +244,7 @@ export default function ProjectPage() {
                     Back to Projects
                 </Link>
                 <div className="flex gap-2">
-                    <Link href={`/project/${project.id}/edit`}>
+                    <Link href={`/projects/${project.id}/edit`}>
                         <Button variant="secondary" icon={<Pencil size={16} />}>
                             Edit
                         </Button>
@@ -401,6 +405,7 @@ export default function ProjectPage() {
                     </Card>
                 </section>
             )}
-        </div>
+            </div>
+        </AppShell>
     );
 }

@@ -16,7 +16,6 @@ import {
     FilmFormat,
     FilmMaintenanceRecord,
     FilmPhoto,
-    FilmProcessingRecord,
     FilmRoll,
     FilmRollStatus,
     filmFormats,
@@ -29,14 +28,6 @@ interface RollDetailPageProps {
         id: string;
     };
 }
-
-const DEFAULT_PROCESSING_FORM = {
-    lab_name: '',
-    processing_cost: '',
-    scanning_cost: '',
-    shipping_cost: '',
-    processing_date: '',
-};
 
 const DEFAULT_MAINTENANCE_FORM = {
     service_type: 'CLA',
@@ -59,15 +50,6 @@ function formatDate(value: string | null | undefined) {
     return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(new Date(value));
 }
 
-function getProcessingTotal(records: FilmProcessingRecord[]) {
-    return records.reduce((total, record) => (
-        total
-        + Number(record.processing_cost || 0)
-        + Number(record.scanning_cost || 0)
-        + Number(record.shipping_cost || 0)
-    ), 0);
-}
-
 function getRollForm(roll: FilmRoll) {
     return {
         film_name: roll.film_name,
@@ -77,6 +59,11 @@ function getRollForm(roll: FilmRoll) {
         camera_id: roll.camera_id ?? '',
         status: roll.status,
         purchase_price: String(roll.purchase_price ?? 0),
+        lab_name: roll.lab_name ?? '',
+        processing_cost: String(roll.processing_cost ?? 0),
+        scanning_cost: String(roll.scanning_cost ?? 0),
+        shipping_cost: String(roll.shipping_cost ?? 0),
+        processing_date: roll.processing_date ?? '',
         frames_taken: String(roll.frames_taken ?? 0),
         successful_photos: String(roll.successful_photos ?? 0),
         location_name: roll.location_name ?? '',
@@ -91,13 +78,11 @@ export default function FilmRollDetailPage({ params }: RollDetailPageProps) {
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
-    const [isAddingProcessing, setIsAddingProcessing] = useState(false);
     const [isLoadingMaintenance, setIsLoadingMaintenance] = useState(false);
     const [isAddingMaintenance, setIsAddingMaintenance] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [maintenanceError, setMaintenanceError] = useState<string | null>(null);
     const [rollForm, setRollForm] = useState<ReturnType<typeof getRollForm> | null>(null);
-    const [processingForm, setProcessingForm] = useState(DEFAULT_PROCESSING_FORM);
     const [maintenanceRecords, setMaintenanceRecords] = useState<FilmMaintenanceRecord[]>([]);
     const [maintenanceForm, setMaintenanceForm] = useState(DEFAULT_MAINTENANCE_FORM);
     const [driveFolderInput, setDriveFolderInput] = useState('');
@@ -161,11 +146,12 @@ export default function FilmRollDetailPage({ params }: RollDetailPageProps) {
         loadMaintenanceRecords(cameraId);
     }, [loadMaintenanceRecords, rollForm?.camera_id]);
 
-    const processingRecords = useMemo(() => roll?.processing_records ?? [], [roll?.processing_records]);
     const photos = useMemo(() => roll?.photos ?? [], [roll?.photos]);
     const favoritePhotos = photos.filter((photo) => photo.is_favorite);
-    const processingTotal = useMemo(() => getProcessingTotal(processingRecords), [processingRecords]);
-    const totalCost = Number(roll?.purchase_price || 0) + processingTotal;
+    const totalCost = Number(roll?.purchase_price || 0)
+        + Number(roll?.processing_cost || 0)
+        + Number(roll?.scanning_cost || 0)
+        + Number(roll?.shipping_cost || 0);
     const costPerFrame = roll?.frames_taken ? totalCost / roll.frames_taken : 0;
     const costPerSuccessfulPhoto = roll?.successful_photos ? totalCost / roll.successful_photos : 0;
 
@@ -183,6 +169,9 @@ export default function FilmRollDetailPage({ params }: RollDetailPageProps) {
                     ...rollForm,
                     iso: Number(rollForm.iso),
                     purchase_price: Number(rollForm.purchase_price || 0),
+                    processing_cost: Number(rollForm.processing_cost || 0),
+                    scanning_cost: Number(rollForm.scanning_cost || 0),
+                    shipping_cost: Number(rollForm.shipping_cost || 0),
                     frames_taken: Number(rollForm.frames_taken || 0),
                     successful_photos: Number(rollForm.successful_photos || 0),
                     camera_id: rollForm.camera_id || null,
@@ -196,35 +185,6 @@ export default function FilmRollDetailPage({ params }: RollDetailPageProps) {
             setError(err instanceof Error ? err.message : 'Failed to save film roll');
         } finally {
             setIsSaving(false);
-        }
-    };
-
-    const handleAddProcessing = async () => {
-        if (!roll) return;
-
-        setIsAddingProcessing(true);
-        setError(null);
-        try {
-            const res = await fetch('/api/film/processing', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    film_roll_id: roll.id,
-                    lab_name: processingForm.lab_name,
-                    processing_cost: Number(processingForm.processing_cost || 0),
-                    scanning_cost: Number(processingForm.scanning_cost || 0),
-                    shipping_cost: Number(processingForm.shipping_cost || 0),
-                    processing_date: processingForm.processing_date,
-                }),
-            });
-
-            if (!res.ok) throw new Error('Failed to add processing record');
-            setProcessingForm(DEFAULT_PROCESSING_FORM);
-            await loadRoll();
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to add processing record');
-        } finally {
-            setIsAddingProcessing(false);
         }
     };
 
@@ -581,32 +541,17 @@ export default function FilmRollDetailPage({ params }: RollDetailPageProps) {
 
                         <Card className="p-5">
                             <h2 className="text-xl">Processing</h2>
+                            <p className="mt-1 text-sm text-text-muted">
+                                One processing summary belongs to this roll. Save it with the photobook.
+                            </p>
                             <div className="mt-4 space-y-3">
-                                {processingRecords.length > 0 && (
-                                    <div className="space-y-2">
-                                        {processingRecords.map((record) => (
-                                            <div key={record.id} className="rounded-lg border border-border-default bg-bg-hover/50 p-3 text-sm">
-                                                <div className="flex items-start justify-between gap-3">
-                                                    <div>
-                                                        <p className="font-medium text-text-primary">{record.lab_name || 'Processing record'}</p>
-                                                        <p className="text-text-muted">{record.processing_date || 'No date'}</p>
-                                                    </div>
-                                                    <p className="font-medium text-text-primary">
-                                                        {formatCurrency(Number(record.processing_cost || 0) + Number(record.scanning_cost || 0) + Number(record.shipping_cost || 0))}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                                <Input placeholder="Lab name" value={processingForm.lab_name} onChange={(event) => setProcessingForm({ ...processingForm, lab_name: event.target.value })} />
+                                <Input placeholder="Lab name" value={rollForm.lab_name} onChange={(event) => setRollForm({ ...rollForm, lab_name: event.target.value })} />
                                 <div className="grid grid-cols-3 gap-2">
-                                    <Input type="number" min="0" step="0.01" placeholder="Process" value={processingForm.processing_cost} onChange={(event) => setProcessingForm({ ...processingForm, processing_cost: event.target.value })} />
-                                    <Input type="number" min="0" step="0.01" placeholder="Scan" value={processingForm.scanning_cost} onChange={(event) => setProcessingForm({ ...processingForm, scanning_cost: event.target.value })} />
-                                    <Input type="number" min="0" step="0.01" placeholder="Ship" value={processingForm.shipping_cost} onChange={(event) => setProcessingForm({ ...processingForm, shipping_cost: event.target.value })} />
+                                    <Input type="number" min="0" step="0.01" placeholder="Process" value={rollForm.processing_cost} onChange={(event) => setRollForm({ ...rollForm, processing_cost: event.target.value })} />
+                                    <Input type="number" min="0" step="0.01" placeholder="Scan" value={rollForm.scanning_cost} onChange={(event) => setRollForm({ ...rollForm, scanning_cost: event.target.value })} />
+                                    <Input type="number" min="0" step="0.01" placeholder="Ship" value={rollForm.shipping_cost} onChange={(event) => setRollForm({ ...rollForm, shipping_cost: event.target.value })} />
                                 </div>
-                                <Input type="date" value={processingForm.processing_date} onChange={(event) => setProcessingForm({ ...processingForm, processing_date: event.target.value })} />
-                                <Button onClick={handleAddProcessing} isLoading={isAddingProcessing}>Add Processing</Button>
+                                <Input type="date" value={rollForm.processing_date} onChange={(event) => setRollForm({ ...rollForm, processing_date: event.target.value })} />
                             </div>
                         </Card>
                     </aside>
