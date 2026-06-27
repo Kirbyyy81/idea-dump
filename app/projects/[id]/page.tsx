@@ -12,7 +12,6 @@ import { TicketCard } from '@/components/organisms/TicketCard';
 import { TicketForm } from '@/components/organisms/TicketForm';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
-import { AppShell } from '@/components/organisms/AppShell';
 import { CreateTicketInput, Note, Project, Ticket, inferStatus } from '@/lib/types';
 import {
     ArrowLeft,
