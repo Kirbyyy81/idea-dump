@@ -50,27 +50,14 @@ export default function ProjectPage() {
     useEffect(() => {
         async function fetchData() {
             try {
+                setIsLoading(true);
+                setError(null);
+
                 // First fetch projects for AppShell sidebar navigation
                 const projectsRes = await fetch('/api/projects');
                 if (projectsRes.ok) {
                     const projectsData = await projectsRes.json();
                     setProjects(projectsData.data || []);
-                }
-
-                const accessRes = await fetch('/api/access/me');
-                let nextCanAccessTickets = false;
-                let nextCanManageTickets = false;
-                let nextUserId: string | null = null;
-
-                if (accessRes.ok) {
-                    const accessPayload = await accessRes.json();
-                    const allowedModules = accessPayload.data?.allowed_modules || [];
-                    nextCanAccessTickets = allowedModules.includes('tickets');
-                    nextCanManageTickets = Boolean(accessPayload.data?.can_manage_access) && nextCanAccessTickets;
-                    nextUserId = accessPayload.data?.user_id ?? null;
-                    setCanAccessTickets(nextCanAccessTickets);
-                    setCanManageTickets(nextCanManageTickets);
-                    setCurrentUserId(nextUserId);
                 }
 
                 const [projectRes, notesRes] = await Promise.all([
@@ -219,6 +206,14 @@ export default function ProjectPage() {
             setError(err instanceof Error ? err.message : 'Failed to delete ticket');
         }
     };
+
+    if (isLoading) {
+        return (
+            <AppShell projects={projects} isLoading loadingMessage="Loading project..." contentClassName="p-8">
+                <div />
+            </AppShell>
+        );
+    }
 
     if (error || !project) {
         return (
