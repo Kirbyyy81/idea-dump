@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Film, Search, X } from 'lucide-react';
 import { AppShell } from '@/components/organisms/AppShell';
-import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
 import { FilmCamera, FilmRoll, FilmRollStatus, filmRollStatusConfig } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -73,8 +72,8 @@ export default function FilmJournalPage() {
 
     return (
         <AppShell contentClassName="p-5 md:p-8">
-            <div className="mx-auto max-w-7xl space-y-7">
-                <header className="space-y-5">
+            <div className="mx-auto max-w-7xl space-y-5">
+                <header>
                     <div>
                         <p className="text-sm uppercase tracking-[0.22em] text-text-muted">Film Photography</p>
                         <h1 className="mt-1">The Film Cupboard</h1>
@@ -83,29 +82,31 @@ export default function FilmJournalPage() {
 
                 {error && <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">{error}</div>}
 
-                <Card className="p-4">
-                    <div className="flex flex-wrap gap-3">
-                        <div className="relative min-w-[240px] flex-1">
-                            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
-                            <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search film, camera, location, notes" className="pl-9 pr-9" />
-                            {query && <button type="button" onClick={() => setQuery('')} aria-label="Clear search" className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted"><X size={16} /></button>}
-                        </div>
-                        <select className="input min-w-48" value={status} onChange={(event) => setStatus(event.target.value as FilmRollStatus | 'all')}>
-                            <option value="all">All stages</option>
-                            {Object.entries(filmRollStatusConfig).map(([value, config]) => <option key={value} value={value}>{config.label}</option>)}
-                        </select>
-                        <select className="input min-w-48" value={cameraId} onChange={(event) => setCameraId(event.target.value)}>
-                            <option value="">All cameras</option>
-                            {cameras.map((camera) => <option key={camera.id} value={camera.id}>{camera.name}</option>)}
-                        </select>
-                    </div>
-                </Card>
-
                 <section className="overflow-hidden rounded-2xl border border-[#4b3428] bg-[#2e201a] shadow-xl">
                     <div className="border-b border-[#654737] bg-[linear-gradient(100deg,#4a3024,#38241c_45%,#523528)] px-6 py-4 text-[#f3dfc4]">
-                        <div className="flex items-center justify-between gap-4">
-                            <div className="flex items-center gap-3"><Film size={19} /><h2 className="text-xl">Roll Library</h2></div>
-                            <span className="text-sm text-[#c9aa88]">{filteredRolls.length} of {rolls.length} rolls</span>
+                        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                            <div className="flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-3">
+                                    <Film size={19} />
+                                    <h2 className="text-xl !text-[#f3dfc4]">Roll Library</h2>
+                                </div>
+                                <span className="shrink-0 text-sm text-[#c9aa88]">{filteredRolls.length} of {rolls.length} rolls</span>
+                            </div>
+                            <div className="flex flex-wrap gap-3 xl:justify-end">
+                                <div className="relative min-w-[240px] flex-1 xl:w-[340px] xl:flex-none">
+                                    <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
+                                    <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search film, camera, location, notes" className="pl-9 pr-9" />
+                                    {query && <button type="button" onClick={() => setQuery('')} aria-label="Clear search" className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted"><X size={16} /></button>}
+                                </div>
+                                <select className="input min-w-48 xl:w-48" value={status} onChange={(event) => setStatus(event.target.value as FilmRollStatus | 'all')}>
+                                    <option value="all">All stages</option>
+                                    {Object.entries(filmRollStatusConfig).map(([value, config]) => <option key={value} value={value}>{config.label}</option>)}
+                                </select>
+                                <select className="input min-w-48 xl:w-48" value={cameraId} onChange={(event) => setCameraId(event.target.value)}>
+                                    <option value="">All cameras</option>
+                                    {cameras.map((camera) => <option key={camera.id} value={camera.id}>{camera.name}</option>)}
+                                </select>
+                            </div>
                         </div>
                     </div>
                     {filteredRolls.length === 0 ? (
