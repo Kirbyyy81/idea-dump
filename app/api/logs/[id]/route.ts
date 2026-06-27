@@ -54,6 +54,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         if (err instanceof AuthError) {
             return NextResponse.json({ error: 'Unauthorized', message: err.message }, { status: err.statusCode });
         }
+        console.error('[PATCH /api/logs/[id]] Unexpected error:', err);
         return NextResponse.json({ error: 'Internal error', message: 'An unexpected error occurred' }, { status: 500 });
     }
 }
@@ -94,6 +95,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         if (err instanceof AuthError) {
             return NextResponse.json({ error: 'Unauthorized', message: err.message }, { status: err.statusCode });
         }
+        console.error('[DELETE /api/logs/[id]] Unexpected error:', err);
         return NextResponse.json({ error: 'Internal error', message: 'An unexpected error occurred' }, { status: 500 });
     }
 }

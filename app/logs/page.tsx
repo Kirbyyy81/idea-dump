@@ -20,7 +20,8 @@ export default function LogsPage() {
     const [error, setError] = useState<string | null>(null);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editContent, setEditContent] = useState<DailyLogContent | null>(null);
-    const [isSaving, setIsSaving] = useState(false);
+    const [isCreating, setIsCreating] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
 
     // New log form
@@ -77,7 +78,7 @@ export default function LogsPage() {
     };
 
     const handleCreateLog = async (content: DailyLogContent) => {
-        setIsSaving(true);
+        setIsCreating(true);
         try {
             const res = await fetch('/api/logs', {
                 method: 'POST',
@@ -93,7 +94,7 @@ export default function LogsPage() {
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Create failed');
         } finally {
-            setIsSaving(false);
+            setIsCreating(false);
         }
     };
 
@@ -105,7 +106,7 @@ export default function LogsPage() {
     const handleSaveEdit = async () => {
         if (!editingId || !editContent) return;
 
-        setIsSaving(true);
+        setIsEditing(true);
         try {
             const res = await fetch(`/api/logs/${editingId}`, {
                 method: 'PATCH',
@@ -122,7 +123,7 @@ export default function LogsPage() {
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Update failed');
         } finally {
-            setIsSaving(false);
+            setIsEditing(false);
         }
     };
 
@@ -186,12 +187,11 @@ export default function LogsPage() {
 
         if (query.trim()) {
             const q = query.trim().toLowerCase();
-            const content = log.content as unknown as Partial<DailyLogContent>;
             const haystack = [
-                content.day,
-                content.operation_task,
-                content.tools_used,
-                content.lesson_learned,
+                log.content.day,
+                log.content.operation_task,
+                log.content.tools_used,
+                log.content.lesson_learned,
             ]
                 .filter(Boolean)
                 .join(' ')
@@ -284,7 +284,7 @@ export default function LogsPage() {
                     <LogForm
                         onSave={handleCreateLog}
                         onCancel={() => setShowNewForm(false)}
-                        isLoading={isSaving}
+                        isLoading={isCreating}
                     />
                 )}
 
@@ -423,7 +423,7 @@ export default function LogsPage() {
                                             log={log}
                                             isEditing={editingId === log.id}
                                             editContent={editingId === log.id ? editContent : null}
-                                            isSaving={isSaving}
+                                            isSaving={isEditing}
                                             onStartEdit={handleStartEdit}
                                             onSaveEdit={handleSaveEdit}
                                             onCancelEdit={handleCancelEdit}

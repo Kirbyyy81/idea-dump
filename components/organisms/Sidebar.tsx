@@ -6,7 +6,8 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Project } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { AppModuleSlug, MODULE_LABELS } from '@/lib/rbac/constants';
+import { AppModuleSlug } from '@/lib/rbac/constants';
+import { AppModuleMetadata } from '@/lib/rbac/types';
 import {
     LayoutDashboard,
     FolderKanban,
@@ -14,6 +15,7 @@ import {
     ShieldCheck,
     ChevronRight,
     ClipboardList,
+    FileSearch,
     BookOpen,
     FilePenLine,
     Film,
@@ -28,26 +30,34 @@ interface SidebarProps {
 }
 
 const DEFAULT_ALLOWED_MODULES: AppModuleSlug[] = ['dashboard', 'settings'];
+const SHELL_MODULES: Record<'dashboard' | 'settings', { href: string; label: string }> = {
+    dashboard: { href: '/dashboard', label: 'Dashboard' },
+    settings: { href: '/settings', label: 'Settings' },
+};
 
-const MODULE_NAV_ITEMS: Array<{
-    href: string;
-    icon: JSX.Element;
-    module: AppModuleSlug;
-    label?: string;
-    requiresManager?: boolean;
-}> = [
-    { href: '/logs', icon: <ClipboardList size={18} />, module: 'logs' },
-    { href: '/api-tools', icon: <BookOpen size={18} />, module: 'api' },
-    { href: '/settings/access', icon: <ShieldCheck size={18} />, module: 'access_control' },
-    { href: '/article-creation', icon: <FilePenLine size={18} />, module: 'article_creation' },
-    { href: '/film', icon: <Film size={18} />, module: 'film_journal' },
-];
+const MODULE_ICONS: Record<string, JSX.Element> = {
+    BookOpen: <BookOpen size={18} />,
+    ClipboardList: <ClipboardList size={18} />,
+    FilePenLine: <FilePenLine size={18} />,
+    FileSearch: <FileSearch size={18} />,
+    Film: <Film size={18} />,
+    FolderKanban: <FolderKanban size={18} />,
+    ShieldCheck: <ShieldCheck size={18} />,
+    Ticket: <Ticket size={18} />,
+};
+
+interface AccessPayload {
+    allowed_modules?: AppModuleSlug[];
+    can_manage_access?: boolean;
+    modules?: AppModuleMetadata[];
+}
 
 export function Sidebar({ projects }: SidebarProps) {
     const pathname = usePathname();
     const [isProjectsOpen, setIsProjectsOpen] = useState(false);
     const [isTicketsOpen, setIsTicketsOpen] = useState(false);
     const [allowedModules, setAllowedModules] = useState<AppModuleSlug[]>(DEFAULT_ALLOWED_MODULES);
+    const [modules, setModules] = useState<AppModuleMetadata[]>([]);
     const [canManageAccess, setCanManageAccess] = useState(false);
 
     useEffect(() => {
@@ -59,9 +69,11 @@ export function Sidebar({ projects }: SidebarProps) {
                 if (!res.ok) return;
 
                 const payload = await res.json();
-                if (!cancelled && payload.data?.allowed_modules) {
-                    setAllowedModules(payload.data.allowed_modules);
-                    setCanManageAccess(Boolean(payload.data.can_manage_access));
+                const accessData = payload.data as AccessPayload;
+                if (!cancelled && accessData.allowed_modules) {
+                    setAllowedModules(accessData.allowed_modules);
+                    setModules(accessData.modules ?? []);
+                    setCanManageAccess(Boolean(accessData.can_manage_access));
                 }
             } catch {
                 // Keep safe defaults if access loading fails.
@@ -79,6 +91,15 @@ export function Sidebar({ projects }: SidebarProps) {
     const isProjectsActive = pathname === '/projects' || pathname.startsWith('/project/');
     const isTicketsActive = pathname === '/tickets' || pathname.startsWith('/tickets/');
     const isAccessControlActive = pathname.startsWith('/settings/access');
+    const moduleBySlug = new Map(modules.map((moduleRow) => [moduleRow.slug, moduleRow]));
+    const getModuleLabel = (moduleSlug: AppModuleSlug) => moduleBySlug.get(moduleSlug)?.label ?? moduleSlug;
+    const getModulePath = (moduleSlug: AppModuleSlug) => moduleBySlug.get(moduleSlug)?.path;
+    const navModules = modules.filter((moduleRow) =>
+        moduleRow.isManaged &&
+        moduleRow.slug !== 'projects' &&
+        moduleRow.slug !== 'tickets' &&
+        canAccessModule(moduleRow.slug)
+    );
 
     return (
         <aside className="w-64 h-screen fixed left-0 top-0 flex flex-col bg-bg-elevated border-r border-border-default">
@@ -110,7 +131,7 @@ export function Sidebar({ projects }: SidebarProps) {
                             )}
                             icon={<LayoutDashboard size={18} />}
                         >
-                            {MODULE_LABELS.dashboard}
+                            {SHELL_MODULES.dashboard.label}
                         </Button>
                     </Link>
                 )}
@@ -121,7 +142,7 @@ export function Sidebar({ projects }: SidebarProps) {
                         onMouseEnter={() => setIsProjectsOpen(true)}
                         onMouseLeave={() => setIsProjectsOpen(false)}
                     >
-                        <Link href="/projects" className="block relative z-10">
+                        <Link href={getModulePath('projects') ?? '/projects'} className="block relative z-10">
                             <Button
                                 variant="ghost"
                                 className={cn(
@@ -133,7 +154,7 @@ export function Sidebar({ projects }: SidebarProps) {
                                 icon={<FolderKanban size={18} />}
                                 onClick={() => setIsProjectsOpen(!isProjectsOpen)}
                             >
-                                <span className="flex-1 text-left">{MODULE_LABELS.projects}</span>
+                                <span className="flex-1 text-left">{getModuleLabel('projects')}</span>
                                 {projects.length > 0 && (
                                     <ChevronRight
                                         size={14}
@@ -191,7 +212,7 @@ export function Sidebar({ projects }: SidebarProps) {
                         onMouseEnter={() => setIsTicketsOpen(true)}
                         onMouseLeave={() => setIsTicketsOpen(false)}
                     >
-                        <Link href="/tickets" className="block relative z-10">
+                        <Link href={getModulePath('tickets') ?? '/tickets'} className="block relative z-10">
                             <Button
                                 variant="ghost"
                                 className={cn(
@@ -203,7 +224,7 @@ export function Sidebar({ projects }: SidebarProps) {
                                 icon={<Ticket size={18} />}
                                 onClick={() => setIsTicketsOpen(!isTicketsOpen)}
                             >
-                                <span className="flex-1 text-left">My Tickets</span>
+                                <span className="flex-1 text-left">{getModuleLabel('tickets')}</span>
                                 <ChevronRight
                                     size={14}
                                     className={cn(
@@ -271,35 +292,32 @@ export function Sidebar({ projects }: SidebarProps) {
                     </div>
                 )}
 
-                {MODULE_NAV_ITEMS
-                    .filter((item) => canAccessModule(item.module))
-                    .filter((item) => !item.requiresManager || canManageAccess)
-                    .map((item) => (
-                    <Link key={item.href} href={item.href} className="block">
+                {navModules.map((item) => (
+                    <Link key={item.slug} href={item.path} className="block">
                         <Button
                             variant="ghost"
                             className={cn(
                                 'w-full justify-start',
-                                (item.module === 'access_control'
+                                (item.slug === 'access_control'
                                     ? isAccessControlActive
-                                    : item.module === 'film_journal'
+                                    : item.slug === 'film_journal'
                                         ? pathname.startsWith('/film')
-                                        : pathname === item.href)
-                                    ? item.module === 'logs' || item.module === 'tickets'
+                                        : pathname === item.path)
+                                    ? item.slug === 'logs' || item.slug === 'log_viewer' || item.slug === 'tickets'
                                         ? 'bg-accent-rose/10 text-accent-rose hover:bg-accent-rose/20 hover:text-accent-rose'
                                         : 'bg-bg-hover text-text-primary'
                                     : 'text-text-secondary hover:text-text-primary'
                             )}
-                            icon={item.icon}
+                            icon={item.icon ? MODULE_ICONS[item.icon] : undefined}
                         >
-                            {item.label ?? MODULE_LABELS[item.module]}
+                            {item.label}
                         </Button>
                     </Link>
                 ))}
             </nav>
 
             <div className="p-4 border-t border-border-subtle">
-                <Link href="/settings" className="block">
+                <Link href={SHELL_MODULES.settings.href} className="block">
                     <Button
                         variant="ghost"
                         className={cn(
@@ -310,7 +328,7 @@ export function Sidebar({ projects }: SidebarProps) {
                         )}
                         icon={<Settings size={18} />}
                     >
-                        Settings
+                        {SHELL_MODULES.settings.label}
                     </Button>
                 </Link>
             </div>

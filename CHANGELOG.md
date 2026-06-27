@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.6.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.5.0...idea-dump-v0.6.0) (2026-06-26)
+
+
+### Features
+
+* add log viewer rbac ([ca728da](https://github.com/Kirbyyy81/idea-dump/commit/ca728da7ec6c468406104b384d37fa2ce5821e23))
+* changed expand collapse to use chevron icon and removed upload file panel ([883b9e7](https://github.com/Kirbyyy81/idea-dump/commit/883b9e7e272059fd362821fbe3725aa8f14d13b3))
+* improve log viewer ([890cc9e](https://github.com/Kirbyyy81/idea-dump/commit/890cc9e87d0699ca53b8e456d67b7d8c3c143970))
+* refine log timeline ([ebc2e1c](https://github.com/Kirbyyy81/idea-dump/commit/ebc2e1ce020a99c1e233933b717c3ef7fe412c7a))
+* source module metadata ([8c2fc54](https://github.com/Kirbyyy81/idea-dump/commit/8c2fc54af3db2b198e1fb0374c2339625057753b))
+
+
+### Bug Fixes
+
+* confirm access saves ([85553ab](https://github.com/Kirbyyy81/idea-dump/commit/85553abbe2e7c55ad6764ae7081739932ec5a318))
+* derive access managers ([fc5001c](https://github.com/Kirbyyy81/idea-dump/commit/fc5001cc0127ab6aa3412526160f05e1fda41bc6))
+* handle dashboard modules ([6b017e1](https://github.com/Kirbyyy81/idea-dump/commit/6b017e1126ca1ea52aee3cb292d0c98b83f0e8fc))
+* harden logs api ([6cfd88c](https://github.com/Kirbyyy81/idea-dump/commit/6cfd88c2adf423e9ab95bcef4a7a0164ccde3571))
+* repair rbac updates ([a4a9012](https://github.com/Kirbyyy81/idea-dump/commit/a4a9012377e96a5eeac1699c86e33b5bf75bfb73))
+* simplify loading buttons ([21ded10](https://github.com/Kirbyyy81/idea-dump/commit/21ded10181a354bca0e626c67be090225f3703e6))
+* use white button loader ([f347011](https://github.com/Kirbyyy81/idea-dump/commit/f347011aa1f3dda1e7a75a2628756a8acddcef0e))
+
+## [0.5.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.4.1...idea-dump-v0.5.0) (2026-06-17)
+
+
+### Features
+
+* add film journal module ([e5ba986](https://github.com/Kirbyyy81/idea-dump/commit/e5ba98607176aa31dd3044c439dd23eab77cb5ec))
+
 ## [0.4.1](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.4.0...idea-dump-v0.4.1) (2026-06-16)
 
 

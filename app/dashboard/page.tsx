@@ -6,6 +6,7 @@ import {
     ShieldCheck,
     BookOpen,
     ClipboardList,
+    FileSearch,
     FilePenLine,
     Film,
     FolderKanban,
@@ -18,54 +19,31 @@ import { Sidebar } from '@/components/organisms/Sidebar';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { PageLoader } from '@/components/atoms/Loader';
-import { AppModuleSlug, MODULE_LABELS, MODULE_PATHS } from '@/lib/rbac/constants';
+import { AppModuleSlug } from '@/lib/rbac/constants';
+import { AppModuleMetadata } from '@/lib/rbac/types';
 import { Project } from '@/lib/types';
 
 interface AccessPayload {
     allowed_modules: AppModuleSlug[];
+    modules?: AppModuleMetadata[];
 }
 
-const MODULE_CARD_META: Partial<Record<AppModuleSlug, { description: string; icon: LucideIcon }>> = {
-    dashboard: {
-        description: 'Review your available modules and jump into the areas you can access.',
-        icon: LayoutDashboard,
-    },
-    projects: {
-        description: 'Manage project records and open individual project detail pages.',
-        icon: FolderKanban,
-    },
-    logs: {
-        description: 'View, add, edit, and export your weekly productivity logs.',
-        icon: ClipboardList,
-    },
-    tickets: {
-        description: 'Raise tickets, review your own queue, and manage ticket workflows across the workspace.',
-        icon: Ticket,
-    },
-    api: {
-        description: 'Manage API keys and review the API usage and documentation.',
-        icon: BookOpen,
-    },
-    access_control: {
-        description: 'Manage roles, module access, and user-specific exceptions.',
-        icon: ShieldCheck,
-    },
-    article_creation: {
-        description: 'Use the built-in helpers for article planning and content support.',
-        icon: FilePenLine,
-    },
-    film_journal: {
-        description: 'Browse film rolls as a journal, open photobook entries, and review shooting costs.',
-        icon: Film,
-    },
-    settings: {
-        description: 'Manage your personal account settings and sign-out actions.',
-        icon: Settings,
-    },
+const MODULE_ICONS: Record<string, LucideIcon> = {
+    BookOpen,
+    ClipboardList,
+    FilePenLine,
+    FileSearch,
+    Film,
+    FolderKanban,
+    LayoutDashboard,
+    Settings,
+    ShieldCheck,
+    Ticket,
 };
 
 export default function DashboardPage() {
     const [allowedModules, setAllowedModules] = useState<AppModuleSlug[]>(['dashboard', 'settings']);
+    const [modules, setModules] = useState<AppModuleMetadata[]>([]);
     const [projects, setProjects] = useState<Project[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -85,6 +63,7 @@ export default function DashboardPage() {
 
                 if (cancelled) return;
                 setAllowedModules(modules);
+                setModules((accessPayload.data as AccessPayload).modules ?? []);
 
                 if (modules.includes('projects')) {
                     const projectsRes = await fetch('/api/projects');
@@ -115,13 +94,10 @@ export default function DashboardPage() {
         () =>
             allowedModules
                 .filter((moduleSlug) => moduleSlug !== 'dashboard')
-                .map((moduleSlug) => ({
-                    ...MODULE_CARD_META[moduleSlug]!,
-                    href: MODULE_PATHS[moduleSlug],
-                    label: MODULE_LABELS[moduleSlug],
-                    moduleSlug,
-                })),
-        [allowedModules]
+                .map((moduleSlug) => modules.find((moduleRow) => moduleRow.slug === moduleSlug))
+                .filter((moduleRow): moduleRow is AppModuleMetadata => Boolean(moduleRow))
+                .filter((moduleRow) => moduleRow.path !== '/settings'),
+        [allowedModules, modules]
     );
 
     if (isLoading) {
@@ -151,10 +127,10 @@ export default function DashboardPage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                         {quickLinks.map((item) => {
-                            const Icon = item.icon;
+                            const Icon = item.icon ? MODULE_ICONS[item.icon] : LayoutDashboard;
 
                             return (
-                                <Link key={item.moduleSlug} href={item.href} className="block">
+                                <Link key={item.slug} href={item.path} className="block">
                                     <Card className="p-6 flex h-full flex-col gap-4 transition-colors hover:border-border-strong hover:bg-bg-hover/50 focus-within:border-border-strong">
                                         <div className="flex items-center gap-3">
                                             <div className="rounded-lg bg-accent-rose/10 p-3">
@@ -167,7 +143,7 @@ export default function DashboardPage() {
                                             </div>
                                         </div>
                                         <p className="text-sm leading-6 text-text-secondary">
-                                            {item.description}
+                                            {item.description ?? 'Open this workspace module.'}
                                         </p>
                                     </Card>
                                 </Link>

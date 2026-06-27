@@ -1,0 +1,16 @@
+2026-06-23 10:00:00.000 REQUEST >>> >>>>>> URL: https://api.example.com/v1/accounts/detail >>>>>> GET >>>>>> (No Body)
+2026-06-23 10:00:00.100 ERROR >>> Network warning while waiting for account detail
+java.net.SocketTimeoutException: timeout
+	at com.example.AccountRepository.load(AccountRepository.java:42)
+2026-06-23 10:00:00.200 RESPONSE >>> >>>>>> (200) >>>>>> {"result":"success","responseCode":0}
+2026-06-23 10:00:01.000 REQUEST >>> >>>>>> URL: https://api.example.com/v1/repeated/check >>>>>> POST >>>>>> {"id":1}
+2026-06-23 10:00:01.100 REQUEST >>> >>>>>> URL: https://api.example.com/v1/repeated/check >>>>>> POST >>>>>> {"id":2}
+2026-06-23 10:00:01.200 RESPONSE >>> >>>>>> URL: https://api.example.com/v1/repeated/check >>>>>> (200) >>>>>> {"id":1,"result":"success"}
+2026-06-23 10:00:01.300 RESPONSE >>> >>>>>> URL: https://api.example.com/v1/repeated/check >>>>>> (200) >>>>>> {"id":2,"result":"success"}
+2026-06-23 10:00:02.000 REQUEST >>> >>>>>> URL: https://api.example.com/v1/single/open >>>>>> GET >>>>>> (No Body)
+2026-06-23 10:00:02.100 RESPONSE >>> >>>>>> (500) >>>>>> {"errorMessage":"server failed"}
+2026-06-23 10:00:03.000 REQUEST >>> >>>>>> URL: https://api.example.com/v1/no/response >>>>>> GET >>>>>> (No Body)
+2026-06-23 10:00:04.000 RESPONSE >>> >>>>>> URL: https://api.example.com/v1/orphan/response >>>>>> (404) >>>>>> {"errorCode":"NOT_FOUND"}
+2026-06-23 10:00:05.000 CRASH >>> >>>>>>> onLaunchErrorActivity >>> >>>>>> Build version: 0.1.260
+Stack trace:
+java.lang.NullPointerException: sample crash
