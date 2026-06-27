@@ -9,7 +9,6 @@ import { Input } from '@/components/atoms/Input';
 import { PageLoader } from '@/components/atoms/Loader';
 import { FilmCamera, FilmRoll, FilmRollStatus, filmRollStatusConfig } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { FilmJournalNav } from './_components/FilmJournalNav';
 
 const BOX_COLORS = [
     'from-[#d7493e] to-[#9f2925]',
@@ -78,7 +77,6 @@ export default function FilmJournalPage() {
                             Every box is one physical roll, from unopened stock to finished photobook.
                         </p>
                     </div>
-                    <FilmJournalNav />
                 </header>
 
                 {error && <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">{error}</div>}

@@ -10,7 +10,6 @@ import { Textarea } from '@/components/atoms/Textarea';
 import { PageLoader } from '@/components/atoms/Loader';
 import { FilmCamera, FilmMaintenanceRecord } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { FilmJournalNav } from '../_components/FilmJournalNav';
 
 const blankCamera = {
     name: '',
@@ -184,7 +183,6 @@ export default function FilmCamerasPage() {
                             Keep each camera separate from the rolls it has photographed.
                         </p>
                     </div>
-                    <FilmJournalNav />
                 </header>
 
                 {error && (
