@@ -102,31 +102,33 @@ function FilmCanister({ roll, index }: { roll: FilmRoll; index: number }) {
         <Link href={`/film/rolls/${roll.id}`} className="group block">
             <article className="relative mx-auto flex min-h-[330px] max-w-[300px] items-center justify-center">
                 <div className="relative h-[300px] w-[300px] drop-shadow-[0_24px_22px_rgba(47,28,14,0.32)]">
-                    <div
-                        className="absolute left-[106px] top-[102px] z-0 h-[112px] w-[154px] -translate-x-[116px] overflow-hidden rounded-r-3xl border-y-2 border-r-2 border-[#171717] bg-[#242424] shadow-[14px_16px_24px_rgba(38,24,13,0.25)] transition-transform duration-500 ease-out group-hover:translate-x-0"
+                    <div 
+                        className="absolute left-[106px] top-[102px] z-0 h-[112px] w-[160px] [clip-path:inset(-50px_-50px_-50px_0)]"
                         aria-hidden="true"
                     >
-                        <div className="absolute inset-x-0 top-2 flex justify-around">
-                            {Array.from({ length: 12 }).map((_, holeIndex) => (
-                                <span key={`top-strip-hole-${holeIndex}`} className="h-2 w-1.5 rounded-sm bg-[#f4efe2]" />
-                            ))}
-                        </div>
-                        <div className="absolute inset-x-0 bottom-2 flex justify-around">
-                            {Array.from({ length: 12 }).map((_, holeIndex) => (
-                                <span key={`bottom-strip-hole-${holeIndex}`} className="h-2 w-1.5 rounded-sm bg-[#f4efe2]" />
-                            ))}
-                        </div>
-                        <div className="ml-8 flex h-full flex-col justify-center pr-4 text-[#fff8e8] opacity-0 transition-opacity delay-100 duration-300 group-hover:opacity-100">
-                            <p className="truncate text-[10px] font-semibold uppercase tracking-[0.18em] text-[#d7c4a8]">
-                                {roll.brand}
-                            </p>
-                            <h2 className="mt-1 line-clamp-2 text-lg leading-tight">{roll.film_name}</h2>
-                            <div className="mt-2 flex items-center justify-between gap-2 text-[10px] font-semibold text-[#d7c4a8]">
-                                <span>{formatCurrency(Number(roll.purchase_price || 0))}</span>
-                                <span>{roll.frames_taken || 0} frames</span>
+                        <div className="absolute left-0 top-0 h-full w-[154px] -translate-x-[116px] overflow-hidden rounded-r-3xl border-y-2 border-r-2 border-[#2a1708]/40 bg-[#120a05]/70 backdrop-blur-md shadow-[14px_16px_24px_rgba(38,24,13,0.35)] transition-transform duration-500 ease-out group-hover:translate-x-0">
+                            <div className="absolute inset-x-0 top-2 flex justify-around">
+                                {Array.from({ length: 12 }).map((_, holeIndex) => (
+                                    <span key={`top-strip-hole-${holeIndex}`} className="h-2 w-1.5 rounded-sm bg-[#f4efe2]/20 shadow-[inset_0_1px_3px_rgba(0,0,0,0.8)]" />
+                                ))}
                             </div>
-                            <div className="mt-1 truncate text-[10px] font-semibold text-[#d7c4a8]">
-                                {roll.camera?.name || 'No camera'}
+                            <div className="absolute inset-x-0 bottom-2 flex justify-around">
+                                {Array.from({ length: 12 }).map((_, holeIndex) => (
+                                    <span key={`bottom-strip-hole-${holeIndex}`} className="h-2 w-1.5 rounded-sm bg-[#f4efe2]/20 shadow-[inset_0_1px_3px_rgba(0,0,0,0.8)]" />
+                                ))}
+                            </div>
+                            <div className="ml-8 flex h-full flex-col justify-center pr-4 text-[#ffcc88] opacity-0 mix-blend-screen transition-opacity delay-100 duration-300 group-hover:opacity-100 [text-shadow:_0_0_8px_rgba(255,166,77,0.6)]">
+                                <p className="truncate text-[10px] font-semibold uppercase tracking-[0.18em] text-[#ffb84d]">
+                                    {roll.brand}
+                                </p>
+                                <h2 className="mt-1 line-clamp-2 text-lg font-bold leading-tight">{roll.film_name}</h2>
+                                <div className="mt-2 flex items-center justify-between gap-2 text-[10px] font-semibold text-[#ffb84d]">
+                                    <span>{formatCurrency(Number(roll.purchase_price || 0))}</span>
+                                    <span>{roll.frames_taken || 0} frames</span>
+                                </div>
+                                <div className="mt-1 truncate text-[10px] font-semibold text-[#ffb84d]">
+                                    {roll.camera?.name || 'No camera'}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -148,6 +150,9 @@ function FilmCanister({ roll, index }: { roll: FilmRoll; index: number }) {
                         <rect x="15" y="52" width="94" height="188" rx="4" fill={`url(#body-${roll.id})`} stroke="#1d1d1d" strokeWidth="3" />
                         <rect x="9" y="42" width="108" height="14" rx="2" fill={theme.cap} />
                         <rect x="22" y="35" width="82" height="7" rx="1.5" fill="#f6f6f1" />
+                        <rect x="9" y="239" width="108" height="14" rx="2" fill={theme.cap} />
+                        <rect x="22" y="253" width="82" height="7" rx="1.5" fill="#f6f6f1" />
+                        <rect x="30" y="64" width="64" height="164" rx="2" fill={theme.label} opacity="0.96" />
                         <rect x="9" y="239" width="108" height="14" rx="2" fill={theme.cap} />
                         <rect x="22" y="253" width="82" height="7" rx="1.5" fill="#f6f6f1" />
                         <rect x="30" y="64" width="64" height="164" rx="2" fill={theme.label} opacity="0.96" />
@@ -185,6 +190,7 @@ function FilmCanister({ roll, index }: { roll: FilmRoll; index: number }) {
                             fontSize="15"
                             fontWeight="700"
                             transform="rotate(-90 47 178)"
+                            className="fill-white/60 [text-shadow:_0_0_4px_rgba(255,255,255,0.8)]"
                         >
                             {roll.format}
                         </text>
@@ -195,12 +201,13 @@ function FilmCanister({ roll, index }: { roll: FilmRoll; index: number }) {
                             fontSize="18"
                             fontWeight="800"
                             transform="rotate(-90 67 168)"
+                            className="fill-white/60 [text-shadow:_0_0_4px_rgba(255,255,255,0.8)]"
                         >
                             {roll.iso}
                         </text>
                     </svg>
 
-                    <div className="absolute left-[30px] top-[64px] z-20 h-[164px] w-[64px] overflow-hidden border border-black/15 bg-white">
+                    <div className="absolute left-[16px] top-[56px] z-20 h-[183px] w-[92px] overflow-hidden bg-white">
                         {thumbnail ? (
                             <img
                                 src={thumbnail}
@@ -210,6 +217,8 @@ function FilmCanister({ roll, index }: { roll: FilmRoll; index: number }) {
                         ) : (
                             <FilmCoverFallback roll={roll} accentColor={theme.accent} />
                         )}
+                        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.4)_0%,rgba(0,0,0,0)_20%,rgba(255,255,255,0.1)_40%,rgba(0,0,0,0)_80%,rgba(0,0,0,0.3)_100%)]" />
+                        <div className="pointer-events-none absolute inset-0 border border-black/20" />
                     </div>
                     <div className="absolute left-[26px] top-[222px] z-30 flex w-[70px] justify-center">
                         <span className={cn('rounded-full border px-2 py-1 text-[9px] shadow-sm', status.colorClass)}>
