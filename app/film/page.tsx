@@ -123,7 +123,10 @@ function FilmCanister({ roll, index }: { roll: FilmRoll; index: number }) {
                             <h2 className="mt-1 line-clamp-2 text-lg leading-tight">{roll.film_name}</h2>
                             <div className="mt-2 flex items-center justify-between gap-2 text-[10px] font-semibold text-[#d7c4a8]">
                                 <span>{formatCurrency(Number(roll.purchase_price || 0))}</span>
-                                <span>{roll.camera?.name || 'No camera'}</span>
+                                <span>{roll.frames_taken || 0} frames</span>
+                            </div>
+                            <div className="mt-1 truncate text-[10px] font-semibold text-[#d7c4a8]">
+                                {roll.camera?.name || 'No camera'}
                             </div>
                         </div>
                     </div>
@@ -140,19 +143,8 @@ function FilmCanister({ roll, index }: { roll: FilmRoll; index: number }) {
                                 <stop offset="48%" stopColor={theme.body} />
                                 <stop offset="100%" stopColor={theme.bodyDark} />
                             </linearGradient>
-                            <linearGradient id={`leader-${roll.id}`} x1="0" x2="1">
-                                <stop offset="0%" stopColor={theme.leader} />
-                                <stop offset="100%" stopColor={theme.leader === '#f7f1e2' ? '#d7cfb8' : '#4a4a4a'} />
-                            </linearGradient>
                         </defs>
 
-                        <path
-                            d="M105 62 H197 Q210 62 210 75 V103 Q210 121 192 121 H155 Q145 121 145 132 V143 H105 Z"
-                            fill={`url(#leader-${roll.id})`}
-                            stroke="#191919"
-                            strokeWidth="3"
-                            strokeLinejoin="round"
-                        />
                         <rect x="15" y="52" width="94" height="188" rx="4" fill={`url(#body-${roll.id})`} stroke="#1d1d1d" strokeWidth="3" />
                         <rect x="9" y="42" width="108" height="14" rx="2" fill={theme.cap} />
                         <rect x="22" y="35" width="82" height="7" rx="1.5" fill="#f6f6f1" />
@@ -162,18 +154,6 @@ function FilmCanister({ roll, index }: { roll: FilmRoll; index: number }) {
                         <line x1="99" y1="65" x2="99" y2="226" stroke="#101010" strokeWidth="2" />
                         <line x1="24" y1="64" x2="24" y2="226" stroke="#101010" strokeWidth="2" opacity="0.35" />
 
-                        {Array.from({ length: 12 }).map((_, holeIndex) => (
-                            <rect
-                                key={`leader-hole-${holeIndex}`}
-                                x={108 + holeIndex * 7}
-                                y="70"
-                                width="4"
-                                height="8"
-                                rx="1"
-                                fill="#f5f2e8"
-                                opacity={theme.leader === '#f7f1e2' ? 0.75 : 0.95}
-                            />
-                        ))}
                         {Array.from({ length: 8 }).map((_, holeIndex) => (
                             <rect
                                 key={`body-hole-${holeIndex}`}
@@ -217,9 +197,6 @@ function FilmCanister({ roll, index }: { roll: FilmRoll; index: number }) {
                             transform="rotate(-90 67 168)"
                         >
                             {roll.iso}
-                        </text>
-                        <text x="199" y="140" fill="#111111" fontSize="13" fontWeight="800">
-                            {roll.frames_taken || 0}
                         </text>
                     </svg>
 
