@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.1](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.8.0...idea-dump-v0.8.1) (2026-06-29)
+
+
+### Bug Fixes
+
+* resolve broken merge conflict in film page ([712791f](https://github.com/Kirbyyy81/idea-dump/commit/712791f4fe27ad785484e1e75778566d1f93c069))
+
 ## [0.8.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.7.0...idea-dump-v0.8.0) (2026-06-29)
 
 
