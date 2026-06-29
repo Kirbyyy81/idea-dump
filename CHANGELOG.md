@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.7.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.6.0...idea-dump-v0.7.0) (2026-06-27)
+
+
+### Features
+
+* add AccessContext for server-side RBAC propagation ([a8bd2a9](https://github.com/Kirbyyy81/idea-dump/commit/a8bd2a9ab7d2f9151966338a910b5be0f472ecea))
+* add server actions for access control admin ([7e73065](https://github.com/Kirbyyy81/idea-dump/commit/7e73065adc7644f59e34148dbbf10855529d1496))
+* merge film processing records into rolls ([d9c07e1](https://github.com/Kirbyyy81/idea-dump/commit/d9c07e1a2db6db5c069125bb7104597c1ba610c4))
+
+
+### Bug Fixes
+
+* align sidebar module rows ([063cbda](https://github.com/Kirbyyy81/idea-dump/commit/063cbdaab175e6d07d638077951781d9b0658596))
+* app shell and loading indicator ([a4271da](https://github.com/Kirbyyy81/idea-dump/commit/a4271da4cc42878db6044fb8d0763727b681402f))
+* removed duplicate app shell import ([e991c0f](https://github.com/Kirbyyy81/idea-dump/commit/e991c0f856c336f5336d556b5bd4eedc01daa41c))
+* repair project detail page loading ([fc03f93](https://github.com/Kirbyyy81/idea-dump/commit/fc03f935e563207b10133792099143accf9190f5))
+* simplify projects sidebar group ([42ca2ea](https://github.com/Kirbyyy81/idea-dump/commit/42ca2ea11284052985b5cd2dcd083b8da0a768b6))
+
 ## [0.6.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.5.0...idea-dump-v0.6.0) (2026-06-26)
 
 

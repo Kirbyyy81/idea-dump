@@ -17,15 +17,35 @@ import { APP_VERSION, LAST_UPDATED, shortVersionCode, VERSION_CODE } from '@/lib
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { AppShell } from '@/components/organisms/AppShell';
+import { Project } from '@/lib/types';
 
 export default function SettingsPage() {
     const router = useRouter();
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [profile, setProfile] = useState<CachedProfile | null>(null);
     const [isSigningOut, setIsSigningOut] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         setProfile(getCachedProfile());
+
+        // Fetch projects
+        async function fetchProjects() {
+            try {
+                const res = await fetch('/api/projects');
+                if (res.ok) {
+                    const payload = await res.json();
+                    setProjects(payload.data || []);
+                }
+            } catch {
+                // Project navigation is best-effort when the user lacks Projects access.
+            } finally {
+                setIsLoading(false);
+            }
+        }
+
+        fetchProjects();
 
         const supabase = createClient();
 
@@ -82,7 +102,7 @@ export default function SettingsPage() {
         'U';
 
     return (
-        <AppShell contentClassName="p-8">
+        <AppShell contentClassName="p-8" projects={projects} isLoading={isLoading}>
             <div className="max-w-3xl space-y-6">
                 <h1 className="text-text-primary text-3xl font-heading font-medium">Settings</h1>
 

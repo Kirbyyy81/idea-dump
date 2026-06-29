@@ -124,11 +124,6 @@ If `npm` is easier to run through Git Bash on your machine, the repo includes a 
 - `/api/keys`
 - `/api/ingest`
 - `/api/openapi`
-- `/api/access/me`
-- `/api/access/users`
-- `/api/access/users/[userId]`
-- `/api/access/roles`
-- `/api/access/roles/[role]`
 
 ## Project Structure
 

@@ -9,7 +9,6 @@ import { TicketForm } from '@/components/organisms/TicketForm';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
-import { PageLoader } from '@/components/atoms/Loader';
 import { Project, Ticket, UpdateTicketInput, ticketSourceConfig, ticketStatusConfig } from '@/lib/types';
 
 export default function ManageTicketsPage() {
@@ -118,12 +117,13 @@ export default function ManageTicketsPage() {
         [projects]
     );
 
-    if (isLoading) {
-        return <PageLoader />;
-    }
-
     return (
-        <AppShell contentClassName="p-8">
+        <AppShell 
+            projects={projects} 
+            isLoading={isLoading}
+            loadingMessage="Loading tickets..."
+            contentClassName="p-8"
+        >
             <div className="max-w-5xl space-y-6">
                 <header className="flex items-center justify-between">
                     <h1 className="text-3xl font-heading font-medium">Manage Tickets</h1>

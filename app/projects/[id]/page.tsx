@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import { AppShell } from '@/components/organisms/AppShell';
 import { StatusBadge } from '../_components/StatusBadge';
 import { PriorityBadge } from '../_components/PriorityBadge';
 import { MarkdownRenderer } from '../_components/MarkdownRenderer';
@@ -23,46 +24,40 @@ import {
     Trash2,
     Plus,
 } from 'lucide-react';
-import { PageLoader } from '@/components/atoms/Loader';
 import { formatDate } from '@/lib/utils';
+import { useAccess } from '@/lib/contexts/AccessContext';
 
 export default function ProjectPage() {
     const params = useParams();
     const router = useRouter();
     const projectId = params.id as string;
+    const access = useAccess();
 
     const [project, setProject] = useState<Project | null>(null);
     const [notes, setNotes] = useState<Note[]>([]);
     const [tickets, setTickets] = useState<Ticket[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [projects, setProjects] = useState<Project[]>([]);
     const [isUpdating, setIsUpdating] = useState(false);
     const [showTicketForm, setShowTicketForm] = useState(false);
     const [editingTicket, setEditingTicket] = useState<Ticket | null>(null);
     const [isSavingTicket, setIsSavingTicket] = useState(false);
-    const [canAccessTickets, setCanAccessTickets] = useState(false);
-    const [canManageTickets, setCanManageTickets] = useState(false);
-    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+    const canAccessTickets = access?.allowedModules.includes('tickets') ?? false;
+    const canManageTickets = Boolean(access?.canManageAccess) && canAccessTickets;
+    const currentUserId = access?.userId ?? null;
 
     useEffect(() => {
         async function fetchData() {
             try {
                 setIsLoading(true);
+                setError(null);
 
-                const accessRes = await fetch('/api/access/me');
-                let nextCanAccessTickets = false;
-                let nextCanManageTickets = false;
-                let nextUserId: string | null = null;
-
-                if (accessRes.ok) {
-                    const accessPayload = await accessRes.json();
-                    const allowedModules = accessPayload.data?.allowed_modules || [];
-                    nextCanAccessTickets = allowedModules.includes('tickets');
-                    nextCanManageTickets = Boolean(accessPayload.data?.can_manage_access) && nextCanAccessTickets;
-                    nextUserId = accessPayload.data?.user_id ?? null;
-                    setCanAccessTickets(nextCanAccessTickets);
-                    setCanManageTickets(nextCanManageTickets);
-                    setCurrentUserId(nextUserId);
+                // First fetch projects for AppShell sidebar navigation
+                const projectsRes = await fetch('/api/projects');
+                if (projectsRes.ok) {
+                    const projectsData = await projectsRes.json();
+                    setProjects(projectsData.data || []);
                 }
 
                 const [projectRes, notesRes] = await Promise.all([
@@ -84,8 +79,8 @@ export default function ProjectPage() {
                     setNotes(notesData.data || []);
                 }
 
-                if (nextCanAccessTickets) {
-                    const scope = nextCanManageTickets ? 'manage' : 'mine';
+                if (canAccessTickets) {
+                    const scope = canManageTickets ? 'manage' : 'mine';
                     const ticketsRes = await fetch(`/api/tickets?project_id=${projectId}&scope=${scope}`);
                     if (ticketsRes.ok) {
                         const ticketsData = await ticketsRes.json();
@@ -100,7 +95,7 @@ export default function ProjectPage() {
         }
 
         fetchData();
-    }, [projectId]);
+    }, [projectId, canAccessTickets, canManageTickets]);
 
     const handleAddNote = async (content: string) => {
         try {
@@ -213,25 +208,32 @@ export default function ProjectPage() {
     };
 
     if (isLoading) {
-        return <PageLoader />;
+        return (
+            <AppShell projects={projects} isLoading loadingMessage="Loading project..." contentClassName="p-8">
+                <div />
+            </AppShell>
+        );
     }
 
     if (error || !project) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center">
-                <p className="text-red-400 mb-4">{error || 'Project not found'}</p>
-                <Link href="/projects" className="btn-secondary">
-                    Back to Projects
-                </Link>
-            </div>
+            <AppShell projects={projects} isLoading={false} contentClassName="p-8">
+                <div className="max-w-5xl mx-auto">
+                    <div className="flex flex-col items-center justify-center py-16">
+                        <p className="text-red-400 mb-4">{error || 'Project not found'}</p>
+                        <Link href="/projects" className="btn-secondary">
+                            Back to Projects
+                        </Link>
+                    </div>
+                </div>
+            </AppShell>
         );
     }
 
-    const status = inferStatus(project);
-
     return (
-        <div className="min-h-screen p-8 max-w-5xl mx-auto">
-            <div className="flex items-center justify-between mb-8">
+        <AppShell projects={projects} isLoading={isLoading} loadingMessage="Loading project..." contentClassName="p-8">
+            <div className="max-w-5xl mx-auto">
+                <div className="flex items-center justify-between mb-8">
                 <Link
                     href="/projects"
                     className="flex items-center gap-2 transition-colors text-text-secondary hover:text-text-primary"
@@ -240,7 +242,7 @@ export default function ProjectPage() {
                     Back to Projects
                 </Link>
                 <div className="flex gap-2">
-                    <Link href={`/project/${project.id}/edit`}>
+                    <Link href={`/projects/${project.id}/edit`}>
                         <Button variant="secondary" icon={<Pencil size={16} />}>
                             Edit
                         </Button>
@@ -267,7 +269,7 @@ export default function ProjectPage() {
             <div className="mb-8">
                 <div className="flex items-start justify-between gap-4 mb-4">
                     <h1 className="text-text-primary text-3xl font-heading font-medium">{project.title}</h1>
-                    <StatusBadge status={status} className="px-3 py-1 text-sm" />
+                    <StatusBadge status={inferStatus(project)} className="px-3 py-1 text-sm" />
                 </div>
 
                 {project.description && (
@@ -401,6 +403,7 @@ export default function ProjectPage() {
                     </Card>
                 </section>
             )}
-        </div>
+            </div>
+        </AppShell>
     );
 }

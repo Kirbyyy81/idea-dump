@@ -25,6 +25,11 @@ export function toNonNegativeNumber(value: unknown, fallback = 0) {
     return parsed;
 }
 
+export function isNonNegativeNumber(value: unknown) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed >= 0;
+}
+
 export function toPositiveInteger(value: unknown, fallback = 0) {
     const parsed = Number(value);
     if (!Number.isFinite(parsed) || parsed <= 0) return fallback;

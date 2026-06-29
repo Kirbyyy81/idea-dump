@@ -15,18 +15,14 @@ import {
     Settings,
     Ticket,
 } from 'lucide-react';
-import { Sidebar } from '@/components/organisms/Sidebar';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
-import { PageLoader } from '@/components/atoms/Loader';
 import { AppModuleSlug } from '@/lib/rbac/constants';
+import { PageLoader } from '@/components/atoms/Loader';
 import { AppModuleMetadata } from '@/lib/rbac/types';
+import { useAccess } from '@/lib/contexts/AccessContext';
 import { Project } from '@/lib/types';
-
-interface AccessPayload {
-    allowed_modules: AppModuleSlug[];
-    modules?: AppModuleMetadata[];
-}
+import { AppShell } from '@/components/organisms/AppShell';
 
 const MODULE_ICONS: Record<string, LucideIcon> = {
     BookOpen,
@@ -42,8 +38,9 @@ const MODULE_ICONS: Record<string, LucideIcon> = {
 };
 
 export default function DashboardPage() {
-    const [allowedModules, setAllowedModules] = useState<AppModuleSlug[]>(['dashboard', 'settings']);
-    const [modules, setModules] = useState<AppModuleMetadata[]>([]);
+    const access = useAccess();
+    const allowedModules = useMemo(() => access?.allowedModules ?? ['dashboard', 'settings'], [access]);
+    const modules = useMemo(() => access?.modules ?? [], [access]);
     const [projects, setProjects] = useState<Project[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -51,21 +48,9 @@ export default function DashboardPage() {
     useEffect(() => {
         let cancelled = false;
 
-        async function loadDashboard() {
+        async function loadProjects() {
             try {
-                const accessRes = await fetch('/api/access/me');
-                if (!accessRes.ok) {
-                    throw new Error('Failed to load dashboard access');
-                }
-
-                const accessPayload = await accessRes.json();
-                const modules = (accessPayload.data as AccessPayload).allowed_modules ?? ['dashboard', 'settings'];
-
-                if (cancelled) return;
-                setAllowedModules(modules);
-                setModules((accessPayload.data as AccessPayload).modules ?? []);
-
-                if (modules.includes('projects')) {
+                if (allowedModules.includes('projects')) {
                     const projectsRes = await fetch('/api/projects');
                     if (projectsRes.ok && !cancelled) {
                         const projectsPayload = await projectsRes.json();
@@ -83,12 +68,12 @@ export default function DashboardPage() {
             }
         }
 
-        loadDashboard();
+        loadProjects();
 
         return () => {
             cancelled = true;
         };
-    }, []);
+    }, [allowedModules]);
 
     const quickLinks = useMemo(
         () =>
@@ -99,10 +84,6 @@ export default function DashboardPage() {
                 .filter((moduleRow) => moduleRow.path !== '/settings'),
         [allowedModules, modules]
     );
-
-    if (isLoading) {
-        return <PageLoader />;
-    }
 
     if (error) {
         return (
@@ -116,50 +97,46 @@ export default function DashboardPage() {
     }
 
     return (
-        <div className="flex min-h-screen bg-bg-base font-body text-text-primary">
-            <Sidebar projects={projects} />
+        <AppShell projects={projects} isLoading={isLoading} loadingMessage="Loading dashboard...">
+            <div className="max-w-5xl space-y-8">
+                <header>
+                    <h1 className="text-3xl font-heading font-medium">Dashboard</h1>
+                </header>
 
-            <main className="flex-1 ml-64 p-8">
-                <div className="max-w-5xl space-y-8">
-                    <header>
-                        <h1 className="text-3xl font-heading font-medium">Dashboard</h1>
-                    </header>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {quickLinks.map((item) => {
+                        const Icon = item.icon ? MODULE_ICONS[item.icon] : LayoutDashboard;
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                        {quickLinks.map((item) => {
-                            const Icon = item.icon ? MODULE_ICONS[item.icon] : LayoutDashboard;
-
-                            return (
-                                <Link key={item.slug} href={item.path} className="block">
-                                    <Card className="p-6 flex h-full flex-col gap-4 transition-colors hover:border-border-strong hover:bg-bg-hover/50 focus-within:border-border-strong">
-                                        <div className="flex items-center gap-3">
-                                            <div className="rounded-lg bg-accent-rose/10 p-3">
-                                                <Icon size={20} className="text-accent-rose" />
-                                            </div>
-                                            <div>
-                                                <h2 className="text-lg font-semibold text-text-primary">
-                                                    {item.label}
-                                                </h2>
-                                            </div>
+                        return (
+                            <Link key={item.slug} href={item.path} className="block">
+                                <Card className="p-6 flex h-full flex-col gap-4 transition-colors hover:border-border-strong hover:bg-bg-hover/50 focus-within:border-border-strong">
+                                    <div className="flex items-center gap-3">
+                                        <div className="rounded-lg bg-accent-rose/10 p-3">
+                                            <Icon size={20} className="text-accent-rose" />
                                         </div>
-                                        <p className="text-sm leading-6 text-text-secondary">
-                                            {item.description ?? 'Open this workspace module.'}
-                                        </p>
-                                    </Card>
-                                </Link>
-                            );
-                        })}
-                    </div>
-
-                    {!allowedModules.includes('projects') && (
-                        <Card className="p-6">
-                            <h2 className="text-lg font-semibold text-text-primary">
-                                Projects Access
-                            </h2>
-                        </Card>
-                    )}
+                                        <div>
+                                            <h2 className="text-lg font-semibold text-text-primary">
+                                                {item.label}
+                                            </h2>
+                                        </div>
+                                    </div>
+                                    <p className="text-sm leading-6 text-text-secondary">
+                                        {item.description ?? 'Open this workspace module.'}
+                                    </p>
+                                </Card>
+                            </Link>
+                        );
+                    })}
                 </div>
-            </main>
-        </div>
+
+                {!allowedModules.includes('projects') && (
+                    <Card className="p-6">
+                        <h2 className="text-lg font-semibold text-text-primary">
+                            Projects Access
+                        </h2>
+                    </Card>
+                )}
+            </div>
+        </AppShell>
     );
 }
