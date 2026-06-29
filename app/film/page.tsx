@@ -1,5 +1,7 @@
 'use client';
 
+/* eslint-disable @next/next/no-img-element */
+
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Camera, Film, FolderSync, Plus, Search, X } from 'lucide-react';
@@ -78,15 +80,102 @@ function formatCameraMetric(camera: FilmDashboardCameraMetric | null | undefined
     return camera.name || label || 'Unnamed camera';
 }
 
-function getRollAccent(index: number) {
-    const accents = [
-        'border-accent-rose bg-[#fdf1f3]',
-        'border-accent-blue bg-[#eef7f9]',
-        'border-accent-sage bg-[#f2f7ed]',
-        'border-accent-apricot bg-[#fff7e8]',
-        'border-accent-coral bg-[#fff0ef]',
+function getCanisterTheme(index: number) {
+    const themes = [
+        {
+            shell: 'from-[#1f2933] via-[#334155] to-[#111827]',
+            cap: 'from-[#0f172a] to-[#475569]',
+            label: 'from-[#fef2f2] to-[#fee2e2]',
+            accent: 'bg-accent-rose',
+        },
+        {
+            shell: 'from-[#263c34] via-[#3d5f50] to-[#17241f]',
+            cap: 'from-[#13221c] to-[#4f7765]',
+            label: 'from-[#f2f7ed] to-[#dcebd2]',
+            accent: 'bg-accent-sage',
+        },
+        {
+            shell: 'from-[#1e3a5f] via-[#2d5f8f] to-[#12243a]',
+            cap: 'from-[#102035] to-[#4378a6]',
+            label: 'from-[#eef7f9] to-[#d8eef2]',
+            accent: 'bg-accent-blue',
+        },
+        {
+            shell: 'from-[#6c3f1f] via-[#a7652c] to-[#3d2413]',
+            cap: 'from-[#2b170c] to-[#b97934]',
+            label: 'from-[#fff7e8] to-[#ffe5b8]',
+            accent: 'bg-accent-apricot',
+        },
+        {
+            shell: 'from-[#5f2626] via-[#963f3a] to-[#341414]',
+            cap: 'from-[#251010] to-[#a64b45]',
+            label: 'from-[#fff0ef] to-[#ffd8d3]',
+            accent: 'bg-accent-coral',
+        },
     ];
-    return accents[index % accents.length];
+    return themes[index % themes.length];
+}
+
+function FilmCoverFallback({ roll, accentClass }: { roll: FilmRoll; accentClass: string }) {
+    return (
+        <div className="flex h-full flex-col justify-between rounded-lg bg-[radial-gradient(circle_at_top_left,#ffffff_0,#fff8e7_45%,#ead5a5_100%)] p-3 text-[#2e2318]">
+            <div>
+                <div className={cn('mb-3 h-1.5 w-12 rounded-full', accentClass)} />
+                <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#6f5131]">{roll.brand}</p>
+                <p className="mt-1 text-lg font-semibold leading-tight">{roll.film_name}</p>
+            </div>
+            <div className="flex items-end justify-between gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#5f452a]">
+                <span>{roll.format}</span>
+                <span>ISO {roll.iso}</span>
+            </div>
+        </div>
+    );
+}
+
+function FilmCanister({ roll, index }: { roll: FilmRoll; index: number }) {
+    const theme = getCanisterTheme(index);
+    const thumbnail = roll.cover_photo?.thumbnail_link;
+
+    return (
+        <Link href={`/film/rolls/${roll.id}`} className="group block">
+            <article className="relative mx-auto flex min-h-[360px] max-w-[250px] flex-col items-center transition-transform duration-300 group-hover:-translate-y-2">
+                <div className={cn('h-8 w-[76%] rounded-t-full bg-gradient-to-b shadow-[inset_0_6px_10px_rgba(255,255,255,0.22),inset_0_-8px_16px_rgba(0,0,0,0.34)]', theme.cap)} />
+                <div className={cn('relative flex min-h-[292px] w-full flex-col overflow-hidden rounded-[2.4rem] border border-white/10 bg-gradient-to-r p-4 shadow-[0_22px_32px_rgba(42,27,16,0.28),inset_18px_0_28px_rgba(255,255,255,0.10),inset_-18px_0_28px_rgba(0,0,0,0.34)]', theme.shell)}>
+                    <div className="pointer-events-none absolute inset-y-0 left-7 w-8 bg-white/10 blur-md" />
+                    <div className="pointer-events-none absolute inset-y-0 right-8 w-10 bg-black/20 blur-lg" />
+                    <div className="relative flex items-start justify-between gap-2">
+                        <span className={cn('rounded-full border px-2 py-1 text-[10px]', filmRollStatusConfig[roll.status].colorClass)}>
+                            {filmRollStatusConfig[roll.status].label}
+                        </span>
+                        <span className="rounded-full bg-black/30 px-2 py-1 text-[10px] font-medium text-white/85">
+                            {roll.frames_taken || 0} frames
+                        </span>
+                    </div>
+                    <div className={cn('relative mt-4 min-h-[176px] overflow-hidden rounded-2xl border border-black/20 bg-gradient-to-br p-2 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.42),0_12px_22px_rgba(0,0,0,0.22)]', theme.label)}>
+                        {thumbnail ? (
+                            <img
+                                src={thumbnail}
+                                alt={`${roll.film_name} cover`}
+                                className="h-full min-h-[160px] w-full rounded-xl object-cover"
+                            />
+                        ) : (
+                            <FilmCoverFallback roll={roll} accentClass={theme.accent} />
+                        )}
+                    </div>
+                    <div className="relative mt-auto pt-4 text-white">
+                        <p className="text-xs uppercase tracking-[0.22em] text-white/55">{roll.brand}</p>
+                        <h2 className="mt-1 line-clamp-2 text-2xl leading-tight text-white">{roll.film_name}</h2>
+                        <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-white/75">
+                            <span>{roll.format} / ISO {roll.iso}</span>
+                            <span className="text-right">{formatCurrency(Number(roll.purchase_price || 0))}</span>
+                            <span className="col-span-2 truncate">{roll.camera?.name || 'No camera'}{roll.location_name ? ` - ${roll.location_name}` : ''}</span>
+                        </div>
+                    </div>
+                </div>
+                <div className={cn('h-9 w-[82%] rounded-b-full bg-gradient-to-t shadow-[inset_0_8px_14px_rgba(255,255,255,0.18),inset_0_-8px_16px_rgba(0,0,0,0.34),0_10px_18px_rgba(0,0,0,0.18)]', theme.cap)} />
+            </article>
+        </Link>
+    );
 }
 
 export default function FilmJournalPage() {
@@ -423,8 +512,8 @@ export default function FilmJournalPage() {
                         </select>
                     </div>
 
-                    <div className="rounded-lg border border-border-default bg-[#d9c49f] p-4 shadow-inner">
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    <div className="rounded-3xl border border-[#6a4d32] bg-[linear-gradient(120deg,#c5a06b,#e4cfaa_45%,#b4834d)] p-5 shadow-inner">
+                        <div className="grid grid-cols-1 gap-x-5 gap-y-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                             {filteredRolls.length === 0 ? (
                                 <div className="col-span-full rounded-lg border border-dashed border-border-strong bg-bg-elevated/70 p-10 text-center">
                                     <Film className="mx-auto mb-3 text-text-muted" size={32} />
@@ -433,39 +522,7 @@ export default function FilmJournalPage() {
                                 </div>
                             ) : (
                                 filteredRolls.map((roll, index) => (
-                                    <Link key={roll.id} href={`/film/rolls/${roll.id}`} className="block">
-                                        <article
-                                            className={cn(
-                                                'relative min-h-[190px] overflow-hidden rounded-lg border-2 p-4 shadow-sm transition-transform hover:-translate-y-1',
-                                                getRollAccent(index)
-                                            )}
-                                        >
-                                            <div className="absolute left-0 top-0 h-full w-3 bg-text-primary/70" />
-                                            <div className="ml-3 flex h-full flex-col justify-between">
-                                                <div>
-                                                    <div className="flex items-start justify-between gap-3">
-                                                        <div>
-                                                            <p className="text-xs uppercase tracking-[0.2em] text-text-muted">{roll.brand}</p>
-                                                            <h2 className="mt-1 text-2xl leading-tight">{roll.film_name}</h2>
-                                                        </div>
-                                                        <span className={cn('rounded-full border px-2 py-1 text-[11px]', filmRollStatusConfig[roll.status].colorClass)}>
-                                                            {filmRollStatusConfig[roll.status].label}
-                                                        </span>
-                                                    </div>
-                                                    <p className="mt-3 text-sm text-text-secondary">
-                                                        {roll.format} · ISO {roll.iso}
-                                                    </p>
-                                                    <p className="mt-1 text-sm text-text-muted">
-                                                        {roll.camera?.name || 'No camera'}{roll.location_name ? ` · ${roll.location_name}` : ''}
-                                                    </p>
-                                                </div>
-                                                <div className="mt-6 flex items-center justify-between border-t border-text-primary/10 pt-3 text-xs text-text-secondary">
-                                                    <span>{roll.frames_taken || 0} frames</span>
-                                                    <span>{formatCurrency(Number(roll.purchase_price || 0))}</span>
-                                                </div>
-                                            </div>
-                                        </article>
-                                    </Link>
+                                    <FilmCanister key={roll.id} roll={roll} index={index} />
                                 ))
                             )}
                         </div>
