@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Sidebar } from '@/components/organisms/Sidebar';
 import { LogForm } from './_components/LogForm';
 import { LogEntryCard } from './_components/LogEntryCard';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { DailyLogEntry, DailyLogContent, Project } from '@/lib/types';
-import { Plus, Download, RefreshCw, Calendar } from 'lucide-react';
+import { Plus, Download, RefreshCw, Calendar, BookOpen } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { useAlert } from '@/lib/contexts/AlertContext';
 import { PageLoader } from '@/components/atoms/Loader';
@@ -263,6 +264,11 @@ export default function LogsPage() {
                     <h1 className="text-3xl font-heading font-medium">Weekly Productivity Log</h1>
 
                     <div className="flex items-center gap-3">
+                        <Link href="/logs/api-tools">
+                            <Button variant="ghost" icon={<BookOpen size={18} />}>
+                                API Tools
+                            </Button>
+                        </Link>
                         <Button variant="ghost" onClick={handleRefresh} icon={<RefreshCw size={18} />}>
                             Refresh
                         </Button>

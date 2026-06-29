@@ -92,8 +92,14 @@ export function Sidebar({ projects }: SidebarProps) {
     const isTicketsActive = pathname === '/tickets' || pathname.startsWith('/tickets/');
     const isAccessControlActive = pathname.startsWith('/settings/access');
     const moduleBySlug = new Map(modules.map((moduleRow) => [moduleRow.slug, moduleRow]));
-    const getModuleLabel = (moduleSlug: AppModuleSlug) => moduleBySlug.get(moduleSlug)?.label ?? moduleSlug;
-    const getModulePath = (moduleSlug: AppModuleSlug) => moduleBySlug.get(moduleSlug)?.path;
+    const getModuleLabel = (moduleSlug: AppModuleSlug) => {
+        if (moduleSlug === 'api') return 'API Docs';
+        return moduleBySlug.get(moduleSlug)?.label ?? moduleSlug;
+    };
+    const getModulePath = (moduleSlug: AppModuleSlug) => {
+        if (moduleSlug === 'api') return '/docs';
+        return moduleBySlug.get(moduleSlug)?.path;
+    };
     const navModules = modules.filter((moduleRow) =>
         moduleRow.isManaged &&
         moduleRow.slug !== 'projects' &&
@@ -292,28 +298,33 @@ export function Sidebar({ projects }: SidebarProps) {
                     </div>
                 )}
 
-                {navModules.map((item) => (
-                    <Link key={item.slug} href={item.path} className="block">
-                        <Button
-                            variant="ghost"
-                            className={cn(
-                                'w-full justify-start',
-                                (item.slug === 'access_control'
-                                    ? isAccessControlActive
-                                    : item.slug === 'film_journal'
-                                        ? pathname.startsWith('/film')
-                                        : pathname === item.path)
-                                    ? item.slug === 'logs' || item.slug === 'log_viewer' || item.slug === 'tickets'
-                                        ? 'bg-accent-rose/10 text-accent-rose hover:bg-accent-rose/20 hover:text-accent-rose'
-                                        : 'bg-bg-hover text-text-primary'
-                                    : 'text-text-secondary hover:text-text-primary'
-                            )}
-                            icon={item.icon ? MODULE_ICONS[item.icon] : undefined}
-                        >
-                            {item.label}
-                        </Button>
-                    </Link>
-                ))}
+                {navModules.map((item) => {
+                    const itemPath = getModulePath(item.slug) ?? item.path;
+                    const itemLabel = getModuleLabel(item.slug);
+
+                    return (
+                        <Link key={item.slug} href={itemPath} className="block">
+                            <Button
+                                variant="ghost"
+                                className={cn(
+                                    'w-full justify-start',
+                                    (item.slug === 'access_control'
+                                        ? isAccessControlActive
+                                        : item.slug === 'film_journal'
+                                            ? pathname.startsWith('/film')
+                                            : pathname === itemPath)
+                                        ? item.slug === 'logs' || item.slug === 'log_viewer' || item.slug === 'tickets'
+                                            ? 'bg-accent-rose/10 text-accent-rose hover:bg-accent-rose/20 hover:text-accent-rose'
+                                            : 'bg-bg-hover text-text-primary'
+                                        : 'text-text-secondary hover:text-text-primary'
+                                )}
+                                icon={item.icon ? MODULE_ICONS[item.icon] : undefined}
+                            >
+                                {itemLabel}
+                            </Button>
+                        </Link>
+                    );
+                })}
             </nav>
 
             <div className="p-4 border-t border-border-subtle">
