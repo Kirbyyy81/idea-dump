@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.8.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.7.0...idea-dump-v0.8.0) (2026-06-29)
+
+
+### Features
+
+* move api tools ([3c64b3d](https://github.com/Kirbyyy81/idea-dump/commit/3c64b3d77fdb81a4e797549fa82a93c0256f1ffa))
+
+
+### Bug Fixes
+
+* refactor film canister design ([0903c4a](https://github.com/Kirbyyy81/idea-dump/commit/0903c4a9c11c368987cb677ffacc23da0906294e))
+* remove duplicate film strip from canister ([d6047b2](https://github.com/Kirbyyy81/idea-dump/commit/d6047b20c49ab76f4935b77b689d2ca858a423c6))
+* slide film strip without moving canister ([1bd9bb2](https://github.com/Kirbyyy81/idea-dump/commit/1bd9bb24a511f33534ed66966bda390255d7a5b2))
+
 ## [0.7.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.6.0...idea-dump-v0.7.0) (2026-06-27)
 
 
