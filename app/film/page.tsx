@@ -100,13 +100,38 @@ function FilmCanister({ roll, index }: { roll: FilmRoll; index: number }) {
 
     return (
         <Link href={`/film/rolls/${roll.id}`} className="group block">
-            <article className="relative mx-auto flex min-h-[410px] max-w-[260px] flex-col items-center transition-transform duration-300 group-hover:-translate-y-2">
-                <div className="relative h-[300px] w-[230px] drop-shadow-[0_24px_22px_rgba(47,28,14,0.32)]">
+            <article className="relative mx-auto flex min-h-[330px] max-w-[300px] items-center justify-center transition-transform duration-300 group-hover:-translate-y-2">
+                <div className="relative h-[300px] w-[300px] drop-shadow-[0_24px_22px_rgba(47,28,14,0.32)]">
+                    <div
+                        className="absolute left-[106px] top-[102px] z-0 h-[112px] w-[154px] origin-left scale-x-[0.22] overflow-hidden rounded-r-3xl border-y-2 border-r-2 border-[#171717] bg-[#242424] opacity-75 shadow-[14px_16px_24px_rgba(38,24,13,0.25)] transition-all duration-500 ease-out group-hover:scale-x-100 group-hover:opacity-100"
+                        aria-hidden="true"
+                    >
+                        <div className="absolute inset-x-0 top-2 flex justify-around">
+                            {Array.from({ length: 12 }).map((_, holeIndex) => (
+                                <span key={`top-strip-hole-${holeIndex}`} className="h-2 w-1.5 rounded-sm bg-[#f4efe2]" />
+                            ))}
+                        </div>
+                        <div className="absolute inset-x-0 bottom-2 flex justify-around">
+                            {Array.from({ length: 12 }).map((_, holeIndex) => (
+                                <span key={`bottom-strip-hole-${holeIndex}`} className="h-2 w-1.5 rounded-sm bg-[#f4efe2]" />
+                            ))}
+                        </div>
+                        <div className="ml-8 flex h-full flex-col justify-center pr-4 text-[#fff8e8] opacity-0 transition-opacity delay-100 duration-300 group-hover:opacity-100">
+                            <p className="truncate text-[10px] font-semibold uppercase tracking-[0.18em] text-[#d7c4a8]">
+                                {roll.brand}
+                            </p>
+                            <h2 className="mt-1 line-clamp-2 text-lg leading-tight">{roll.film_name}</h2>
+                            <div className="mt-2 flex items-center justify-between gap-2 text-[10px] font-semibold text-[#d7c4a8]">
+                                <span>{formatCurrency(Number(roll.purchase_price || 0))}</span>
+                                <span>{roll.camera?.name || 'No camera'}</span>
+                            </div>
+                        </div>
+                    </div>
                     <svg
                         viewBox="0 0 230 300"
                         role="img"
                         aria-labelledby={`film-roll-${roll.id}`}
-                        className="absolute inset-0 h-full w-full overflow-visible"
+                        className="absolute inset-y-0 left-0 z-10 h-full w-[230px] overflow-visible"
                     >
                         <title id={`film-roll-${roll.id}`}>{`${roll.brand} ${roll.film_name}`}</title>
                         <defs>
@@ -198,7 +223,7 @@ function FilmCanister({ roll, index }: { roll: FilmRoll; index: number }) {
                         </text>
                     </svg>
 
-                    <div className="absolute left-[30px] top-[64px] h-[164px] w-[64px] overflow-hidden border border-black/15 bg-white">
+                    <div className="absolute left-[30px] top-[64px] z-20 h-[164px] w-[64px] overflow-hidden border border-black/15 bg-white">
                         {thumbnail ? (
                             <img
                                 src={thumbnail}
@@ -209,23 +234,9 @@ function FilmCanister({ roll, index }: { roll: FilmRoll; index: number }) {
                             <FilmCoverFallback roll={roll} accentColor={theme.accent} />
                         )}
                     </div>
-                </div>
-
-                <div className="mt-4 w-full rounded-2xl border border-[#7a5738]/45 bg-[#fff8e8]/88 p-4 text-[#2d2016] shadow-[0_12px_26px_rgba(68,43,23,0.18)] transition-colors group-hover:bg-white">
-                    <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                            <p className="truncate text-xs font-semibold uppercase tracking-[0.2em] text-[#7a5738]">{roll.brand}</p>
-                            <h2 className="mt-1 line-clamp-2 text-xl leading-tight text-[#2d2016]">{roll.film_name}</h2>
-                        </div>
-                        <span className={cn('shrink-0 rounded-full border px-2 py-1 text-[10px]', status.colorClass)}>
+                    <div className="absolute left-[26px] top-[222px] z-30 flex w-[70px] justify-center">
+                        <span className={cn('rounded-full border px-2 py-1 text-[9px] shadow-sm', status.colorClass)}>
                             {status.label}
-                        </span>
-                    </div>
-                    <div className="mt-3 grid grid-cols-2 gap-2 text-xs font-medium text-[#6d5338]">
-                        <span>{roll.format} / ISO {roll.iso}</span>
-                        <span className="text-right">{formatCurrency(Number(roll.purchase_price || 0))}</span>
-                        <span className="col-span-2 truncate">
-                            {roll.camera?.name || 'No camera'}{roll.location_name ? ` - ${roll.location_name}` : ''}
                         </span>
                     </div>
                 </div>
