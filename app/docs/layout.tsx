@@ -1,10 +1,10 @@
 import { requirePageModuleAccess } from '@/lib/rbac/guards';
 
-export default async function ApiToolsLayout({
+export default async function ApiDocsLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
-    await requirePageModuleAccess('logs');
+    await requirePageModuleAccess('api');
     return children;
 }
