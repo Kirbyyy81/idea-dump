@@ -100,10 +100,10 @@ function FilmCanister({ roll, index }: { roll: FilmRoll; index: number }) {
 
     return (
         <Link href={`/film/rolls/${roll.id}`} className="group block">
-            <article className="relative mx-auto flex min-h-[330px] max-w-[300px] items-center justify-center transition-transform duration-300 group-hover:-translate-y-2">
+            <article className="relative mx-auto flex min-h-[330px] max-w-[300px] items-center justify-center">
                 <div className="relative h-[300px] w-[300px] drop-shadow-[0_24px_22px_rgba(47,28,14,0.32)]">
                     <div
-                        className="absolute left-[106px] top-[102px] z-0 h-[112px] w-[154px] origin-left scale-x-[0.22] overflow-hidden rounded-r-3xl border-y-2 border-r-2 border-[#171717] bg-[#242424] opacity-75 shadow-[14px_16px_24px_rgba(38,24,13,0.25)] transition-all duration-500 ease-out group-hover:scale-x-100 group-hover:opacity-100"
+                        className="absolute left-[106px] top-[102px] z-0 h-[112px] w-[154px] -translate-x-[116px] overflow-hidden rounded-r-3xl border-y-2 border-r-2 border-[#171717] bg-[#242424] shadow-[14px_16px_24px_rgba(38,24,13,0.25)] transition-transform duration-500 ease-out group-hover:translate-x-0"
                         aria-hidden="true"
                     >
                         <div className="absolute inset-x-0 top-2 flex justify-around">
