@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Card } from '@/components/atoms/Card';
 import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
+import { Select } from '@/components/atoms/Select';
 import { Copy, Eraser } from 'lucide-react';
 import {
     DEFAULT_IMAGE_SUFFIX,
@@ -66,17 +67,14 @@ export function SlugImageNameCard() {
                     <label className="text-sm font-medium text-text-secondary">
                         Suffix
                     </label>
-                    <select
+                    <Select
                         value={suffix}
-                        onChange={(e) => setSuffix(e.target.value)}
-                        className="input w-full"
-                    >
-                        {IMAGE_SUFFIX_OPTIONS.map((option) => (
-                            <option key={option} value={option}>
-                                {option}
-                            </option>
-                        ))}
-                    </select>
+                        onChange={setSuffix}
+                        options={IMAGE_SUFFIX_OPTIONS.map((option) => ({
+                            value: option,
+                            label: option,
+                        }))}
+                    />
                 </div>
             </div>
 

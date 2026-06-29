@@ -6,8 +6,8 @@ import { AppShell } from '@/components/organisms/AppShell';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
+import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
-import { PageLoader } from '@/components/atoms/Loader';
 import { FilmCamera, FilmMaintenanceRecord } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -170,7 +170,13 @@ export default function FilmCamerasPage() {
         setMaintenance((records) => records.filter((record) => record.id !== id));
     }
 
-    if (isLoading) return <PageLoader message="Opening camera cabinet..." />;
+    if (isLoading) {
+        return (
+            <AppShell isLoading loadingMessage="Opening camera cabinet..." >
+                <div />
+            </AppShell>
+        );
+    }
 
     return (
         <AppShell contentClassName="p-5 md:p-8">
@@ -327,21 +333,21 @@ export default function FilmCamerasPage() {
                                     onSubmit={addMaintenance}
                                     className="mt-5 grid grid-cols-1 gap-3 border-t border-border-default pt-5 md:grid-cols-2"
                                 >
-                                    <select
-                                        className="input"
+                                    <Select
                                         value={maintenanceForm.service_type}
-                                        onChange={(event) => setMaintenanceForm({
+                                        onChange={(nextValue) => setMaintenanceForm({
                                             ...maintenanceForm,
-                                            service_type: event.target.value,
+                                            service_type: nextValue,
                                         })}
-                                    >
-                                        <option>CLA</option>
-                                        <option>Lens Cleaning</option>
-                                        <option>Light Seal Replacement</option>
-                                        <option>Repair</option>
-                                        <option>Battery Replacement</option>
-                                        <option>Custom Maintenance</option>
-                                    </select>
+                                        options={[
+                                            { value: 'CLA', label: 'CLA' },
+                                            { value: 'Lens Cleaning', label: 'Lens Cleaning' },
+                                            { value: 'Light Seal Replacement', label: 'Light Seal Replacement' },
+                                            { value: 'Repair', label: 'Repair' },
+                                            { value: 'Battery Replacement', label: 'Battery Replacement' },
+                                            { value: 'Custom Maintenance', label: 'Custom Maintenance' },
+                                        ]}
+                                    />
                                     <Input
                                         placeholder="Provider or shop"
                                         value={maintenanceForm.provider_name}

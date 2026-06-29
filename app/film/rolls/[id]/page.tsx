@@ -9,8 +9,8 @@ import { AppShell } from '@/components/organisms/AppShell';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
+import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
-import { PageLoader } from '@/components/atoms/Loader';
 import {
     FilmCamera,
     FilmFormat,
@@ -265,7 +265,11 @@ export default function FilmRollDetailPage({ params }: RollDetailPageProps) {
     };
 
     if (isLoading) {
-        return <PageLoader message="Opening photobook..." />;
+        return (
+            <AppShell isLoading loadingMessage="Opening photobook..." contentClassName="p-8">
+                <div />
+            </AppShell>
+        );
     }
 
     if (!roll || !rollForm) {
@@ -422,20 +426,29 @@ export default function FilmRollDetailPage({ params }: RollDetailPageProps) {
                                 <Input value={rollForm.film_name} onChange={(event) => setRollForm({ ...rollForm, film_name: event.target.value })} />
                                 <Input value={rollForm.brand} onChange={(event) => setRollForm({ ...rollForm, brand: event.target.value })} />
                                 <div className="grid grid-cols-2 gap-3">
-                                    <select className="input" value={rollForm.format} onChange={(event) => setRollForm({ ...rollForm, format: event.target.value as FilmFormat })}>
-                                        {filmFormats.map((format) => <option key={format} value={format}>{format}</option>)}
-                                    </select>
+                                    <Select
+                                        value={rollForm.format}
+                                        onChange={(nextValue) => setRollForm({ ...rollForm, format: nextValue as FilmFormat })}
+                                        options={filmFormats.map((format) => ({ value: format, label: format }))}
+                                    />
                                     <Input type="number" min="1" value={rollForm.iso} onChange={(event) => setRollForm({ ...rollForm, iso: event.target.value })} />
                                 </div>
-                                <select className="input" value={rollForm.status} onChange={(event) => setRollForm({ ...rollForm, status: event.target.value as FilmRollStatus })}>
-                                    {Object.entries(filmRollStatusConfig).map(([status, config]) => (
-                                        <option key={status} value={status}>{config.label}</option>
-                                    ))}
-                                </select>
-                                <select className="input" value={rollForm.camera_id} onChange={(event) => setRollForm({ ...rollForm, camera_id: event.target.value })}>
-                                    <option value="">No camera selected</option>
-                                    {cameras.map((camera) => <option key={camera.id} value={camera.id}>{camera.name}</option>)}
-                                </select>
+                                <Select
+                                    value={rollForm.status}
+                                    onChange={(nextValue) => setRollForm({ ...rollForm, status: nextValue as FilmRollStatus })}
+                                    options={Object.entries(filmRollStatusConfig).map(([status, config]) => ({
+                                        value: status,
+                                        label: config.label,
+                                    }))}
+                                />
+                                <Select
+                                    value={rollForm.camera_id}
+                                    onChange={(nextValue) => setRollForm({ ...rollForm, camera_id: nextValue })}
+                                    options={[
+                                        { value: '', label: 'No camera selected' },
+                                        ...cameras.map((camera) => ({ value: camera.id, label: camera.name })),
+                                    ]}
+                                />
                                 <Input placeholder="Location" value={rollForm.location_name} onChange={(event) => setRollForm({ ...rollForm, location_name: event.target.value })} />
                                 <div className="grid grid-cols-2 gap-3">
                                     <Input type="number" min="0" step="0.01" value={rollForm.purchase_price} onChange={(event) => setRollForm({ ...rollForm, purchase_price: event.target.value })} />
@@ -514,14 +527,18 @@ export default function FilmRollDetailPage({ params }: RollDetailPageProps) {
                                                 No maintenance logged for this camera yet.
                                             </div>
                                         )}
-                                        <select className="input" value={maintenanceForm.service_type} onChange={(event) => setMaintenanceForm({ ...maintenanceForm, service_type: event.target.value })}>
-                                            <option value="CLA">CLA</option>
-                                            <option value="Lens Cleaning">Lens Cleaning</option>
-                                            <option value="Light Seal Replacement">Light Seal Replacement</option>
-                                            <option value="Repair">Repair</option>
-                                            <option value="Battery Replacement">Battery Replacement</option>
-                                            <option value="Custom Maintenance">Custom Maintenance</option>
-                                        </select>
+                                        <Select
+                                            value={maintenanceForm.service_type}
+                                            onChange={(nextValue) => setMaintenanceForm({ ...maintenanceForm, service_type: nextValue })}
+                                            options={[
+                                                { value: 'CLA', label: 'CLA' },
+                                                { value: 'Lens Cleaning', label: 'Lens Cleaning' },
+                                                { value: 'Light Seal Replacement', label: 'Light Seal Replacement' },
+                                                { value: 'Repair', label: 'Repair' },
+                                                { value: 'Battery Replacement', label: 'Battery Replacement' },
+                                                { value: 'Custom Maintenance', label: 'Custom Maintenance' },
+                                            ]}
+                                        />
                                         <Input placeholder="Provider or shop" value={maintenanceForm.provider_name} onChange={(event) => setMaintenanceForm({ ...maintenanceForm, provider_name: event.target.value })} />
                                         <div className="grid grid-cols-2 gap-3">
                                             <Input type="number" min="0" step="0.01" placeholder="Cost" value={maintenanceForm.maintenance_cost} onChange={(event) => setMaintenanceForm({ ...maintenanceForm, maintenance_cost: event.target.value })} />

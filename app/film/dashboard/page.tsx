@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { Aperture, Camera, CircleDollarSign, Film, Heart, Image as ImageIcon, Wrench } from 'lucide-react';
 import { AppShell } from '@/components/organisms/AppShell';
 import { Card } from '@/components/atoms/Card';
-import { PageLoader } from '@/components/atoms/Loader';
 import { FilmDashboardSummary } from '@/lib/types';
 
 function money(value: number) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value || 0); }
@@ -13,7 +12,9 @@ export default function FilmDashboardPage() {
     const [summary, setSummary] = useState<FilmDashboardSummary | null>(null);
     const [error, setError] = useState<string | null>(null);
     useEffect(() => { fetch('/api/film/dashboard').then(async (response) => { const payload = await response.json(); if (!response.ok) throw new Error(payload.error); setSummary(payload.data); }).catch((loadError) => setError(loadError.message || 'Failed to load dashboard')); }, []);
-    if (!summary && !error) return <PageLoader message="Developing dashboard totals..." />;
+    if (!summary && !error) {
+        return <AppShell isLoading loadingMessage="Developing dashboard totals..." contentClassName="p-5 md:p-8"><div /></AppShell>;
+    }
     const metrics = summary ? [
         { label: 'Pictures taken', value: summary.total_pictures_taken, icon: Aperture },
         { label: 'Total spending', value: money(summary.total_money_spent), icon: CircleDollarSign },

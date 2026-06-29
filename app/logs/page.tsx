@@ -12,6 +12,7 @@ import { Plus, Download, RefreshCw, Calendar, BookOpen } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { useAlert } from '@/lib/contexts/AlertContext';
 import { Input } from '@/components/atoms/Input';
+import { Select } from '@/components/atoms/Select';
 
 export default function LogsPage() {
     const [logs, setLogs] = useState<DailyLogEntry[]>([]);
@@ -310,15 +311,16 @@ export default function LogsPage() {
 
                             <div className="min-w-[160px]">
                                 <label className="block text-xs text-text-muted mb-1">Source</label>
-                                <select
+                                <Select
                                     value={sourceFilter}
-                                    onChange={(e) => setSourceFilter(e.target.value as 'all' | 'agent' | 'human')}
-                                    className="input py-2 text-sm"
-                                >
-                                    <option value="all">All</option>
-                                    <option value="human">Human</option>
-                                    <option value="agent">Agent</option>
-                                </select>
+                                    onChange={(nextValue) => setSourceFilter(nextValue as 'all' | 'agent' | 'human')}
+                                    buttonClassName="py-2 text-sm"
+                                    options={[
+                                        { value: 'all', label: 'All' },
+                                        { value: 'human', label: 'Human' },
+                                        { value: 'agent', label: 'Agent' },
+                                    ]}
+                                />
                             </div>
 
                             <div className="flex-1 min-w-[220px]">
