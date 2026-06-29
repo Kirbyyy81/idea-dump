@@ -17,7 +17,7 @@ function hashApiKey(key: string): string {
 // GET /api/keys - List all API keys for current user
 export async function GET() {
     try {
-        const access = await authorizeSessionModule('api');
+        const access = await authorizeSessionModule('logs');
         if ('response' in access) {
             return access.response;
         }
@@ -50,7 +50,7 @@ export async function GET() {
 // POST /api/keys - Create a new API key
 export async function POST(request: NextRequest) {
     try {
-        const access = await authorizeSessionModule('api');
+        const access = await authorizeSessionModule('logs');
         if ('response' in access) {
             return access.response;
         }
@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
 // DELETE /api/keys?id=xxx - Delete an API key
 export async function DELETE(request: NextRequest) {
     try {
-        const access = await authorizeSessionModule('api');
+        const access = await authorizeSessionModule('logs');
         if ('response' in access) {
             return access.response;
         }

@@ -87,9 +87,9 @@ export function Sidebar({ projects }: SidebarProps) {
     const isAccessControlActive = pathname.startsWith('/settings/access');
     const moduleBySlug = new Map(modules.map((moduleRow) => [moduleRow.slug, moduleRow]));
     const getModuleLabel = (moduleSlug: AppModuleSlug, fallback: string = moduleSlug) =>
-        moduleBySlug.get(moduleSlug)?.label ?? fallback;
+        moduleSlug === 'api' ? 'API Docs' : moduleBySlug.get(moduleSlug)?.label ?? fallback;
     const getModulePath = (moduleSlug: AppModuleSlug, fallback: string) =>
-        moduleBySlug.get(moduleSlug)?.path ?? fallback;
+        moduleSlug === 'api' ? '/docs' : moduleBySlug.get(moduleSlug)?.path ?? fallback;
     const navModules = modules.filter((moduleRow) =>
         moduleRow.isManaged &&
         moduleRow.slug !== 'projects' &&
@@ -301,18 +301,21 @@ export function Sidebar({ projects }: SidebarProps) {
                     ),
                 })}
 
-                {navModules.map((item) => (
+                {navModules.map((item) => {
+                    const itemPath = getModulePath(item.slug, item.path);
+                    return (
                     <div key={item.slug}>
                         {renderModuleLink({
-                            active: item.slug === 'access_control' ? isAccessControlActive : pathname === item.path,
-                            href: item.path,
+                            active: item.slug === 'access_control' ? isAccessControlActive : pathname === itemPath,
+                            href: itemPath,
                             icon: item.icon && MODULE_ICONS[item.icon]
                                 ? MODULE_ICONS[item.icon]
                                 : <LayoutDashboard size={18} />,
-                            label: item.label,
+                            label: getModuleLabel(item.slug, item.label),
                         })}
                     </div>
-                ))}
+                );
+                })}
             </nav>
 
             <div className="p-4 border-t border-border-subtle">

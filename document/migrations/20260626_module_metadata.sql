@@ -25,7 +25,7 @@ from (
     ('logs', 'Weekly Logs', '/logs', 30, true, false, 'ClipboardList', 'View, add, edit, and export your weekly productivity logs.'),
     ('log_viewer', 'Log Viewer', '/log-viewer', 40, true, false, 'FileSearch', 'Search and review captured logs across the workspace.'),
     ('film_journal', 'Film Journal', '/film', 50, true, false, 'Film', 'Browse film rolls as a journal, open photobook entries, and review shooting costs.'),
-    ('api', 'API', '/api-tools', 60, true, false, 'BookOpen', 'Manage API keys and review the API usage and documentation.'),
+    ('api', 'API Docs', '/docs', 60, true, false, 'BookOpen', 'Review the generated API reference and endpoint documentation.'),
     ('access_control', 'Access Control', '/settings/access', 70, true, false, 'ShieldCheck', 'Manage roles, module access, and user-specific exceptions.'),
     ('article_creation', 'Article Creation', '/article-creation', 80, true, false, 'FilePenLine', 'Use the built-in helpers for article planning and content support.'),
     ('settings', 'Settings', '/settings', 90, false, true, 'Settings', 'Manage your personal account settings and sign-out actions.')
