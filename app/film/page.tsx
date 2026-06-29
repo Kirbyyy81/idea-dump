@@ -14,34 +14,49 @@ import { cn } from '@/lib/utils';
 
 const CANISTER_THEMES = [
     {
-        shell: 'from-[#1f2933] via-[#334155] to-[#111827]',
-        cap: 'from-[#0f172a] to-[#475569]',
-        label: 'from-[#fef2f2] to-[#fee2e2]',
-        accent: 'bg-accent-rose',
+        body: '#f2383f',
+        bodyDark: '#8f1f24',
+        bodyLight: '#ff6a70',
+        leader: '#27364f',
+        cap: '#1b2940',
+        label: '#fff2df',
+        accent: '#f2383f',
     },
     {
-        shell: 'from-[#263c34] via-[#3d5f50] to-[#17241f]',
-        cap: 'from-[#13221c] to-[#4f7765]',
-        label: 'from-[#f2f7ed] to-[#dcebd2]',
-        accent: 'bg-accent-sage',
+        body: '#f59f22',
+        bodyDark: '#9c5c10',
+        bodyLight: '#ffc15b',
+        leader: '#24314b',
+        cap: '#19263d',
+        label: '#fff6d8',
+        accent: '#f59f22',
     },
     {
-        shell: 'from-[#1e3a5f] via-[#2d5f8f] to-[#12243a]',
-        cap: 'from-[#102035] to-[#4378a6]',
-        label: 'from-[#eef7f9] to-[#d8eef2]',
-        accent: 'bg-accent-blue',
+        body: '#f8f1dc',
+        bodyDark: '#b9a46e',
+        bodyLight: '#fff9eb',
+        leader: '#323232',
+        cap: '#252525',
+        label: '#ffffff',
+        accent: '#323232',
     },
     {
-        shell: 'from-[#6c3f1f] via-[#a7652c] to-[#3d2413]',
-        cap: 'from-[#2b170c] to-[#b97934]',
-        label: 'from-[#fff7e8] to-[#ffe5b8]',
-        accent: 'bg-accent-apricot',
+        body: '#2f5f9f',
+        bodyDark: '#1c375c',
+        bodyLight: '#6f9ad0',
+        leader: '#f7f1e2',
+        cap: '#1d2f4e',
+        label: '#eaf3ff',
+        accent: '#2f5f9f',
     },
     {
-        shell: 'from-[#5f2626] via-[#963f3a] to-[#341414]',
-        cap: 'from-[#251010] to-[#a64b45]',
-        label: 'from-[#fff0ef] to-[#ffd8d3]',
-        accent: 'bg-accent-coral',
+        body: '#f7f4e9',
+        bodyDark: '#b8b2a1',
+        bodyLight: '#ffffff',
+        leader: '#f7f4e9',
+        cap: '#2c3442',
+        label: '#ffffff',
+        accent: '#2c3442',
     },
 ];
 
@@ -53,11 +68,17 @@ function formatCurrency(value: number) {
     }).format(value || 0);
 }
 
-function FilmCoverFallback({ roll, accentClass }: { roll: FilmRoll; accentClass: string }) {
+function FilmCoverFallback({
+    roll,
+    accentColor,
+}: {
+    roll: FilmRoll;
+    accentColor: string;
+}) {
     return (
-        <div className="flex h-full flex-col justify-between rounded-lg bg-[radial-gradient(circle_at_top_left,#ffffff_0,#fff8e7_45%,#ead5a5_100%)] p-3 text-[#2e2318]">
+        <div className="flex h-full flex-col justify-between bg-[radial-gradient(circle_at_top_left,#ffffff_0,#fff8e7_46%,#ead5a5_100%)] p-3 text-[#2e2318]">
             <div>
-                <div className={cn('mb-3 h-1.5 w-12 rounded-full', accentClass)} />
+                <div className="mb-3 h-1.5 w-12 rounded-full" style={{ backgroundColor: accentColor }} />
                 <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#6f5131]">
                     {roll.brand}
                 </p>
@@ -74,46 +95,140 @@ function FilmCoverFallback({ roll, accentClass }: { roll: FilmRoll; accentClass:
 function FilmCanister({ roll, index }: { roll: FilmRoll; index: number }) {
     const theme = CANISTER_THEMES[index % CANISTER_THEMES.length];
     const thumbnail = roll.cover_photo?.thumbnail_link;
+    const status = filmRollStatusConfig[roll.status];
+    const stripeCount = theme.body === '#f8f1dc' || theme.body === '#f7f4e9' ? 8 : 0;
 
     return (
         <Link href={`/film/rolls/${roll.id}`} className="group block">
-            <article className="relative mx-auto flex min-h-[360px] max-w-[250px] flex-col items-center transition-transform duration-300 group-hover:-translate-y-2">
-                <div className={cn('h-8 w-[76%] rounded-t-full bg-gradient-to-b shadow-[inset_0_6px_10px_rgba(255,255,255,0.22),inset_0_-8px_16px_rgba(0,0,0,0.34)]', theme.cap)} />
-                <div className={cn('relative flex min-h-[292px] w-full flex-col overflow-hidden rounded-[2.4rem] border border-white/10 bg-gradient-to-r p-4 shadow-[0_22px_32px_rgba(42,27,16,0.28),inset_18px_0_28px_rgba(255,255,255,0.10),inset_-18px_0_28px_rgba(0,0,0,0.34)]', theme.shell)}>
-                    <div className="pointer-events-none absolute inset-y-0 left-7 w-8 bg-white/10 blur-md" />
-                    <div className="pointer-events-none absolute inset-y-0 right-8 w-10 bg-black/20 blur-lg" />
-                    <div className="relative flex items-start justify-between gap-2">
-                        <span className={cn('rounded-full border px-2 py-1 text-[10px]', filmRollStatusConfig[roll.status].colorClass)}>
-                            {filmRollStatusConfig[roll.status].label}
-                        </span>
-                        <span className="rounded-full bg-black/30 px-2 py-1 text-[10px] font-medium text-white/85">
-                            {roll.frames_taken || 0} frames
-                        </span>
-                    </div>
-                    <div className={cn('relative mt-4 min-h-[176px] overflow-hidden rounded-2xl border border-black/20 bg-gradient-to-br p-2 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.42),0_12px_22px_rgba(0,0,0,0.22)]', theme.label)}>
+            <article className="relative mx-auto flex min-h-[410px] max-w-[260px] flex-col items-center transition-transform duration-300 group-hover:-translate-y-2">
+                <div className="relative h-[300px] w-[230px] drop-shadow-[0_24px_22px_rgba(47,28,14,0.32)]">
+                    <svg
+                        viewBox="0 0 230 300"
+                        role="img"
+                        aria-labelledby={`film-roll-${roll.id}`}
+                        className="absolute inset-0 h-full w-full overflow-visible"
+                    >
+                        <title id={`film-roll-${roll.id}`}>{`${roll.brand} ${roll.film_name}`}</title>
+                        <defs>
+                            <linearGradient id={`body-${roll.id}`} x1="0" x2="1" y1="0" y2="1">
+                                <stop offset="0%" stopColor={theme.bodyLight} />
+                                <stop offset="48%" stopColor={theme.body} />
+                                <stop offset="100%" stopColor={theme.bodyDark} />
+                            </linearGradient>
+                            <linearGradient id={`leader-${roll.id}`} x1="0" x2="1">
+                                <stop offset="0%" stopColor={theme.leader} />
+                                <stop offset="100%" stopColor={theme.leader === '#f7f1e2' ? '#d7cfb8' : '#4a4a4a'} />
+                            </linearGradient>
+                        </defs>
+
+                        <path
+                            d="M105 62 H197 Q210 62 210 75 V103 Q210 121 192 121 H155 Q145 121 145 132 V143 H105 Z"
+                            fill={`url(#leader-${roll.id})`}
+                            stroke="#191919"
+                            strokeWidth="3"
+                            strokeLinejoin="round"
+                        />
+                        <rect x="15" y="52" width="94" height="188" rx="4" fill={`url(#body-${roll.id})`} stroke="#1d1d1d" strokeWidth="3" />
+                        <rect x="9" y="42" width="108" height="14" rx="2" fill={theme.cap} />
+                        <rect x="22" y="35" width="82" height="7" rx="1.5" fill="#f6f6f1" />
+                        <rect x="9" y="239" width="108" height="14" rx="2" fill={theme.cap} />
+                        <rect x="22" y="253" width="82" height="7" rx="1.5" fill="#f6f6f1" />
+                        <rect x="30" y="64" width="64" height="164" rx="2" fill={theme.label} opacity="0.96" />
+                        <line x1="99" y1="65" x2="99" y2="226" stroke="#101010" strokeWidth="2" />
+                        <line x1="24" y1="64" x2="24" y2="226" stroke="#101010" strokeWidth="2" opacity="0.35" />
+
+                        {Array.from({ length: 12 }).map((_, holeIndex) => (
+                            <rect
+                                key={`leader-hole-${holeIndex}`}
+                                x={108 + holeIndex * 7}
+                                y="70"
+                                width="4"
+                                height="8"
+                                rx="1"
+                                fill="#f5f2e8"
+                                opacity={theme.leader === '#f7f1e2' ? 0.75 : 0.95}
+                            />
+                        ))}
+                        {Array.from({ length: 8 }).map((_, holeIndex) => (
+                            <rect
+                                key={`body-hole-${holeIndex}`}
+                                x="103"
+                                y={75 + holeIndex * 17}
+                                width="6"
+                                height="9"
+                                rx="1"
+                                fill="#f5f2e8"
+                                opacity="0.95"
+                            />
+                        ))}
+                        {stripeCount > 0 && Array.from({ length: stripeCount }).map((_, stripeIndex) => (
+                            <line
+                                key={`stripe-${stripeIndex}`}
+                                x1={38 + stripeIndex * 7}
+                                x2={38 + stripeIndex * 7}
+                                y1="68"
+                                y2="224"
+                                stroke={theme.accent}
+                                strokeWidth="2.5"
+                                opacity="0.82"
+                            />
+                        ))}
+                        <text
+                            x="47"
+                            y="178"
+                            fill="#111111"
+                            fontSize="15"
+                            fontWeight="700"
+                            transform="rotate(-90 47 178)"
+                        >
+                            {roll.format}
+                        </text>
+                        <text
+                            x="67"
+                            y="168"
+                            fill="#111111"
+                            fontSize="18"
+                            fontWeight="800"
+                            transform="rotate(-90 67 168)"
+                        >
+                            {roll.iso}
+                        </text>
+                        <text x="199" y="140" fill="#111111" fontSize="13" fontWeight="800">
+                            {roll.frames_taken || 0}
+                        </text>
+                    </svg>
+
+                    <div className="absolute left-[30px] top-[64px] h-[164px] w-[64px] overflow-hidden border border-black/15 bg-white">
                         {thumbnail ? (
                             <img
                                 src={thumbnail}
                                 alt={`${roll.film_name} cover`}
-                                className="h-full min-h-[160px] w-full rounded-xl object-cover"
+                                className="h-full w-full object-cover"
                             />
                         ) : (
-                            <FilmCoverFallback roll={roll} accentClass={theme.accent} />
+                            <FilmCoverFallback roll={roll} accentColor={theme.accent} />
                         )}
                     </div>
-                    <div className="relative mt-auto pt-4 text-white">
-                        <p className="text-xs uppercase tracking-[0.22em] text-white/55">{roll.brand}</p>
-                        <h2 className="mt-1 line-clamp-2 text-2xl leading-tight text-white">{roll.film_name}</h2>
-                        <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-white/75">
-                            <span>{roll.format} / ISO {roll.iso}</span>
-                            <span className="text-right">{formatCurrency(Number(roll.purchase_price || 0))}</span>
-                            <span className="col-span-2 truncate">
-                                {roll.camera?.name || 'No camera'}{roll.location_name ? ` - ${roll.location_name}` : ''}
-                            </span>
+                </div>
+
+                <div className="mt-4 w-full rounded-2xl border border-[#7a5738]/45 bg-[#fff8e8]/88 p-4 text-[#2d2016] shadow-[0_12px_26px_rgba(68,43,23,0.18)] transition-colors group-hover:bg-white">
+                    <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                            <p className="truncate text-xs font-semibold uppercase tracking-[0.2em] text-[#7a5738]">{roll.brand}</p>
+                            <h2 className="mt-1 line-clamp-2 text-xl leading-tight text-[#2d2016]">{roll.film_name}</h2>
                         </div>
+                        <span className={cn('shrink-0 rounded-full border px-2 py-1 text-[10px]', status.colorClass)}>
+                            {status.label}
+                        </span>
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-xs font-medium text-[#6d5338]">
+                        <span>{roll.format} / ISO {roll.iso}</span>
+                        <span className="text-right">{formatCurrency(Number(roll.purchase_price || 0))}</span>
+                        <span className="col-span-2 truncate">
+                            {roll.camera?.name || 'No camera'}{roll.location_name ? ` - ${roll.location_name}` : ''}
+                        </span>
                     </div>
                 </div>
-                <div className={cn('h-9 w-[82%] rounded-b-full bg-gradient-to-t shadow-[inset_0_8px_14px_rgba(255,255,255,0.18),inset_0_-8px_16px_rgba(0,0,0,0.34),0_10px_18px_rgba(0,0,0,0.18)]', theme.cap)} />
             </article>
         </Link>
     );
