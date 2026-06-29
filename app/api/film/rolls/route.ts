@@ -120,7 +120,7 @@ export async function GET(request: NextRequest) {
         const admin = createAdminClient();
         let requestQuery = admin
             .from('film_rolls')
-            .select('*, camera:film_cameras(*)')
+            .select('*, camera:film_cameras(*), cover_photo:film_photos!film_rolls_cover_photo_id_fkey(*)')
             .eq('user_id', session.user.id)
             .order('created_at', { ascending: false });
 
@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
         const { data, error } = await admin
             .from('film_rolls')
             .insert(insert.data)
-            .select('*, camera:film_cameras(*)')
+            .select('*, camera:film_cameras(*), cover_photo:film_photos!film_rolls_cover_photo_id_fkey(*)')
             .single();
 
         if (error) throw error;
@@ -219,7 +219,7 @@ export async function PUT(request: NextRequest) {
             .update(updateData)
             .eq('id', id)
             .eq('user_id', session.user.id)
-            .select('*, camera:film_cameras(*)')
+            .select('*, camera:film_cameras(*), cover_photo:film_photos!film_rolls_cover_photo_id_fkey(*)')
             .single();
 
         if (error) throw error;

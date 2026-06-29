@@ -250,6 +250,7 @@ export interface FilmRoll {
     created_at: string;
     updated_at: string;
     camera?: FilmCamera | null;
+    cover_photo?: FilmPhoto | null;
     photos?: FilmPhoto[];
 }
 
