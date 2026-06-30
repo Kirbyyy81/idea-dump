@@ -20,7 +20,6 @@ export async function GET(_request: Request, { params }: RouteParams) {
             .select(`
                 *,
                 camera:film_cameras(*),
-                processing_records:film_processing_records(*),
                 photos:film_photos!film_photos_film_roll_id_fkey(*)
             `)
             .eq('id', id)
