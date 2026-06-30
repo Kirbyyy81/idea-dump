@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { AppShell } from '@/components/organisms/AppShell';
 import { ProjectForm } from '../../_components/ProjectForm';
 import { CreateProjectInput } from '@/lib/types';
 import { PageLoader } from '@/components/atoms/Loader';
@@ -64,7 +65,7 @@ export default function EditProjectPage() {
                 throw new Error(resData.error || 'Failed to update project');
             }
 
-            router.push(`/project/${projectId}`);
+            router.push(`/projects/${projectId}`);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An error occurred');
             setIsSubmitting(false);
@@ -76,33 +77,34 @@ export default function EditProjectPage() {
     }
 
     return (
-        <div className="min-h-screen p-8 max-w-3xl mx-auto">
-            {/* Header */}
-            <div className="flex items-center gap-4 mb-8">
-                <Link
-                    href={`/project/${projectId}`}
-                    className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors"
-                >
-                    <ArrowLeft size={20} />
-                </Link>
-                <h1 className="text-text-primary">Edit Project</h1>
-            </div>
-
-            {error && (
-                <div className="p-3 rounded-lg bg-error-bg border border-error mb-6">
-                    <p className="text-sm text-error">{error}</p>
+        <AppShell contentClassName="p-8">
+            <div className="max-w-3xl">
+                <div className="flex items-center gap-4 mb-8">
+                    <Link
+                        href={`/projects/${projectId}`}
+                        className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors"
+                    >
+                        <ArrowLeft size={20} />
+                    </Link>
+                    <h1 className="text-text-primary">Edit Project</h1>
                 </div>
-            )}
 
-            {initialData && (
-                <ProjectForm
-                    initialData={initialData}
-                    onSubmit={handleSubmit}
-                    isSubmitting={isSubmitting}
-                    submitLabel="Save Changes"
-                    onCancel={() => router.push(`/project/${projectId}`)}
-                />
-            )}
-        </div>
+                {error && (
+                    <div className="p-3 rounded-lg bg-error-bg border border-error mb-6">
+                        <p className="text-sm text-error">{error}</p>
+                    </div>
+                )}
+
+                {initialData && (
+                    <ProjectForm
+                        initialData={initialData}
+                        onSubmit={handleSubmit}
+                        isSubmitting={isSubmitting}
+                        submitLabel="Save Changes"
+                        onCancel={() => router.push(`/projects/${projectId}`)}
+                    />
+                )}
+            </div>
+        </AppShell>
     );
 }

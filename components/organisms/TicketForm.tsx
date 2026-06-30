@@ -5,6 +5,7 @@ import { Save } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
+import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
 import {
     CreateTicketInput,
@@ -84,18 +85,14 @@ export function TicketForm({
                 {!lockedProjectId && (
                     <div>
                         <label className="block text-sm text-text-secondary mb-1">Project</label>
-                        <select
+                        <Select
                             value={projectId}
-                            onChange={(e) => setProjectId(e.target.value)}
-                            className="input w-full"
-                        >
-                            <option value="">Select a project</option>
-                            {projects.map((project) => (
-                                <option key={project.id} value={project.id}>
-                                    {project.title}
-                                </option>
-                            ))}
-                        </select>
+                            onChange={setProjectId}
+                            options={[
+                                { value: '', label: 'Select a project' },
+                                ...projects.map((project) => ({ value: project.id, label: project.title })),
+                            ]}
+                        />
                     </div>
                 )}
 
@@ -129,32 +126,26 @@ export function TicketForm({
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
                         <label className="block text-sm text-text-secondary mb-1">Status</label>
-                        <select
+                        <Select
                             value={status}
-                            onChange={(e) => setStatus(e.target.value as TicketStatus)}
-                            className="input w-full"
-                        >
-                            {statusOptions.map(([value, config]) => (
-                                <option key={value} value={value}>
-                                    {config.label}
-                                </option>
-                            ))}
-                        </select>
+                            onChange={(nextValue) => setStatus(nextValue as TicketStatus)}
+                            options={statusOptions.map(([value, config]) => ({
+                                value,
+                                label: config.label,
+                            }))}
+                        />
                     </div>
 
                     <div>
                         <label className="block text-sm text-text-secondary mb-1">Source</label>
-                        <select
+                        <Select
                             value={source}
-                            onChange={(e) => setSource(e.target.value as TicketSource)}
-                            className="input w-full"
-                        >
-                            {Object.entries(ticketSourceConfig).map(([value, config]) => (
-                                <option key={value} value={value}>
-                                    {config.label}
-                                </option>
-                            ))}
-                        </select>
+                            onChange={(nextValue) => setSource(nextValue as TicketSource)}
+                            options={Object.entries(ticketSourceConfig).map(([value, config]) => ({
+                                value,
+                                label: config.label,
+                            }))}
+                        />
                     </div>
                 </div>
 

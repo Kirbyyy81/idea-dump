@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Sidebar } from '@/components/organisms/Sidebar';
+import { AppShell } from '@/components/organisms/AppShell';
 import { LogForm } from './_components/LogForm';
 import { LogEntryCard } from './_components/LogEntryCard';
 import { Button } from '@/components/atoms/Button';
@@ -11,8 +11,8 @@ import { DailyLogEntry, DailyLogContent, Project } from '@/lib/types';
 import { Plus, Download, RefreshCw, Calendar, BookOpen } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { useAlert } from '@/lib/contexts/AlertContext';
-import { PageLoader } from '@/components/atoms/Loader';
 import { Input } from '@/components/atoms/Input';
+import { Select } from '@/components/atoms/Select';
 
 export default function LogsPage() {
     const [logs, setLogs] = useState<DailyLogEntry[]>([]);
@@ -250,15 +250,8 @@ export default function LogsPage() {
 
     const sortedDates = Object.keys(groupedLogs).sort((a, b) => b.localeCompare(a));
 
-    if (isLoading) {
-        return <PageLoader />;
-    }
-
     return (
-        <div className="flex min-h-screen bg-bg-base font-body text-text-primary">
-            <Sidebar projects={projects} />
-
-            <main className="flex-1 ml-64 p-8">
+        <AppShell projects={projects} isLoading={isLoading}>
                 {/* Header */}
                 <header className="flex items-center justify-between mb-8">
                     <h1 className="text-3xl font-heading font-medium">Weekly Productivity Log</h1>
@@ -318,15 +311,16 @@ export default function LogsPage() {
 
                             <div className="min-w-[160px]">
                                 <label className="block text-xs text-text-muted mb-1">Source</label>
-                                <select
+                                <Select
                                     value={sourceFilter}
-                                    onChange={(e) => setSourceFilter(e.target.value as 'all' | 'agent' | 'human')}
-                                    className="input py-2 text-sm"
-                                >
-                                    <option value="all">All</option>
-                                    <option value="human">Human</option>
-                                    <option value="agent">Agent</option>
-                                </select>
+                                    onChange={(nextValue) => setSourceFilter(nextValue as 'all' | 'agent' | 'human')}
+                                    buttonClassName="py-2 text-sm"
+                                    options={[
+                                        { value: 'all', label: 'All' },
+                                        { value: 'human', label: 'Human' },
+                                        { value: 'agent', label: 'Agent' },
+                                    ]}
+                                />
                             </div>
 
                             <div className="flex-1 min-w-[220px]">
@@ -442,7 +436,6 @@ export default function LogsPage() {
                         ))}
                     </div>
                 )}
-            </main>
-        </div>
+        </AppShell>
     );
 }

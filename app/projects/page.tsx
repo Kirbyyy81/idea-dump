@@ -2,14 +2,13 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { Sidebar } from '@/components/organisms/Sidebar';
+import { AppShell } from '@/components/organisms/AppShell';
 import { ProjectCard } from './_components/ProjectCard';
 import { Project, Status, statusConfig, inferStatus } from '@/lib/types';
 import { Plus, Search, X } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
 import { cn } from '@/lib/utils';
 import { iconMap } from '@/lib/icons';
-import { PageLoader } from '@/components/atoms/Loader';
 
 export default function ProjectsPage() {
     const [projects, setProjects] = useState<Project[]>([]);
@@ -58,29 +57,25 @@ export default function ProjectsPage() {
         return counts;
     }, [projects]);
 
-    if (isLoading) {
-        return <PageLoader />;
-    }
-
     if (error) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-bg-base">
-                <p className="text-error mb-4">{error}</p>
-                <Button onClick={() => window.location.reload()}>
-                    Retry
-                </Button>
-            </div>
+            <AppShell contentClassName="p-8">
+                <div className="flex min-h-[60vh] flex-col items-center justify-center">
+                    <p className="text-error mb-4">{error}</p>
+                    <Button onClick={() => window.location.reload()}>
+                        Retry
+                    </Button>
+                </div>
+            </AppShell>
         );
     }
 
     return (
-        <div className="flex min-h-screen bg-bg-base font-body text-text-primary">
-            <Sidebar projects={projects} />
-
-            <main className="flex-1 ml-64 p-8">
+        <AppShell projects={projects} isLoading={isLoading} loadingMessage="Loading projects...">
+            <div>
                 <header className="flex items-center justify-between mb-6">
                     <h1 className="text-3xl font-heading font-medium">Projects</h1>
-                    <Link href="/project/new">
+                    <Link href="/projects/new">
                         <Button icon={<Plus size={18} />}>
                             New Project
                         </Button>
@@ -175,7 +170,7 @@ export default function ProjectsPage() {
                         ))}
                     </div>
                 )}
-            </main>
-        </div>
+            </div>
+        </AppShell>
     );
 }

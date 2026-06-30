@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Project, inferStatus, priorityConfig } from '@/lib/types';
 import { formatRelativeTime, truncate } from '@/lib/utils';
 import { Card } from '@/components/atoms/Card';
-import { StatusBadge } from '../../project/_components/StatusBadge';
+import { StatusBadge } from './StatusBadge';
 
 interface ProjectCardProps {
     project: Project;
@@ -13,7 +13,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
     const priority = priorityConfig[project.priority];
 
     return (
-        <Link href={`/project/${project.id}`} className="block h-full">
+        <Link href={`/projects/${project.id}`} className="block h-full">
             <Card hoverable className="h-full flex flex-col p-4 sm:p-6">
                 {/* Header */}
                 <div className="flex items-start justify-between gap-3 mb-3">

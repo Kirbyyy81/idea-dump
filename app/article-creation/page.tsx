@@ -1,10 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Sidebar } from '@/components/organisms/Sidebar';
 import { Card } from '@/components/atoms/Card';
 import { Project } from '@/lib/types';
-import { PageLoader } from '@/components/atoms/Loader';
+import { AppShell } from '@/components/organisms/AppShell';
 import { FilePenLine } from 'lucide-react';
 import { MinuteReaderCard } from './_components/MinuteReaderCard';
 import { SlugImageNameCard } from './_components/SlugImageNameCard';
@@ -42,30 +41,23 @@ export default function ArticleCreationPage() {
         };
     }, []);
 
-    if (isLoading) {
-        return <PageLoader />;
-    }
-
     return (
-        <div className="flex min-h-screen bg-bg-base font-body text-text-primary">
-            <Sidebar projects={projects} />
-            <main className="flex-1 ml-64 p-8">
-                <div className="max-w-5xl space-y-8">
-                    <header className="space-y-3">
-                        <div className="flex items-center gap-3">
-                            <div>
-                                <h1 className="text-3xl font-heading font-medium">
-                                    Article Creation
-                                </h1>
-                            </div>
+        <AppShell projects={projects} isLoading={isLoading} loadingMessage="Loading article creation tools...">
+            <div className="max-w-5xl space-y-8">
+                <header className="space-y-3">
+                    <div className="flex items-center gap-3">
+                        <div>
+                            <h1 className="text-3xl font-heading font-medium">
+                                Article Creation
+                            </h1>
                         </div>
-                    </header>
+                    </div>
+                </header>
 
-                    <MinuteReaderCard />
-                    <SlugImageNameCard />
-                    <TocAnchorGeneratorCard />
-                </div>
-            </main>
-        </div>
+                <MinuteReaderCard />
+                <SlugImageNameCard />
+                <TocAnchorGeneratorCard />
+            </div>
+        </AppShell>
     );
 }

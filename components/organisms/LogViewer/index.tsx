@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
+import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
 import { parseLogText } from '@/lib/logViewer/parse';
 import { buildTransactions, transactionHasError } from '@/lib/logViewer/transactions';
@@ -224,19 +225,17 @@ export function LogViewer() {
 
             <div className="min-w-0 md:min-w-[220px]">
               <label className="mb-1 block text-xs text-text-muted">Endpoint</label>
-              <select
+              <Select
                 value={endpointFilter}
-                onChange={(e) => setEndpointFilter(e.target.value)}
-                className="input w-full min-w-0 py-2 text-sm"
-                title="Filter by endpoint"
-              >
-                <option value="">All endpoints</option>
-                {endpointOptions.map((endpoint) => (
-                  <option key={endpoint} value={endpoint}>
-                    {endpoint}
-                  </option>
-                ))}
-              </select>
+                onChange={setEndpointFilter}
+                className="min-w-0"
+                buttonClassName="py-2 text-sm"
+                ariaLabel="Filter by endpoint"
+                options={[
+                  { value: '', label: 'All endpoints' },
+                  ...endpointOptions.map((endpoint) => ({ value: endpoint, label: endpoint })),
+                ]}
+              />
             </div>
 
             <label className="inline-flex h-10 items-center gap-2 text-sm text-text-secondary">

@@ -1,5 +1,44 @@
 # Changelog
 
+## [0.8.1](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.8.0...idea-dump-v0.8.1) (2026-06-29)
+
+
+### Bug Fixes
+
+* resolve broken merge conflict in film page ([712791f](https://github.com/Kirbyyy81/idea-dump/commit/712791f4fe27ad785484e1e75778566d1f93c069))
+
+## [0.8.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.7.0...idea-dump-v0.8.0) (2026-06-29)
+
+
+### Features
+
+* move api tools ([3c64b3d](https://github.com/Kirbyyy81/idea-dump/commit/3c64b3d77fdb81a4e797549fa82a93c0256f1ffa))
+
+
+### Bug Fixes
+
+* refactor film canister design ([0903c4a](https://github.com/Kirbyyy81/idea-dump/commit/0903c4a9c11c368987cb677ffacc23da0906294e))
+* remove duplicate film strip from canister ([d6047b2](https://github.com/Kirbyyy81/idea-dump/commit/d6047b20c49ab76f4935b77b689d2ca858a423c6))
+* slide film strip without moving canister ([1bd9bb2](https://github.com/Kirbyyy81/idea-dump/commit/1bd9bb24a511f33534ed66966bda390255d7a5b2))
+
+## [0.7.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.6.0...idea-dump-v0.7.0) (2026-06-27)
+
+
+### Features
+
+* add AccessContext for server-side RBAC propagation ([a8bd2a9](https://github.com/Kirbyyy81/idea-dump/commit/a8bd2a9ab7d2f9151966338a910b5be0f472ecea))
+* add server actions for access control admin ([7e73065](https://github.com/Kirbyyy81/idea-dump/commit/7e73065adc7644f59e34148dbbf10855529d1496))
+* merge film processing records into rolls ([d9c07e1](https://github.com/Kirbyyy81/idea-dump/commit/d9c07e1a2db6db5c069125bb7104597c1ba610c4))
+
+
+### Bug Fixes
+
+* align sidebar module rows ([063cbda](https://github.com/Kirbyyy81/idea-dump/commit/063cbdaab175e6d07d638077951781d9b0658596))
+* app shell and loading indicator ([a4271da](https://github.com/Kirbyyy81/idea-dump/commit/a4271da4cc42878db6044fb8d0763727b681402f))
+* removed duplicate app shell import ([e991c0f](https://github.com/Kirbyyy81/idea-dump/commit/e991c0f856c336f5336d556b5bd4eedc01daa41c))
+* repair project detail page loading ([fc03f93](https://github.com/Kirbyyy81/idea-dump/commit/fc03f935e563207b10133792099143accf9190f5))
+* simplify projects sidebar group ([42ca2ea](https://github.com/Kirbyyy81/idea-dump/commit/42ca2ea11284052985b5cd2dcd083b8da0a768b6))
+
 ## [0.6.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.5.0...idea-dump-v0.6.0) (2026-06-26)
 
 
