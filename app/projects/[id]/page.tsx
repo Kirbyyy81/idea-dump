@@ -268,7 +268,7 @@ export default function ProjectPage() {
 
             <div className="mb-8">
                 <div className="flex items-start justify-between gap-4 mb-4">
-                    <h1 className="text-text-primary text-3xl font-heading font-medium">{project.title}</h1>
+                    <h1 className="text-text-primary text-2xl font-extrabold">{project.title}</h1>
                     <StatusBadge status={inferStatus(project)} className="px-3 py-1 text-sm" />
                 </div>
 
@@ -326,7 +326,7 @@ export default function ProjectPage() {
             {project.prd_content && (
                 <section className="mb-8">
                     <Card className="p-6">
-                        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 font-body text-text-primary">
+                        <h2 className="text-lg font-bold mb-4 flex items-center gap-2 font-body text-text-primary">
                             <FileText size={20} className="text-accent-rose" />
                             PRD
                         </h2>
@@ -345,7 +345,7 @@ export default function ProjectPage() {
                 <section className="mt-6">
                     <Card className="p-6">
                         <div className="mb-4 flex items-center justify-between">
-                            <h2 className="flex items-center gap-2 text-xl font-semibold font-body text-text-primary">
+                            <h2 className="flex items-center gap-2 text-lg font-bold font-body text-text-primary">
                                 <TicketIcon size={20} className="text-accent-rose" />
                                 Tickets
                                 <span className="text-sm font-normal text-text-muted">({tickets.length})</span>

@@ -74,7 +74,7 @@ export default function ProjectsPage() {
         <AppShell projects={projects} isLoading={isLoading} loadingMessage="Loading projects...">
             <div>
                 <header className="flex items-center justify-between mb-6">
-                    <h1 className="text-3xl font-heading font-medium">Projects</h1>
+                    <h1 className="text-2xl font-extrabold">Projects</h1>
                     <Link href="/projects/new">
                         <Button icon={<Plus size={18} />}>
                             New Project
