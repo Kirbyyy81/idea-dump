@@ -66,7 +66,7 @@ export default function NewTicketPage() {
                 <h1 className="text-3xl font-heading font-medium">Raise Ticket</h1>
 
                 {error && (
-                    <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+                    <div className="rounded-lg border border-error bg-error-bg px-4 py-3 text-sm text-error">
                         {error}
                     </div>
                 )}
