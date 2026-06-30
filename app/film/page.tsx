@@ -72,10 +72,10 @@ function FilmCoverFallback({
         <div className="flex h-full flex-col justify-between bg-bg-subtle p-3 text-text-primary">
             <div>
                 <div className="mb-3 h-1.5 w-12 rounded-full" style={{ backgroundColor: accentColor }} />
-                <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-text-secondary">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-text-secondary">
                     {roll.brand}
                 </p>
-                <p className="mt-1 text-lg font-semibold leading-tight">{roll.film_name}</p>
+                <p className="mt-1 text-lg font-bold leading-tight">{roll.film_name}</p>
             </div>
             <div className="flex items-end justify-between gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-text-secondary">
                 <span>{roll.format}</span>
@@ -111,7 +111,7 @@ function FilmCanister({ roll, index }: { roll: FilmRoll; index: number }) {
                                 ))}
                             </div>
                             <div className="ml-8 flex h-full flex-col justify-center pr-4 text-action-primary-text opacity-0 transition-opacity delay-100 duration-300 group-hover:opacity-100">
-                                <p className="truncate text-[10px] font-semibold uppercase tracking-[0.18em] text-pastel-yellow">
+                                <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-pastel-yellow">
                                     {roll.brand}
                                 </p>
                                 <h2 className="mt-1 line-clamp-2 text-lg font-bold leading-tight">{roll.film_name}</h2>
@@ -132,15 +132,8 @@ function FilmCanister({ roll, index }: { roll: FilmRoll; index: number }) {
                         className="absolute inset-y-0 left-0 z-10 h-full w-[230px] overflow-visible"
                     >
                         <title id={`film-roll-${roll.id}`}>{`${roll.brand} ${roll.film_name}`}</title>
-                        <defs>
-                            <linearGradient id={`body-${roll.id}`} x1="0" x2="1" y1="0" y2="1">
-                                <stop offset="0%" stopColor={theme.bodyLight} />
-                                <stop offset="48%" stopColor={theme.body} />
-                                <stop offset="100%" stopColor={theme.bodyDark} />
-                            </linearGradient>
-                        </defs>
 
-                        <rect x="15" y="52" width="94" height="188" rx="4" fill={`url(#body-${roll.id})`} stroke="var(--border-dark)" strokeWidth="3" />
+                        <rect x="15" y="52" width="94" height="188" rx="4" fill={theme.body} stroke="var(--border-dark)" strokeWidth="3" />
                         <rect x="9" y="42" width="108" height="14" rx="2" fill={theme.cap} />
                         <rect x="22" y="35" width="82" height="7" rx="1.5" fill="var(--bg-surface)" />
                         <rect x="9" y="239" width="108" height="14" rx="2" fill={theme.cap} />
@@ -280,7 +273,7 @@ export default function FilmJournalPage() {
             <div className="mx-auto max-w-7xl space-y-5">
                 <header>
                     <div>
-                        <p className="text-sm uppercase tracking-[0.22em] text-text-muted">Film Photography</p>
+                        <p className="text-sm uppercase tracking-wide text-text-muted">Film Photography</p>
                         <h1 className="mt-1">The Film Cupboard</h1>
                     </div>
                 </header>
@@ -297,7 +290,7 @@ export default function FilmJournalPage() {
                             <div className="flex items-center justify-between gap-4">
                                 <div className="flex items-center gap-3">
                                     <Film size={19} />
-                                    <h2 className="text-xl !text-text-on-dark">Roll Library</h2>
+                                    <h2 className="text-lg font-bold !text-text-on-dark">Roll Library</h2>
                                 </div>
                                 <span className="shrink-0 text-sm text-nav-text-muted">{filteredRolls.length} of {rolls.length} rolls</span>
                             </div>

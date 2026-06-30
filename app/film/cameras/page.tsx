@@ -183,7 +183,7 @@ export default function FilmCamerasPage() {
             <div className="mx-auto max-w-7xl space-y-7">
                 <header className="space-y-5">
                     <div>
-                        <p className="text-sm uppercase tracking-[0.22em] text-text-muted">Gear cabinet</p>
+                        <p className="text-sm uppercase tracking-wide text-text-muted">Gear cabinet</p>
                         <h1 className="mt-1">Cameras & Maintenance</h1>
                     </div>
                 </header>
@@ -212,7 +212,7 @@ export default function FilmCamerasPage() {
                                             : 'border-border-default hover:bg-bg-hover',
                                     )}
                                 >
-                                    <p className="font-medium text-text-primary">{item.name}</p>
+                                    <p className="font-bold text-text-primary">{item.name}</p>
                                     <p className="text-sm text-text-muted">
                                         {[item.brand, item.model].filter(Boolean).join(' ') || 'No model details'}
                                     </p>
@@ -230,7 +230,7 @@ export default function FilmCamerasPage() {
                                 <div className="flex items-center justify-between gap-3">
                                     <div className="flex items-center gap-2">
                                         <Camera size={19} className="text-accent-blue" />
-                                        <h2 className="text-xl">{selected ? 'Camera details' : 'New camera'}</h2>
+                                        <h2 className="text-lg font-bold">{selected ? 'Camera details' : 'New camera'}</h2>
                                     </div>
                                     {selected && (
                                         <Button
@@ -286,7 +286,7 @@ export default function FilmCamerasPage() {
                             <Card className="p-5">
                                 <div className="flex items-center gap-2">
                                     <Wrench size={19} className="text-accent-apricot" />
-                                    <h2 className="text-xl">Maintenance history</h2>
+                                    <h2 className="text-lg font-bold">Maintenance history</h2>
                                 </div>
 
                                 <div className="mt-4 space-y-3">
@@ -296,7 +296,7 @@ export default function FilmCamerasPage() {
                                             className="flex items-start justify-between gap-4 rounded-lg border border-border-default bg-bg-hover/40 p-4"
                                         >
                                             <div>
-                                                <p className="font-medium text-text-primary">
+                                                <p className="font-bold text-text-primary">
                                                     {record.service_type || 'Maintenance'}
                                                 </p>
                                                 <p className="text-sm text-text-muted">
@@ -308,7 +308,7 @@ export default function FilmCamerasPage() {
                                                 )}
                                             </div>
                                             <div className="flex items-center gap-3">
-                                                <span className="font-medium">
+                                                <span className="font-bold">
                                                     {money(Number(record.maintenance_cost))}
                                                 </span>
                                                 <button
