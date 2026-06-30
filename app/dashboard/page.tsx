@@ -100,7 +100,7 @@ export default function DashboardPage() {
         <AppShell projects={projects} isLoading={isLoading} loadingMessage="Loading dashboard...">
             <div className="max-w-5xl space-y-8">
                 <header>
-                    <h1 className="text-3xl font-heading font-medium">Dashboard</h1>
+                    <h1 className="text-2xl font-extrabold">Dashboard</h1>
                 </header>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -115,7 +115,7 @@ export default function DashboardPage() {
                                             <Icon size={20} className="text-accent-rose" />
                                         </div>
                                         <div>
-                                            <h2 className="text-lg font-semibold text-text-primary">
+                                            <h2 className="text-lg font-bold text-text-primary">
                                                 {item.label}
                                             </h2>
                                         </div>
@@ -131,7 +131,7 @@ export default function DashboardPage() {
 
                 {!allowedModules.includes('projects') && (
                     <Card className="p-6">
-                        <h2 className="text-lg font-semibold text-text-primary">
+                        <h2 className="text-lg font-bold text-text-primary">
                             Projects Access
                         </h2>
                     </Card>
