@@ -169,7 +169,7 @@ export function TicketForm({
                                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                                     priority === value
                                         ? value === 'high'
-                                            ? 'bg-accent-rose text-white'
+                                            ? 'bg-accent-rose text-action-primary-text'
                                             : value === 'medium'
                                                 ? 'bg-accent-apricot text-bg-base'
                                                 : 'bg-accent-sage text-bg-base'
@@ -192,7 +192,7 @@ export function TicketForm({
                 </div>
 
                 {error && (
-                    <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+                    <div className="rounded-lg border border-error bg-error-bg px-3 py-2 text-sm text-error">
                         {error}
                     </div>
                 )}
