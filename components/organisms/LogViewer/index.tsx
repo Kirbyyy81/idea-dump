@@ -138,7 +138,7 @@ export function LogViewer() {
           <div className="flex min-w-0 items-center gap-2">
             <FileText size={20} className="shrink-0 text-accent-rose" />
             <div className="min-w-0">
-              <h2 className="text-xl font-semibold font-body text-text-primary">
+              <h2 className="text-lg font-bold font-body text-text-primary">
                 Import Logs
               </h2>
               {!isImportOpen && (
@@ -272,7 +272,7 @@ export function LogViewer() {
       ) : (
         <Card className="min-w-0 max-w-full p-6">
           <div className="mb-4 flex min-w-0 items-center justify-between gap-3">
-            <h2 className="text-xl font-semibold font-body text-text-primary">Logs</h2>
+            <h2 className="text-lg font-bold font-body text-text-primary">Logs</h2>
             <span className="text-xs text-text-muted">
               {filteredTransactions.length} / {transactions.length}
             </span>
