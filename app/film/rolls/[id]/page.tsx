@@ -318,19 +318,19 @@ export default function FilmRollDetailPage({ params }: RollDetailPageProps) {
                 <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                     <Card className="p-5">
                         <p className="text-sm text-text-muted">Total Cost</p>
-                        <p className="mt-2 text-2xl font-semibold">{formatCurrency(totalCost)}</p>
+                        <p className="mt-2 text-2xl font-extrabold">{formatCurrency(totalCost)}</p>
                     </Card>
                     <Card className="p-5">
                         <p className="text-sm text-text-muted">Frames</p>
-                        <p className="mt-2 text-2xl font-semibold">{roll.frames_taken}</p>
+                        <p className="mt-2 text-2xl font-extrabold">{roll.frames_taken}</p>
                     </Card>
                     <Card className="p-5">
                         <p className="text-sm text-text-muted">Cost / Frame</p>
-                        <p className="mt-2 text-2xl font-semibold">{formatCurrency(costPerFrame)}</p>
+                        <p className="mt-2 text-2xl font-extrabold">{formatCurrency(costPerFrame)}</p>
                     </Card>
                     <Card className="p-5">
                         <p className="text-sm text-text-muted">Cost / Successful Photo</p>
-                        <p className="mt-2 text-2xl font-semibold">{formatCurrency(costPerSuccessfulPhoto)}</p>
+                        <p className="mt-2 text-2xl font-extrabold">{formatCurrency(costPerSuccessfulPhoto)}</p>
                     </Card>
                 </section>
 
@@ -340,7 +340,7 @@ export default function FilmRollDetailPage({ params }: RollDetailPageProps) {
                             <div className="border-b border-border-default px-6 py-4">
                                 <div className="flex items-center gap-2">
                                     <BookOpen size={18} className="text-accent-rose" />
-                                    <h2 className="text-xl">Photobook</h2>
+                                    <h2 className="text-lg font-bold">Photobook</h2>
                                 </div>
                             </div>
                             <div className="p-6">
@@ -401,7 +401,7 @@ export default function FilmRollDetailPage({ params }: RollDetailPageProps) {
 
                         {favoritePhotos.length > 0 && (
                             <Card className="p-5">
-                                <h2 className="text-xl">Favorite Shots</h2>
+                                <h2 className="text-lg font-bold">Favorite Shots</h2>
                                 <div className="mt-4 flex gap-3 overflow-x-auto pb-2">
                                     {favoritePhotos.map((photo) => (
                                         <a key={`favorite-${photo.id}`} href={photo.web_view_link ?? '#'} target="_blank" rel="noreferrer" className="block h-28 w-36 shrink-0 overflow-hidden rounded-lg border border-border-default bg-bg-hover">
@@ -421,7 +421,7 @@ export default function FilmRollDetailPage({ params }: RollDetailPageProps) {
 
                     <aside className="space-y-6">
                         <Card className="p-5">
-                            <h2 className="text-xl">Roll Details</h2>
+                            <h2 className="text-lg font-bold">Roll Details</h2>
                             <div className="mt-4 space-y-3">
                                 <Input value={rollForm.film_name} onChange={(event) => setRollForm({ ...rollForm, film_name: event.target.value })} />
                                 <Input value={rollForm.brand} onChange={(event) => setRollForm({ ...rollForm, brand: event.target.value })} />
@@ -460,7 +460,7 @@ export default function FilmRollDetailPage({ params }: RollDetailPageProps) {
                         </Card>
 
                         <Card className="p-5">
-                            <h2 className="text-xl">Google Drive Folder</h2>
+                            <h2 className="text-lg font-bold">Google Drive Folder</h2>
                             <p className="mt-1 text-sm text-text-muted">Paste a Drive folder URL or ID for this roll.</p>
                             <div className="mt-4 space-y-3">
                                 <Input value={driveFolderInput} onChange={(event) => setDriveFolderInput(event.target.value)} placeholder="Drive folder URL or ID" />
@@ -478,7 +478,7 @@ export default function FilmRollDetailPage({ params }: RollDetailPageProps) {
                         <Card className="p-5">
                             <div className="flex items-center gap-2">
                                 <Wrench size={18} className="text-accent-blue" />
-                                <h2 className="text-xl">Camera Maintenance</h2>
+                                <h2 className="text-lg font-bold">Camera Maintenance</h2>
                             </div>
                             <p className="mt-1 text-sm text-text-muted">
                                 Track service history for the camera attached to this roll.
@@ -503,7 +503,7 @@ export default function FilmRollDetailPage({ params }: RollDetailPageProps) {
                                                     <div key={record.id} className="rounded-lg border border-border-default bg-bg-hover/50 p-3 text-sm">
                                                         <div className="flex items-start justify-between gap-3">
                                                             <div>
-                                                                <p className="font-medium capitalize text-text-primary">
+                                                                <p className="font-bold capitalize text-text-primary">
                                                                     {record.service_type || 'Maintenance'}
                                                                 </p>
                                                                 <p className="text-text-muted">
@@ -512,7 +512,7 @@ export default function FilmRollDetailPage({ params }: RollDetailPageProps) {
                                                                         .join(' · ')}
                                                                 </p>
                                                             </div>
-                                                            <p className="font-medium text-text-primary">
+                                                            <p className="font-bold text-text-primary">
                                                                 {formatCurrency(Number(record.maintenance_cost || 0))}
                                                             </p>
                                                         </div>
@@ -554,7 +554,7 @@ export default function FilmRollDetailPage({ params }: RollDetailPageProps) {
                         </Card>
 
                         <Card className="p-5">
-                            <h2 className="text-xl">Processing</h2>
+                            <h2 className="text-lg font-bold">Processing</h2>
                             <p className="mt-1 text-sm text-text-muted">
                                 One processing summary belongs to this roll. Save it with the photobook.
                             </p>

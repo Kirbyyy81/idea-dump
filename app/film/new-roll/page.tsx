@@ -54,12 +54,12 @@ export default function NewFilmRollPage() {
         <AppShell contentClassName="p-5 md:p-8">
             <div className="mx-auto max-w-5xl space-y-7">
                 <header className="space-y-5">
-                    <div><p className="text-sm uppercase tracking-[0.22em] text-text-muted">Inventory</p><h1 className="mt-1">Register a Film Roll</h1></div>
+                    <div><p className="text-sm uppercase tracking-wide text-text-muted">Inventory</p><h1 className="mt-1">Register a Film Roll</h1></div>
                 </header>
                 {error && <div className="rounded-lg border border-error bg-error-bg px-4 py-3 text-sm text-error">{error}</div>}
                 <form onSubmit={handleSubmit}>
                     <Card className="overflow-hidden p-0">
-                        <div className="border-b border-border-default bg-bg-hover/50 px-6 py-5"><div className="flex items-center gap-3"><PackagePlus className="text-accent-apricot" size={22} /><div><h2 className="text-xl">Unopened roll</h2><p className="text-sm text-text-muted">It will begin on your shelf with the Unused status.</p></div></div></div>
+                        <div className="border-b border-border-default bg-bg-hover/50 px-6 py-5"><div className="flex items-center gap-3"><PackagePlus className="text-accent-apricot" size={22} /><div><h2 className="text-lg font-bold">Unopened roll</h2><p className="text-sm text-text-muted">It will begin on your shelf with the Unused status.</p></div></div></div>
                         <div className="grid grid-cols-1 gap-5 p-6 md:grid-cols-2">
                             <label className="space-y-2"><span className="text-sm text-text-secondary">Film name *</span><Input required value={form.film_name} onChange={(event) => setForm({ ...form, film_name: event.target.value })} placeholder="Portra 400" /></label>
                             <label className="space-y-2"><span className="text-sm text-text-secondary">Brand *</span><Input required value={form.brand} onChange={(event) => setForm({ ...form, brand: event.target.value })} placeholder="Kodak" /></label>
