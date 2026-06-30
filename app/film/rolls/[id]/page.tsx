@@ -349,7 +349,7 @@ export default function FilmRollDetailPage({ params }: RollDetailPageProps) {
                 </header>
 
                 {error && (
-                    <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+                    <div className="rounded-lg border border-error bg-error-bg px-4 py-3 text-sm text-error">
                         {error}
                     </div>
                 )}
@@ -521,7 +521,7 @@ export default function FilmRollDetailPage({ params }: RollDetailPageProps) {
                                 ) : (
                                     <>
                                         {maintenanceError && (
-                                            <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+                                            <div className="rounded-lg border border-error bg-error-bg px-3 py-2 text-sm text-error">
                                                 {maintenanceError}
                                             </div>
                                         )}
