@@ -50,7 +50,7 @@ export function NotesPanel({ notes, onAddNote }: NotesPanelProps) {
                         value={newNote}
                         onChange={(e) => setNewNote(e.target.value)}
                         placeholder="Add a quick note..."
-                        className="min-h-[80px] text-sm bg-white"
+                        className="min-h-[80px] text-sm bg-bg-surface"
                         error={false} // No validation state needed for simple note
                         disabled={isSubmitting}
                     />
@@ -77,7 +77,7 @@ export function NotesPanel({ notes, onAddNote }: NotesPanelProps) {
                     </div>
                 ) : (
                     notes.map((note) => (
-                        <Card key={note.id} className="p-4 bg-white/50 hover:bg-white text-sm">
+                        <Card key={note.id} className="p-4 bg-bg-surface/50 hover:bg-bg-surface text-sm">
                             <div className="text-text-secondary mb-2">
                                 <MarkdownRenderer content={note.content} />
                             </div>
