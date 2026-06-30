@@ -80,11 +80,11 @@ function formatCameraMetric(camera: FilmDashboardCameraMetric | null | undefined
 
 function getRollAccent(index: number) {
     const accents = [
-        'border-accent-rose bg-[#fdf1f3]',
-        'border-accent-blue bg-[#eef7f9]',
-        'border-accent-sage bg-[#f2f7ed]',
-        'border-accent-apricot bg-[#fff7e8]',
-        'border-accent-coral bg-[#fff0ef]',
+        'border-accent-rose bg-pastel-pink-soft',
+        'border-accent-blue bg-pastel-blue-soft',
+        'border-accent-sage bg-pastel-olive-soft',
+        'border-accent-apricot bg-pastel-yellow-soft',
+        'border-accent-coral bg-pastel-peach',
     ];
     return accents[index % accents.length];
 }
@@ -273,7 +273,7 @@ export default function FilmJournalPage() {
                 </header>
 
                 {error && (
-                    <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+                    <div className="rounded-lg border border-error bg-error-bg px-4 py-3 text-sm text-error">
                         {error}
                     </div>
                 )}
@@ -423,7 +423,7 @@ export default function FilmJournalPage() {
                         </select>
                     </div>
 
-                    <div className="rounded-lg border border-border-default bg-[#d9c49f] p-4 shadow-inner">
+                    <div className="rounded-lg border border-border-default bg-surface-film-shelf p-4">
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                             {filteredRolls.length === 0 ? (
                                 <div className="col-span-full rounded-lg border border-dashed border-border-strong bg-bg-elevated/70 p-10 text-center">
@@ -436,7 +436,7 @@ export default function FilmJournalPage() {
                                     <Link key={roll.id} href={`/film/rolls/${roll.id}`} className="block">
                                         <article
                                             className={cn(
-                                                'relative min-h-[190px] overflow-hidden rounded-lg border-2 p-4 shadow-sm transition-transform hover:-translate-y-1',
+                                                'relative min-h-[190px] overflow-hidden rounded-lg border-2 p-4 transition-transform hover:-translate-y-1',
                                                 getRollAccent(index)
                                             )}
                                         >
