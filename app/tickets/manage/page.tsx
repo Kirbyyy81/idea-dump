@@ -127,7 +127,7 @@ export default function ManageTicketsPage() {
         >
             <div className="max-w-5xl space-y-6">
                 <header className="flex items-center justify-between">
-                    <h1 className="text-3xl font-heading font-medium">Manage Tickets</h1>
+                    <h1 className="text-2xl font-extrabold">Manage Tickets</h1>
                     <Link href="/tickets/new">
                         <Button icon={<Plus size={18} />}>Raise Ticket</Button>
                     </Link>
