@@ -109,20 +109,20 @@ export default function DashboardPage() {
 
                         return (
                             <Link key={item.slug} href={item.path} className="block">
-                                <Card className="p-6 flex h-full flex-col gap-4 transition-colors hover:border-border-strong hover:bg-bg-hover/50 focus-within:border-border-strong">
+                                <Card className="border-2 border-border-dark p-6 flex h-full flex-col gap-4 transition-all duration-150 hover:-translate-y-1 hover:bg-bg-hover focus-within:-translate-y-1 focus-within:border-border-dark">
                                     <div className="flex items-center gap-3">
-                                        <div className="rounded-lg bg-accent-rose/10 p-3">
-                                            <Icon size={20} className="text-accent-rose" />
-                                        </div>
-                                        <div>
-                                            <h2 className="text-lg font-bold text-text-primary">
-                                                {item.label}
-                                            </h2>
-                                        </div>
+                                        <Icon size={20} className="text-text-primary" />
+                                        <h2 className="font-mono text-base font-bold text-text-primary">
+                                            {item.label}
+                                        </h2>
                                     </div>
-                                    <p className="text-sm leading-6 text-text-secondary">
+                                    <p className="font-mono text-sm leading-6 text-text-secondary flex-1">
                                         {item.description ?? 'Open this workspace module.'}
                                     </p>
+                                    <div className="font-mono text-xs text-text-muted">
+                                        &gt; OPEN{' '}
+                                        <span className="inline-block w-[0.5em] animate-pulse">_</span>
+                                    </div>
                                 </Card>
                             </Link>
                         );
