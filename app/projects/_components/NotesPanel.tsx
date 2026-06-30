@@ -70,7 +70,7 @@ export function NotesPanel({ notes, onAddNote }: NotesPanelProps) {
             </Card>
 
             {/* Notes List */}
-            <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
+            <div className="custom-scrollbar space-y-3 max-h-[500px] overflow-y-auto pr-2">
                 {notes.length === 0 ? (
                     <div className="text-center py-8 text-text-muted text-sm">
                         No notes yet. Start capturing your ideas!

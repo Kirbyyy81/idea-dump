@@ -360,7 +360,7 @@ export default function LogApiToolsPage() {
                                     <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">
                                         Preview
                                     </p>
-                                    <pre className="overflow-x-auto text-xs md:text-sm">
+                                    <pre className="custom-scrollbar overflow-x-auto text-xs md:text-sm">
                                         <code className="whitespace-pre-wrap text-text-secondary">
                                             {weeklyLogSkillPreview}
                                         </code>
@@ -384,7 +384,7 @@ export default function LogApiToolsPage() {
                                     Copy this key now. You will not be able to see it again.
                                 </p>
                                 <div className="flex items-center gap-2">
-                                    <code className="flex-1 p-2 rounded text-sm font-mono bg-bg-base text-text-primary overflow-x-auto">
+                                    <code className="custom-scrollbar flex-1 p-2 rounded text-sm font-mono bg-bg-base text-text-primary overflow-x-auto">
                                         {newKey}
                                     </code>
                                     <Button
@@ -487,7 +487,7 @@ export default function LogApiToolsPage() {
                                 after posting.
                             </p>
                         </div>
-                        <pre className="p-4 rounded-lg text-sm overflow-x-auto bg-bg-base border border-border">
+                        <pre className="custom-scrollbar p-4 rounded-lg text-sm overflow-x-auto bg-bg-base border border-border">
                             <code className="text-text-secondary">{`curl -X POST https://idea-dump-alpha.vercel.app/api/logs \\
   -H "x-api-key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\

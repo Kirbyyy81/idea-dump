@@ -63,7 +63,7 @@ function JsonOrText({
           {hasJson ? 'json' : event.bodyKind === 'none' ? 'no body' : 'text'}
         </span>
       </summary>
-      <div className="min-w-0 overflow-x-auto px-3 pb-3 pt-0">
+      <div className="custom-scrollbar min-w-0 overflow-x-auto px-3 pb-3 pt-0">
         {hasJson ? (
           <JsonTree value={event.bodyJson} />
         ) : (

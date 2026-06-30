@@ -209,7 +209,7 @@ export function Sidebar({ projects }: SidebarProps) {
                 </Link>
             </div>
 
-            <nav className="flex-1 space-y-1 overflow-y-auto py-4">
+            <nav className="custom-scrollbar-nav flex-1 space-y-1 overflow-y-auto py-4">
                 {canAccessModule('dashboard') && (
                     renderModuleLink({
                         active: isDashboardActive,
@@ -227,7 +227,7 @@ export function Sidebar({ projects }: SidebarProps) {
                     label: getModuleLabel('projects', 'Projects'),
                     children: (
                         <>
-                            <div className="max-h-[260px] space-y-1 overflow-y-auto custom-scrollbar">
+                            <div className="custom-scrollbar-nav max-h-[260px] space-y-1 overflow-y-auto">
                                 {projects.length === 0 ? (
                                     <p className="px-3 py-2 text-[12px] italic leading-none text-nav-text-muted">
                                         No projects

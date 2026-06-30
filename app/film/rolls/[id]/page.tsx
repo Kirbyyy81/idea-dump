@@ -402,7 +402,7 @@ export default function FilmRollDetailPage({ params }: RollDetailPageProps) {
                         {favoritePhotos.length > 0 && (
                             <Card className="p-5">
                                 <h2 className="text-lg font-bold">Favorite Shots</h2>
-                                <div className="mt-4 flex gap-3 overflow-x-auto pb-2">
+                                <div className="custom-scrollbar mt-4 flex gap-3 overflow-x-auto pb-2">
                                     {favoritePhotos.map((photo) => (
                                         <a key={`favorite-${photo.id}`} href={photo.web_view_link ?? '#'} target="_blank" rel="noreferrer" className="block h-28 w-36 shrink-0 overflow-hidden rounded-lg border border-border-default bg-bg-hover">
                                             {photo.thumbnail_link ? (
