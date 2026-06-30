@@ -251,14 +251,14 @@ export function Sidebar({ projects }: SidebarProps) {
                     group: 'tickets',
                     href: getModulePath('tickets', '/tickets'),
                     icon: <Ticket size={18} />,
-                    label: 'My Tickets',
+                    label: 'Tickets',
                     children: (
                         <div className="space-y-0.5">
                             {renderSubItem({
                                 href: '/tickets',
                                 icon: <Ticket size={14} />,
                                 isActive: isExactPath(pathname, '/tickets'),
-                                label: 'View Tickets',
+                                label: 'My Tickets',
                             })}
                             {renderSubItem({
                                 href: '/tickets/new',
