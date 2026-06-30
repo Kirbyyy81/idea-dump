@@ -188,7 +188,7 @@ export function Select({
                         width: menuPosition.width,
                     }}
                     className={cn(
-                        'fixed z-50 max-h-64 overflow-y-auto rounded-md border border-border-default bg-bg-elevated py-1 text-sm shadow-lg',
+                        'fixed z-50 max-h-64 overflow-y-auto rounded-md border border-border-default bg-bg-elevated py-1 text-sm shadow-subtle',
                         menuClassName
                     )}
                 >
