@@ -32,6 +32,7 @@ module.exports = {
                 'text-on-dark': 'var(--text-on-dark)',
 
                 // Border colors
+                'border': 'var(--border-default)',
                 'border-default': 'var(--border-default)',
                 'border-subtle': 'var(--border-subtle)',
                 'border-strong': 'var(--border-strong)',
@@ -59,6 +60,7 @@ module.exports = {
 
                 // Status colors
                 'surface-primary': 'var(--surface-primary)',
+                'surface-tertiary': 'var(--bg-subtle)',
                 'surface-film-shelf': 'var(--surface-film-shelf)',
                 'overlay-backdrop': 'var(--overlay-backdrop)',
                 'surface-idea': 'var(--surface-idea)',
@@ -91,7 +93,7 @@ module.exports = {
                 'chart-5': 'var(--chart-5)',
             },
             fontFamily: {
-                sans: ['var(--font-body)'],
+                sans: ['var(--font-sans)', 'Plus Jakarta Sans', 'system-ui', 'sans-serif'],
                 body: ['var(--font-body)'],
                 heading: ['var(--font-heading)'],
             },

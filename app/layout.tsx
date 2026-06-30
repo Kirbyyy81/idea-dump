@@ -1,19 +1,12 @@
 import type { Metadata } from 'next';
-import { DM_Serif_Text, Inter } from 'next/font/google';
+import { Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 import { AlertProvider } from '@/lib/contexts/AlertContext';
 import { AlertDialog } from '@/components/molecules/AlertDialog';
 
-const dmSerifText = DM_Serif_Text({
-    weight: '400',
+const plusJakartaSans = Plus_Jakarta_Sans({
     subsets: ['latin'],
-    variable: '--font-heading',
-    display: 'swap',
-});
-
-const inter = Inter({
-    subsets: ['latin'],
-    variable: '--font-body',
+    variable: '--font-sans',
     display: 'swap',
 });
 
@@ -35,7 +28,7 @@ export default function RootLayout({
     children: React.ReactNode;
 }) {
     return (
-        <html lang="en" className={`${dmSerifText.variable} ${inter.variable}`}>
+        <html lang="en" className={plusJakartaSans.variable}>
             <body className="min-h-screen antialiased">
                 <AlertProvider>
                     {children}
