@@ -70,7 +70,7 @@ export default function SignupPage() {
 
                 <div className="card p-8">
                     <div className="text-center mb-8">
-                        <h1 className="text-3xl mb-2">
+                        <h1 className="text-2xl font-extrabold mb-2">
                             <span className="text-text-primary">Idea</span>
                             <span className="text-accent-rose">Dump</span>
                         </h1>
