@@ -218,7 +218,7 @@ export default function LoginPage() {
                                 type="button"
                                 onClick={() => setAuthMethod('otp')}
                                 className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${authMethod === 'otp'
-                                    ? 'bg-surface-primary text-text-primary shadow-sm'
+                                    ? 'bg-surface-primary text-text-primary'
                                     : 'text-text-secondary hover:text-text-primary'
                                     }`}
                             >
@@ -228,7 +228,7 @@ export default function LoginPage() {
                                 type="button"
                                 onClick={() => setAuthMethod('password')}
                                 className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${authMethod === 'password'
-                                    ? 'bg-surface-primary text-text-primary shadow-sm'
+                                    ? 'bg-surface-primary text-text-primary'
                                     : 'text-text-secondary hover:text-text-primary'
                                     }`}
                             >
@@ -287,8 +287,8 @@ export default function LoginPage() {
                             </div>
 
                             {error && (
-                                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                                    <p className="text-sm text-red-400">{error}</p>
+                                <div className="p-3 rounded-lg bg-error-bg border border-error">
+                                    <p className="text-sm text-error">{error}</p>
                                 </div>
                             )}
 
@@ -384,8 +384,8 @@ export default function LoginPage() {
                             )}
 
                             {error && (
-                                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                                    <p className="text-sm text-red-400">{error}</p>
+                                <div className="p-3 rounded-lg bg-error-bg border border-error">
+                                    <p className="text-sm text-error">{error}</p>
                                 </div>
                             )}
 
