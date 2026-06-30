@@ -65,7 +65,7 @@ export default function ProjectsPage() {
     if (error) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-bg-base">
-                <p className="text-red-400 mb-4">{error}</p>
+                <p className="text-error mb-4">{error}</p>
                 <Button onClick={() => window.location.reload()}>
                     Retry
                 </Button>
@@ -116,7 +116,7 @@ export default function ProjectsPage() {
                             className={cn(
                                 'px-3 py-1.5 rounded-full text-sm font-medium transition-colors',
                                 selectedStatus === 'all'
-                                    ? 'bg-accent-rose text-white'
+                                    ? 'bg-accent-rose text-action-primary-text'
                                     : 'bg-bg-hover text-text-secondary hover:bg-bg-subtle'
                             )}
                         >
@@ -134,7 +134,7 @@ export default function ProjectsPage() {
                                     className={cn(
                                         'px-3 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5',
                                         selectedStatus === status
-                                            ? 'bg-accent-rose text-white'
+                                            ? 'bg-accent-rose text-action-primary-text'
                                             : 'bg-bg-hover text-text-secondary hover:bg-bg-subtle'
                                     )}
                                 >
