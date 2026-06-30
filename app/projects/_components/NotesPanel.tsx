@@ -34,7 +34,7 @@ export function NotesPanel({ notes, onAddNote }: NotesPanelProps) {
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
-                <h3 className="font-heading font-semibold flex items-center gap-2 text-text-primary">
+                <h3 className="font-heading font-bold flex items-center gap-2 text-text-primary">
                     <StickyNote className="text-accent-blue" />
                     Project Notes
                 </h3>

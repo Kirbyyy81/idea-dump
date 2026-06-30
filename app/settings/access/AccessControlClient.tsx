@@ -309,7 +309,7 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
 
             <Card className="overflow-hidden rounded-2xl p-0">
                 <div className="border-b border-border-default bg-bg-hover px-6 py-3">
-                    <div className="grid grid-cols-[180px_minmax(0,1fr)_110px] items-center gap-4 text-xs uppercase tracking-[0.18em] text-text-muted">
+                    <div className="grid grid-cols-[180px_minmax(0,1fr)_110px] items-center gap-4 text-xs uppercase tracking-wide text-text-muted">
                         <span>Role</span>
                         <span>Modules</span>
                         <div className="flex justify-end">
@@ -396,7 +396,7 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                                 className="grid grid-cols-[180px_minmax(0,1fr)_110px] items-start gap-4 border-b border-border-default px-6 py-4 last:border-b-0 hover:bg-bg-hover"
                             >
                                 <div className="pt-1">
-                                    <span className="font-medium uppercase tracking-[0.14em] text-text-primary">
+                                    <span className="font-bold uppercase tracking-[0.14em] text-text-primary">
                                         {roleRecord.role}
                                     </span>
                                 </div>
@@ -440,7 +440,7 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
 
             <Card className="overflow-hidden rounded-2xl p-0">
                 <div className="border-b border-border-default bg-bg-hover px-6 py-3">
-                    <div className="grid grid-cols-[minmax(0,1.4fr)_180px_minmax(0,1.2fr)_110px] items-center gap-4 text-xs uppercase tracking-[0.18em] text-text-muted">
+                    <div className="grid grid-cols-[minmax(0,1.4fr)_180px_minmax(0,1.2fr)_110px] items-center gap-4 text-xs uppercase tracking-wide text-text-muted">
                         <span>User</span>
                         <span>Role</span>
                         <span>Exceptions</span>
@@ -470,7 +470,7 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                                         {getInitials(userLabel)}
                                     </div>
                                     <div className="min-w-0">
-                                        <p className="truncate font-medium text-text-primary">{userLabel}</p>
+                                        <p className="truncate font-bold text-text-primary">{userLabel}</p>
                                         <p className="truncate text-xs text-text-secondary">{getUserSubLabel(user)}</p>
                                     </div>
                                 </div>
