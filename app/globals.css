@@ -255,6 +255,34 @@ body {
   display: none;
 }
 
+/* ===== INTERACTION POLISH ===== */
+button,
+[role="button"],
+[role="option"],
+.btn-primary,
+.btn-secondary,
+.btn-ghost,
+.status-badge,
+aside a,
+nav a,
+.card.cursor-pointer {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+input,
+textarea,
+select,
+.selectable,
+.select-text,
+.markdown-body,
+.markdown-body *,
+[contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 /* ===== TYPOGRAPHY ===== */
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
