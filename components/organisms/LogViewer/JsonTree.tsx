@@ -58,7 +58,7 @@ function JsonOrText({
   return (
     <details className="min-w-0 rounded-md border border-border-subtle bg-bg-base">
       <summary className="flex cursor-pointer select-none items-center justify-between gap-3 px-3 py-2 text-sm text-text-secondary">
-        <span className="font-medium">{title}</span>
+        <span className="font-bold">{title}</span>
         <span className="text-xs text-text-muted">
           {hasJson ? 'json' : event.bodyKind === 'none' ? 'no body' : 'text'}
         </span>

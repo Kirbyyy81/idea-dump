@@ -108,7 +108,7 @@ export function AlertDialog() {
                     <div className={cn("p-2 rounded-full", styles.bg)}>
                         <Icon size={24} className={styles.icon} />
                     </div>
-                    <h2 id="alert-title" className={cn("text-lg font-heading font-medium", styles.title)}>
+                    <h2 id="alert-title" className={cn("text-lg font-bold", styles.title)}>
                         {alert.title}
                     </h2>
                 </div>
