@@ -104,7 +104,7 @@ export default function SettingsPage() {
     return (
         <AppShell contentClassName="p-8" projects={projects} isLoading={isLoading}>
             <div className="max-w-3xl space-y-6">
-                <h1 className="text-text-primary text-3xl font-heading font-medium">Settings</h1>
+                <h1 className="text-text-primary text-2xl font-extrabold">Settings</h1>
 
                 <Card className="p-6">
                     <div className="flex items-start justify-between gap-4">
@@ -127,7 +127,7 @@ export default function SettingsPage() {
                             <div>
                                 <div className="flex items-center gap-2 mb-1">
                                     <UserIcon size={18} className="text-accent-rose" />
-                                    <h2 className="text-xl font-semibold font-body text-text-primary">
+                                    <h2 className="text-lg font-bold font-body text-text-primary">
                                         Profile
                                     </h2>
                                 </div>

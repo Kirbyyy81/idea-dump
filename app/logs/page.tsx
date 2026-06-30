@@ -254,7 +254,7 @@ export default function LogsPage() {
         <AppShell projects={projects} isLoading={isLoading}>
                 {/* Header */}
                 <header className="flex items-center justify-between mb-8">
-                    <h1 className="text-3xl font-heading font-medium">Weekly Productivity Log</h1>
+                    <h1 className="text-2xl font-extrabold">Weekly Productivity Log</h1>
 
                     <div className="flex items-center gap-3">
                         <Link href="/logs/api-tools">
