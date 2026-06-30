@@ -352,8 +352,8 @@ export function AccessControlClient() {
             </div>
 
             {error && (
-                <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3">
-                    <p className="text-sm text-red-400">{error}</p>
+                <div className="rounded-xl border border-error bg-error-bg px-4 py-3">
+                    <p className="text-sm text-error">{error}</p>
                 </div>
             )}
 
