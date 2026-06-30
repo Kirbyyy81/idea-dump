@@ -54,10 +54,15 @@ const MODULE_ICONS: Record<string, JSX.Element> = {
     Ticket: <Ticket size={18} />,
 };
 
-const GROUP_ACTIVE_CLASS = 'bg-nav-bg-hover text-nav-text';
-const GROUP_INACTIVE_CLASS = 'text-nav-text-muted hover:text-nav-text';
-const SUBITEM_ACTIVE_CLASS = 'text-nav-text border-l-2 border-nav-text';
-const SUBITEM_INACTIVE_CLASS = 'text-nav-text-muted hover:text-nav-text';
+const NAV_ITEM_CLASS =
+    'flex min-h-10 w-full items-center gap-2 rounded-sm border border-transparent px-3 py-2 text-left text-[12px] font-semibold leading-none transition-colors';
+const NAV_SUBITEM_CLASS =
+    'flex min-h-9 w-full items-center gap-2 rounded-sm border border-transparent px-3 py-2 text-left text-[12px] font-medium leading-none transition-colors';
+const GROUP_ACTIVE_CLASS = 'bg-nav-bg-hover text-nav-text hover:bg-nav-bg-hover hover:text-nav-text';
+const GROUP_INACTIVE_CLASS = 'text-nav-text-muted hover:bg-nav-bg-hover hover:text-nav-text';
+const SUBITEM_ACTIVE_CLASS =
+    'border-l-2 border-l-nav-text bg-nav-bg-hover text-nav-text hover:bg-nav-bg-hover hover:text-nav-text';
+const SUBITEM_INACTIVE_CLASS = 'text-nav-text-muted hover:bg-nav-bg-hover hover:text-nav-text';
 
 function isExactPath(pathname: string, href: string) {
     return pathname === href;
@@ -103,11 +108,11 @@ export function Sidebar({ projects }: SidebarProps) {
             key={href}
             href={href}
             className={cn(
-                'btn-ghost w-full justify-start text-sm py-1.5 h-8 font-normal',
+                NAV_SUBITEM_CLASS,
                 isActive ? SUBITEM_ACTIVE_CLASS : SUBITEM_INACTIVE_CLASS
             )}
         >
-            {icon && <span className="mr-2">{icon}</span>}
+            {icon && <span className="grid size-4 shrink-0 place-items-center">{icon}</span>}
             <span className="truncate">{label}</span>
         </Link>
     );
@@ -126,11 +131,11 @@ export function Sidebar({ projects }: SidebarProps) {
         <Link
             href={href}
             className={cn(
-                'btn-ghost w-full justify-start relative z-10',
+                NAV_ITEM_CLASS,
                 active ? GROUP_ACTIVE_CLASS : GROUP_INACTIVE_CLASS
             )}
         >
-            <span className="mr-2">{icon}</span>
+            <span className="grid size-5 shrink-0 place-items-center">{icon}</span>
             <span className="flex-1 text-left truncate">{label}</span>
         </Link>
     );
@@ -161,13 +166,13 @@ export function Sidebar({ projects }: SidebarProps) {
                 <Link
                     href={href}
                     className={cn(
-                        'btn-ghost w-full justify-start relative z-10',
+                        NAV_ITEM_CLASS,
                         active ? GROUP_ACTIVE_CLASS : GROUP_INACTIVE_CLASS
                     )}
                     aria-expanded={isOpen}
                     onClick={() => setOpenGroups((current) => ({ ...current, [group]: !isOpen }))}
                 >
-                    <span className="mr-2">{icon}</span>
+                    <span className="grid size-5 shrink-0 place-items-center">{icon}</span>
                     <span className="flex-1 text-left">{label}</span>
                     <ChevronRight
                         size={14}
@@ -188,23 +193,23 @@ export function Sidebar({ projects }: SidebarProps) {
     };
 
     return (
-        <aside className="min-h-full flex flex-col rounded-lg bg-nav-bg text-nav-text">
-            <div className="p-6 border-b border-nav-bg-hover">
+        <aside className="flex min-h-full flex-col rounded-lg bg-nav-bg px-[14px] py-[18px] text-nav-text">
+            <div className="border-b border-nav-bg-hover pb-4">
                 <Link href="/dashboard" className="flex items-center gap-2">
                     <Image
                         src="/logo.png"
                         alt="IdeaDump Logo"
-                        width={24}
-                        height={24}
-                        className="w-6 h-6 object-contain"
+                        width={28}
+                        height={28}
+                        className="size-7 object-contain"
                     />
-                    <span className="font-bold text-xl font-heading text-nav-text">
+                    <span className="font-heading text-base font-extrabold leading-none text-nav-text">
                         IdeaDump
                     </span>
                 </Link>
             </div>
 
-            <nav className="flex-1 p-4 overflow-y-auto space-y-1">
+            <nav className="flex-1 space-y-1 overflow-y-auto py-4">
                 {canAccessModule('dashboard') && (
                     renderModuleLink({
                         active: isDashboardActive,
@@ -222,9 +227,9 @@ export function Sidebar({ projects }: SidebarProps) {
                     label: getModuleLabel('projects', 'Projects'),
                     children: (
                         <>
-                            <div className="space-y-0.5 max-h-[260px] overflow-y-auto custom-scrollbar">
+                            <div className="max-h-[260px] space-y-1 overflow-y-auto custom-scrollbar">
                                 {projects.length === 0 ? (
-                                    <p className="px-3 py-1.5 text-xs text-nav-text-muted italic">
+                                    <p className="px-3 py-2 text-[12px] italic leading-none text-nav-text-muted">
                                         No projects
                                     </p>
                                 ) : (
@@ -318,7 +323,7 @@ export function Sidebar({ projects }: SidebarProps) {
                 })}
             </nav>
 
-            <div className="p-4 border-t border-nav-bg-hover">
+            <div className="border-t border-nav-bg-hover pt-4">
                 {renderModuleLink({
                     active: pathname === '/settings',
                     href: SHELL_MODULES.settings.href,
