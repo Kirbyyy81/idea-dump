@@ -107,7 +107,7 @@ export default function DashboardPage() {
     if (error) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-bg-base">
-                <p className="text-red-400 mb-4">{error}</p>
+                <p className="text-error mb-4">{error}</p>
                 <Button onClick={() => window.location.reload()}>
                     Retry
                 </Button>
