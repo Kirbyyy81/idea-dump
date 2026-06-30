@@ -9,7 +9,7 @@ import { TicketForm } from '@/components/organisms/TicketForm';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
-import { PageLoader } from '@/components/atoms/Loader';
+import { Select } from '@/components/atoms/Select';
 import { Project, Ticket, UpdateTicketInput, ticketSourceConfig, ticketStatusConfig } from '@/lib/types';
 
 export default function TicketsPage() {
@@ -113,12 +113,13 @@ export default function TicketsPage() {
         [projects]
     );
 
-    if (isLoading) {
-        return <PageLoader />;
-    }
-
     return (
-        <AppShell contentClassName="p-8">
+        <AppShell
+            projects={projects}
+            isLoading={isLoading}
+            loadingMessage="Loading tickets..."
+            contentClassName="p-8"
+        >
             <div className="max-w-5xl space-y-6">
                 <header className="flex items-center justify-between">
                     <h1 className="text-3xl font-heading font-medium">My Tickets</h1>
@@ -149,45 +150,59 @@ export default function TicketsPage() {
                     <div className="flex flex-wrap items-end gap-3">
                         <div className="min-w-[180px]">
                             <label className="mb-1 block text-xs text-text-muted">Project</label>
-                            <select value={filterProject} onChange={(e) => setFilterProject(e.target.value)} className="input text-sm">
-                                <option value="">All Projects</option>
-                                {projects.map((project) => (
-                                    <option key={project.id} value={project.id}>
-                                        {project.title}
-                                    </option>
-                                ))}
-                            </select>
+                            <Select
+                                value={filterProject}
+                                onChange={setFilterProject}
+                                buttonClassName="text-sm"
+                                options={[
+                                    { value: '', label: 'All Projects' },
+                                    ...projects.map((project) => ({ value: project.id, label: project.title })),
+                                ]}
+                            />
                         </div>
                         <div className="min-w-[160px]">
                             <label className="mb-1 block text-xs text-text-muted">Status</label>
-                            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="input text-sm">
-                                <option value="">All Statuses</option>
-                                {Object.entries(ticketStatusConfig).map(([value, config]) => (
-                                    <option key={value} value={value}>
-                                        {config.label}
-                                    </option>
-                                ))}
-                            </select>
+                            <Select
+                                value={filterStatus}
+                                onChange={setFilterStatus}
+                                buttonClassName="text-sm"
+                                options={[
+                                    { value: '', label: 'All Statuses' },
+                                    ...Object.entries(ticketStatusConfig).map(([value, config]) => ({
+                                        value,
+                                        label: config.label,
+                                    })),
+                                ]}
+                            />
                         </div>
                         <div className="min-w-[160px]">
                             <label className="mb-1 block text-xs text-text-muted">Priority</label>
-                            <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)} className="input text-sm">
-                                <option value="">All Priorities</option>
-                                <option value="low">Low</option>
-                                <option value="medium">Medium</option>
-                                <option value="high">High</option>
-                            </select>
+                            <Select
+                                value={filterPriority}
+                                onChange={setFilterPriority}
+                                buttonClassName="text-sm"
+                                options={[
+                                    { value: '', label: 'All Priorities' },
+                                    { value: 'low', label: 'Low' },
+                                    { value: 'medium', label: 'Medium' },
+                                    { value: 'high', label: 'High' },
+                                ]}
+                            />
                         </div>
                         <div className="min-w-[160px]">
                             <label className="mb-1 block text-xs text-text-muted">Source</label>
-                            <select value={filterSource} onChange={(e) => setFilterSource(e.target.value)} className="input text-sm">
-                                <option value="">All Sources</option>
-                                {Object.entries(ticketSourceConfig).map(([value, config]) => (
-                                    <option key={value} value={value}>
-                                        {config.label}
-                                    </option>
-                                ))}
-                            </select>
+                            <Select
+                                value={filterSource}
+                                onChange={setFilterSource}
+                                buttonClassName="text-sm"
+                                options={[
+                                    { value: '', label: 'All Sources' },
+                                    ...Object.entries(ticketSourceConfig).map(([value, config]) => ({
+                                        value,
+                                        label: config.label,
+                                    })),
+                                ]}
+                            />
                         </div>
                         <div className="min-w-[220px] flex-1">
                             <label className="mb-1 block text-xs text-text-muted">Search</label>

@@ -4,6 +4,8 @@ import { authorizeFilmJournal, getOwnedFilmCamera, jsonError } from '@/lib/film/
 import {
     isFilmFormat,
     isFilmRollStatus,
+    isNonNegativeNumber,
+    normalizeDate,
     toNonNegativeInteger,
     toNonNegativeNumber,
     toNullableText,
@@ -23,6 +25,11 @@ function buildRollInsert(body: Record<string, unknown>, userId: string) {
     if (!brand) return { error: 'Brand is required' };
     if (!isFilmFormat(format)) return { error: 'Format is required' };
     if (!iso) return { error: 'ISO must be greater than 0' };
+    for (const field of ['purchase_price', 'processing_cost', 'scanning_cost', 'shipping_cost', 'frames_taken', 'successful_photos']) {
+        if (body[field] !== undefined && body[field] !== '' && !isNonNegativeNumber(body[field])) {
+            return { error: `${field.replaceAll('_', ' ')} must be non-negative` };
+        }
+    }
 
     return {
         data: {
@@ -34,6 +41,11 @@ function buildRollInsert(body: Record<string, unknown>, userId: string) {
             camera_id: toNullableText(body.camera_id),
             status: isFilmRollStatus(body.status) ? body.status : 'UNUSED',
             purchase_price: toNonNegativeNumber(body.purchase_price),
+            lab_name: toNullableText(body.lab_name),
+            processing_cost: toNonNegativeNumber(body.processing_cost),
+            scanning_cost: toNonNegativeNumber(body.scanning_cost),
+            shipping_cost: toNonNegativeNumber(body.shipping_cost),
+            processing_date: normalizeDate(body.processing_date),
             location_name: toNullableText(body.location_name),
             frames_taken: toNonNegativeInteger(body.frames_taken),
             successful_photos: toNonNegativeInteger(body.successful_photos),
@@ -46,6 +58,12 @@ function buildRollInsert(body: Record<string, unknown>, userId: string) {
 
 function buildRollUpdates(body: Record<string, unknown>) {
     const updates: Record<string, unknown> = {};
+
+    for (const field of ['purchase_price', 'processing_cost', 'scanning_cost', 'shipping_cost', 'frames_taken', 'successful_photos']) {
+        if (body[field] !== undefined && body[field] !== '' && !isNonNegativeNumber(body[field])) {
+            return { error: `${field.replaceAll('_', ' ')} must be non-negative` };
+        }
+    }
 
     if (body.film_name !== undefined) updates.film_name = toRequiredText(body.film_name);
     if (body.brand !== undefined) updates.brand = toRequiredText(body.brand);
@@ -64,6 +82,11 @@ function buildRollUpdates(body: Record<string, unknown>) {
         updates.status = body.status;
     }
     if (body.purchase_price !== undefined) updates.purchase_price = toNonNegativeNumber(body.purchase_price);
+    if (body.lab_name !== undefined) updates.lab_name = toNullableText(body.lab_name);
+    if (body.processing_cost !== undefined) updates.processing_cost = toNonNegativeNumber(body.processing_cost);
+    if (body.scanning_cost !== undefined) updates.scanning_cost = toNonNegativeNumber(body.scanning_cost);
+    if (body.shipping_cost !== undefined) updates.shipping_cost = toNonNegativeNumber(body.shipping_cost);
+    if (body.processing_date !== undefined) updates.processing_date = normalizeDate(body.processing_date);
     if (body.location_name !== undefined) updates.location_name = toNullableText(body.location_name);
     if (body.frames_taken !== undefined) updates.frames_taken = toNonNegativeInteger(body.frames_taken);
     if (body.successful_photos !== undefined) updates.successful_photos = toNonNegativeInteger(body.successful_photos);
@@ -97,7 +120,7 @@ export async function GET(request: NextRequest) {
         const admin = createAdminClient();
         let requestQuery = admin
             .from('film_rolls')
-            .select('*, camera:film_cameras(*)')
+            .select('*, camera:film_cameras(*), cover_photo:film_photos!film_rolls_cover_photo_id_fkey(*)')
             .eq('user_id', session.user.id)
             .order('created_at', { ascending: false });
 
@@ -138,7 +161,7 @@ export async function POST(request: NextRequest) {
         const { data, error } = await admin
             .from('film_rolls')
             .insert(insert.data)
-            .select('*, camera:film_cameras(*)')
+            .select('*, camera:film_cameras(*), cover_photo:film_photos!film_rolls_cover_photo_id_fkey(*)')
             .single();
 
         if (error) throw error;
@@ -196,7 +219,7 @@ export async function PUT(request: NextRequest) {
             .update(updateData)
             .eq('id', id)
             .eq('user_id', session.user.id)
-            .select('*, camera:film_cameras(*)')
+            .select('*, camera:film_cameras(*), cover_photo:film_photos!film_rolls_cover_photo_id_fkey(*)')
             .single();
 
         if (error) throw error;

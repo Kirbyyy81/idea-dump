@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getFirstAllowedModulePath, getSessionUserAppAccess } from '@/lib/rbac/access';
+import { AccessProvider } from '@/lib/contexts/AccessContext';
 
 export default async function ManageTicketsLayout({
     children,
@@ -16,5 +17,5 @@ export default async function ManageTicketsLayout({
         redirect(getFirstAllowedModulePath(session.access));
     }
 
-    return children;
+    return <AccessProvider access={session.access}>{children}</AccessProvider>;
 }

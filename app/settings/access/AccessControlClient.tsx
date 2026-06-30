@@ -1,23 +1,23 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Plus, Search, X } from 'lucide-react';
 import { AppModuleSlug, AppRoleSlug } from '@/lib/rbac/constants';
-import { AccessAdminRoleRecord, AccessAdminUserRecord, AppModuleMetadata, ModuleOverrideEffect } from '@/lib/rbac/types';
+import { AccessAdminRoleRecord, AccessAdminUserRecord, ModuleOverrideEffect } from '@/lib/rbac/types';
 import { Badge } from '@/components/atoms/Badge';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
-import { PageLoader } from '@/components/atoms/Loader';
+import { Select } from '@/components/atoms/Select';
 import { useAlert } from '@/lib/contexts/AlertContext';
-
-interface AccessUsersResponse {
-    modules: AppModuleMetadata[];
-    roleAssignments: AccessAdminRoleRecord[];
-    roles: AppRoleSlug[];
-    users: AccessAdminUserRecord[];
-}
+import {
+    AccessUsersResponse,
+    createRole as createRoleAction,
+    getAccessAdminData,
+    saveRoleModules,
+    saveUserAccess,
+} from './actions';
 
 interface UserDraftState {
     overrides: Partial<Record<AppModuleSlug, ModuleOverrideEffect | null>>;
@@ -64,11 +64,14 @@ function getInitials(value: string) {
     return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase();
 }
 
-export function AccessControlClient() {
+interface AccessControlClientProps {
+    initialData: AccessUsersResponse;
+}
+
+export function AccessControlClient({ initialData }: AccessControlClientProps) {
     const { showSuccess } = useAlert();
-    const [data, setData] = useState<AccessUsersResponse | null>(null);
+    const [data, setData] = useState<AccessUsersResponse>(initialData);
     const [error, setError] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
     const [savingRole, setSavingRole] = useState<AppRoleSlug | null>(null);
     const [savingUserId, setSavingUserId] = useState<string | null>(null);
     const [search, setSearch] = useState('');
@@ -79,26 +82,10 @@ export function AccessControlClient() {
     const [isCreatingRole, setIsCreatingRole] = useState(false);
     const [showNewRoleRow, setShowNewRoleRow] = useState(false);
 
-    async function loadAccessData() {
-        try {
-            const res = await fetch('/api/access/users');
-            if (!res.ok) {
-                const payload = await res.json();
-                throw new Error(payload.message || 'Failed to load access data');
-            }
-
-            const payload = await res.json();
-            setData(payload.data);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to load access data');
-        } finally {
-            setIsLoading(false);
-        }
+    async function reloadData() {
+        const fresh = await getAccessAdminData();
+        setData(fresh);
     }
-
-    useEffect(() => {
-        loadAccessData();
-    }, []);
 
     const filteredUsers = useMemo(() => {
         if (!data) return [];
@@ -217,23 +204,14 @@ export function AccessControlClient() {
         setError(null);
 
         try {
-            const res = await fetch(`/api/access/roles/${roleRecord.role}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ modules }),
-            });
-
-            if (!res.ok) {
-                const payload = await res.json();
-                throw new Error(payload.message || 'Failed to save role modules');
-            }
+            await saveRoleModules(roleRecord.role, modules);
 
             setRoleDrafts((current) => {
                 const next = { ...current };
                 delete next[roleRecord.role];
                 return next;
             });
-            await loadAccessData();
+            await reloadData();
             showSuccess(`${roleRecord.role} modules were updated.`, 'Access saved');
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to save role modules');
@@ -253,23 +231,11 @@ export function AccessControlClient() {
         setError(null);
 
         try {
-            const res = await fetch('/api/access/roles', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    role,
-                    modules: newRoleDraft.modules,
-                }),
-            });
-
-            if (!res.ok) {
-                const payload = await res.json();
-                throw new Error(payload.message || 'Failed to create role');
-            }
+            await createRoleAction(role, newRoleDraft.modules);
 
             setNewRoleDraft(DEFAULT_NEW_ROLE);
             setShowNewRoleRow(false);
-            await loadAccessData();
+            await reloadData();
             showSuccess(`${role} was created.`, 'Role created');
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to create role');
@@ -290,19 +256,7 @@ export function AccessControlClient() {
         setError(null);
 
         try {
-            const res = await fetch(`/api/access/users/${user.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    overrides: draft.overrides,
-                    role: draft.role,
-                }),
-            });
-
-            if (!res.ok) {
-                const payload = await res.json();
-                throw new Error(payload.message || 'Failed to save access');
-            }
+            await saveUserAccess(user.id, draft.role, draft.overrides);
 
             setUserDrafts((current) => {
                 const next = { ...current };
@@ -314,7 +268,7 @@ export function AccessControlClient() {
                 delete next[user.id];
                 return next;
             });
-            await loadAccessData();
+            await reloadData();
             showSuccess(`${getUserLabel(user)} access was updated.`, 'Access saved');
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to save access');
@@ -322,10 +276,6 @@ export function AccessControlClient() {
             setSavingUserId(null);
         }
     };
-
-    if (isLoading) {
-        return <PageLoader message="Loading access controls..." />;
-    }
 
     return (
         <div className="mx-auto min-h-screen max-w-7xl space-y-8 p-8">
@@ -526,17 +476,13 @@ export function AccessControlClient() {
                                 </div>
 
                                 <div className="pt-0.5">
-                                    <select
+                                    <Select
                                         value={draft.role}
-                                        onChange={(e) => updateUserRole(user, e.target.value as AppRoleSlug)}
-                                        className="input h-10 min-w-[160px] text-sm"
-                                    >
-                                        {data?.roles.map((role) => (
-                                            <option key={role} value={role}>
-                                                {role}
-                                            </option>
-                                        ))}
-                                    </select>
+                                        onChange={(nextValue) => updateUserRole(user, nextValue as AppRoleSlug)}
+                                        className="min-w-[160px]"
+                                        buttonClassName="h-10 text-sm"
+                                        options={(data?.roles ?? []).map((role) => ({ value: role, label: role }))}
+                                    />
                                 </div>
 
                                 <div className="space-y-3">
@@ -548,20 +494,22 @@ export function AccessControlClient() {
                                                     className="flex items-center gap-2 rounded-xl border border-border-default bg-bg-hover px-3 py-2"
                                                 >
                                                     <Badge className="shrink-0">{getModuleLabel(moduleSlug)}</Badge>
-                                                    <select
+                                                    <Select
                                                         value={draft.overrides[moduleSlug] ?? 'allow'}
-                                                        onChange={(e) =>
+                                                        onChange={(nextValue) =>
                                                             updateUserOverride(
                                                                 user,
                                                                 moduleSlug,
-                                                                e.target.value as ModuleOverrideEffect
+                                                                nextValue as ModuleOverrideEffect
                                                             )
                                                         }
-                                                        className="input h-8 min-w-[110px] border-0 bg-transparent px-2 text-xs"
-                                                    >
-                                                        <option value="allow">Allow</option>
-                                                        <option value="deny">Deny</option>
-                                                    </select>
+                                                        className="min-w-[110px]"
+                                                        buttonClassName="h-8 border-0 bg-transparent px-2 text-xs"
+                                                        options={[
+                                                            { value: 'allow', label: 'Allow' },
+                                                            { value: 'deny', label: 'Deny' },
+                                                        ]}
+                                                    />
                                                     <button
                                                         type="button"
                                                         onClick={() => removeUserOverride(user, moduleSlug)}
@@ -581,38 +529,41 @@ export function AccessControlClient() {
 
                                     {availableModules.length > 0 && (
                                         <div className="flex flex-wrap items-center gap-2">
-                                            <select
+                                            <Select
                                                 value={newOverride.module}
-                                                onChange={(e) =>
+                                                onChange={(nextValue) =>
                                                     updateNewOverrideDraft(
                                                         user.id,
                                                         'module',
-                                                        e.target.value as AppModuleSlug | ''
+                                                        nextValue as AppModuleSlug | ''
                                                     )
                                                 }
-                                                className="input h-9 min-w-[150px] text-xs"
-                                            >
-                                                <option value="">Add module</option>
-                                                {availableModules.map((moduleRow) => (
-                                                    <option key={`${user.id}-new-${moduleRow.slug}`} value={moduleRow.slug}>
-                                                        {moduleRow.label}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                            <select
+                                                className="min-w-[150px]"
+                                                buttonClassName="h-9 text-xs"
+                                                options={[
+                                                    { value: '', label: 'Add module' },
+                                                    ...availableModules.map((moduleRow) => ({
+                                                        value: moduleRow.slug,
+                                                        label: moduleRow.label,
+                                                    })),
+                                                ]}
+                                            />
+                                            <Select
                                                 value={newOverride.effect}
-                                                onChange={(e) =>
+                                                onChange={(nextValue) =>
                                                     updateNewOverrideDraft(
                                                         user.id,
                                                         'effect',
-                                                        e.target.value as ModuleOverrideEffect
+                                                        nextValue as ModuleOverrideEffect
                                                     )
                                                 }
-                                                className="input h-9 min-w-[110px] text-xs"
-                                            >
-                                                <option value="allow">Allow</option>
-                                                <option value="deny">Deny</option>
-                                            </select>
+                                                className="min-w-[110px]"
+                                                buttonClassName="h-9 text-xs"
+                                                options={[
+                                                    { value: 'allow', label: 'Allow' },
+                                                    { value: 'deny', label: 'Deny' },
+                                                ]}
+                                            />
                                             <Button
                                                 type="button"
                                                 variant="ghost"
