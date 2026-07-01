@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { authorizeSessionModule } from '@/lib/rbac/guards';
 import { Note } from '@/lib/types';
 
@@ -17,6 +18,20 @@ const demoNotes: Note[] = [
         created_at: new Date(Date.now() - 86400000).toISOString(),
     },
 ];
+
+async function verifyProjectOwner(projectId: string, userId: string) {
+    const supabaseAdmin = createAdminClient();
+    const { data, error } = await supabaseAdmin
+        .from('projects')
+        .select('id')
+        .eq('id', projectId)
+        .eq('user_id', userId)
+        .maybeSingle();
+
+    if (error) throw error;
+
+    return Boolean(data);
+}
 
 // GET /api/notes?project_id=xxx - List notes for a project
 export async function GET(request: NextRequest) {
@@ -42,7 +57,13 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
         }
 
-        const { data, error } = await supabase
+        const ownsProject = await verifyProjectOwner(projectId, user.id);
+        if (!ownsProject) {
+            return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+        }
+
+        const supabaseAdmin = createAdminClient();
+        const { data, error } = await supabaseAdmin
             .from('notes')
             .select('*')
             .eq('project_id', projectId)
@@ -90,7 +111,13 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Project ID and content are required' }, { status: 400 });
         }
 
-        const { data, error } = await supabase
+        const ownsProject = await verifyProjectOwner(project_id, user.id);
+        if (!ownsProject) {
+            return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+        }
+
+        const supabaseAdmin = createAdminClient();
+        const { data, error } = await supabaseAdmin
             .from('notes')
             .insert({ project_id, content })
             .select()
@@ -99,7 +126,7 @@ export async function POST(request: NextRequest) {
         if (error) throw error;
 
         // Update project's updated_at timestamp
-        await supabase
+        await supabaseAdmin
             .from('projects')
             .update({ updated_at: new Date().toISOString() })
             .eq('id', project_id);
@@ -134,7 +161,24 @@ export async function DELETE(request: NextRequest) {
             return NextResponse.json({ error: 'Note ID is required' }, { status: 400 });
         }
 
-        const { error } = await supabase
+        const supabaseAdmin = createAdminClient();
+        const { data: note, error: noteError } = await supabaseAdmin
+            .from('notes')
+            .select('project_id')
+            .eq('id', id)
+            .maybeSingle();
+
+        if (noteError) throw noteError;
+        if (!note) {
+            return NextResponse.json({ error: 'Note not found' }, { status: 404 });
+        }
+
+        const ownsProject = await verifyProjectOwner(note.project_id, user.id);
+        if (!ownsProject) {
+            return NextResponse.json({ error: 'Note not found' }, { status: 404 });
+        }
+
+        const { error } = await supabaseAdmin
             .from('notes')
             .delete()
             .eq('id', id);

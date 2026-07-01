@@ -9,6 +9,9 @@ IdeaDump is a Next.js app for keeping projects, writing weekly work logs, managi
 - API key management for external clients and agent-style workflows
 - Access control for roles, module permissions, and per-user exceptions
 - Small article-creation helper tools for content support tasks
+- Ticketing system for tracking project-related tasks and issues
+- Film journal for analog photography tracking (cameras, rolls, canister themes)
+- Interactive log viewer for system and productivity logs
 - Supabase authentication with login, signup, callback, and password reset
 - In-app API reference inside the API module
 
@@ -33,6 +36,15 @@ The current app is organized around these modules:
 
 - `Article Creation`  
   Small productivity helpers for article work, including minute-read estimation, slug/image-name generation, and table-of-contents anchor generation.
+
+- `Tickets`  
+  Ticketing system linked to projects, with statuses, priorities, and assignments.
+
+- `Film Journal`  
+  Analog film photography tracker to manage cameras, log rolls, and visualize film canisters with custom themes.
+
+- `Log Viewer`  
+  Interactive viewer for logs and productivity entries.
 
 - `Settings`  
   Profile details, sign-out flow, and version/build metadata.
@@ -104,6 +116,11 @@ If `npm` is easier to run through Git Bash on your machine, the repo includes a 
 - `/project/[id]`
 - `/project/[id]/edit`
 - `/logs`
+- `/log-viewer`
+- `/tickets`
+- `/tickets/new`
+- `/tickets/manage`
+- `/film`
 - `/api-tools`
 - `/docs` redirects to `/api-tools`
 - `/settings`
@@ -124,6 +141,8 @@ If `npm` is easier to run through Git Bash on your machine, the repo includes a 
 - `/api/keys`
 - `/api/ingest`
 - `/api/openapi`
+- `/api/tickets`
+- `/api/film/*`
 
 ## Project Structure
 

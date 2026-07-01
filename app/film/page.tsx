@@ -99,27 +99,27 @@ function FilmCanister({ roll, index }: { roll: FilmRoll; index: number }) {
                         className="absolute left-[106px] top-[102px] z-0 h-[112px] w-[160px] [clip-path:inset(-50px_-50px_-50px_0)]"
                         aria-hidden="true"
                     >
-                        <div className="absolute left-0 top-0 h-full w-[154px] -translate-x-[116px] overflow-hidden rounded-r-3xl border-y-2 border-r-2 border-border-dark/40 bg-nav-bg/70 transition-transform duration-500 ease-out group-hover:translate-x-0">
+                        <div className="absolute left-0 top-0 h-full w-[154px] -translate-x-[116px] overflow-hidden rounded-r-3xl border-y-2 border-r-2 border-border-dark/40 bg-black/80 backdrop-blur-md shadow-[14px_16px_24px_rgba(0,0,0,0.35)] transition-transform duration-500 ease-out group-hover:translate-x-0">
                             <div className="absolute inset-x-0 top-2 flex justify-around">
                                 {Array.from({ length: 12 }).map((_, holeIndex) => (
-                                    <span key={`top-strip-hole-${holeIndex}`} className="h-2 w-1.5 rounded-sm bg-bg-surface/20" />
+                                    <span key={`top-strip-hole-${holeIndex}`} className="h-2 w-1.5 rounded-sm bg-bg-surface/20 shadow-[inset_0_1px_3px_rgba(0,0,0,0.8)]" />
                                 ))}
                             </div>
                             <div className="absolute inset-x-0 bottom-2 flex justify-around">
                                 {Array.from({ length: 12 }).map((_, holeIndex) => (
-                                    <span key={`bottom-strip-hole-${holeIndex}`} className="h-2 w-1.5 rounded-sm bg-bg-surface/20" />
+                                    <span key={`bottom-strip-hole-${holeIndex}`} className="h-2 w-1.5 rounded-sm bg-bg-surface/20 shadow-[inset_0_1px_3px_rgba(0,0,0,0.8)]" />
                                 ))}
                             </div>
-                            <div className="ml-8 flex h-full flex-col justify-center pr-4 text-action-primary-text opacity-0 transition-opacity delay-100 duration-300 group-hover:opacity-100">
-                                <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-pastel-yellow">
+                            <div className="ml-8 flex h-full flex-col justify-center pr-4 text-[#ffcc88] opacity-0 mix-blend-screen transition-opacity delay-100 duration-300 group-hover:opacity-100 [text-shadow:_0_0_8px_rgba(255,166,77,0.6)]">
+                                <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-[#ffb84d]">
                                     {roll.brand}
                                 </p>
-                                <h2 className="mt-1 line-clamp-2 text-lg font-bold leading-tight">{roll.film_name}</h2>
-                                <div className="mt-2 flex items-center justify-between gap-2 text-[10px] font-semibold text-pastel-yellow">
+                                <h2 className="mt-1 line-clamp-2 text-lg font-bold leading-tight text-[#ffcc88]">{roll.film_name}</h2>
+                                <div className="mt-2 flex items-center justify-between gap-2 text-[10px] font-semibold text-[#ffb84d]">
                                     <span>{formatCurrency(Number(roll.purchase_price || 0))}</span>
                                     <span>{roll.frames_taken || 0} frames</span>
                                 </div>
-                                <div className="mt-1 truncate text-[10px] font-semibold text-pastel-yellow">
+                                <div className="mt-1 truncate text-[10px] font-semibold text-[#ffb84d]">
                                     {roll.camera?.name || 'No camera'}
                                 </div>
                             </div>
@@ -132,8 +132,15 @@ function FilmCanister({ roll, index }: { roll: FilmRoll; index: number }) {
                         className="absolute inset-y-0 left-0 z-10 h-full w-[230px] overflow-visible"
                     >
                         <title id={`film-roll-${roll.id}`}>{`${roll.brand} ${roll.film_name}`}</title>
+                        <defs>
+                            <linearGradient id={`body-${roll.id}`} x1="0" x2="1" y1="0" y2="1">
+                                <stop offset="0%" stopColor={theme.bodyLight} />
+                                <stop offset="48%" stopColor={theme.body} />
+                                <stop offset="100%" stopColor={theme.bodyDark} />
+                            </linearGradient>
+                        </defs>
 
-                        <rect x="15" y="52" width="94" height="188" rx="4" fill={theme.body} stroke="var(--border-dark)" strokeWidth="3" />
+                        <rect x="15" y="52" width="94" height="188" rx="4" fill={`url(#body-${roll.id})`} stroke="var(--border-dark)" strokeWidth="3" />
                         <rect x="9" y="42" width="108" height="14" rx="2" fill={theme.cap} />
                         <rect x="22" y="35" width="82" height="7" rx="1.5" fill="var(--bg-surface)" />
                         <rect x="9" y="239" width="108" height="14" rx="2" fill={theme.cap} />
@@ -200,11 +207,11 @@ function FilmCanister({ roll, index }: { roll: FilmRoll; index: number }) {
                         ) : (
                             <FilmCoverFallback roll={roll} accentColor={theme.accent} />
                         )}
-                        <div className="pointer-events-none absolute inset-0 bg-bg-surface/10" />
+                        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.4)_0%,rgba(0,0,0,0)_20%,rgba(255,255,255,0.1)_40%,rgba(0,0,0,0)_80%,rgba(0,0,0,0.3)_100%)]" />
                         <div className="pointer-events-none absolute inset-0 border border-border-dark/20" />
                     </div>
-                    <div className="absolute left-[26px] top-[222px] z-30 flex w-[70px] justify-center">
-                        <span className={cn('rounded-full border px-2 py-1 text-[9px]', status.colorClass)}>
+                    <div className="absolute left-[62px] top-[265px] z-30 flex -translate-x-1/2 justify-center">
+                        <span className={cn('rounded-full border px-2 py-1 text-[9px] shadow-sm', status.colorClass)}>
                             {status.label}
                         </span>
                     </div>
