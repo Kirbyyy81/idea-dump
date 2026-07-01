@@ -88,7 +88,7 @@ export default function DashboardPage() {
     if (error) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-bg-base">
-                <p className="text-red-400 mb-4">{error}</p>
+                <p className="text-error mb-4">{error}</p>
                 <Button onClick={() => window.location.reload()}>
                     Retry
                 </Button>
@@ -100,7 +100,7 @@ export default function DashboardPage() {
         <AppShell projects={projects} isLoading={isLoading} loadingMessage="Loading dashboard...">
             <div className="max-w-5xl space-y-8">
                 <header>
-                    <h1 className="text-3xl font-heading font-medium">Dashboard</h1>
+                    <h1 className="text-2xl font-extrabold">Dashboard</h1>
                 </header>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -109,20 +109,20 @@ export default function DashboardPage() {
 
                         return (
                             <Link key={item.slug} href={item.path} className="block">
-                                <Card className="p-6 flex h-full flex-col gap-4 transition-colors hover:border-border-strong hover:bg-bg-hover/50 focus-within:border-border-strong">
+                                <Card className="border-2 border-border-dark p-6 flex h-full flex-col gap-4 transition-all duration-150 hover:-translate-y-1 hover:bg-bg-hover focus-within:-translate-y-1 focus-within:border-border-dark">
                                     <div className="flex items-center gap-3">
-                                        <div className="rounded-lg bg-accent-rose/10 p-3">
-                                            <Icon size={20} className="text-accent-rose" />
-                                        </div>
-                                        <div>
-                                            <h2 className="text-lg font-semibold text-text-primary">
-                                                {item.label}
-                                            </h2>
-                                        </div>
+                                        <Icon size={20} className="text-text-primary" />
+                                        <h2 className="font-mono text-base font-bold text-text-primary">
+                                            {item.label}
+                                        </h2>
                                     </div>
-                                    <p className="text-sm leading-6 text-text-secondary">
+                                    <p className="font-mono text-sm leading-6 text-text-secondary flex-1">
                                         {item.description ?? 'Open this workspace module.'}
                                     </p>
+                                    <div className="font-mono text-xs text-text-muted">
+                                        &gt; OPEN{' '}
+                                        <span className="inline-block w-[0.5em] animate-pulse">_</span>
+                                    </div>
                                 </Card>
                             </Link>
                         );
@@ -131,7 +131,7 @@ export default function DashboardPage() {
 
                 {!allowedModules.includes('projects') && (
                     <Card className="p-6">
-                        <h2 className="text-lg font-semibold text-text-primary">
+                        <h2 className="text-lg font-bold text-text-primary">
                             Projects Access
                         </h2>
                     </Card>

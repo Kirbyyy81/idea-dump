@@ -34,7 +34,7 @@ export function NotesPanel({ notes, onAddNote }: NotesPanelProps) {
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
-                <h3 className="font-heading font-semibold flex items-center gap-2 text-text-primary">
+                <h3 className="font-heading font-bold flex items-center gap-2 text-text-primary">
                     <StickyNote className="text-accent-blue" />
                     Project Notes
                 </h3>
@@ -50,7 +50,7 @@ export function NotesPanel({ notes, onAddNote }: NotesPanelProps) {
                         value={newNote}
                         onChange={(e) => setNewNote(e.target.value)}
                         placeholder="Add a quick note..."
-                        className="min-h-[80px] text-sm bg-white"
+                        className="min-h-[80px] text-sm bg-bg-surface"
                         error={false} // No validation state needed for simple note
                         disabled={isSubmitting}
                     />
@@ -70,14 +70,14 @@ export function NotesPanel({ notes, onAddNote }: NotesPanelProps) {
             </Card>
 
             {/* Notes List */}
-            <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
+            <div className="custom-scrollbar space-y-3 max-h-[500px] overflow-y-auto pr-2">
                 {notes.length === 0 ? (
                     <div className="text-center py-8 text-text-muted text-sm">
                         No notes yet. Start capturing your ideas!
                     </div>
                 ) : (
                     notes.map((note) => (
-                        <Card key={note.id} className="p-4 bg-white/50 hover:bg-white text-sm">
+                        <Card key={note.id} className="p-4 bg-bg-surface/50 hover:bg-bg-surface text-sm">
                             <div className="text-text-secondary mb-2">
                                 <MarkdownRenderer content={note.content} />
                             </div>

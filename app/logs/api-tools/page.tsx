@@ -13,11 +13,10 @@ import {
     Trash2,
     Workflow,
 } from 'lucide-react';
-import { Sidebar } from '@/components/organisms/Sidebar';
+import { AppShell } from '@/components/organisms/AppShell';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
-import { Project } from '@/lib/types';
 import { formatDate } from '@/lib/utils';
 
 interface ApiKeyDisplay {
@@ -139,7 +138,6 @@ function downloadTextFile(filename: string, content: string) {
 }
 
 export default function LogApiToolsPage() {
-    const [projects, setProjects] = useState<Project[]>([]);
     const [apiKeys, setApiKeys] = useState<ApiKeyDisplay[]>([]);
     const [keysLoading, setKeysLoading] = useState(true);
     const [isCreating, setIsCreating] = useState(false);
@@ -150,17 +148,6 @@ export default function LogApiToolsPage() {
 
     useEffect(() => {
         let cancelled = false;
-
-        async function fetchProjects() {
-            try {
-                const res = await fetch('/api/projects');
-                if (!res.ok || cancelled) return;
-                const data = await res.json();
-                setProjects(data.data || []);
-            } catch {
-                // Sidebar project list is best-effort only.
-            }
-        }
 
         async function fetchKeys() {
             try {
@@ -181,7 +168,6 @@ export default function LogApiToolsPage() {
             }
         }
 
-        fetchProjects();
         fetchKeys();
 
         return () => {
@@ -244,26 +230,24 @@ export default function LogApiToolsPage() {
     };
 
     return (
-        <div className="flex min-h-screen bg-bg-base font-body text-text-primary">
-            <Sidebar projects={projects} />
-            <main className="flex-1 ml-64 p-8">
-                <div className="max-w-5xl space-y-8">
-                    <header className="flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-4">
-                            <Link
-                                href="/logs"
-                                className="flex items-center gap-2 text-text-secondary transition-colors hover:text-text-primary"
-                            >
-                                <ArrowLeft size={20} />
-                            </Link>
-                            <h1 className="text-3xl font-heading font-medium">Weekly Logs API Tools</h1>
-                        </div>
-                    </header>
+        <AppShell contentClassName="p-8">
+            <div className="max-w-5xl space-y-8">
+                <header className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                        <Link
+                            href="/logs"
+                            className="flex items-center gap-2 text-text-secondary transition-colors hover:text-text-primary"
+                        >
+                            <ArrowLeft size={20} />
+                        </Link>
+                        <h1 className="text-2xl font-extrabold">Weekly Logs API Tools</h1>
+                    </div>
+                </header>
 
                     <Card className="p-6">
                         <div className="flex items-center gap-2 mb-3">
                             <Workflow size={20} className="text-accent-rose" />
-                            <h2 className="text-xl font-semibold font-body text-text-primary">
+                            <h2 className="text-lg font-bold font-body text-text-primary">
                                 How to Use It
                             </h2>
                         </div>
@@ -285,7 +269,7 @@ export default function LogApiToolsPage() {
                                             {index + 1}
                                         </span>
                                         <div className="rounded-lg border border-border bg-bg-base p-4">
-                                            <p className="mb-2 font-medium text-text-primary">{title}</p>
+                                            <p className="mb-2 font-bold text-text-primary">{title}</p>
                                             <p>{body}</p>
                                         </div>
                                     </li>
@@ -297,7 +281,7 @@ export default function LogApiToolsPage() {
                     <Card className="p-6">
                         <div className="flex items-center gap-2 mb-3">
                             <BookOpen size={20} className="text-accent-rose" />
-                            <h2 className="text-xl font-semibold font-body text-text-primary">
+                            <h2 className="text-lg font-bold font-body text-text-primary">
                                 Weekly Log Skill
                             </h2>
                         </div>
@@ -315,7 +299,7 @@ export default function LogApiToolsPage() {
                                     <dl className="grid gap-3 text-sm">
                                         <div>
                                             <dt className="text-text-muted">Name</dt>
-                                            <dd className="font-medium text-text-primary">weekly-log</dd>
+                                            <dd className="font-bold text-text-primary">weekly-log</dd>
                                         </div>
                                         <div>
                                             <dt className="text-text-muted">Description</dt>
@@ -376,7 +360,7 @@ export default function LogApiToolsPage() {
                                     <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">
                                         Preview
                                     </p>
-                                    <pre className="overflow-x-auto text-xs md:text-sm">
+                                    <pre className="custom-scrollbar overflow-x-auto text-xs md:text-sm">
                                         <code className="whitespace-pre-wrap text-text-secondary">
                                             {weeklyLogSkillPreview}
                                         </code>
@@ -389,7 +373,7 @@ export default function LogApiToolsPage() {
                     <Card className="p-6">
                         <div className="flex items-center gap-2 mb-4">
                             <Key size={20} className="text-accent-rose" />
-                            <h2 className="text-xl font-semibold font-body text-text-primary">
+                            <h2 className="text-lg font-bold font-body text-text-primary">
                                 API Keys
                             </h2>
                         </div>
@@ -400,7 +384,7 @@ export default function LogApiToolsPage() {
                                     Copy this key now. You will not be able to see it again.
                                 </p>
                                 <div className="flex items-center gap-2">
-                                    <code className="flex-1 p-2 rounded text-sm font-mono bg-bg-base text-text-primary overflow-x-auto">
+                                    <code className="custom-scrollbar flex-1 p-2 rounded text-sm font-mono bg-bg-base text-text-primary overflow-x-auto">
                                         {newKey}
                                     </code>
                                     <Button
@@ -463,7 +447,7 @@ export default function LogApiToolsPage() {
                                         className="flex items-center justify-between p-4 rounded-lg bg-bg-hover"
                                     >
                                         <div>
-                                            <p className="font-medium text-text-primary">{key.name}</p>
+                                            <p className="font-bold text-text-primary">{key.name}</p>
                                             <p className="text-sm text-text-muted">
                                                 Created {formatDate(key.created_at)}
                                                 {key.last_used_at
@@ -487,7 +471,7 @@ export default function LogApiToolsPage() {
                     <Card className="p-6">
                         <div className="flex items-center gap-2 mb-4">
                             <BookOpen size={20} className="text-accent-rose" />
-                            <h2 className="text-xl font-semibold font-body text-text-primary">
+                            <h2 className="text-lg font-bold font-body text-text-primary">
                                 API Example
                             </h2>
                         </div>
@@ -503,7 +487,7 @@ export default function LogApiToolsPage() {
                                 after posting.
                             </p>
                         </div>
-                        <pre className="p-4 rounded-lg text-sm overflow-x-auto bg-bg-base border border-border">
+                        <pre className="custom-scrollbar p-4 rounded-lg text-sm overflow-x-auto bg-bg-base border border-border">
                             <code className="text-text-secondary">{`curl -X POST https://idea-dump-alpha.vercel.app/api/logs \\
   -H "x-api-key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
@@ -519,7 +503,6 @@ export default function LogApiToolsPage() {
                         </pre>
                     </Card>
                 </div>
-            </main>
-        </div>
+        </AppShell>
     );
 }

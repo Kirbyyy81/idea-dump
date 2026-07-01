@@ -193,7 +193,7 @@ export function ProjectForm({
                                 onClick={() => setPriority(p)}
                                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${priority === p
                                     ? p === 'high'
-                                        ? 'bg-accent-rose text-white'
+                                        ? 'bg-accent-rose text-action-primary-text'
                                         : p === 'medium'
                                             ? 'bg-accent-apricot text-bg-base'
                                             : 'bg-accent-sage text-bg-base'

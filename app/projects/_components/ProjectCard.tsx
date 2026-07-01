@@ -17,7 +17,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
             <Card hoverable className="h-full flex flex-col p-4 sm:p-6">
                 {/* Header */}
                 <div className="flex items-start justify-between gap-3 mb-3">
-                    <h3 className="font-heading font-semibold text-lg text-text-primary line-clamp-2">
+                    <h3 className="font-heading font-bold text-text-primary line-clamp-2">
                         {project.title}
                     </h3>
                     <StatusBadge status={status} />

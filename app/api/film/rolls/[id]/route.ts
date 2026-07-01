@@ -20,11 +20,11 @@ export async function GET(_request: Request, { params }: RouteParams) {
             .select(`
                 *,
                 camera:film_cameras(*),
-                photos:film_photos(*)
+                photos:film_photos!film_photos_film_roll_id_fkey(*)
             `)
             .eq('id', id)
             .eq('user_id', session.user.id)
-            .order('created_at', { referencedTable: 'film_photos', ascending: true })
+            .order('created_at', { referencedTable: 'film_photos!film_photos_film_roll_id_fkey', ascending: true })
             .maybeSingle();
 
         if (error) throw error;

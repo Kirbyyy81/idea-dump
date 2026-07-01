@@ -106,7 +106,7 @@ export default function ResetPasswordPage() {
 
                 <div className="card p-8">
                     <div className="text-center mb-8">
-                        <h1 className="text-3xl mb-2">
+                        <h1 className="text-2xl font-extrabold mb-2">
                             <span className="text-text-primary">Idea</span>
                             <span className="text-accent-rose">Dump</span>
                         </h1>
@@ -116,14 +116,14 @@ export default function ResetPasswordPage() {
                     </div>
 
                     {message && (
-                        <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 mb-6">
-                            <p className="text-sm text-emerald-400">{message}</p>
+                        <div className="p-3 rounded-lg bg-success-bg border border-success mb-6">
+                            <p className="text-sm text-success">{message}</p>
                         </div>
                     )}
 
                     {error && (
-                        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 mb-6">
-                            <p className="text-sm text-red-400">{error}</p>
+                        <div className="p-3 rounded-lg bg-error-bg border border-error mb-6">
+                            <p className="text-sm text-error">{error}</p>
                         </div>
                     )}
 

@@ -34,7 +34,7 @@ export function MinuteReaderCard() {
     return (
         <Card className="p-6 space-y-4">
             <div className="space-y-1">
-                <h2 className="text-xl font-semibold font-body text-text-primary">
+                <h2 className="text-lg font-bold font-body text-text-primary">
                     Minute Reader
                 </h2>
                 <p className="text-sm text-text-muted">
@@ -52,7 +52,7 @@ export function MinuteReaderCard() {
             <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-lg border border-border-subtle bg-bg-base p-4">
                     <p className="text-xs uppercase tracking-wide text-text-muted">Word count</p>
-                    <p className="mt-2 text-2xl font-heading text-text-primary">
+                    <p className="mt-2 text-2xl font-extrabold text-text-primary">
                         {readingTime.wordCount}
                     </p>
                 </div>
@@ -60,7 +60,7 @@ export function MinuteReaderCard() {
                     <p className="text-xs uppercase tracking-wide text-text-muted">
                         Reading time
                     </p>
-                    <p className="mt-2 text-2xl font-heading text-text-primary">
+                    <p className="mt-2 text-2xl font-extrabold text-text-primary">
                         {readingTime.label || '—'}
                     </p>
                 </div>

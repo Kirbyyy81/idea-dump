@@ -114,22 +114,22 @@ export default function TicketsPage() {
     );
 
     return (
-        <AppShell 
-            projects={projects} 
-            isLoading={isLoading} 
+        <AppShell
+            projects={projects}
+            isLoading={isLoading}
             loadingMessage="Loading tickets..."
             contentClassName="p-8"
         >
             <div className="max-w-5xl space-y-6">
                 <header className="flex items-center justify-between">
-                    <h1 className="text-3xl font-heading font-medium">My Tickets</h1>
+                    <h1 className="text-2xl font-extrabold">My Tickets</h1>
                     <Link href="/tickets/new">
                         <Button icon={<Plus size={18} />}>Raise Ticket</Button>
                     </Link>
                 </header>
 
                 {error && (
-                    <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+                    <div className="rounded-lg border border-error bg-error-bg px-4 py-3 text-sm text-error">
                         {error}
                     </div>
                 )}

@@ -47,7 +47,7 @@ export default function ArticleCreationPage() {
                 <header className="space-y-3">
                     <div className="flex items-center gap-3">
                         <div>
-                            <h1 className="text-3xl font-heading font-medium">
+                            <h1 className="text-2xl font-extrabold">
                                 Article Creation
                             </h1>
                         </div>

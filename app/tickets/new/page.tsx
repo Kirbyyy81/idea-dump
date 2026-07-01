@@ -63,10 +63,10 @@ export default function NewTicketPage() {
     return (
         <AppShell contentClassName="p-8">
             <div className="max-w-3xl space-y-6">
-                <h1 className="text-3xl font-heading font-medium">Raise Ticket</h1>
+                <h1 className="text-2xl font-extrabold">Raise Ticket</h1>
 
                 {error && (
-                    <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+                    <div className="rounded-lg border border-error bg-error-bg px-4 py-3 text-sm text-error">
                         {error}
                     </div>
                 )}

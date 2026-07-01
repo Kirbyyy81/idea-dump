@@ -61,7 +61,7 @@ export default function ProjectsPage() {
         return (
             <AppShell contentClassName="p-8">
                 <div className="flex min-h-[60vh] flex-col items-center justify-center">
-                    <p className="text-red-400 mb-4">{error}</p>
+                    <p className="text-error mb-4">{error}</p>
                     <Button onClick={() => window.location.reload()}>
                         Retry
                     </Button>
@@ -74,7 +74,7 @@ export default function ProjectsPage() {
         <AppShell projects={projects} isLoading={isLoading} loadingMessage="Loading projects...">
             <div>
                 <header className="flex items-center justify-between mb-6">
-                    <h1 className="text-3xl font-heading font-medium">Projects</h1>
+                    <h1 className="text-2xl font-extrabold">Projects</h1>
                     <Link href="/projects/new">
                         <Button icon={<Plus size={18} />}>
                             New Project
@@ -111,7 +111,7 @@ export default function ProjectsPage() {
                             className={cn(
                                 'px-3 py-1.5 rounded-full text-sm font-medium transition-colors',
                                 selectedStatus === 'all'
-                                    ? 'bg-accent-rose text-white'
+                                    ? 'bg-accent-rose text-action-primary-text'
                                     : 'bg-bg-hover text-text-secondary hover:bg-bg-subtle'
                             )}
                         >
@@ -129,7 +129,7 @@ export default function ProjectsPage() {
                                     className={cn(
                                         'px-3 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5',
                                         selectedStatus === status
-                                            ? 'bg-accent-rose text-white'
+                                            ? 'bg-accent-rose text-action-primary-text'
                                             : 'bg-bg-hover text-text-secondary hover:bg-bg-subtle'
                                     )}
                                 >

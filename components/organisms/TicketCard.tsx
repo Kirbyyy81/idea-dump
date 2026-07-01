@@ -30,7 +30,7 @@ export function TicketCard({ ticket, projectTitle, canManage = false, onEdit, on
             <div className="space-y-3">
                 <div className="flex items-start justify-between gap-4">
                     <div>
-                        <h3 className="text-text-primary font-semibold">{ticket.title}</h3>
+                        <h3 className="text-text-primary font-bold">{ticket.title}</h3>
                         {projectTitle && <p className="text-sm text-text-muted">{projectTitle}</p>}
                     </div>
                     <span className={cn('status-badge', statusStyles[ticket.status])}>

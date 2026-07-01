@@ -43,7 +43,7 @@ export function SlugImageNameCard() {
     return (
         <Card className="p-6 space-y-4">
             <div className="space-y-1">
-                <h2 className="text-xl font-semibold font-body text-text-primary">
+                <h2 className="text-lg font-bold font-body text-text-primary">
                     Slug and Meta Image Name Generator
                 </h2>
                 <p className="text-sm text-text-muted">

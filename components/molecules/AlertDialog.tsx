@@ -77,7 +77,7 @@ export function AlertDialog() {
             onClick={hideAlert}
         >
             {/* Backdrop */}
-            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+            <div className="absolute inset-0 bg-overlay-backdrop" />
 
             {/* Dialog */}
             <div
@@ -88,7 +88,7 @@ export function AlertDialog() {
                 aria-describedby="alert-message"
                 tabIndex={-1}
                 className={cn(
-                    "relative z-10 w-full max-w-md mx-4 p-6 rounded-lg shadow-xl",
+                    "relative z-10 w-full max-w-md mx-4 p-6 rounded-lg shadow-subtle",
                     "bg-bg-elevated border",
                     styles.border
                 )}
@@ -108,7 +108,7 @@ export function AlertDialog() {
                     <div className={cn("p-2 rounded-full", styles.bg)}>
                         <Icon size={24} className={styles.icon} />
                     </div>
-                    <h2 id="alert-title" className={cn("text-lg font-heading font-medium", styles.title)}>
+                    <h2 id="alert-title" className={cn("text-lg font-bold", styles.title)}>
                         {alert.title}
                     </h2>
                 </div>
