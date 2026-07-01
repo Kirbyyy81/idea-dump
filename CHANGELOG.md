@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.8.2](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.8.1...idea-dump-v0.8.2) (2026-07-01)
+
+
+### Bug Fixes
+
+* clarify ticket sidebar labels ([4f3b103](https://github.com/Kirbyyy81/idea-dump/commit/4f3b103b4903e909d92bf4ff0be1fb6164b794cb))
+* disambiguate film photos embed ([2ea075f](https://github.com/Kirbyyy81/idea-dump/commit/2ea075f9e22dc0ec5f9b3b6975f8ca03268b066c))
+* load film rolls without processing embed ([d733c39](https://github.com/Kirbyyy81/idea-dump/commit/d733c39ce64b820e3c9f9df4597a1ceb744a3907))
+* prevent control text selection ([72b7bbd](https://github.com/Kirbyyy81/idea-dump/commit/72b7bbdbaad2c2a6899389720e6640ece66765a8))
+* refine sidebar hover ([26b59de](https://github.com/Kirbyyy81/idea-dump/commit/26b59de44478eaa34c6f73dde0afa1e97924f1b5))
+* restore project notes writes ([68e3917](https://github.com/Kirbyyy81/idea-dump/commit/68e39179fcb3990042313a06d62ad3a9957d68c8))
+
 ## [0.8.1](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.8.0...idea-dump-v0.8.1) (2026-06-29)
 
 
