@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.3](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.8.2...idea-dump-v0.8.3) (2026-07-02)
+
+
+### Bug Fixes
+
+* add animation for status update ([89075e4](https://github.com/Kirbyyy81/idea-dump/commit/89075e4f4a3fe375c708a220cf75cafee88bb869))
+
 ## [0.8.2](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.8.1...idea-dump-v0.8.2) (2026-07-01)
 
 
