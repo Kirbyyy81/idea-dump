@@ -92,9 +92,9 @@ export function Sidebar({ projects }: SidebarProps) {
     const isAccessControlActive = pathname.startsWith('/settings/access');
     const moduleBySlug = new Map(modules.map((moduleRow) => [moduleRow.slug, moduleRow]));
     const getModuleLabel = (moduleSlug: AppModuleSlug, fallback: string = moduleSlug) =>
-        moduleSlug === 'api' ? 'API Docs' : moduleBySlug.get(moduleSlug)?.label ?? fallback;
+        moduleBySlug.get(moduleSlug)?.label ?? fallback;
     const getModulePath = (moduleSlug: AppModuleSlug, fallback: string) =>
-        moduleSlug === 'api' ? '/docs' : moduleBySlug.get(moduleSlug)?.path ?? fallback;
+        moduleBySlug.get(moduleSlug)?.path ?? fallback;
     const navModules = modules.filter((moduleRow) =>
         moduleRow.isManaged &&
         moduleRow.slug !== 'projects' &&

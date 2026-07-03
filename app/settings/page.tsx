@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -11,7 +12,7 @@ import {
     type CachedProfile,
     setCachedProfile,
 } from '@/lib/auth/profileCache';
-import { CheckCircle, LogOut, Pencil, Save, User as UserIcon } from 'lucide-react';
+import { BookOpen, CheckCircle, LogOut, Pencil, Save, User as UserIcon } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { APP_VERSION, LAST_UPDATED, shortVersionCode, VERSION_CODE } from '@/lib/version';
 import { Button } from '@/components/atoms/Button';
@@ -303,6 +304,27 @@ export default function SettingsPage() {
                         <p className="text-sm text-error">{error}</p>
                     </div>
                 )}
+
+                <Card className="p-6">
+                    <div className="flex items-center justify-between gap-4">
+                        <div>
+                            <div className="mb-1 flex items-center gap-2">
+                                <BookOpen size={18} className="text-accent-rose" />
+                                <h2 className="text-lg font-bold font-body text-text-primary">
+                                    API Docs
+                                </h2>
+                            </div>
+                            <p className="text-sm text-text-secondary">
+                                Review the generated API reference from settings.
+                            </p>
+                        </div>
+
+                        <Link href="/settings/docs" className="btn-secondary inline-flex items-center gap-2">
+                            <BookOpen size={16} />
+                            <span>Open docs</span>
+                        </Link>
+                    </div>
+                </Card>
 
                 <div className="pt-4 text-xs text-text-muted">
                     <p>

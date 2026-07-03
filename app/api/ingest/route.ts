@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
         }
 
         const access = await getUserAppAccess(keyData.user_id);
-        if (!canAccessModule(access, 'api')) {
+        if (!canAccessModule(access, 'projects')) {
             return createForbiddenModuleResponse();
         }
 
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
 
 // GET /api/ingest - API documentation
 export async function GET() {
-    const access = await authorizeSessionModule('api');
+    const access = await authorizeSessionModule('settings');
     if ('response' in access) {
         return access.response;
     }

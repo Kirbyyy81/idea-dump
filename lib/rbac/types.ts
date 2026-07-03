@@ -4,6 +4,7 @@ export type ModuleOverrideEffect = 'allow' | 'deny';
 
 export interface AppModuleMetadata {
     description: string | null;
+    enabled: boolean;
     icon: string | null;
     isAlwaysAllowed: boolean;
     isManaged: boolean;

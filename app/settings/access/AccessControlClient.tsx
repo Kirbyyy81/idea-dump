@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Plus, Search, X } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, Lock, Plus, Search, X } from 'lucide-react';
 import { AppModuleSlug, AppRoleSlug } from '@/lib/rbac/constants';
 import { AccessAdminRoleRecord, AccessAdminUserRecord, ModuleOverrideEffect } from '@/lib/rbac/types';
 import { Badge } from '@/components/atoms/Badge';
@@ -16,6 +16,7 @@ import {
     createRole as createRoleAction,
     getAccessAdminData,
     saveRoleModules,
+    saveModuleVisibility as saveModuleVisibilityAction,
     saveUserAccess,
 } from './actions';
 
@@ -43,6 +44,8 @@ const DEFAULT_NEW_ROLE: NewRoleDraft = {
     role: '',
     modules: [],
 };
+
+const PROTECTED_MODULE_SLUGS: AppModuleSlug[] = ['dashboard', 'settings', 'access_control'];
 
 function getUserLabel(user: AccessAdminUserRecord) {
     return user.displayName || user.email || user.id;
@@ -72,6 +75,7 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
     const { showSuccess } = useAlert();
     const [data, setData] = useState<AccessUsersResponse>(initialData);
     const [error, setError] = useState<string | null>(null);
+    const [savingModuleSlug, setSavingModuleSlug] = useState<AppModuleSlug | null>(null);
     const [savingRole, setSavingRole] = useState<AppRoleSlug | null>(null);
     const [savingUserId, setSavingUserId] = useState<string | null>(null);
     const [search, setSearch] = useState('');
@@ -87,22 +91,9 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
         setData(fresh);
     }
 
-    const filteredUsers = useMemo(() => {
-        if (!data) return [];
-
-        const query = search.trim().toLowerCase();
-        if (!query) return data.users;
-
-        return data.users.filter((user) =>
-            [user.displayName, user.email, user.role]
-                .filter(Boolean)
-                .some((value) => String(value).toLowerCase().includes(query))
-        );
-    }, [data, search]);
-
     const moduleSlugs = useMemo(() => data?.modules.map((moduleRow) => moduleRow.slug) ?? [], [data]);
     const moduleLabels = useMemo(
-        () => new Map(data?.modules.map((moduleRow) => [moduleRow.slug, moduleRow.label]) ?? []),
+        () => new Map(data?.allModules.map((moduleRow) => [moduleRow.slug, moduleRow.label]) ?? []),
         [data]
     );
     const getModuleLabel = (moduleSlug: AppModuleSlug) => moduleLabels.get(moduleSlug) ?? moduleSlug;
@@ -113,7 +104,55 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
     const getUserDraft = (user: AccessAdminUserRecord) =>
         userDrafts[user.id] ?? { overrides: { ...user.overrides }, role: user.role };
 
+    const searchQuery = search.trim().toLowerCase();
+    const moduleSearchText = (moduleSlug: AppModuleSlug) => {
+        const moduleRow = data.allModules.find((row) => row.slug === moduleSlug);
+        return [
+            moduleRow?.label,
+            moduleRow?.slug,
+            moduleRow?.description,
+        ]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase();
+    };
+    const moduleMatchesSearch = (moduleSlug: AppModuleSlug) =>
+        Boolean(searchQuery && moduleSearchText(moduleSlug).includes(searchQuery));
+
+    const filteredModules = useMemo(() => {
+        if (!searchQuery) return data.allModules;
+
+        return data.allModules.filter((moduleRow) =>
+            [moduleRow.label, moduleRow.slug, moduleRow.description, moduleRow.enabled ? 'enabled' : 'hidden']
+                .filter(Boolean)
+                .some((value) => String(value).toLowerCase().includes(searchQuery))
+        );
+    }, [data.allModules, searchQuery]);
+
+    const filteredRoleAssignments = searchQuery
+        ? data.roleAssignments.filter((roleRecord) =>
+            roleRecord.role.toLowerCase().includes(searchQuery) ||
+            getRoleDraft(roleRecord).some((moduleSlug) => moduleMatchesSearch(moduleSlug))
+        )
+        : data.roleAssignments;
+
+    const filteredUsers = searchQuery
+        ? data.users.filter((user) => {
+            const draft = getUserDraft(user);
+            const matchingUserText = [user.displayName, user.email, user.role, draft.role]
+                .filter(Boolean)
+                .some((value) => String(value).toLowerCase().includes(searchQuery));
+            const matchingAllowedModule = user.allowedModules.some((moduleSlug) => moduleMatchesSearch(moduleSlug));
+            const matchingOverrideModule = Object.keys(draft.overrides).some((moduleSlug) =>
+                moduleMatchesSearch(moduleSlug as AppModuleSlug)
+            );
+
+            return matchingUserText || matchingAllowedModule || matchingOverrideModule;
+        })
+        : data.users;
+
     const getNewOverrideDraft = (userId: string) => newOverrideDrafts[userId] ?? DEFAULT_NEW_OVERRIDE;
+    const isProtectedModule = (moduleSlug: AppModuleSlug) => PROTECTED_MODULE_SLUGS.includes(moduleSlug);
 
     const toggleRoleModule = (role: AppRoleSlug, moduleSlug: AppModuleSlug) => {
         setRoleDrafts((current) => {
@@ -220,6 +259,25 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
         }
     };
 
+    const saveModuleVisibility = async (moduleSlug: AppModuleSlug, enabled: boolean) => {
+        const moduleRow = data.allModules.find((row) => row.slug === moduleSlug);
+        setSavingModuleSlug(moduleSlug);
+        setError(null);
+
+        try {
+            await saveModuleVisibilityAction(moduleSlug, enabled);
+            await reloadData();
+            showSuccess(
+                `${moduleRow?.label ?? moduleSlug} is now ${enabled ? 'enabled' : 'hidden'}.`,
+                'Module visibility saved'
+            );
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to update module visibility');
+        } finally {
+            setSavingModuleSlug(null);
+        }
+    };
+
     const createRole = async () => {
         const role = newRoleDraft.role.trim();
         if (!role) {
@@ -278,7 +336,7 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
     };
 
     return (
-        <div className="mx-auto min-h-screen max-w-7xl space-y-8 p-8">
+        <div className="mx-auto min-h-screen max-w-7xl space-y-5 p-6">
             <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                     <Link
@@ -295,7 +353,7 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                     <Input
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Search users"
+                        placeholder="Search users or modules"
                         className="pl-9"
                     />
                 </div>
@@ -309,7 +367,80 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
 
             <Card className="overflow-hidden rounded-2xl p-0">
                 <div className="border-b border-border-default bg-bg-hover px-6 py-3">
-                    <div className="grid grid-cols-[180px_minmax(0,1fr)_110px] items-center gap-4 text-xs uppercase tracking-wide text-text-muted">
+                    <div className="grid grid-cols-[minmax(0,1fr)_120px_120px] items-center gap-4 text-xs uppercase tracking-wide text-text-muted">
+                        <span>Module visibility</span>
+                        <span>Status</span>
+                        <span className="text-right">Action</span>
+                    </div>
+                </div>
+
+                <div>
+                    {filteredModules.map((moduleRow) => {
+                        const isProtected = isProtectedModule(moduleRow.slug);
+                        const isSaving = savingModuleSlug === moduleRow.slug;
+
+                        return (
+                            <div
+                                key={`visibility-${moduleRow.slug}`}
+                                className={`grid grid-cols-[minmax(0,1fr)_108px_96px] items-center gap-3 border-b border-border-default px-5 py-3 last:border-b-0 hover:bg-bg-hover ${
+                                    moduleRow.enabled ? '' : 'bg-bg-subtle text-text-muted'
+                                }`}
+                            >
+                                <div className="min-w-0">
+                                    <div className="flex items-center gap-2">
+                                        <p className="truncate font-bold text-text-primary">{moduleRow.label}</p>
+                                        {isProtected && <Lock size={14} className="shrink-0 text-text-muted" />}
+                                    </div>
+                                    {moduleRow.description && (
+                                        <p className="mt-0.5 line-clamp-1 text-xs text-text-secondary">
+                                            {moduleRow.description}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <Badge
+                                        variant={moduleRow.enabled ? 'complete' : 'archived'}
+                                        className="capitalize"
+                                    >
+                                        {moduleRow.enabled ? 'Enabled' : 'Hidden'}
+                                    </Badge>
+                                </div>
+
+                                <div className="flex justify-end">
+                                    {isProtected ? (
+                                        <Button
+                                            type="button"
+                                            variant="secondary"
+                                            disabled
+                                            icon={<Lock size={14} />}
+                                            className="h-8 px-3 text-xs"
+                                        >
+                                            Locked
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            type="button"
+                                            variant={moduleRow.enabled ? 'secondary' : 'primary'}
+                                            onClick={() => saveModuleVisibility(moduleRow.slug, !moduleRow.enabled)}
+                                            isLoading={isSaving}
+                                            disabled={isSaving}
+                                            icon={moduleRow.enabled ? <EyeOff size={14} /> : <Eye size={14} />}
+                                            className="h-8 px-3 text-xs"
+                                        >
+                                            {moduleRow.enabled ? 'Hide' : 'Show'}
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </Card>
+
+            <Card className="overflow-hidden rounded-2xl p-0">
+                <div className="border-b border-border-default bg-bg-hover px-6 py-3">
+                    <div className="grid grid-cols-[150px_minmax(0,1fr)_86px] items-center gap-4 text-xs uppercase tracking-wide text-text-muted">
                         <span>Role</span>
                         <span>Modules</span>
                         <div className="flex justify-end">
@@ -327,7 +458,7 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
 
                 <div>
                     {showNewRoleRow && (
-                        <div className="grid grid-cols-[180px_minmax(0,1fr)_110px] items-start gap-4 border-b border-border-default px-6 py-4">
+                        <div className="grid grid-cols-[150px_minmax(0,1fr)_112px] items-start gap-4 border-b border-border-default px-5 py-3">
                             <div className="space-y-2 pt-0.5">
                                 <span className="text-xs uppercase tracking-[0.14em] text-text-muted">New role</span>
                                 <Input
@@ -339,11 +470,11 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                                         }))
                                     }
                                     placeholder="e.g. editor"
-                                    className="h-10"
+                                    className="h-9"
                                 />
                             </div>
 
-                            <div className="flex flex-wrap gap-2 pt-6">
+                            <div className="flex flex-wrap gap-1.5 pt-6">
                                 {data?.modules.map((moduleRow) => {
                                     const selected = newRoleDraft.modules.includes(moduleRow.slug);
 
@@ -352,7 +483,7 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                                             key={`new-role-${moduleRow.slug}`}
                                             type="button"
                                             onClick={() => toggleNewRoleModule(moduleRow.slug)}
-                                            className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
+                                            className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${
                                                 selected
                                                     ? 'border-accent-rose bg-accent-rose/10 text-accent-rose'
                                                     : 'border-border-default bg-transparent text-text-secondary hover:border-border-strong hover:text-text-primary'
@@ -370,7 +501,7 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                                     variant="ghost"
                                     onClick={cancelCreateRole}
                                     disabled={isCreatingRole}
-                                    className="h-9 px-4 text-xs"
+                                    className="h-8 px-3 text-xs"
                                 >
                                     Cancel
                                 </Button>
@@ -379,7 +510,7 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                                     onClick={createRole}
                                     isLoading={isCreatingRole}
                                     disabled={isCreatingRole}
-                                    className="h-9 px-4 text-xs"
+                                    className="h-8 px-3 text-xs"
                                 >
                                     Create
                                 </Button>
@@ -387,13 +518,13 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                         </div>
                     )}
 
-                    {data?.roleAssignments.map((roleRecord) => {
+                    {filteredRoleAssignments.map((roleRecord) => {
                         const draftModules = getRoleDraft(roleRecord);
 
                         return (
                             <div
                                 key={roleRecord.role}
-                                className="grid grid-cols-[180px_minmax(0,1fr)_110px] items-start gap-4 border-b border-border-default px-6 py-4 last:border-b-0 hover:bg-bg-hover"
+                                className="grid grid-cols-[150px_minmax(0,1fr)_86px] items-start gap-4 border-b border-border-default px-5 py-3 last:border-b-0 hover:bg-bg-hover"
                             >
                                 <div className="pt-1">
                                     <span className="font-bold uppercase tracking-[0.14em] text-text-primary">
@@ -401,7 +532,7 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                                     </span>
                                 </div>
 
-                                <div className="flex flex-wrap gap-2">
+                                <div className="flex flex-wrap gap-1.5">
                                     {data.modules.map((moduleRow) => {
                                         const selected = draftModules.includes(moduleRow.slug);
 
@@ -410,7 +541,7 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                                                 key={`${roleRecord.role}-${moduleRow.slug}`}
                                                 type="button"
                                                 onClick={() => toggleRoleModule(roleRecord.role, moduleRow.slug)}
-                                                className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
+                                                className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${
                                                     selected
                                                         ? 'border-accent-rose bg-accent-rose/10 text-accent-rose'
                                                         : 'border-border-default bg-transparent text-text-secondary hover:border-border-strong hover:text-text-primary'
@@ -427,7 +558,7 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                                         onClick={() => saveRole(roleRecord)}
                                         isLoading={savingRole === roleRecord.role}
                                         disabled={savingRole === roleRecord.role}
-                                        className="h-9 px-4 text-xs"
+                                        className="h-8 px-3 text-xs"
                                     >
                                         Save
                                     </Button>
@@ -440,7 +571,7 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
 
             <Card className="overflow-hidden rounded-2xl p-0">
                 <div className="border-b border-border-default bg-bg-hover px-6 py-3">
-                    <div className="grid grid-cols-[minmax(0,1.4fr)_180px_minmax(0,1.2fr)_110px] items-center gap-4 text-xs uppercase tracking-wide text-text-muted">
+                    <div className="grid grid-cols-[minmax(0,1.2fr)_150px_minmax(0,1.5fr)_80px] items-center gap-3 text-xs uppercase tracking-wide text-text-muted">
                         <span>User</span>
                         <span>Role</span>
                         <span>Exceptions</span>
@@ -463,10 +594,10 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                         return (
                             <div
                                 key={user.id}
-                                className="grid grid-cols-[minmax(0,1.4fr)_180px_minmax(0,1.2fr)_110px] items-start gap-4 border-b border-border-default px-6 py-4 last:border-b-0 hover:bg-bg-hover"
+                                className="grid grid-cols-[minmax(0,1.2fr)_150px_minmax(0,1.5fr)_80px] items-start gap-3 border-b border-border-default px-5 py-3 last:border-b-0 hover:bg-bg-hover"
                             >
-                                <div className="flex min-w-0 items-center gap-3">
-                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border-default bg-bg-hover text-xs font-semibold uppercase text-text-primary">
+                                <div className="flex min-w-0 items-center gap-2.5">
+                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border-default bg-bg-hover text-[11px] font-semibold uppercase text-text-primary">
                                         {getInitials(userLabel)}
                                     </div>
                                     <div className="min-w-0">
@@ -480,18 +611,18 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                                         value={draft.role}
                                         onChange={(nextValue) => updateUserRole(user, nextValue as AppRoleSlug)}
                                         className="min-w-[160px]"
-                                        buttonClassName="h-10 text-sm"
+                                        buttonClassName="h-8 text-sm"
                                         options={(data?.roles ?? []).map((role) => ({ value: role, label: role }))}
                                     />
                                 </div>
 
-                                <div className="space-y-3">
+                                <div className="flex flex-wrap items-center gap-2">
                                     {overrideEntries.length > 0 ? (
-                                        <div className="space-y-2">
+                                        <>
                                             {overrideEntries.map((moduleSlug) => (
                                                 <div
                                                     key={`${user.id}-${moduleSlug}`}
-                                                    className="flex items-center gap-2 rounded-xl border border-border-default bg-bg-hover px-3 py-2"
+                                                    className="flex items-center gap-1.5 rounded-lg border border-border-default bg-bg-hover px-2 py-1"
                                                 >
                                                     <Badge className="shrink-0">{getModuleLabel(moduleSlug)}</Badge>
                                                     <Select
@@ -503,7 +634,7 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                                                                 nextValue as ModuleOverrideEffect
                                                             )
                                                         }
-                                                        className="min-w-[110px]"
+                                                        className="min-w-[96px]"
                                                         buttonClassName="h-8 border-0 bg-transparent px-2 text-xs"
                                                         options={[
                                                             { value: 'allow', label: 'Allow' },
@@ -513,22 +644,22 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                                                     <button
                                                         type="button"
                                                         onClick={() => removeUserOverride(user, moduleSlug)}
-                                                        className="ml-auto rounded-full p-1 text-text-muted transition-colors hover:bg-bg-hover hover:text-text-primary"
+                                                        className="rounded-full p-1 text-text-muted transition-colors hover:bg-bg-hover hover:text-text-primary"
                                                         aria-label={`Remove ${getModuleLabel(moduleSlug)} override`}
                                                     >
                                                         <X size={14} />
                                                     </button>
                                                 </div>
                                             ))}
-                                        </div>
+                                        </>
                                     ) : (
-                                        <span className="inline-flex h-10 items-center text-sm text-text-muted">
+                                        <span className="inline-flex h-9 items-center text-sm text-text-muted">
                                             None
                                         </span>
                                     )}
 
                                     {availableModules.length > 0 && (
-                                        <div className="flex flex-wrap items-center gap-2">
+                                        <>
                                             <Select
                                                 value={newOverride.module}
                                                 onChange={(nextValue) =>
@@ -538,8 +669,8 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                                                         nextValue as AppModuleSlug | ''
                                                     )
                                                 }
-                                                className="min-w-[150px]"
-                                                buttonClassName="h-9 text-xs"
+                                                className="min-w-[132px]"
+                                                buttonClassName="h-8 text-xs"
                                                 options={[
                                                     { value: '', label: 'Add module' },
                                                     ...availableModules.map((moduleRow) => ({
@@ -557,8 +688,8 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                                                         nextValue as ModuleOverrideEffect
                                                     )
                                                 }
-                                                className="min-w-[110px]"
-                                                buttonClassName="h-9 text-xs"
+                                                className="min-w-[96px]"
+                                                buttonClassName="h-8 text-xs"
                                                 options={[
                                                     { value: 'allow', label: 'Allow' },
                                                     { value: 'deny', label: 'Deny' },
@@ -568,12 +699,12 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                                                 type="button"
                                                 variant="ghost"
                                                 onClick={() => addUserOverride(user)}
-                                                className="h-9 px-3 text-xs"
+                                                className="h-8 px-2.5 text-xs"
                                                 icon={<Plus size={14} />}
                                             >
                                                 Add
                                             </Button>
-                                        </div>
+                                        </>
                                     )}
                                 </div>
 
@@ -582,7 +713,7 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                                         onClick={() => saveUser(user)}
                                         isLoading={savingUserId === user.id}
                                         disabled={savingUserId === user.id}
-                                        className="h-9 px-4 text-xs"
+                                        className="h-8 px-3 text-xs"
                                     >
                                         Save
                                     </Button>

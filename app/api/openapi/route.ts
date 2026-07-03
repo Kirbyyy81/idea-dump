@@ -5,7 +5,7 @@ import { authorizeSessionModule } from '@/lib/rbac/guards';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-    const access = await authorizeSessionModule('api');
+    const access = await authorizeSessionModule('settings');
     if ('response' in access) {
         return access.response;
     }

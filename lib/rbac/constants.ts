@@ -8,7 +8,6 @@ export const APP_MODULE_SLUGS = [
     'tickets',
     'logs',
     'log_viewer',
-    'api',
     'access_control',
     'article_creation',
     'film_journal',

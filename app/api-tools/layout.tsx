@@ -6,6 +6,6 @@ export default async function ApiToolsLayout({
 }: {
     children: React.ReactNode;
 }) {
-    const session = await requirePageModuleAccess('api');
+    const session = await requirePageModuleAccess('logs');
     return <AccessProvider access={session.access}>{children}</AccessProvider>;
 }

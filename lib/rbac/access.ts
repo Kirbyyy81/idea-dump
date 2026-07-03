@@ -219,6 +219,23 @@ export async function getAppModules(): Promise<AppModuleMetadata[]> {
         .filter((moduleRow): moduleRow is AppModuleMetadata => Boolean(moduleRow));
 }
 
+export async function getAllAppModules(): Promise<AppModuleMetadata[]> {
+    const admin = createAdminClient();
+    const { data, error } = await admin
+        .from('DIM_modules')
+        .select('modules, name, path, sort_order, is_managed, is_always_allowed, icon, description, enabled')
+        .order('sort_order', { ascending: true })
+        .order('name', { ascending: true });
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    return ((data || []) as ModuleRow[])
+        .map(toModuleMetadata)
+        .filter((moduleRow): moduleRow is AppModuleMetadata => Boolean(moduleRow));
+}
+
 export async function getManagedAppModules(): Promise<AppModuleMetadata[]> {
     return (await getAppModules()).filter((moduleRow) => moduleRow.isManaged);
 }
@@ -266,6 +283,7 @@ function toModuleMetadata(row: ModuleRow): AppModuleMetadata | null {
 
     return {
         description: row.description,
+        enabled: Boolean(row.enabled),
         icon: row.icon,
         isAlwaysAllowed: Boolean(row.is_always_allowed),
         isManaged: Boolean(row.is_managed),
