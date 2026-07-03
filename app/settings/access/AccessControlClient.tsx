@@ -91,22 +91,9 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
         setData(fresh);
     }
 
-    const filteredUsers = useMemo(() => {
-        if (!data) return [];
-
-        const query = search.trim().toLowerCase();
-        if (!query) return data.users;
-
-        return data.users.filter((user) =>
-            [user.displayName, user.email, user.role]
-                .filter(Boolean)
-                .some((value) => String(value).toLowerCase().includes(query))
-        );
-    }, [data, search]);
-
     const moduleSlugs = useMemo(() => data?.modules.map((moduleRow) => moduleRow.slug) ?? [], [data]);
     const moduleLabels = useMemo(
-        () => new Map(data?.modules.map((moduleRow) => [moduleRow.slug, moduleRow.label]) ?? []),
+        () => new Map(data?.allModules.map((moduleRow) => [moduleRow.slug, moduleRow.label]) ?? []),
         [data]
     );
     const getModuleLabel = (moduleSlug: AppModuleSlug) => moduleLabels.get(moduleSlug) ?? moduleSlug;
@@ -116,6 +103,53 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
 
     const getUserDraft = (user: AccessAdminUserRecord) =>
         userDrafts[user.id] ?? { overrides: { ...user.overrides }, role: user.role };
+
+    const searchQuery = search.trim().toLowerCase();
+    const moduleSearchText = (moduleSlug: AppModuleSlug) => {
+        const moduleRow = data.allModules.find((row) => row.slug === moduleSlug);
+        return [
+            moduleRow?.label,
+            moduleRow?.slug,
+            moduleRow?.description,
+        ]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase();
+    };
+    const moduleMatchesSearch = (moduleSlug: AppModuleSlug) =>
+        Boolean(searchQuery && moduleSearchText(moduleSlug).includes(searchQuery));
+
+    const filteredModules = useMemo(() => {
+        if (!searchQuery) return data.allModules;
+
+        return data.allModules.filter((moduleRow) =>
+            [moduleRow.label, moduleRow.slug, moduleRow.description, moduleRow.enabled ? 'enabled' : 'hidden']
+                .filter(Boolean)
+                .some((value) => String(value).toLowerCase().includes(searchQuery))
+        );
+    }, [data.allModules, searchQuery]);
+
+    const filteredRoleAssignments = searchQuery
+        ? data.roleAssignments.filter((roleRecord) =>
+            roleRecord.role.toLowerCase().includes(searchQuery) ||
+            getRoleDraft(roleRecord).some((moduleSlug) => moduleMatchesSearch(moduleSlug))
+        )
+        : data.roleAssignments;
+
+    const filteredUsers = searchQuery
+        ? data.users.filter((user) => {
+            const draft = getUserDraft(user);
+            const matchingUserText = [user.displayName, user.email, user.role, draft.role]
+                .filter(Boolean)
+                .some((value) => String(value).toLowerCase().includes(searchQuery));
+            const matchingAllowedModule = user.allowedModules.some((moduleSlug) => moduleMatchesSearch(moduleSlug));
+            const matchingOverrideModule = Object.keys(draft.overrides).some((moduleSlug) =>
+                moduleMatchesSearch(moduleSlug as AppModuleSlug)
+            );
+
+            return matchingUserText || matchingAllowedModule || matchingOverrideModule;
+        })
+        : data.users;
 
     const getNewOverrideDraft = (userId: string) => newOverrideDrafts[userId] ?? DEFAULT_NEW_OVERRIDE;
     const isProtectedModule = (moduleSlug: AppModuleSlug) => PROTECTED_MODULE_SLUGS.includes(moduleSlug);
@@ -319,7 +353,7 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                     <Input
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Search users"
+                        placeholder="Search users or modules"
                         className="pl-9"
                     />
                 </div>
@@ -341,7 +375,7 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                 </div>
 
                 <div>
-                    {data.allModules.map((moduleRow) => {
+                    {filteredModules.map((moduleRow) => {
                         const isProtected = isProtectedModule(moduleRow.slug);
                         const isSaving = savingModuleSlug === moduleRow.slug;
 
@@ -484,7 +518,7 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                         </div>
                     )}
 
-                    {data?.roleAssignments.map((roleRecord) => {
+                    {filteredRoleAssignments.map((roleRecord) => {
                         const draftModules = getRoleDraft(roleRecord);
 
                         return (
