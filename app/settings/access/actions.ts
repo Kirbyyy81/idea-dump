@@ -3,16 +3,21 @@
 import {
     canAccessModule,
     getDisplayName,
+    getAllAppModules,
     getManagedAppModules,
     getRoleModuleAssignments,
     getSessionUserAppAccess,
     getUserAppAccess,
+    isAppModuleSlug,
 } from '@/lib/rbac/access';
 import { AppModuleSlug } from '@/lib/rbac/constants';
 import { AccessAdminRoleRecord, AccessAdminUserRecord, AppModuleMetadata, ModuleOverrideEffect } from '@/lib/rbac/types';
 import { createAdminClient } from '@/lib/supabase/admin';
 
+const PROTECTED_MODULE_SLUGS: AppModuleSlug[] = ['dashboard', 'settings', 'access_control'];
+
 export interface AccessUsersResponse {
+    allModules: AppModuleMetadata[];
     modules: AppModuleMetadata[];
     roleAssignments: AccessAdminRoleRecord[];
     roles: string[];
@@ -45,7 +50,8 @@ export async function getAccessAdminData(): Promise<AccessUsersResponse> {
         throw new Error(error.message || 'Failed to load users');
     }
 
-    const [modules, roleAssignments, roleRows, users] = await Promise.all([
+    const [allModules, modules, roleAssignments, roleRows, users] = await Promise.all([
+        getAllAppModules(),
         getManagedAppModules(),
         getRoleModuleAssignments(),
         admin.from('DIM_roles').select('role').order('role', { ascending: true }),
@@ -75,6 +81,7 @@ export async function getAccessAdminData(): Promise<AccessUsersResponse> {
     ];
 
     return {
+        allModules,
         modules,
         roleAssignments: roleAssignments satisfies AccessAdminRoleRecord[],
         roles: orderedRoles,
@@ -156,6 +163,33 @@ export async function saveRoleModules(role: string, modules: string[]): Promise<
 
     if (deleteError) {
         throw new Error(deleteError.message || 'Failed to update role modules');
+    }
+
+    return { success: true };
+}
+
+export async function saveModuleVisibility(
+    moduleSlug: string,
+    enabled: boolean
+): Promise<{ success: true }> {
+    await requireAccessAdmin();
+
+    if (!isAppModuleSlug(moduleSlug)) {
+        throw new Error('Invalid module');
+    }
+
+    if (!enabled && PROTECTED_MODULE_SLUGS.includes(moduleSlug)) {
+        throw new Error('This module cannot be hidden');
+    }
+
+    const admin = createAdminClient();
+    const { error } = await admin
+        .from('DIM_modules')
+        .update({ enabled })
+        .eq('modules', moduleSlug);
+
+    if (error) {
+        throw new Error(error.message || 'Failed to update module visibility');
     }
 
     return { success: true };

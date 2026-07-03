@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Plus, Search, X } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, Lock, Plus, Search, X } from 'lucide-react';
 import { AppModuleSlug, AppRoleSlug } from '@/lib/rbac/constants';
 import { AccessAdminRoleRecord, AccessAdminUserRecord, ModuleOverrideEffect } from '@/lib/rbac/types';
 import { Badge } from '@/components/atoms/Badge';
@@ -16,6 +16,7 @@ import {
     createRole as createRoleAction,
     getAccessAdminData,
     saveRoleModules,
+    saveModuleVisibility as saveModuleVisibilityAction,
     saveUserAccess,
 } from './actions';
 
@@ -43,6 +44,8 @@ const DEFAULT_NEW_ROLE: NewRoleDraft = {
     role: '',
     modules: [],
 };
+
+const PROTECTED_MODULE_SLUGS: AppModuleSlug[] = ['dashboard', 'settings', 'access_control'];
 
 function getUserLabel(user: AccessAdminUserRecord) {
     return user.displayName || user.email || user.id;
@@ -72,6 +75,7 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
     const { showSuccess } = useAlert();
     const [data, setData] = useState<AccessUsersResponse>(initialData);
     const [error, setError] = useState<string | null>(null);
+    const [savingModuleSlug, setSavingModuleSlug] = useState<AppModuleSlug | null>(null);
     const [savingRole, setSavingRole] = useState<AppRoleSlug | null>(null);
     const [savingUserId, setSavingUserId] = useState<string | null>(null);
     const [search, setSearch] = useState('');
@@ -114,6 +118,7 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
         userDrafts[user.id] ?? { overrides: { ...user.overrides }, role: user.role };
 
     const getNewOverrideDraft = (userId: string) => newOverrideDrafts[userId] ?? DEFAULT_NEW_OVERRIDE;
+    const isProtectedModule = (moduleSlug: AppModuleSlug) => PROTECTED_MODULE_SLUGS.includes(moduleSlug);
 
     const toggleRoleModule = (role: AppRoleSlug, moduleSlug: AppModuleSlug) => {
         setRoleDrafts((current) => {
@@ -220,6 +225,25 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
         }
     };
 
+    const saveModuleVisibility = async (moduleSlug: AppModuleSlug, enabled: boolean) => {
+        const moduleRow = data.allModules.find((row) => row.slug === moduleSlug);
+        setSavingModuleSlug(moduleSlug);
+        setError(null);
+
+        try {
+            await saveModuleVisibilityAction(moduleSlug, enabled);
+            await reloadData();
+            showSuccess(
+                `${moduleRow?.label ?? moduleSlug} is now ${enabled ? 'enabled' : 'hidden'}.`,
+                'Module visibility saved'
+            );
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to update module visibility');
+        } finally {
+            setSavingModuleSlug(null);
+        }
+    };
+
     const createRole = async () => {
         const role = newRoleDraft.role.trim();
         if (!role) {
@@ -306,6 +330,79 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                     <p className="text-sm text-error">{error}</p>
                 </div>
             )}
+
+            <Card className="overflow-hidden rounded-2xl p-0">
+                <div className="border-b border-border-default bg-bg-hover px-6 py-3">
+                    <div className="grid grid-cols-[minmax(0,1fr)_120px_120px] items-center gap-4 text-xs uppercase tracking-wide text-text-muted">
+                        <span>Module visibility</span>
+                        <span>Status</span>
+                        <span className="text-right">Action</span>
+                    </div>
+                </div>
+
+                <div>
+                    {data.allModules.map((moduleRow) => {
+                        const isProtected = isProtectedModule(moduleRow.slug);
+                        const isSaving = savingModuleSlug === moduleRow.slug;
+
+                        return (
+                            <div
+                                key={`visibility-${moduleRow.slug}`}
+                                className={`grid grid-cols-[minmax(0,1fr)_120px_120px] items-center gap-4 border-b border-border-default px-6 py-4 last:border-b-0 hover:bg-bg-hover ${
+                                    moduleRow.enabled ? '' : 'bg-bg-subtle text-text-muted'
+                                }`}
+                            >
+                                <div className="min-w-0">
+                                    <div className="flex items-center gap-2">
+                                        <p className="truncate font-bold text-text-primary">{moduleRow.label}</p>
+                                        {isProtected && <Lock size={14} className="shrink-0 text-text-muted" />}
+                                    </div>
+                                    {moduleRow.description && (
+                                        <p className="mt-1 line-clamp-2 text-sm text-text-secondary">
+                                            {moduleRow.description}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <Badge
+                                        variant={moduleRow.enabled ? 'complete' : 'archived'}
+                                        className="capitalize"
+                                    >
+                                        {moduleRow.enabled ? 'Enabled' : 'Hidden'}
+                                    </Badge>
+                                </div>
+
+                                <div className="flex justify-end">
+                                    {isProtected ? (
+                                        <Button
+                                            type="button"
+                                            variant="secondary"
+                                            disabled
+                                            icon={<Lock size={14} />}
+                                            className="h-9 px-4 text-xs"
+                                        >
+                                            Locked
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            type="button"
+                                            variant={moduleRow.enabled ? 'secondary' : 'primary'}
+                                            onClick={() => saveModuleVisibility(moduleRow.slug, !moduleRow.enabled)}
+                                            isLoading={isSaving}
+                                            disabled={isSaving}
+                                            icon={moduleRow.enabled ? <EyeOff size={14} /> : <Eye size={14} />}
+                                            className="h-9 px-4 text-xs"
+                                        >
+                                            {moduleRow.enabled ? 'Hide' : 'Show'}
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </Card>
 
             <Card className="overflow-hidden rounded-2xl p-0">
                 <div className="border-b border-border-default bg-bg-hover px-6 py-3">
