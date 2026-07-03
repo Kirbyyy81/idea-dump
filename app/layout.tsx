@@ -1,8 +1,9 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 import { AlertProvider } from '@/lib/contexts/AlertContext';
 import { AlertDialog } from '@/components/molecules/AlertDialog';
+import { PwaRegister } from '@/components/molecules/PwaRegister';
 
 const plusJakartaSans = Plus_Jakarta_Sans({
     subsets: ['latin'],
@@ -11,15 +12,26 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
+    applicationName: 'IdeaDump',
     title: 'IdeaDump',
     description: 'All in one stop for random ideas',
+    manifest: '/manifest.webmanifest',
     icons: {
         icon: [
-            { url: '/logo.png', sizes: '32x32', type: 'image/png' },
-            { url: '/logo.png', sizes: '16x16', type: 'image/png' },
+            { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+            { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
         ],
-        apple: '/logo.png',
+        apple: '/icon-192.png',
     },
+    appleWebApp: {
+        capable: true,
+        statusBarStyle: 'default',
+        title: 'IdeaDump',
+    },
+};
+
+export const viewport: Viewport = {
+    themeColor: '#F8F5EF',
 };
 
 export default function RootLayout({
@@ -34,6 +46,7 @@ export default function RootLayout({
                     {children}
                     <AlertDialog />
                 </AlertProvider>
+                <PwaRegister />
             </body>
         </html>
     );
