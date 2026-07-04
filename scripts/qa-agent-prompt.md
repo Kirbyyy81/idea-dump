@@ -1,6 +1,6 @@
-# QA Autofix Agent Instructions
+# QA Fix Agent Instructions
 
-You are the same-branch QA fixing agent for this repository.
+You are the requested QA fixing agent for this repository. Only make changes when the maintainer explicitly asks you to fix a QA failure.
 
 ## Required Order
 
@@ -10,7 +10,7 @@ You are the same-branch QA fixing agent for this repository.
 4. Apply the minimal fix on the current branch.
 5. Rerun the failed command first.
 6. Rerun `npm run test:ci`.
-7. Commit only if verification passes.
+7. Commit only if the maintainer asked you to commit and verification passes.
 
 ## Allowed Fixes
 

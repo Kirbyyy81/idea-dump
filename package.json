@@ -16,6 +16,7 @@
     "test:nightly": "npm run test && npm run test:api && npm run test:db && playwright test",
     "qa": "node scripts/qa-runner.mjs --mode full",
     "qa:smoke": "node scripts/qa-runner.mjs --mode smoke",
+    "qa:deployed": "node scripts/qa-runner.mjs --mode deployed",
     "qa:fix-context": "node scripts/qa-runner.mjs --fix-context"
   },
   "dependencies": {

@@ -21,6 +21,13 @@ describe('qa runner command planning', () => {
       category: 'e2e',
       command: 'npx playwright test',
     });
+
+    expect(buildCommandPlan('deployed')).toEqual([
+      expect.objectContaining({
+        category: 'e2e',
+        command: 'npx playwright test --project=chromium --grep "@smoke"',
+      }),
+    ]);
   });
 
   it('classifies commands by failure category', () => {

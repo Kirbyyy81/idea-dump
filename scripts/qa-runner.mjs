@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -63,6 +62,10 @@ export function buildCommandPlan(mode = 'full') {
 
   if (mode === 'full') {
     return [...common, COMMANDS.e2eFull].map((step) => ({ ...step }));
+  }
+
+  if (mode === 'deployed') {
+    return [COMMANDS.e2eSmoke].map((step) => ({ ...step }));
   }
 
   throw new Error(`Unknown QA mode: ${mode}`);
