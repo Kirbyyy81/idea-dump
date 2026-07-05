@@ -144,6 +144,25 @@ If `npm` is easier to run through Git Bash on your machine, the repo includes a 
 - `/api/tickets`
 - `/api/film/*`
 
+## QA And Regression Automation
+
+Use these commands when a coding agent or maintainer needs to verify a change:
+
+```bash
+npm run qa:smoke      # lint, build, unit/api/db tests, Chromium Playwright smoke tests
+npm run qa            # full regression suite, including all configured Playwright browsers
+npm run qa:deployed   # Playwright smoke tests against PLAYWRIGHT_BASE_URL
+npm run qa:fix-context
+```
+
+The GitHub workflows are wired for the same loop:
+
+- `.github/workflows/test.yml` runs smoke QA on pull requests and feature-branch pushes.
+- `.github/workflows/nightly-tests.yml` runs the full regression suite on schedule and opens or updates a GitHub issue if it breaks.
+- `.github/workflows/deployment-qa.yml` runs browser smoke tests against a successful deployment URL and opens or updates a GitHub issue with the QA report if the deployed UI breaks.
+
+GitHub Actions only detects and reports failures. It does not run a fixing agent or commit code automatically. When you want a coding agent to fix a failure, ask it to inspect the uploaded `qa-report/` artifacts or run `npm run qa:fix-context` locally, then apply a fix, rerun the failed command, and rerun `npm run test:ci`.
+
 ## Project Structure
 
 - `app/`  

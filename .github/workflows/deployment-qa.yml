@@ -1,0 +1,153 @@
+name: deployment qa
+
+on:
+  deployment_status:
+  workflow_dispatch:
+    inputs:
+      deployment_url:
+        description: URL to test with Playwright smoke checks
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+  deployments: read
+
+concurrency:
+  group: deployment-qa-${{ github.event.deployment.id || github.event.deployment_status.id || inputs.deployment_url || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.deployment_status.state == 'success' }}
+    runs-on: ubuntu-latest
+    env:
+      PLAYWRIGHT_BASE_URL: ${{ inputs.deployment_url || github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'http://127.0.0.1:54321' }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY || 'test-anon-key' }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || 'test-service-role-key' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Validate deployment URL
+        shell: bash
+        run: |
+          if [ -z "$PLAYWRIGHT_BASE_URL" ]; then
+            echo "Deployment status did not provide environment_url or target_url."
+            exit 1
+          fi
+          echo "Testing $PLAYWRIGHT_BASE_URL"
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run deployed smoke QA
+        run: npm run qa:deployed
+
+      - name: Upload deployment QA artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-qa-artifacts
+          path: |
+            qa-report/
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+
+      - name: Open or update deployment QA issue
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- deployment-qa-failure -->';
+            const summary = fs.existsSync('qa-report/summary.md')
+              ? fs.readFileSync('qa-report/summary.md', 'utf8')
+              : 'QA did not produce a summary. Check the workflow logs.';
+            const url = process.env.PLAYWRIGHT_BASE_URL || 'unknown deployment URL';
+            const title = `Deployment QA failed: ${url}`;
+            const body = [
+              marker,
+              `Deployment smoke checks failed for ${url}.`,
+              '',
+              `Workflow run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              '',
+              summary,
+            ].join('\n');
+            const { owner, repo } = context.repo;
+            for (const label of [
+              { name: 'qa', color: '5319e7', description: 'Quality automation' },
+              { name: 'deployment', color: '0366d6', description: 'Deployment checks' },
+            ]) {
+              try {
+                await github.rest.issues.getLabel({ owner, repo, name: label.name });
+              } catch (error) {
+                if (error.status !== 404) throw error;
+                await github.rest.issues.createLabel({ owner, repo, ...label });
+              }
+            }
+            const issues = await github.rest.issues.listForRepo({
+              owner,
+              repo,
+              state: 'open',
+              labels: 'qa,deployment',
+              per_page: 20,
+            });
+            const existing = issues.data.find((issue) => issue.body?.includes(marker) && issue.title === title);
+            if (existing) {
+              await github.rest.issues.update({ owner, repo, issue_number: existing.number, body });
+              core.info(`Updated issue #${existing.number}`);
+              return;
+            }
+            const issue = await github.rest.issues.create({
+              owner,
+              repo,
+              title,
+              body,
+              labels: ['qa', 'deployment'],
+            });
+            core.info(`Created issue #${issue.data.number}`);
+
+      - name: Close resolved deployment QA issue
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const marker = '<!-- deployment-qa-failure -->';
+            const url = process.env.PLAYWRIGHT_BASE_URL || 'unknown deployment URL';
+            const title = `Deployment QA failed: ${url}`;
+            const { owner, repo } = context.repo;
+            const issues = await github.rest.issues.listForRepo({
+              owner,
+              repo,
+              state: 'open',
+              labels: 'qa,deployment',
+              per_page: 20,
+            });
+            const existing = issues.data.find((issue) => issue.body?.includes(marker) && issue.title === title);
+            if (!existing) {
+              core.info('No open deployment QA issue to close.');
+              return;
+            }
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: existing.number,
+              body: `Deployment smoke QA passed again for ${url} in ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}. Closing this failure issue.`,
+            });
+            await github.rest.issues.update({
+              owner,
+              repo,
+              issue_number: existing.number,
+              state: 'closed',
+            });
+            core.info(`Closed issue #${existing.number}`);
