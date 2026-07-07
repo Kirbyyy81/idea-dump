@@ -26,12 +26,14 @@ import {
 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { useAccess } from '@/lib/contexts/AccessContext';
+import { useAlert } from '@/lib/contexts/AlertContext';
 
 export default function ProjectPage() {
     const params = useParams();
     const router = useRouter();
     const projectId = params.id as string;
     const access = useAccess();
+    const { showSuccess } = useAlert();
 
     const [project, setProject] = useState<Project | null>(null);
     const [notes, setNotes] = useState<Note[]>([]);
@@ -108,6 +110,7 @@ export default function ProjectPage() {
             if (!res.ok) throw new Error('Failed to add note');
             const { data } = await res.json();
             setNotes([data, ...notes]);
+            showSuccess('Project note added.', 'Saved');
         } catch (err) {
             console.error('Failed to add note:', err);
         }
@@ -127,6 +130,11 @@ export default function ProjectPage() {
             if (!res.ok) throw new Error('Failed to update project');
             const { data } = await res.json();
             setProject(data);
+            if (updates.archived !== undefined) {
+                showSuccess(updates.archived ? 'Project archived.' : 'Project unarchived.', 'Saved');
+            } else {
+                showSuccess('Project updated.', 'Saved');
+            }
         } catch (err) {
             console.error('Failed to update project:', err);
         } finally {
@@ -147,6 +155,7 @@ export default function ProjectPage() {
             });
 
             if (!res.ok) throw new Error('Failed to delete project');
+            showSuccess('Project deleted.', 'Deleted');
             router.push('/projects');
         } catch (err) {
             console.error('Failed to delete project:', err);
@@ -166,6 +175,7 @@ export default function ProjectPage() {
             const payload = await res.json();
             setTickets((current) => [payload.data, ...current]);
             setShowTicketForm(false);
+            showSuccess('Ticket created.', 'Saved');
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to create ticket');
         } finally {
@@ -188,6 +198,7 @@ export default function ProjectPage() {
             const payload = await res.json();
             setTickets((current) => current.map((ticket) => (ticket.id === editingTicket.id ? payload.data : ticket)));
             setEditingTicket(null);
+            showSuccess('Ticket updated.', 'Saved');
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to update ticket');
         } finally {
@@ -202,6 +213,7 @@ export default function ProjectPage() {
             const res = await fetch(`/api/tickets/${id}`, { method: 'DELETE' });
             if (!res.ok) throw new Error('Failed to delete ticket');
             setTickets((current) => current.filter((ticket) => ticket.id !== id));
+            showSuccess('Ticket deleted.', 'Deleted');
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to delete ticket');
         }
