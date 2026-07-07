@@ -15,7 +15,7 @@ import {
     filmRollStatusConfig,
     filmTypeConfig,
 } from '@/lib/types';
-import { cn, formatCurrencyMYR } from '@/lib/utils';
+import { formatCurrencyMYR } from '@/lib/utils';
 
 const CANISTER_THEMES = [
     {
@@ -87,7 +87,6 @@ function FilmCoverFallback({
 function FilmCanister({ roll, index }: { roll: FilmRoll; index: number }) {
     const theme = CANISTER_THEMES[index % CANISTER_THEMES.length];
     const thumbnail = roll.cover_image_url || roll.cover_photo?.thumbnail_link;
-    const status = filmRollStatusConfig[roll.status];
     const stripeCount = index % 2 === 0 ? 8 : 0;
     const filmTypeLabel = filmTypeConfig[roll.film_type || 'NEGATIVE'].label;
     const processTypeLabel = roll.process_type ? filmProcessTypeConfig[roll.process_type].label : 'No process';
@@ -211,11 +210,6 @@ function FilmCanister({ roll, index }: { roll: FilmRoll; index: number }) {
                         )}
                         <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.4)_0%,rgba(0,0,0,0)_20%,rgba(255,255,255,0.1)_40%,rgba(0,0,0,0)_80%,rgba(0,0,0,0.3)_100%)]" />
                         <div className="pointer-events-none absolute inset-0 border border-border-dark/20" />
-                    </div>
-                    <div className="absolute left-[62px] top-[265px] z-30 flex -translate-x-1/2 justify-center">
-                        <span className={cn('rounded-full border px-2 py-1 text-[9px] shadow-sm', status.colorClass)}>
-                            {status.label}
-                        </span>
                     </div>
                 </div>
                 <div className="w-full rounded-lg border border-border-default bg-bg-surface px-3 py-2 text-center">
