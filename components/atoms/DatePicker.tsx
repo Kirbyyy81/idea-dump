@@ -77,7 +77,7 @@ export function DatePicker({
             setMenuPosition({
                 left: rect.left,
                 top: rect.bottom + 4,
-                width: Math.max(rect.width, 320),
+                width: Math.max(rect.width, 260),
             });
         }
 
@@ -178,25 +178,25 @@ export function DatePicker({
                         top: menuPosition.top,
                         width: menuPosition.width,
                     }}
-                    className="fixed z-50 rounded-xl border border-border-default bg-bg-elevated p-3 text-sm shadow-subtle"
+                    className="fixed z-50 rounded-lg border border-border-default bg-bg-elevated p-2 text-xs shadow-subtle"
                 >
-                    <div className="mb-3 flex items-center justify-between gap-3">
-                        <button type="button" className="btn-ghost h-8 min-h-8 px-2" onClick={() => changeMonth(-1)} aria-label="Previous month">
-                            <ChevronLeft size={16} />
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                        <button type="button" className="btn-ghost h-7 min-h-7 px-2" onClick={() => changeMonth(-1)} aria-label="Previous month">
+                            <ChevronLeft size={14} />
                         </button>
                         <p className="font-semibold text-text-primary">{monthLabel}</p>
-                        <button type="button" className="btn-ghost h-8 min-h-8 px-2" onClick={() => changeMonth(1)} aria-label="Next month">
-                            <ChevronRight size={16} />
+                        <button type="button" className="btn-ghost h-7 min-h-7 px-2" onClick={() => changeMonth(1)} aria-label="Next month">
+                            <ChevronRight size={14} />
                         </button>
                     </div>
 
-                    <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-semibold uppercase tracking-wide text-text-muted">
+                    <div className="grid grid-cols-7 gap-0.5 text-center text-[10px] font-semibold uppercase tracking-wide text-text-muted">
                         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                            <span key={day} className="py-1">{day}</span>
+                            <span key={day} className="py-0.5">{day}</span>
                         ))}
                     </div>
 
-                    <div className="mt-1 grid grid-cols-7 gap-1">
+                    <div className="mt-1 grid grid-cols-7 gap-0.5">
                         {weeks.map((date) => {
                             const inputDate = formatInputDate(date);
                             const isSelected = value === inputDate;
@@ -209,7 +209,7 @@ export function DatePicker({
                                     type="button"
                                     onClick={() => chooseDate(date)}
                                     className={cn(
-                                        'grid size-9 place-items-center rounded-full text-sm transition-colors',
+                                        'grid size-7 place-items-center rounded-full text-xs transition-colors',
                                         isSelected
                                             ? 'bg-action-primary text-action-primary-text'
                                             : 'text-text-secondary hover:bg-bg-hover hover:text-text-primary',
@@ -223,8 +223,8 @@ export function DatePicker({
                         })}
                     </div>
 
-                    <div className="mt-3 flex justify-end border-t border-border-subtle pt-3">
-                        <button type="button" className="btn-ghost h-8 min-h-8 px-3" onClick={jumpToToday}>
+                    <div className="mt-2 flex justify-end border-t border-border-subtle pt-2">
+                        <button type="button" className="btn-ghost h-7 min-h-7 px-3" onClick={jumpToToday}>
                             Today
                         </button>
                     </div>

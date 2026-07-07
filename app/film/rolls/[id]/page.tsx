@@ -300,44 +300,80 @@ function RollDetailContent() {
                                         Replace Cover
                                     </Button>
                                 </div>
-                                <Input value={rollForm.film_name} onChange={(event) => setRollForm({ ...rollForm, film_name: event.target.value })} />
-                                <Input value={rollForm.brand} onChange={(event) => setRollForm({ ...rollForm, brand: event.target.value })} />
+                                <label className="space-y-2">
+                                    <span className="text-sm text-text-secondary">Film name</span>
+                                    <Input value={rollForm.film_name} onChange={(event) => setRollForm({ ...rollForm, film_name: event.target.value })} placeholder="Film stock name" />
+                                </label>
+                                <label className="space-y-2">
+                                    <span className="text-sm text-text-secondary">Brand</span>
+                                    <Input value={rollForm.brand} onChange={(event) => setRollForm({ ...rollForm, brand: event.target.value })} placeholder="Kodak, Fujifilm, Harman..." />
+                                </label>
                                 <div className="grid grid-cols-2 gap-3">
+                                    <label className="space-y-2">
+                                        <span className="text-sm text-text-secondary">Format</span>
+                                        <Select
+                                            value={rollForm.format}
+                                            onChange={(nextValue) => setRollForm({ ...rollForm, format: nextValue as FilmFormat })}
+                                            options={filmFormats.map((format) => ({ value: format, label: format }))}
+                                        />
+                                    </label>
+                                    <label className="space-y-2">
+                                        <span className="text-sm text-text-secondary">ISO</span>
+                                        <Input type="number" min="1" value={rollForm.iso} onChange={(event) => setRollForm({ ...rollForm, iso: event.target.value })} placeholder="400" />
+                                    </label>
+                                </div>
+                                <label className="space-y-2">
+                                    <span className="text-sm text-text-secondary">Film type</span>
                                     <Select
-                                        value={rollForm.format}
-                                        onChange={(nextValue) => setRollForm({ ...rollForm, format: nextValue as FilmFormat })}
-                                        options={filmFormats.map((format) => ({ value: format, label: format }))}
+                                        value={rollForm.film_type}
+                                        onChange={(nextValue) => setRollForm({ ...rollForm, film_type: nextValue as FilmType })}
+                                        options={filmTypes.map((type) => ({ value: type, label: filmTypeConfig[type].label }))}
                                     />
-                                    <Input type="number" min="1" value={rollForm.iso} onChange={(event) => setRollForm({ ...rollForm, iso: event.target.value })} />
-                                </div>
-                                <Select
-                                    value={rollForm.film_type}
-                                    onChange={(nextValue) => setRollForm({ ...rollForm, film_type: nextValue as FilmType })}
-                                    options={filmTypes.map((type) => ({ value: type, label: filmTypeConfig[type].label }))}
-                                />
-                                <Select
-                                    value={rollForm.status}
-                                    onChange={(nextValue) => setRollForm({ ...rollForm, status: nextValue as FilmRollStatus })}
-                                    options={Object.entries(filmRollStatusConfig).map(([status, config]) => ({
-                                        value: status,
-                                        label: config.label,
-                                    }))}
-                                />
-                                <Select
-                                    value={rollForm.camera_id}
-                                    onChange={(nextValue) => setRollForm({ ...rollForm, camera_id: nextValue })}
-                                    options={[
-                                        { value: '', label: 'No camera selected' },
-                                        ...cameras.map((camera) => ({ value: camera.id, label: camera.name })),
-                                    ]}
-                                />
-                                <Input placeholder="Location" value={rollForm.location_name} onChange={(event) => setRollForm({ ...rollForm, location_name: event.target.value })} />
+                                </label>
+                                <label className="space-y-2">
+                                    <span className="text-sm text-text-secondary">Roll status</span>
+                                    <Select
+                                        value={rollForm.status}
+                                        onChange={(nextValue) => setRollForm({ ...rollForm, status: nextValue as FilmRollStatus })}
+                                        options={Object.entries(filmRollStatusConfig).map(([status, config]) => ({
+                                            value: status,
+                                            label: config.label,
+                                        }))}
+                                    />
+                                </label>
+                                <label className="space-y-2">
+                                    <span className="text-sm text-text-secondary">Camera</span>
+                                    <Select
+                                        value={rollForm.camera_id}
+                                        onChange={(nextValue) => setRollForm({ ...rollForm, camera_id: nextValue })}
+                                        options={[
+                                            { value: '', label: 'No camera selected' },
+                                            ...cameras.map((camera) => ({ value: camera.id, label: camera.name })),
+                                        ]}
+                                    />
+                                </label>
+                                <label className="space-y-2">
+                                    <span className="text-sm text-text-secondary">Location</span>
+                                    <Input placeholder="Where this roll was shot or stored" value={rollForm.location_name} onChange={(event) => setRollForm({ ...rollForm, location_name: event.target.value })} />
+                                </label>
                                 <div className="grid grid-cols-2 gap-3">
-                                    <Input type="number" min="0" step="0.01" value={rollForm.purchase_price} onChange={(event) => setRollForm({ ...rollForm, purchase_price: event.target.value })} />
-                                    <Input type="number" min="0" value={rollForm.frames_taken} onChange={(event) => setRollForm({ ...rollForm, frames_taken: event.target.value })} />
+                                    <label className="space-y-2">
+                                        <span className="text-sm text-text-secondary">Purchase price</span>
+                                        <Input type="number" min="0" step="0.01" value={rollForm.purchase_price} onChange={(event) => setRollForm({ ...rollForm, purchase_price: event.target.value })} placeholder="0.00" />
+                                    </label>
+                                    <label className="space-y-2">
+                                        <span className="text-sm text-text-secondary">Frames taken</span>
+                                        <Input type="number" min="0" value={rollForm.frames_taken} onChange={(event) => setRollForm({ ...rollForm, frames_taken: event.target.value })} placeholder="0" />
+                                    </label>
                                 </div>
-                                <Input type="number" min="0" value={rollForm.successful_photos} onChange={(event) => setRollForm({ ...rollForm, successful_photos: event.target.value })} />
-                                <Textarea value={rollForm.notes} onChange={(event) => setRollForm({ ...rollForm, notes: event.target.value })} placeholder="Journal notes" />
+                                <label className="space-y-2">
+                                    <span className="text-sm text-text-secondary">Successful photos</span>
+                                    <Input type="number" min="0" value={rollForm.successful_photos} onChange={(event) => setRollForm({ ...rollForm, successful_photos: event.target.value })} placeholder="0" />
+                                </label>
+                                <label className="space-y-2">
+                                    <span className="text-sm text-text-secondary">Journal notes</span>
+                                    <Textarea value={rollForm.notes} onChange={(event) => setRollForm({ ...rollForm, notes: event.target.value })} placeholder="Notes about this roll, shoot, or inventory" />
+                                </label>
                             </div>
                         </Card>
                     </aside>
