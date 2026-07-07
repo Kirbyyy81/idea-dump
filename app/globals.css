@@ -262,10 +262,13 @@ button,
 .btn-primary,
 .btn-secondary,
 .btn-ghost,
+.action-link,
 .status-badge,
 aside a,
 nav a,
 .card.cursor-pointer {
+  caret-color: transparent;
+  cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   -webkit-user-select: none;
   user-select: none;

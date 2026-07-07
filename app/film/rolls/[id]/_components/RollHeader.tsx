@@ -17,7 +17,7 @@ export function RollHeader({ roll, isSaving, onSave, showSave = true }: RollHead
     return (
         <header className="flex flex-wrap items-start justify-between gap-4">
             <div>
-                <Link href="/film" className="inline-flex items-center gap-2 text-sm text-text-secondary hover:text-text-primary">
+                <Link href="/film" className="action-link inline-flex items-center gap-2 text-sm text-text-secondary hover:text-text-primary">
                     <ArrowLeft size={16} />
                     Back to cupboard
                 </Link>
