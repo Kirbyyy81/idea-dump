@@ -16,6 +16,14 @@ export function formatDate(dateString: string): string {
     });
 }
 
+export function formatCurrencyMYR(value: number): string {
+    return new Intl.NumberFormat('en-MY', {
+        style: 'currency',
+        currency: 'MYR',
+        maximumFractionDigits: 2,
+    }).format(value || 0);
+}
+
 // Format relative time (e.g., "2 days ago")
 export function formatRelativeTime(dateString: string): string {
     const date = new Date(dateString);

@@ -73,7 +73,7 @@ export function getOpenApiSpec() {
 
     const filmRollSchema = {
         type: 'object',
-        required: ['id', 'user_id', 'film_name', 'brand', 'format', 'iso', 'status', 'created_at', 'updated_at'],
+        required: ['id', 'user_id', 'film_name', 'brand', 'format', 'film_type', 'iso', 'status', 'created_at', 'updated_at'],
         properties: {
             id: { type: 'string', format: 'uuid' },
             user_id: { type: 'string', format: 'uuid' },
@@ -81,6 +81,8 @@ export function getOpenApiSpec() {
             film_name: { type: 'string' },
             brand: { type: 'string' },
             format: { type: 'string', enum: ['35mm', '120', 'Large Format'] },
+            film_type: { type: 'string', enum: ['NEGATIVE', 'REVERSAL', 'BW_NEGATIVE'] },
+            process_type: { type: 'string', enum: ['C41', 'E6', 'BW', 'ECN2'], nullable: true },
             iso: { type: 'integer' },
             status: { type: 'string', enum: ['UNUSED', 'LOADED', 'SHOOTING', 'AWAITING_PROCESSING', 'PROCESSING', 'PROCESSED', 'ARCHIVED'] },
             purchase_price: { type: 'number' },
@@ -95,6 +97,8 @@ export function getOpenApiSpec() {
             notes: { type: 'string', nullable: true },
             drive_folder_id: { type: 'string', nullable: true },
             cover_photo_id: { type: 'string', format: 'uuid', nullable: true },
+            cover_image_url: { type: 'string', nullable: true },
+            cover_image_path: { type: 'string', nullable: true },
             created_at: { type: 'string', format: 'date-time' },
             updated_at: { type: 'string', format: 'date-time' },
         },
@@ -473,6 +477,29 @@ export function getOpenApiSpec() {
                 post: {
                     summary: 'Create a film roll',
                     description: 'Creates one physical roll. New inventory defaults to UNUSED and processing fields may be filled later.',
+                    requestBody: {
+                        required: true,
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    required: ['film_name', 'brand', 'format', 'iso'],
+                                    properties: {
+                                        film_name: { type: 'string' },
+                                        brand: { type: 'string' },
+                                        format: { type: 'string', enum: ['35mm', '120', 'Large Format'] },
+                                        film_type: { type: 'string', enum: ['NEGATIVE', 'REVERSAL', 'BW_NEGATIVE'] },
+                                        process_type: { type: 'string', enum: ['C41', 'E6', 'BW', 'ECN2'], nullable: true },
+                                        iso: { type: 'integer' },
+                                        frames_taken: { type: 'integer', minimum: 0 },
+                                        purchase_price: { type: 'number', minimum: 0 },
+                                        camera_id: { type: 'string', format: 'uuid', nullable: true },
+                                        notes: { type: 'string' },
+                                    },
+                                },
+                            },
+                        },
+                    },
                     responses: {
                         201: { description: 'Created film roll' },
                         400: { description: 'Validation error', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
@@ -480,7 +507,7 @@ export function getOpenApiSpec() {
                 },
                 put: {
                     summary: 'Update a film roll',
-                    description: 'Updates roll lifecycle, shooting, cost, and single processing-summary fields.',
+                    description: 'Updates roll lifecycle, film metadata, shooting, cost, and single processing-summary fields.',
                     responses: {
                         200: { description: 'Updated film roll' },
                         400: { description: 'Validation error', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
@@ -491,6 +518,32 @@ export function getOpenApiSpec() {
                     parameters: [{ name: 'id', in: 'query', required: true, schema: { type: 'string', format: 'uuid' } }],
                     responses: {
                         200: { description: 'Deleted film roll' },
+                    },
+                },
+            },
+            '/api/film/rolls/{id}/cover': {
+                post: {
+                    summary: 'Upload a film roll cover image',
+                    description: 'Uploads JPEG, PNG, or WebP cover images to Supabase Storage and stores the resulting URL/path on the roll.',
+                    parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+                    requestBody: {
+                        required: true,
+                        content: {
+                            'multipart/form-data': {
+                                schema: {
+                                    type: 'object',
+                                    required: ['cover'],
+                                    properties: {
+                                        cover: { type: 'string', format: 'binary' },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    responses: {
+                        200: { description: 'Updated film roll with cover image URL' },
+                        400: { description: 'Validation error', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+                        404: { description: 'Film roll not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
                     },
                 },
             },

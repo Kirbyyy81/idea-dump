@@ -14,13 +14,20 @@ import { Textarea } from '@/components/atoms/Textarea';
 import {
     FilmCamera,
     FilmFormat,
+    FilmProcessType,
     FilmPhoto,
     FilmRoll,
     FilmRollStatus,
+    FilmType,
     filmFormats,
+    filmProcessTypeConfig,
+    filmProcessTypes,
     filmRollStatusConfig,
+    filmTypeConfig,
+    filmTypes,
 } from '@/lib/types';
-import { cn } from '@/lib/utils';
+import { useAlert } from '@/lib/contexts/AlertContext';
+import { cn, formatCurrencyMYR } from '@/lib/utils';
 
 interface RollDetailPageProps {
     params: {
@@ -28,19 +35,13 @@ interface RollDetailPageProps {
     };
 }
 
-function formatCurrency(value: number) {
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-        maximumFractionDigits: 2,
-    }).format(value || 0);
-}
-
 function getRollForm(roll: FilmRoll) {
     return {
         film_name: roll.film_name,
         brand: roll.brand,
         format: roll.format,
+        film_type: roll.film_type ?? 'NEGATIVE',
+        process_type: roll.process_type ?? '',
         iso: String(roll.iso),
         camera_id: roll.camera_id ?? '',
         status: roll.status,
@@ -59,6 +60,7 @@ function getRollForm(roll: FilmRoll) {
 }
 
 export default function FilmRollDetailPage({ params }: RollDetailPageProps) {
+    const { showSuccess } = useAlert();
     const [roll, setRoll] = useState<FilmRoll | null>(null);
     const [cameras, setCameras] = useState<FilmCamera[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -67,6 +69,8 @@ export default function FilmRollDetailPage({ params }: RollDetailPageProps) {
     const [error, setError] = useState<string | null>(null);
     const [rollForm, setRollForm] = useState<ReturnType<typeof getRollForm> | null>(null);
     const [driveFolderInput, setDriveFolderInput] = useState('');
+    const [coverFile, setCoverFile] = useState<File | null>(null);
+    const [isUploadingCover, setIsUploadingCover] = useState(false);
 
     const loadRoll = useCallback(async () => {
         setError(null);
@@ -124,6 +128,31 @@ export default function FilmRollDetailPage({ params }: RollDetailPageProps) {
     const costPerFrame = roll?.frames_taken ? totalCost / roll.frames_taken : 0;
     const costPerSuccessfulPhoto = roll?.successful_photos ? totalCost / roll.successful_photos : 0;
 
+    const handleCoverUpload = async () => {
+        if (!roll || !coverFile) return;
+
+        setIsUploadingCover(true);
+        setError(null);
+        try {
+            const coverData = new FormData();
+            coverData.append('cover', coverFile);
+            const res = await fetch(`/api/film/rolls/${roll.id}/cover`, {
+                method: 'POST',
+                body: coverData,
+            });
+            const payload = await res.json();
+            if (!res.ok) throw new Error(payload.error || 'Failed to upload film cover');
+            setRoll(payload.data);
+            setRollForm(getRollForm(payload.data));
+            setCoverFile(null);
+            showSuccess('Film cover updated.', 'Saved');
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to upload film cover');
+        } finally {
+            setIsUploadingCover(false);
+        }
+    };
+
     const handleSaveRoll = async () => {
         if (!roll || !rollForm) return;
 
@@ -137,6 +166,8 @@ export default function FilmRollDetailPage({ params }: RollDetailPageProps) {
                     id: roll.id,
                     ...rollForm,
                     iso: Number(rollForm.iso),
+                    film_type: rollForm.film_type,
+                    process_type: rollForm.process_type || null,
                     purchase_price: Number(rollForm.purchase_price || 0),
                     processing_cost: Number(rollForm.processing_cost || 0),
                     scanning_cost: Number(rollForm.scanning_cost || 0),
@@ -150,6 +181,7 @@ export default function FilmRollDetailPage({ params }: RollDetailPageProps) {
 
             if (!res.ok) throw new Error('Failed to save film roll');
             await loadRoll();
+            showSuccess('Film roll saved.', 'Saved');
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to save film roll');
         } finally {
@@ -175,6 +207,7 @@ export default function FilmRollDetailPage({ params }: RollDetailPageProps) {
             const payload = await res.json();
             if (!res.ok) throw new Error(payload.error || 'Failed to sync Google Drive folder');
             await loadRoll();
+            showSuccess('Drive metadata synced.', 'Synced');
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to sync Google Drive folder');
         } finally {
@@ -196,6 +229,7 @@ export default function FilmRollDetailPage({ params }: RollDetailPageProps) {
 
             if (!res.ok) throw new Error('Failed to update photo');
             await loadRoll();
+            showSuccess(updates.set_as_cover ? 'Cover photo selected.' : 'Photo updated.', 'Saved');
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to update photo');
         }
@@ -255,7 +289,7 @@ export default function FilmRollDetailPage({ params }: RollDetailPageProps) {
                 <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                     <Card className="p-5">
                         <p className="text-sm text-text-muted">Total Cost</p>
-                        <p className="mt-2 text-2xl font-extrabold">{formatCurrency(totalCost)}</p>
+                        <p className="mt-2 text-2xl font-extrabold">{formatCurrencyMYR(totalCost)}</p>
                     </Card>
                     <Card className="p-5">
                         <p className="text-sm text-text-muted">Frames</p>
@@ -263,11 +297,11 @@ export default function FilmRollDetailPage({ params }: RollDetailPageProps) {
                     </Card>
                     <Card className="p-5">
                         <p className="text-sm text-text-muted">Cost / Frame</p>
-                        <p className="mt-2 text-2xl font-extrabold">{formatCurrency(costPerFrame)}</p>
+                        <p className="mt-2 text-2xl font-extrabold">{formatCurrencyMYR(costPerFrame)}</p>
                     </Card>
                     <Card className="p-5">
                         <p className="text-sm text-text-muted">Cost / Successful Photo</p>
-                        <p className="mt-2 text-2xl font-extrabold">{formatCurrency(costPerSuccessfulPhoto)}</p>
+                        <p className="mt-2 text-2xl font-extrabold">{formatCurrencyMYR(costPerSuccessfulPhoto)}</p>
                     </Card>
                 </section>
 
@@ -324,6 +358,14 @@ export default function FilmRollDetailPage({ params }: RollDetailPageProps) {
                                         <Input type="number" min="0" step="0.01" placeholder="Scan" value={rollForm.scanning_cost} onChange={(event) => setRollForm({ ...rollForm, scanning_cost: event.target.value })} />
                                         <Input type="number" min="0" step="0.01" placeholder="Ship" value={rollForm.shipping_cost} onChange={(event) => setRollForm({ ...rollForm, shipping_cost: event.target.value })} />
                                     </div>
+                                    <Select
+                                        value={rollForm.process_type}
+                                        onChange={(nextValue) => setRollForm({ ...rollForm, process_type: nextValue as FilmProcessType | '' })}
+                                        options={[
+                                            { value: '', label: 'Choose process later' },
+                                            ...filmProcessTypes.map((type) => ({ value: type, label: filmProcessTypeConfig[type].label })),
+                                        ]}
+                                    />
                                     <Input type="date" value={rollForm.processing_date} onChange={(event) => setRollForm({ ...rollForm, processing_date: event.target.value })} />
                                     <Button icon={<Save size={16} />} onClick={handleSaveRoll} isLoading={isSaving}>
                                         Save Processing
@@ -459,6 +501,22 @@ export default function FilmRollDetailPage({ params }: RollDetailPageProps) {
                         <Card className="p-5">
                             <h2 className="text-lg font-bold">Roll Details</h2>
                             <div className="mt-4 space-y-3">
+                                {(roll.cover_image_url || roll.cover_photo?.thumbnail_link) && (
+                                    <div className="overflow-hidden rounded-lg border border-border-default bg-bg-hover">
+                                        <img
+                                            src={roll.cover_image_url || roll.cover_photo?.thumbnail_link || ''}
+                                            alt={`${roll.film_name} cover`}
+                                            className="aspect-[4/3] w-full object-cover"
+                                        />
+                                    </div>
+                                )}
+                                <div className="space-y-2 rounded-lg border border-border-default bg-bg-hover/40 p-3">
+                                    <p className="text-sm font-semibold text-text-secondary">Cover image</p>
+                                    <Input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setCoverFile(event.target.files?.[0] || null)} />
+                                    <Button type="button" variant="secondary" onClick={handleCoverUpload} disabled={!coverFile} isLoading={isUploadingCover}>
+                                        Replace Cover
+                                    </Button>
+                                </div>
                                 <Input value={rollForm.film_name} onChange={(event) => setRollForm({ ...rollForm, film_name: event.target.value })} />
                                 <Input value={rollForm.brand} onChange={(event) => setRollForm({ ...rollForm, brand: event.target.value })} />
                                 <div className="grid grid-cols-2 gap-3">
@@ -469,6 +527,11 @@ export default function FilmRollDetailPage({ params }: RollDetailPageProps) {
                                     />
                                     <Input type="number" min="1" value={rollForm.iso} onChange={(event) => setRollForm({ ...rollForm, iso: event.target.value })} />
                                 </div>
+                                <Select
+                                    value={rollForm.film_type}
+                                    onChange={(nextValue) => setRollForm({ ...rollForm, film_type: nextValue as FilmType })}
+                                    options={filmTypes.map((type) => ({ value: type, label: filmTypeConfig[type].label }))}
+                                />
                                 <Select
                                     value={rollForm.status}
                                     onChange={(nextValue) => setRollForm({ ...rollForm, status: nextValue as FilmRollStatus })}
