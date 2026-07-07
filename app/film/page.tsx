@@ -11,9 +11,7 @@ import {
     FilmCamera,
     FilmRoll,
     FilmRollStatus,
-    filmProcessTypeConfig,
     filmRollStatusConfig,
-    filmTypeConfig,
 } from '@/lib/types';
 import { formatCurrencyMYR } from '@/lib/utils';
 
@@ -88,12 +86,10 @@ function FilmCanister({ roll, index }: { roll: FilmRoll; index: number }) {
     const theme = CANISTER_THEMES[index % CANISTER_THEMES.length];
     const thumbnail = roll.cover_image_url || roll.cover_photo?.thumbnail_link;
     const stripeCount = index % 2 === 0 ? 8 : 0;
-    const filmTypeLabel = filmTypeConfig[roll.film_type || 'NEGATIVE'].label;
-    const processTypeLabel = roll.process_type ? filmProcessTypeConfig[roll.process_type].label : 'No process';
 
     return (
         <Link href={`/film/rolls/${roll.id}`} className="action-link group block">
-            <article className="relative mx-auto flex min-h-[390px] max-w-[300px] flex-col items-center justify-center gap-3">
+            <article className="relative mx-auto flex min-h-[330px] max-w-[300px] flex-col items-center justify-center">
                 <div className="relative h-[300px] w-[300px]">
                     <div
                         className="absolute left-[106px] top-[102px] z-0 h-[112px] w-[160px] [clip-path:inset(-50px_-50px_-50px_0)]"
@@ -210,13 +206,6 @@ function FilmCanister({ roll, index }: { roll: FilmRoll; index: number }) {
                         )}
                         <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.4)_0%,rgba(0,0,0,0)_20%,rgba(255,255,255,0.1)_40%,rgba(0,0,0,0)_80%,rgba(0,0,0,0.3)_100%)]" />
                         <div className="pointer-events-none absolute inset-0 border border-border-dark/20" />
-                    </div>
-                </div>
-                <div className="w-full rounded-lg border border-border-default bg-bg-surface px-3 py-2 text-center">
-                    <p className="truncate text-sm font-bold text-text-primary">{roll.brand} {roll.film_name}</p>
-                    <div className="mt-1 flex flex-wrap justify-center gap-1.5 text-[10px] font-bold uppercase text-text-secondary">
-                        <span className="rounded-full border border-border-subtle bg-bg-subtle px-2 py-0.5">{filmTypeLabel}</span>
-                        <span className="rounded-full border border-border-subtle bg-bg-subtle px-2 py-0.5">{processTypeLabel}</span>
                     </div>
                 </div>
             </article>
