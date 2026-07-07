@@ -92,7 +92,7 @@ function FilmCanister({ roll, index }: { roll: FilmRoll; index: number }) {
     const processTypeLabel = roll.process_type ? filmProcessTypeConfig[roll.process_type].label : 'No process';
 
     return (
-        <Link href={`/film/rolls/${roll.id}`} className="group block">
+        <Link href={`/film/rolls/${roll.id}`} className="action-link group block">
             <article className="relative mx-auto flex min-h-[390px] max-w-[300px] flex-col items-center justify-center gap-3">
                 <div className="relative h-[300px] w-[300px]">
                     <div
@@ -348,7 +348,7 @@ export default function FilmJournalPage() {
                             <Film className="mx-auto mb-4 opacity-60" size={38} />
                             <p>{rolls.length ? 'No rolls match these filters.' : 'Your cupboard is ready for its first roll.'}</p>
                             {!rolls.length && (
-                                <Link href="/film/new-roll" className="mt-4 inline-flex rounded-full bg-action-primary px-5 py-2 text-sm font-medium text-action-primary-text">
+                                <Link href="/film/new-roll" className="action-link mt-4 inline-flex rounded-full bg-action-primary px-5 py-2 text-sm font-medium text-action-primary-text">
                                     Register a roll
                                 </Link>
                             )}

@@ -44,7 +44,7 @@ export function StepStepper({ roll, photos, activeStep, rollId }: StepStepperPro
                         key={step.slug}
                         href={href}
                         className={cn(
-                            'flex items-center gap-3 rounded-lg border px-4 py-3 text-sm transition-colors',
+                            'action-link flex items-center gap-3 rounded-lg border px-4 py-3 text-sm transition-colors',
                             isActive
                                 ? 'border-accent-sage bg-pastel-olive-soft text-text-primary'
                                 : step.isComplete

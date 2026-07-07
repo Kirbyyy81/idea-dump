@@ -239,7 +239,7 @@ function RollDetailContent() {
         return (
             <AppShell contentClassName="p-8">
                 <div className="max-w-4xl">
-                    <Link href="/film" className="inline-flex items-center gap-2 text-text-secondary hover:text-text-primary">
+                    <Link href="/film" className="action-link inline-flex items-center gap-2 text-text-secondary hover:text-text-primary">
                         <ArrowLeft size={18} />
                         Back to Film Journal
                     </Link>

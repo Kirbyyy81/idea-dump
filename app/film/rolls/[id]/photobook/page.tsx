@@ -85,7 +85,7 @@ export default function PhotobookPage() {
         return (
             <AppShell contentClassName="p-8">
                 <div className="max-w-4xl">
-                    <Link href="/film" className="inline-flex items-center gap-2 text-text-secondary hover:text-text-primary">
+                    <Link href="/film" className="action-link inline-flex items-center gap-2 text-text-secondary hover:text-text-primary">
                         <ArrowLeft size={18} />
                         Back to Film Journal
                     </Link>
@@ -140,7 +140,7 @@ export default function PhotobookPage() {
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                                 {photos.map((photo) => (
                                     <article key={photo.id} className="overflow-hidden rounded-lg border border-border-default bg-bg-elevated">
-                                        <a href={photo.web_view_link ?? '#'} target="_blank" rel="noreferrer" className="block aspect-[4/3] bg-bg-hover">
+                                        <a href={photo.web_view_link ?? '#'} target="_blank" rel="noreferrer" className="action-link block aspect-[4/3] bg-bg-hover">
                                             {photo.thumbnail_link ? (
                                                 <img
                                                     src={photo.thumbnail_link}
@@ -188,7 +188,7 @@ export default function PhotobookPage() {
                         <h2 className="text-lg font-bold">Favorite Shots</h2>
                         <div className="mt-4 flex gap-3 overflow-x-auto snap-x pb-2">
                             {favoritePhotos.map((photo) => (
-                                <a key={`favorite-${photo.id}`} href={photo.web_view_link ?? '#'} target="_blank" rel="noreferrer" className="block h-28 w-36 shrink-0 snap-start overflow-hidden rounded-lg border border-border-default bg-bg-hover">
+                                <a key={`favorite-${photo.id}`} href={photo.web_view_link ?? '#'} target="_blank" rel="noreferrer" className="action-link block h-28 w-36 shrink-0 snap-start overflow-hidden rounded-lg border border-border-default bg-bg-hover">
                                     {photo.thumbnail_link ? (
                                         <img src={photo.thumbnail_link} alt={photo.name} className="h-full w-full object-cover" />
                                     ) : (
