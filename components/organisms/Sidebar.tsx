@@ -193,7 +193,7 @@ export function Sidebar({ projects }: SidebarProps) {
     };
 
     return (
-        <aside className="flex min-h-full flex-col rounded-lg bg-nav-bg px-[14px] py-[18px] text-nav-text">
+        <aside className="sticky top-8 flex h-[calc(100dvh-64px)] max-h-[calc(100dvh-64px)] flex-col overflow-hidden rounded-lg bg-nav-bg px-[14px] py-[18px] text-nav-text md:top-10 md:h-[calc(100dvh-80px)] md:max-h-[calc(100dvh-80px)]">
             <div className="border-b border-nav-bg-hover pb-4">
                 <Link href="/dashboard" className="flex items-center gap-2">
                     <Image
