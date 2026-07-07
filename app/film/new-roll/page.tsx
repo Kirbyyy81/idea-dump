@@ -140,7 +140,7 @@ export default function NewFilmRollPage() {
                             </label>
                             <label className="space-y-2">
                                 <span className="text-sm text-text-secondary">Process type</span>
-                                <Select value={form.process_type} onChange={(nextValue) => setForm({ ...form, process_type: nextValue as FilmProcessType | '' })} options={[{ value: '', label: 'Choose later' }, ...filmProcessTypes.map((type) => ({ value: type, label: filmProcessTypeConfig[type].label }))]} />
+                                <Select value={form.process_type} onChange={(nextValue) => setForm({ ...form, process_type: nextValue as FilmProcessType | '' })} options={[{ value: '', label: 'Processing only' }, ...filmProcessTypes.map((type) => ({ value: type, label: filmProcessTypeConfig[type].label }))]} />
                             </label>
                             <label className="space-y-2">
                                 <span className="text-sm text-text-secondary">ISO *</span>

@@ -9,6 +9,7 @@ import { ArrowLeft, FolderSync, Save } from 'lucide-react';
 import { AppShell } from '@/components/organisms/AppShell';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
+import { DatePicker } from '@/components/atoms/DatePicker';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
@@ -32,6 +33,18 @@ import { RollHeader } from './_components/RollHeader';
 import { StepStepper } from './_components/StepStepper';
 import { StatsCards } from './_components/StatsCards';
 
+function getTodayInputDate() {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function getOptionalMoneyFormValue(value: number | null | undefined) {
+    return Number(value || 0) > 0 ? String(value) : '';
+}
+
 function getRollForm(roll: FilmRoll) {
     return {
         film_name: roll.film_name,
@@ -44,10 +57,10 @@ function getRollForm(roll: FilmRoll) {
         status: roll.status,
         purchase_price: String(roll.purchase_price ?? 0),
         lab_name: roll.lab_name ?? '',
-        processing_cost: String(roll.processing_cost ?? 0),
-        scanning_cost: String(roll.scanning_cost ?? 0),
-        shipping_cost: String(roll.shipping_cost ?? 0),
-        processing_date: roll.processing_date ?? '',
+        processing_cost: getOptionalMoneyFormValue(roll.processing_cost),
+        scanning_cost: getOptionalMoneyFormValue(roll.scanning_cost),
+        shipping_cost: getOptionalMoneyFormValue(roll.shipping_cost),
+        processing_date: roll.processing_date ?? getTodayInputDate(),
         frames_taken: String(roll.frames_taken ?? 0),
         successful_photos: String(roll.successful_photos ?? 0),
         location_name: roll.location_name ?? '',
@@ -332,38 +345,41 @@ function RollDetailContent() {
 
                 {activeStep === 'processing' && (
                     <Card className="p-5">
-                        <div className="flex items-start justify-between gap-4">
-                            <div>
-                                <h2 className="text-lg font-bold">Processing</h2>
-                                <p className="mt-1 text-sm text-text-muted">
-                                    Complete this before opening the photobook.
-                                </p>
-                            </div>
-                            <span className={cn(
-                                'rounded-full border px-3 py-1 text-xs font-semibold',
-                                hasProcessingDetails
-                                    ? 'border-accent-sage bg-pastel-olive-soft text-text-primary'
-                                    : 'border-accent-apricot bg-pastel-yellow-soft text-text-primary'
-                            )}>
-                                {hasProcessingDetails ? 'Complete' : 'Needed'}
-                            </span>
+                        <div>
+                            <h2 className="text-lg font-bold">Processing</h2>
+                            <p className="mt-1 text-sm text-text-muted">
+                                Complete this before opening the photobook.
+                            </p>
                         </div>
                         <div className="mt-4 space-y-3">
                             <Input placeholder="Lab name" value={rollForm.lab_name} onChange={(event) => setRollForm({ ...rollForm, lab_name: event.target.value })} />
-                            <div className="grid grid-cols-3 gap-2">
-                                <Input type="number" min="0" step="0.01" placeholder="Process" value={rollForm.processing_cost} onChange={(event) => setRollForm({ ...rollForm, processing_cost: event.target.value })} />
-                                <Input type="number" min="0" step="0.01" placeholder="Scan" value={rollForm.scanning_cost} onChange={(event) => setRollForm({ ...rollForm, scanning_cost: event.target.value })} />
-                                <Input type="number" min="0" step="0.01" placeholder="Ship" value={rollForm.shipping_cost} onChange={(event) => setRollForm({ ...rollForm, shipping_cost: event.target.value })} />
+                            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                                <label className="space-y-2">
+                                    <span className="text-sm text-text-secondary">Processing cost</span>
+                                    <Input type="number" min="0" step="0.01" placeholder="0.00" value={rollForm.processing_cost} onChange={(event) => setRollForm({ ...rollForm, processing_cost: event.target.value })} />
+                                </label>
+                                <label className="space-y-2">
+                                    <span className="text-sm text-text-secondary">Scanning cost</span>
+                                    <Input type="number" min="0" step="0.01" placeholder="0.00" value={rollForm.scanning_cost} onChange={(event) => setRollForm({ ...rollForm, scanning_cost: event.target.value })} />
+                                </label>
+                                <label className="space-y-2">
+                                    <span className="text-sm text-text-secondary">Shipping cost</span>
+                                    <Input type="number" min="0" step="0.01" placeholder="0.00" value={rollForm.shipping_cost} onChange={(event) => setRollForm({ ...rollForm, shipping_cost: event.target.value })} />
+                                </label>
                             </div>
                             <Select
                                 value={rollForm.process_type}
                                 onChange={(nextValue) => setRollForm({ ...rollForm, process_type: nextValue as FilmProcessType | '' })}
                                 options={[
-                                    { value: '', label: 'Choose process later' },
+                                    { value: '', label: 'Processing only' },
                                     ...filmProcessTypes.map((type) => ({ value: type, label: filmProcessTypeConfig[type].label })),
                                 ]}
                             />
-                            <Input type="date" value={rollForm.processing_date} onChange={(event) => setRollForm({ ...rollForm, processing_date: event.target.value })} />
+                            <DatePicker
+                                value={rollForm.processing_date}
+                                onChange={(nextValue) => setRollForm({ ...rollForm, processing_date: nextValue })}
+                                ariaLabel="Processing date"
+                            />
                             <Button icon={<Save size={16} />} onClick={handleSaveRoll} isLoading={isSaving}>
                                 Save Processing
                             </Button>
