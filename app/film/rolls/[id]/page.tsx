@@ -71,6 +71,10 @@ function getRollForm(roll: FilmRoll) {
     };
 }
 
+function getPhotoImageUrl(photo: Pick<FilmPhoto, 'id'>) {
+    return `/api/film/photos/${photo.id}/image`;
+}
+
 export default function FilmRollDetailPage() {
     return (
         <Suspense fallback={<AppShell isLoading loadingMessage="Opening film roll..." contentClassName="p-8"><div /></AppShell>}>
@@ -325,7 +329,7 @@ function RollDetailContent() {
                                 {(roll.cover_image_url || roll.cover_photo?.thumbnail_link) && (
                                     <div className="overflow-hidden rounded-lg border border-border-default bg-bg-hover">
                                         <img
-                                            src={roll.cover_image_url || roll.cover_photo?.thumbnail_link || ''}
+                                            src={roll.cover_image_url || (roll.cover_photo ? getPhotoImageUrl(roll.cover_photo) : '')}
                                             alt={`${roll.film_name} cover`}
                                             className="aspect-[4/3] w-full object-cover"
                                         />
@@ -338,7 +342,7 @@ function RollDetailContent() {
                                         accept="image/jpeg,image/png,image/webp"
                                         value={coverFile}
                                         onChange={setCoverFile}
-                                        previewUrl={roll.cover_image_url || roll.cover_photo?.thumbnail_link}
+                                        previewUrl={roll.cover_image_url || (roll.cover_photo ? getPhotoImageUrl(roll.cover_photo) : undefined)}
                                         disabled={isUploadingCover}
                                     />
                                     <Button type="button" variant="secondary" onClick={handleCoverUpload} disabled={!coverFile} isLoading={isUploadingCover}>
@@ -635,7 +639,7 @@ function FilmFrame({
         <div className="group relative aspect-[4/3] overflow-hidden bg-black">
             <button type="button" onClick={onSelect} className="h-full w-full text-left">
                 {photo.thumbnail_link ? (
-                    <img src={photo.thumbnail_link} alt={photo.name} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                    <img src={getPhotoImageUrl(photo)} alt={photo.name} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
                 ) : (
                     <div className="grid h-full place-items-center p-3 text-center text-xs text-on-dark/70">
                         <ImageIcon size={22} className="mx-auto mb-2" />
@@ -710,7 +714,7 @@ function PhotoPreviewDialog({
                 <div className="grid gap-0 md:grid-cols-[1fr_260px]">
                     <div className="grid min-h-[320px] place-items-center bg-[#120f0d] p-4">
                         {photo.thumbnail_link ? (
-                            <img src={photo.thumbnail_link} alt={photo.name} className="max-h-[70vh] max-w-full rounded-lg object-contain" />
+                            <img src={getPhotoImageUrl(photo)} alt={photo.name} className="max-h-[70vh] max-w-full rounded-lg object-contain" />
                         ) : (
                             <div className="text-center text-on-dark/70">
                                 <ImageIcon size={36} className="mx-auto mb-3" />

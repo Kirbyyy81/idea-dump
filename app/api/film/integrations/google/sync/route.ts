@@ -108,6 +108,9 @@ export async function POST(request: NextRequest) {
         });
     } catch (error) {
         console.error('Error syncing Google Drive folder:', error);
-        return jsonError('Failed to sync Google Drive folder', 500);
+        const message = error instanceof Error && error.message
+            ? error.message
+            : 'Failed to sync Google Drive folder';
+        return jsonError(message, 500);
     }
 }
