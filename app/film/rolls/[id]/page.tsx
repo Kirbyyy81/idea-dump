@@ -317,7 +317,7 @@ function RollDetailContent() {
                     </div>
                 )}
 
-                <StatsCards roll={roll} />
+                {activeStep !== 'photobook' && <StatsCards roll={roll} />}
 
                 <StepStepper roll={roll} photos={photos} activeStep={activeStep} rollId={roll.id} />
 
