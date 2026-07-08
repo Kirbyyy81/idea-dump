@@ -49,8 +49,8 @@ export function AppShell({ children, contentClassName = 'p-8', projects: externa
     const projects = externalProjects !== undefined ? externalProjects : internalProjects;
 
     return (
-        <div className="min-h-screen bg-bg-canvas p-4 md:p-6 font-body text-text-primary">
-            <div className="mx-auto grid max-w-[1540px] min-h-[calc(100vh-48px)] grid-cols-[224px_minmax(0,1fr)] gap-5 rounded-shell border-2 border-border-strong bg-bg-shell p-4">
+        <div className="min-h-screen bg-bg-canvas p-2 md:p-6 font-body text-text-primary">
+            <div className="mx-auto grid max-w-[1540px] min-h-[calc(100vh-48px)] grid-cols-[224px_minmax(0,1fr)] items-start gap-5 rounded-shell border-2 border-border-strong bg-bg-shell p-4">
                 <Sidebar projects={projects} />
                 <main className={`min-w-0 ${contentClassName}`}>
                     {isLoading ? (
