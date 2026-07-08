@@ -407,7 +407,7 @@ function RollDetailContent() {
                                 value={rollForm.process_type}
                                 onChange={(nextValue) => setRollForm({ ...rollForm, process_type: nextValue as FilmProcessType | '' })}
                                 options={[
-                                    { value: '', label: 'Processing only' },
+                                    { value: '', label: 'Processing Type' },
                                     ...filmProcessTypes.map((type) => ({ value: type, label: filmProcessTypeConfig[type].label })),
                                 ]}
                             />
