@@ -2,10 +2,10 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { ReactNode, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
-import { ArrowLeft, FolderSync, Save } from 'lucide-react';
+import { ArrowLeft, ExternalLink, FolderSync, Heart, ImageIcon, Save, Star, X } from 'lucide-react';
 import { AppShell } from '@/components/organisms/AppShell';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
@@ -17,6 +17,7 @@ import { FileUpload } from '@/components/molecules/FileUpload';
 import {
     FilmCamera,
     FilmFormat,
+    FilmPhoto,
     FilmProcessType,
     FilmRoll,
     FilmRollStatus,
@@ -93,6 +94,8 @@ function RollDetailContent() {
     const [driveFolderInput, setDriveFolderInput] = useState('');
     const [coverFile, setCoverFile] = useState<File | null>(null);
     const [isUploadingCover, setIsUploadingCover] = useState(false);
+    const [selectedPhoto, setSelectedPhoto] = useState<FilmPhoto | null>(null);
+    const [updatingPhotoId, setUpdatingPhotoId] = useState<string | null>(null);
 
     const loadRoll = useCallback(async () => {
         setError(null);
@@ -146,7 +149,7 @@ function RollDetailContent() {
     const inlineSteps = steps.filter((step) => step.slug !== 'photobook');
     const defaultStep = inlineSteps.find((step) => !step.isComplete)?.slug ?? 'film';
     const stepParam = searchParams.get('step');
-    const activeStep = ['film', 'processing', 'drive'].includes(stepParam || '') ? stepParam! : defaultStep;
+    const activeStep = ['film', 'processing', 'drive', 'photobook'].includes(stepParam || '') ? stepParam! : defaultStep;
 
     useEffect(() => {
         const googleStatus = searchParams.get('google');
@@ -176,6 +179,40 @@ function RollDetailContent() {
             setError(err instanceof Error ? err.message : 'Failed to upload film cover');
         } finally {
             setIsUploadingCover(false);
+        }
+    };
+
+    const handleUpdatePhoto = async (
+        photo: FilmPhoto,
+        updates: { is_favorite?: boolean; set_as_cover?: boolean }
+    ) => {
+        if (!roll) return;
+
+        setUpdatingPhotoId(photo.id);
+        setError(null);
+        try {
+            const res = await fetch('/api/film/photos', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: photo.id,
+                    film_roll_id: roll.id,
+                    ...updates,
+                }),
+            });
+
+            const payload = await res.json();
+            if (!res.ok) throw new Error(payload.error || 'Failed to update photo');
+
+            await loadRoll();
+            setSelectedPhoto((current) => current && current.id === photo.id
+                ? { ...current, ...payload.data }
+                : current);
+            showSuccess(updates.set_as_cover ? 'Cover photo updated.' : 'Photo updated.', 'Saved');
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to update photo');
+        } finally {
+            setUpdatingPhotoId(null);
         }
     };
 
@@ -464,7 +501,239 @@ function RollDetailContent() {
                         </div>
                     </Card>
                 )}
+
+                {activeStep === 'photobook' && (
+                    <PhotobookContactSheet
+                        roll={roll}
+                        photos={photos}
+                        isUpdatingPhotoId={updatingPhotoId}
+                        onSelectPhoto={setSelectedPhoto}
+                        onToggleFavorite={(photo) => handleUpdatePhoto(photo, { is_favorite: !photo.is_favorite })}
+                        onSetCover={(photo) => handleUpdatePhoto(photo, { set_as_cover: true })}
+                    />
+                )}
+
+                {selectedPhoto && (
+                    <PhotoPreviewDialog
+                        roll={roll}
+                        photo={selectedPhoto}
+                        isUpdating={updatingPhotoId === selectedPhoto.id}
+                        onClose={() => setSelectedPhoto(null)}
+                        onToggleFavorite={() => handleUpdatePhoto(selectedPhoto, { is_favorite: !selectedPhoto.is_favorite })}
+                        onSetCover={() => handleUpdatePhoto(selectedPhoto, { set_as_cover: true })}
+                    />
+                )}
             </div>
         </AppShell>
+    );
+}
+
+function chunkPhotos(photos: FilmPhoto[], size: number) {
+    const chunks: FilmPhoto[][] = [];
+    for (let index = 0; index < photos.length; index += size) {
+        chunks.push(photos.slice(index, index + size));
+    }
+    return chunks.length > 0 ? chunks : [[]];
+}
+
+function PhotobookContactSheet({
+    roll,
+    photos,
+    isUpdatingPhotoId,
+    onSelectPhoto,
+    onToggleFavorite,
+    onSetCover,
+}: {
+    roll: FilmRoll;
+    photos: FilmPhoto[];
+    isUpdatingPhotoId: string | null;
+    onSelectPhoto: (photo: FilmPhoto) => void;
+    onToggleFavorite: (photo: FilmPhoto) => void;
+    onSetCover: (photo: FilmPhoto) => void;
+}) {
+    const rows = chunkPhotos(photos, 6);
+    const placeholderCount = photos.length === 0 ? 6 : Math.max(0, 6 - rows[rows.length - 1].length);
+
+    return (
+        <Card className="overflow-hidden p-0">
+            <div className="flex flex-col gap-3 border-b border-border-default bg-bg-elevated p-5 md:flex-row md:items-center md:justify-between">
+                <div>
+                    <p className="text-sm uppercase tracking-wide text-text-muted">Photobook</p>
+                    <h2 className="text-2xl font-bold">Contact Sheet</h2>
+                    <p className="mt-1 text-sm text-text-muted">
+                        {photos.length > 0
+                            ? `${photos.length} Drive photo${photos.length === 1 ? '' : 's'} synced for ${roll.film_name}.`
+                            : roll.drive_folder_id
+                                ? 'Folder linked, but no supported Drive photos are synced yet.'
+                                : 'Connect Google Drive and sync a folder to build this contact sheet.'}
+                    </p>
+                </div>
+                <Link href={`/film/rolls/${roll.id}?step=drive`} className="btn-ghost">
+                    Manage Drive
+                </Link>
+            </div>
+
+            <div className="bg-[#f8f3e7] p-4">
+                <div className="space-y-3 rounded-sm bg-[#171310] p-2 shadow-subtle">
+                    {rows.map((row, rowIndex) => {
+                        const placeholders = rowIndex === rows.length - 1 ? placeholderCount : 0;
+                        return (
+                            <FilmStripRow key={`${rowIndex}-${row.length}`}>
+                                {row.map((photo) => (
+                                    <FilmFrame
+                                        key={photo.id}
+                                        roll={roll}
+                                        photo={photo}
+                                        isUpdating={isUpdatingPhotoId === photo.id}
+                                        onSelect={() => onSelectPhoto(photo)}
+                                        onToggleFavorite={() => onToggleFavorite(photo)}
+                                        onSetCover={() => onSetCover(photo)}
+                                    />
+                                ))}
+                                {Array.from({ length: placeholders }).map((_, index) => (
+                                    <EmptyFilmFrame key={`placeholder-${rowIndex}-${index}`} />
+                                ))}
+                            </FilmStripRow>
+                        );
+                    })}
+                </div>
+            </div>
+        </Card>
+    );
+}
+
+function FilmStripRow({ children }: { children: ReactNode }) {
+    return (
+        <div className="bg-[#1f1915] p-1">
+            <div className="h-3 rounded-[2px] bg-[repeating-linear-gradient(90deg,#f8f3e7_0_5px,transparent_5px_12px)]" />
+            <div className="grid grid-cols-2 gap-1 bg-[#120f0d] py-1 sm:grid-cols-3 lg:grid-cols-6">
+                {children}
+            </div>
+            <div className="h-3 rounded-[2px] bg-[repeating-linear-gradient(90deg,#f8f3e7_0_5px,transparent_5px_12px)]" />
+        </div>
+    );
+}
+
+function FilmFrame({
+    roll,
+    photo,
+    isUpdating,
+    onSelect,
+    onToggleFavorite,
+    onSetCover,
+}: {
+    roll: FilmRoll;
+    photo: FilmPhoto;
+    isUpdating: boolean;
+    onSelect: () => void;
+    onToggleFavorite: () => void;
+    onSetCover: () => void;
+}) {
+    const isCover = roll.cover_photo_id === photo.id;
+
+    return (
+        <div className="group relative aspect-[4/3] overflow-hidden bg-black">
+            <button type="button" onClick={onSelect} className="h-full w-full text-left">
+                {photo.thumbnail_link ? (
+                    <img src={photo.thumbnail_link} alt={photo.name} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                ) : (
+                    <div className="grid h-full place-items-center p-3 text-center text-xs text-on-dark/70">
+                        <ImageIcon size={22} className="mx-auto mb-2" />
+                        <span className="line-clamp-2">{photo.name}</span>
+                    </div>
+                )}
+            </button>
+
+            <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-gradient-to-t from-black/85 to-transparent p-2 opacity-100 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
+                <button
+                    type="button"
+                    onClick={onToggleFavorite}
+                    disabled={isUpdating}
+                    className={cn('rounded-full bg-bg-elevated/90 p-1.5 text-text-primary shadow-subtle', photo.is_favorite && 'text-error')}
+                    aria-label={photo.is_favorite ? 'Remove favorite' : 'Mark favorite'}
+                >
+                    <Heart size={14} fill={photo.is_favorite ? 'currentColor' : 'none'} />
+                </button>
+                <button
+                    type="button"
+                    onClick={onSetCover}
+                    disabled={isUpdating || isCover}
+                    className={cn('rounded-full bg-bg-elevated/90 p-1.5 text-text-primary shadow-subtle', isCover && 'text-accent-apricot')}
+                    aria-label={isCover ? 'Current cover photo' : 'Set as cover photo'}
+                >
+                    <Star size={14} fill={isCover ? 'currentColor' : 'none'} />
+                </button>
+            </div>
+        </div>
+    );
+}
+
+function EmptyFilmFrame() {
+    return (
+        <div className="aspect-[4/3] border border-[#2f2925] bg-black/95" />
+    );
+}
+
+function PhotoPreviewDialog({
+    roll,
+    photo,
+    isUpdating,
+    onClose,
+    onToggleFavorite,
+    onSetCover,
+}: {
+    roll: FilmRoll;
+    photo: FilmPhoto;
+    isUpdating: boolean;
+    onClose: () => void;
+    onToggleFavorite: () => void;
+    onSetCover: () => void;
+}) {
+    const isCover = roll.cover_photo_id === photo.id;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <button type="button" className="absolute inset-0 bg-overlay-backdrop" onClick={onClose} aria-label="Close photo preview" />
+            <div className="relative z-10 w-full max-w-5xl overflow-hidden rounded-2xl border border-border-default bg-bg-elevated shadow-subtle">
+                <div className="flex items-center justify-between gap-3 border-b border-border-default p-4">
+                    <div className="min-w-0">
+                        <h2 className="truncate text-lg font-bold">{photo.name}</h2>
+                        <p className="text-sm text-text-muted">
+                            {[photo.width && photo.height ? `${photo.width} x ${photo.height}` : null, photo.mime_type].filter(Boolean).join(' · ')}
+                        </p>
+                    </div>
+                    <button type="button" onClick={onClose} className="rounded-full p-2 text-text-muted hover:bg-bg-hover hover:text-text-primary" aria-label="Close">
+                        <X size={20} />
+                    </button>
+                </div>
+
+                <div className="grid gap-0 md:grid-cols-[1fr_260px]">
+                    <div className="grid min-h-[320px] place-items-center bg-[#120f0d] p-4">
+                        {photo.thumbnail_link ? (
+                            <img src={photo.thumbnail_link} alt={photo.name} className="max-h-[70vh] max-w-full rounded-lg object-contain" />
+                        ) : (
+                            <div className="text-center text-on-dark/70">
+                                <ImageIcon size={36} className="mx-auto mb-3" />
+                                <p>No public thumbnail available.</p>
+                            </div>
+                        )}
+                    </div>
+                    <aside className="space-y-3 border-t border-border-default p-4 md:border-l md:border-t-0">
+                        <Button type="button" variant="secondary" icon={<Heart size={16} />} onClick={onToggleFavorite} disabled={isUpdating}>
+                            {photo.is_favorite ? 'Remove Favorite' : 'Mark Favorite'}
+                        </Button>
+                        <Button type="button" variant="secondary" icon={<Star size={16} />} onClick={onSetCover} disabled={isUpdating || isCover}>
+                            {isCover ? 'Current Cover' : 'Set as Cover'}
+                        </Button>
+                        {photo.web_view_link && (
+                            <a href={photo.web_view_link} target="_blank" rel="noreferrer" className="btn-ghost inline-flex w-full items-center justify-center gap-2">
+                                <ExternalLink size={16} />
+                                Open in Drive
+                            </a>
+                        )}
+                    </aside>
+                </div>
+            </div>
+        </div>
     );
 }
