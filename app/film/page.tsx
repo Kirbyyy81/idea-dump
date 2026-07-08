@@ -92,7 +92,7 @@ function FilmCanister({ roll, index }: { roll: FilmRoll; index: number }) {
             <article className="relative mx-auto flex min-h-[330px] max-w-[300px] flex-col items-center justify-center">
                 <div className="relative h-[300px] w-[300px]">
                     <div
-                        className="absolute left-[106px] top-[102px] z-0 h-[112px] w-[160px] [clip-path:inset(-50px_-50px_-50px_0)]"
+                        className="absolute left-[106px] top-[90px] z-0 h-[136px] w-[160px] [clip-path:inset(-50px_-50px_-50px_0)]"
                         aria-hidden="true"
                     >
                         <div className="absolute left-0 top-0 h-full w-[154px] -translate-x-[116px] overflow-hidden rounded-r-3xl border-y-2 border-r-2 border-border-dark/40 bg-black/80 backdrop-blur-md shadow-[14px_16px_24px_rgba(0,0,0,0.35)] transition-transform duration-500 ease-out group-hover:translate-x-0">
