@@ -13,6 +13,7 @@ import { DatePicker } from '@/components/atoms/DatePicker';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
+import { FileUpload } from '@/components/molecules/FileUpload';
 import {
     FilmCamera,
     FilmFormat,
@@ -293,9 +294,16 @@ function RollDetailContent() {
                                         />
                                     </div>
                                 )}
-                                <div className="space-y-2 rounded-lg border border-border-default bg-bg-hover/40 p-3">
-                                    <p className="text-sm font-semibold text-text-secondary">Cover image</p>
-                                    <Input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setCoverFile(event.target.files?.[0] || null)} />
+                                <div className="space-y-3 rounded-lg border border-border-default bg-bg-hover/40 p-3">
+                                    <FileUpload
+                                        label="Cover image"
+                                        hint="Upload a JPEG, PNG, or WebP cover"
+                                        accept="image/jpeg,image/png,image/webp"
+                                        value={coverFile}
+                                        onChange={setCoverFile}
+                                        previewUrl={roll.cover_image_url || roll.cover_photo?.thumbnail_link}
+                                        disabled={isUploadingCover}
+                                    />
                                     <Button type="button" variant="secondary" onClick={handleCoverUpload} disabled={!coverFile} isLoading={isUploadingCover}>
                                         Replace Cover
                                     </Button>
