@@ -7,8 +7,13 @@ import { Film, Search, X } from 'lucide-react';
 import { AppShell } from '@/components/organisms/AppShell';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
-import { FilmCamera, FilmRoll, FilmRollStatus, filmRollStatusConfig } from '@/lib/types';
-import { cn } from '@/lib/utils';
+import {
+    FilmCamera,
+    FilmRoll,
+    FilmRollStatus,
+    filmRollStatusConfig,
+} from '@/lib/types';
+import { formatCurrencyMYR } from '@/lib/utils';
 
 const CANISTER_THEMES = [
     {
@@ -53,14 +58,6 @@ const CANISTER_THEMES = [
     },
 ];
 
-function formatCurrency(value: number) {
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-        maximumFractionDigits: 2,
-    }).format(value || 0);
-}
-
 function FilmCoverFallback({
     roll,
     accentColor,
@@ -87,13 +84,12 @@ function FilmCoverFallback({
 
 function FilmCanister({ roll, index }: { roll: FilmRoll; index: number }) {
     const theme = CANISTER_THEMES[index % CANISTER_THEMES.length];
-    const thumbnail = roll.cover_photo?.thumbnail_link;
-    const status = filmRollStatusConfig[roll.status];
+    const thumbnail = roll.cover_image_url || roll.cover_photo?.thumbnail_link;
     const stripeCount = index % 2 === 0 ? 8 : 0;
 
     return (
-        <Link href={`/film/rolls/${roll.id}`} className="group block">
-            <article className="relative mx-auto flex min-h-[330px] max-w-[300px] items-center justify-center">
+        <Link href={`/film/rolls/${roll.id}`} className="action-link group block">
+            <article className="relative mx-auto flex min-h-[330px] max-w-[300px] flex-col items-center justify-center">
                 <div className="relative h-[300px] w-[300px]">
                     <div
                         className="absolute left-[106px] top-[102px] z-0 h-[112px] w-[160px] [clip-path:inset(-50px_-50px_-50px_0)]"
@@ -116,7 +112,7 @@ function FilmCanister({ roll, index }: { roll: FilmRoll; index: number }) {
                                 </p>
                                 <h2 className="mt-1 line-clamp-2 text-lg font-bold leading-tight text-[#ffcc88]">{roll.film_name}</h2>
                                 <div className="mt-2 flex items-center justify-between gap-2 text-[10px] font-semibold text-[#ffb84d]">
-                                    <span>{formatCurrency(Number(roll.purchase_price || 0))}</span>
+                                    <span>{formatCurrencyMYR(Number(roll.purchase_price || 0))}</span>
                                     <span>{roll.frames_taken || 0} frames</span>
                                 </div>
                                 <div className="mt-1 truncate text-[10px] font-semibold text-[#ffb84d]">
@@ -202,6 +198,7 @@ function FilmCanister({ roll, index }: { roll: FilmRoll; index: number }) {
                                 alt={`${roll.film_name} cover`}
                                 fill
                                 sizes="92px"
+                                unoptimized
                                 className="h-full w-full object-cover"
                             />
                         ) : (
@@ -209,11 +206,6 @@ function FilmCanister({ roll, index }: { roll: FilmRoll; index: number }) {
                         )}
                         <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.4)_0%,rgba(0,0,0,0)_20%,rgba(255,255,255,0.1)_40%,rgba(0,0,0,0)_80%,rgba(0,0,0,0.3)_100%)]" />
                         <div className="pointer-events-none absolute inset-0 border border-border-dark/20" />
-                    </div>
-                    <div className="absolute left-[62px] top-[265px] z-30 flex -translate-x-1/2 justify-center">
-                        <span className={cn('rounded-full border px-2 py-1 text-[9px] shadow-sm', status.colorClass)}>
-                            {status.label}
-                        </span>
                     </div>
                 </div>
             </article>
@@ -259,7 +251,7 @@ export default function FilmJournalPage() {
             if (status !== 'all' && roll.status !== status) return false;
             if (cameraId && roll.camera_id !== cameraId) return false;
             if (!needle) return true;
-            return [roll.film_name, roll.brand, roll.notes, roll.location_name, roll.camera?.name]
+            return [roll.film_name, roll.brand, roll.notes, roll.location_name, roll.camera?.name, roll.film_type, roll.process_type]
                 .filter(Boolean)
                 .join(' ')
                 .toLowerCase()
@@ -345,7 +337,7 @@ export default function FilmJournalPage() {
                             <Film className="mx-auto mb-4 opacity-60" size={38} />
                             <p>{rolls.length ? 'No rolls match these filters.' : 'Your cupboard is ready for its first roll.'}</p>
                             {!rolls.length && (
-                                <Link href="/film/new-roll" className="mt-4 inline-flex rounded-full bg-action-primary px-5 py-2 text-sm font-medium text-action-primary-text">
+                                <Link href="/film/new-roll" className="action-link mt-4 inline-flex rounded-full bg-action-primary px-5 py-2 text-sm font-medium text-action-primary-text">
                                     Register a roll
                                 </Link>
                             )}

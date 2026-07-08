@@ -1,8 +1,8 @@
 -- ============================================================================
--- IdeaDump — Database Schema Snapshot
+-- IdeaDump - Database Schema Snapshot
 -- Captured: 2026-06-28
 -- Source:   Supabase project (xcaxukhjkqqnmzziqrkc)
--- Tables:   16 (all RLS enabled)
+-- Tables:   15 public application tables (all RLS enabled)
 -- Rows:     projects=1, daily_logs=171, api_keys=1, DIM_roles=4,
 --           DIM_modules=10, BRIDGE_role_modules=29, BRIDGE_user_roles=3
 --           (all others = 0 rows)
@@ -148,9 +148,6 @@ create table if not exists public.film_cameras (
 );
 
 -- 12. film_rolls
--- DRIFT: Migration 20260618 was supposed to add lab_name, processing_cost,
--- scanning_cost, shipping_cost, processing_date — these columns are MISSING
--- from the live DB. The app code (lib/types.ts) expects them.
 create table if not exists public.film_rolls (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -158,18 +155,31 @@ create table if not exists public.film_rolls (
   film_name text not null,
   brand text not null,
   format text not null check (format in ('35mm', '120', 'Large Format')),
+  film_type text not null default 'NEGATIVE' check (
+    film_type in ('NEGATIVE', 'REVERSAL', 'BW_NEGATIVE')
+  ),
+  process_type text check (
+    process_type is null or process_type in ('C41', 'E6', 'BW', 'ECN2')
+  ),
   iso integer not null check (iso > 0),
   status text not null default 'UNUSED' check (
     status in ('UNUSED', 'LOADED', 'SHOOTING', 'AWAITING_PROCESSING',
                'PROCESSING', 'PROCESSED', 'ARCHIVED')
   ),
   purchase_price numeric(10, 2) not null default 0,
+  lab_name text,
+  processing_cost numeric(10, 2) not null default 0 check (processing_cost >= 0),
+  scanning_cost numeric(10, 2) not null default 0 check (scanning_cost >= 0),
+  shipping_cost numeric(10, 2) not null default 0 check (shipping_cost >= 0),
+  processing_date date,
   frames_taken integer not null default 0 check (frames_taken >= 0),
   successful_photos integer not null default 0 check (successful_photos >= 0),
   location_name text,
   notes text,
   drive_folder_id text,
   cover_photo_id uuid,  -- FK added below (self-referential via film_photos)
+  cover_image_url text,
+  cover_image_path text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -179,23 +189,7 @@ create table if not exists public.film_rolls (
 --   add constraint film_rolls_cover_photo_id_fkey
 --   foreign key (cover_photo_id) references public.film_photos(id) on delete set null;
 
--- 13. film_processing_records
--- ORPHANED: Migration 20260618 was supposed to merge this data into film_rolls
--- and DROP this table. It still exists in the live DB.
-create table if not exists public.film_processing_records (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
-  film_roll_id uuid not null references public.film_rolls(id) on delete cascade,
-  lab_name text,
-  processing_date date,
-  processing_cost numeric(10, 2) not null default 0,
-  scanning_cost numeric(10, 2) not null default 0,
-  shipping_cost numeric(10, 2) not null default 0,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
--- 14. film_maintenance_records
+-- 13. film_maintenance_records
 create table if not exists public.film_maintenance_records (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -209,7 +203,7 @@ create table if not exists public.film_maintenance_records (
   updated_at timestamptz not null default now()
 );
 
--- 15. film_photos
+-- 14. film_photos
 create table if not exists public.film_photos (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -228,7 +222,7 @@ create table if not exists public.film_photos (
   unique (film_roll_id, drive_file_id)
 );
 
--- 16. film_drive_connections
+-- 15. film_drive_connections
 create table if not exists public.film_drive_connections (
   user_id uuid primary key references auth.users(id) on delete cascade,
   access_token_encrypted text not null,
@@ -239,6 +233,12 @@ create table if not exists public.film_drive_connections (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- Storage bucket used by Film Journal cover uploads.
+insert into storage.buckets (id, name, public)
+values ('film-covers', 'film-covers', true)
+on conflict (id) do update
+set public = excluded.public;
 
 -- ============================================================================
 -- SECTION 4: Indexes
@@ -269,10 +269,6 @@ create index if not exists film_maintenance_records_user_id_idx
 -- film_photos
 create index if not exists film_photos_roll_id_idx
   on public.film_photos (film_roll_id);
-
--- film_processing_records
-create index if not exists film_processing_records_roll_id_idx
-  on public.film_processing_records (film_roll_id);
 
 -- ============================================================================
 -- SECTION 5: Triggers & Functions
@@ -311,7 +307,7 @@ create trigger tickets_updated_at
 -- SECTION 6: Row Level Security
 -- ============================================================================
 
--- All 16 tables have RLS enabled.
+-- All 15 public application tables have RLS enabled.
 alter table public.projects enable row level security;
 alter table public.notes enable row level security;
 alter table public.tickets enable row level security;
@@ -324,7 +320,6 @@ alter table public.BRIDGE_user_roles enable row level security;
 alter table public.app_user_module_overrides enable row level security;
 alter table public.film_cameras enable row level security;
 alter table public.film_rolls enable row level security;
-alter table public.film_processing_records enable row level security;
 alter table public.film_maintenance_records enable row level security;
 alter table public.film_photos enable row level security;
 alter table public.film_drive_connections enable row level security;
@@ -392,26 +387,23 @@ create policy "Users can delete own tickets"
 -- SECTION 8: Schema Drift Notes
 -- ============================================================================
 --
--- 1. film_rolls missing 5 columns (HIGH)
---    Migration 20260618_merge_film_processing_into_rolls.sql was not applied.
---    Missing: lab_name, processing_cost, scanning_cost, shipping_cost, processing_date
---    App code (lib/types.ts FilmRoll interface) expects these fields.
+-- 1. Remote Film schema pending 20260707 migration (HIGH)
+--    Supabase MCP write operations were read-only on 2026-07-08, so the live
+--    database still needs 20260707_film_roll_cover_and_types.sql applied by a
+--    writable migration path. Missing remote columns at that time:
+--    film_type, process_type, cover_image_url, cover_image_path.
 --
--- 2. film_processing_records still exists (MEDIUM)
---    Migration 20260618 was supposed to DROP this table after merging data.
---    Table is empty (0 rows) but still present.
---
--- 3. projects.tags column orphaned (LOW)
+-- 2. projects.tags column orphaned (LOW)
 --    Column exists in DB but is not in TypeScript Project type.
 --    No app code reads or writes it.
 --
--- 4. DIM_modules.status column undocumented (LOW)
+-- 3. DIM_modules.status column undocumented (LOW)
 --    Column exists in live DB but no migration file creates it.
 --    Not referenced in app code.
 --
--- 5. daily_logs updated_at trigger missing (LOW)
+-- 4. daily_logs updated_at trigger missing (LOW)
 --    Migration 20260316 creates this trigger, but it does not exist in live DB.
 --    The updated_at column won't auto-update on row modifications.
 --
--- 6. DIM_roles has 4 rows but only 3 are defined in migrations (INFO)
+-- 5. DIM_roles has 4 rows but only 3 are defined in migrations (INFO)
 --    owner, admin, member are from migrations. 1 additional custom role exists.

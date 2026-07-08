@@ -1,5 +1,5 @@
-import { FilmFormat, FilmRollStatus } from '@/lib/types';
-import { FILM_FORMATS, FILM_ROLL_STATUSES } from './constants';
+import { FilmFormat, FilmProcessType, FilmRollStatus, FilmType } from '@/lib/types';
+import { FILM_FORMATS, FILM_PROCESS_TYPES, FILM_ROLL_STATUSES, FILM_TYPES } from './constants';
 
 export function isFilmRollStatus(value: unknown): value is FilmRollStatus {
     return FILM_ROLL_STATUSES.includes(value as FilmRollStatus);
@@ -7,6 +7,14 @@ export function isFilmRollStatus(value: unknown): value is FilmRollStatus {
 
 export function isFilmFormat(value: unknown): value is FilmFormat {
     return FILM_FORMATS.includes(value as FilmFormat);
+}
+
+export function isFilmType(value: unknown): value is FilmType {
+    return FILM_TYPES.includes(value as FilmType);
+}
+
+export function isFilmProcessType(value: unknown): value is FilmProcessType {
+    return FILM_PROCESS_TYPES.includes(value as FilmProcessType);
 }
 
 export function toNullableText(value: unknown) {

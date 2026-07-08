@@ -3,7 +3,9 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { authorizeFilmJournal, getOwnedFilmCamera, jsonError } from '@/lib/film/api';
 import {
     isFilmFormat,
+    isFilmProcessType,
     isFilmRollStatus,
+    isFilmType,
     isNonNegativeNumber,
     normalizeDate,
     toNonNegativeInteger,
@@ -19,11 +21,17 @@ function buildRollInsert(body: Record<string, unknown>, userId: string) {
     const filmName = toRequiredText(body.film_name);
     const brand = toRequiredText(body.brand);
     const format = body.format;
+    const filmType = body.film_type;
+    const processType = body.process_type;
     const iso = toPositiveInteger(body.iso);
 
     if (!filmName) return { error: 'Film name is required' };
     if (!brand) return { error: 'Brand is required' };
     if (!isFilmFormat(format)) return { error: 'Format is required' };
+    if (filmType !== undefined && !isFilmType(filmType)) return { error: 'Invalid film type' };
+    if (processType !== undefined && processType !== null && processType !== '' && !isFilmProcessType(processType)) {
+        return { error: 'Invalid process type' };
+    }
     if (!iso) return { error: 'ISO must be greater than 0' };
     for (const field of ['purchase_price', 'processing_cost', 'scanning_cost', 'shipping_cost', 'frames_taken', 'successful_photos']) {
         if (body[field] !== undefined && body[field] !== '' && !isNonNegativeNumber(body[field])) {
@@ -37,6 +45,8 @@ function buildRollInsert(body: Record<string, unknown>, userId: string) {
             film_name: filmName,
             brand,
             format,
+            film_type: isFilmType(filmType) ? filmType : 'NEGATIVE',
+            process_type: isFilmProcessType(processType) ? processType : null,
             iso,
             camera_id: toNullableText(body.camera_id),
             status: isFilmRollStatus(body.status) ? body.status : 'UNUSED',
@@ -52,6 +62,8 @@ function buildRollInsert(body: Record<string, unknown>, userId: string) {
             notes: toNullableText(body.notes),
             drive_folder_id: toNullableText(body.drive_folder_id),
             cover_photo_id: body.cover_photo_id === null ? null : toNullableText(body.cover_photo_id),
+            cover_image_url: toNullableText(body.cover_image_url),
+            cover_image_path: toNullableText(body.cover_image_path),
         },
     };
 }
@@ -70,6 +82,17 @@ function buildRollUpdates(body: Record<string, unknown>) {
     if (body.format !== undefined) {
         if (!isFilmFormat(body.format)) return { error: 'Invalid format' };
         updates.format = body.format;
+    }
+    if (body.film_type !== undefined) {
+        if (!isFilmType(body.film_type)) return { error: 'Invalid film type' };
+        updates.film_type = body.film_type;
+    }
+    if (body.process_type !== undefined) {
+        if (body.process_type === null || body.process_type === '') updates.process_type = null;
+        else {
+            if (!isFilmProcessType(body.process_type)) return { error: 'Invalid process type' };
+            updates.process_type = body.process_type;
+        }
     }
     if (body.iso !== undefined) {
         const iso = toPositiveInteger(body.iso);
@@ -95,6 +118,8 @@ function buildRollUpdates(body: Record<string, unknown>) {
     if (body.cover_photo_id !== undefined) {
         updates.cover_photo_id = body.cover_photo_id === null ? null : toNullableText(body.cover_photo_id);
     }
+    if (body.cover_image_url !== undefined) updates.cover_image_url = toNullableText(body.cover_image_url);
+    if (body.cover_image_path !== undefined) updates.cover_image_path = toNullableText(body.cover_image_path);
 
     if (updates.film_name === '') return { error: 'Film name is required' };
     if (updates.brand === '') return { error: 'Brand is required' };
