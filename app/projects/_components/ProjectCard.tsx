@@ -1,22 +1,16 @@
 import Link from 'next/link';
-import { Priority, Project, inferStatus, priorityConfig } from '@/lib/types';
+import { Project, inferStatus } from '@/lib/types';
 import { formatRelativeTime, truncate } from '@/lib/utils';
 import { Card } from '@/components/atoms/Card';
+import { PriorityIndicator } from '@/components/atoms/PriorityIndicator';
 import { StatusBadge } from './StatusBadge';
 
 interface ProjectCardProps {
     project: Project;
 }
 
-const priorityPillClass: Record<Priority, string> = {
-    low: 'border-border-strong bg-bg-hover text-text-primary',
-    medium: 'border-warning bg-warning-bg text-warning',
-    high: 'border-error bg-error-bg text-error',
-};
-
 export function ProjectCard({ project }: ProjectCardProps) {
     const status = inferStatus(project);
-    const priority = priorityConfig[project.priority];
 
     return (
         <Link href={`/projects/${project.id}`} className="block h-full">
@@ -38,14 +32,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
                 {/* Footer */}
                 <div className="flex items-center justify-between mt-auto pt-3 border-t border-border-subtle">
-                    <span
-                        className={cn(
-                            'inline-flex min-w-[56px] items-center justify-center rounded-full border px-2.5 py-1 text-xs font-semibold capitalize',
-                            priorityPillClass[project.priority]
-                        )}
-                    >
-                        {priority.label}
-                    </span>
+                    <PriorityIndicator priority={project.priority} size="sm" />
 
                     {/* Timestamp */}
                     <p className="text-xs text-text-muted">
@@ -56,6 +43,3 @@ export function ProjectCard({ project }: ProjectCardProps) {
         </Link>
     );
 }
-
-// Helper needed because we can't import cn in the render function without import
-import { cn } from '@/lib/utils';

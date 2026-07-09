@@ -3,7 +3,8 @@
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
-import { priorityConfig, Ticket, TicketStatus, ticketSourceConfig, ticketStatusConfig } from '@/lib/types';
+import { PriorityIndicator } from '@/components/atoms/PriorityIndicator';
+import { Ticket, TicketStatus, ticketSourceConfig, ticketStatusConfig } from '@/lib/types';
 import { cn, formatDate } from '@/lib/utils';
 
 interface TicketCardProps {
@@ -48,9 +49,7 @@ export function TicketCard({ ticket, projectTitle, canManage = false, onEdit, on
                             #{tag}
                         </span>
                     ))}
-                    <span className={cn('rounded-full bg-bg-hover px-2 py-0.5', priorityConfig[ticket.priority].textClass)}>
-                        {priorityConfig[ticket.priority].label}
-                    </span>
+                    <PriorityIndicator priority={ticket.priority} size="sm" />
                     <span className="rounded-full bg-bg-hover px-2 py-0.5">
                         {ticketSourceConfig[ticket.source].label}
                     </span>

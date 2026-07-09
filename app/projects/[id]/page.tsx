@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { AppShell } from '@/components/organisms/AppShell';
 import { StatusBadge } from '../_components/StatusBadge';
-import { PriorityBadge } from '../_components/PriorityBadge';
+import { PriorityIndicator } from '@/components/atoms/PriorityIndicator';
 import { MarkdownRenderer } from '../_components/MarkdownRenderer';
 import { NotesPanel } from '../_components/NotesPanel';
 import { TicketCard } from '@/components/organisms/TicketCard';
@@ -291,7 +291,7 @@ export default function ProjectPage() {
 
                 <Card className="grid grid-cols-1 gap-4 p-4 !border-border-subtle bg-bg-elevated sm:grid-cols-2 md:grid-cols-5">
                     <div>
-                        <PriorityBadge priority={project.priority} />
+                        <PriorityIndicator priority={project.priority} showCaption />
                     </div>
                     <div>
                         <p className="text-xs uppercase mb-1 text-text-muted">Created</p>
