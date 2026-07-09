@@ -21,7 +21,6 @@ import {
     FolderKanban,
     LayoutDashboard,
     PanelLeftClose,
-    PanelLeftOpen,
     Plus,
     Settings,
     Settings2,
@@ -213,21 +212,38 @@ export function Sidebar({ projects, collapsed = false, onToggleCollapsed }: Side
         >
             <div className={cn('border-b border-nav-bg-hover pb-4', collapsed && 'pb-3')}>
                 <div className={cn('flex gap-2', collapsed ? 'flex-col items-center' : 'items-center justify-between')}>
-                    <Link href="/dashboard" className={cn('flex min-w-0 items-center gap-2', collapsed && 'justify-center')}>
-                        <Image
-                            src="/logo.png"
-                            alt="IdeaDump Logo"
-                            width={28}
-                            height={28}
-                            className="size-7 shrink-0 object-contain"
-                        />
-                        {!collapsed && (
+                    {collapsed && onToggleCollapsed ? (
+                        <button
+                            type="button"
+                            onClick={onToggleCollapsed}
+                            className="grid size-9 place-items-center rounded-sm text-nav-text-muted transition-colors hover:bg-nav-bg-hover hover:text-nav-text"
+                            aria-label="Expand sidebar"
+                            aria-expanded={false}
+                            title="Expand sidebar"
+                        >
+                            <Image
+                                src="/logo.png"
+                                alt=""
+                                width={28}
+                                height={28}
+                                className="size-7 shrink-0 object-contain"
+                            />
+                        </button>
+                    ) : (
+                        <Link href="/dashboard" className="flex min-w-0 items-center gap-2">
+                            <Image
+                                src="/logo.png"
+                                alt="IdeaDump Logo"
+                                width={28}
+                                height={28}
+                                className="size-7 shrink-0 object-contain"
+                            />
                             <span className="truncate font-heading text-base font-extrabold leading-none text-nav-text">
                                 IdeaDump
                             </span>
-                        )}
-                    </Link>
-                    {onToggleCollapsed && (
+                        </Link>
+                    )}
+                    {onToggleCollapsed && !collapsed && (
                         <button
                             type="button"
                             onClick={onToggleCollapsed}
@@ -236,7 +252,7 @@ export function Sidebar({ projects, collapsed = false, onToggleCollapsed }: Side
                             aria-expanded={!collapsed}
                             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
                         >
-                            {collapsed ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
+                            <PanelLeftClose size={17} />
                         </button>
                     )}
                 </div>
