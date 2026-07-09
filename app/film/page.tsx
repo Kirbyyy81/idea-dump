@@ -92,7 +92,7 @@ function FilmCanister({ roll, index }: { roll: FilmRoll; index: number }) {
     const stripeCount = index % 2 === 0 ? 8 : 0;
 
     return (
-        <div className="mx-auto flex max-w-[300px] flex-col items-center gap-3">
+        <div className="mx-auto flex max-w-[300px] flex-col items-center">
             <Link
                 href={`/film/rolls/${roll.id}?step=photobook`}
                 className="action-link group block"
@@ -219,12 +219,6 @@ function FilmCanister({ roll, index }: { roll: FilmRoll; index: number }) {
                         </div>
                     </div>
                 </article>
-            </Link>
-            <Link
-                href={`/film/rolls/${roll.id}?step=film`}
-                className="action-link rounded-full border border-border-default bg-bg-elevated px-4 py-2 text-sm font-semibold text-text-primary shadow-subtle transition-colors hover:border-border-strong hover:bg-bg-hover"
-            >
-                Roll Details
             </Link>
         </div>
     );

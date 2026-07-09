@@ -340,7 +340,16 @@ function RollDetailContent() {
     return (
         <AppShell contentClassName="film-module p-8">
             <div className="max-w-7xl space-y-8">
-                <RollHeader roll={roll} isSaving={isSaving} onSave={handleSaveRoll} />
+                <RollHeader
+                    roll={roll}
+                    isSaving={isSaving}
+                    onSave={handleSaveRoll}
+                    alternateAction={activeStep === 'photobook' ? (
+                        <Link href={`/film/rolls/${roll.id}?step=film`} className="btn-secondary">
+                            Roll Details
+                        </Link>
+                    ) : undefined}
+                />
 
                 {error && (
                     <div className="rounded-lg border border-error bg-error-bg px-4 py-3 text-sm text-error">

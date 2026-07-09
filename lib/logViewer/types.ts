@@ -1,5 +1,5 @@
 export type LogBodyKind = 'json' | 'text' | 'none';
-export type LogLineType = 'request' | 'response' | 'content_data' | 'crash' | 'error' | 'other';
+export type LogLineType = 'request' | 'response' | 'content_data' | 'crash' | 'error' | 'info' | 'other';
 export type OrphanKind = 'request' | 'response' | 'content_data' | null;
 
 export type LogEvent = {
@@ -14,8 +14,14 @@ export type LogEvent = {
   method?: string;
   url?: string;
   endpointKey?: string;
+  host?: string;
+  path?: string;
   httpStatus?: number;
   functionName?: string;
+  requestId?: string;
+  responseId?: string;
+  clientRequestId?: string;
+  durationMs?: number;
   bodyKind?: LogBodyKind;
   bodyRaw?: string;
   bodyJson?: unknown;
@@ -28,6 +34,9 @@ export type Transaction = {
   id: string;
   url?: string;
   endpointKey?: string;
+  host?: string;
+  path?: string;
+  correlationId?: string;
   method?: string;
   request?: LogEvent;
   responses: LogEvent[];

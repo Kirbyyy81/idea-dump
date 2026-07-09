@@ -6,16 +6,26 @@ import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
+import { Toggle } from '@/components/atoms/Toggle';
 import { parseLogText } from '@/lib/logViewer/parse';
 import { buildTransactions, transactionHasError } from '@/lib/logViewer/transactions';
-import { LogEvent, Transaction, UnparsedLogLine } from '@/lib/logViewer/types';
+import { LogEvent, LogLineType, Transaction, UnparsedLogLine } from '@/lib/logViewer/types';
 import { FileText, ChevronDown, ChevronRight, Search, Upload, X } from 'lucide-react';
 import { TransactionRow } from './TransactionDisplay';
 import { StandaloneLines } from './StandaloneLines';
 
+const LARGE_PASTE_PARSE_THRESHOLD = 250000;
+
+function transactionIncludesLineType(tx: Transaction, lineType: LogLineType): boolean {
+  if (tx.request?.lineType === lineType) return true;
+  if (tx.contentData?.lineType === lineType) return true;
+  return tx.responses.some((event) => event.lineType === lineType);
+}
+
 export function LogViewer() {
   const [fileName, setFileName] = useState<string>('');
   const [rawText, setRawText] = useState<string>('');
+  const [lastParsedRawText, setLastParsedRawText] = useState<string>('');
   const [events, setEvents] = useState<LogEvent[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [unparsedLines, setUnparsedLines] = useState<UnparsedLogLine[]>([]);
@@ -28,6 +38,8 @@ export function LogViewer() {
   const [query, setQuery] = useState<string>('');
   const [errorsOnly, setErrorsOnly] = useState<boolean>(false);
   const [endpointFilter, setEndpointFilter] = useState<string>('');
+  const [lineTypeFilter, setLineTypeFilter] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('');
 
   const indexed = useMemo(() => {
     return transactions.map((tx) => {
@@ -51,12 +63,18 @@ export function LogViewer() {
     return indexed
       .filter(({ tx, searchText }) => {
         if (errorsOnly && !transactionHasError(tx)) return false;
+        if (lineTypeFilter && !transactionIncludesLineType(tx, lineTypeFilter as LogLineType)) return false;
+        if (statusFilter === 'errors' && !transactionHasError(tx)) return false;
+        if (statusFilter === 'ok' && transactionHasError(tx)) return false;
+        if (statusFilter === 'orphans' && !tx.orphanKind) return false;
+        if (statusFilter === 'missing-response' && tx.orphanKind !== 'request') return false;
+        if (statusFilter === 'orphan-response' && tx.orphanKind !== 'response') return false;
         if (endpointFilter && (tx.endpointKey ?? tx.url ?? '') !== endpointFilter) return false;
         if (!q) return true;
         return searchText.includes(q);
       })
       .map(({ tx }) => tx);
-  }, [indexed, query, errorsOnly, endpointFilter]);
+  }, [indexed, query, errorsOnly, endpointFilter, lineTypeFilter, statusFilter]);
 
   const endpointOptions = useMemo(() => {
     return Array.from(
@@ -70,9 +88,25 @@ export function LogViewer() {
 
   const hasParsedOutput =
     transactions.length > 0 || unparsedLines.length > 0 || unmatchedContentData.length > 0;
+  const isLargePastedLog = rawText.length > LARGE_PASTE_PARSE_THRESHOLD && !fileName;
+  const isManualParsePending = isLargePastedLog && rawText !== lastParsedRawText;
+  const summary = useMemo(() => {
+    const errorCount = transactions.filter((tx) => transactionHasError(tx)).length;
+    const orphanCount = transactions.filter((tx) => tx.orphanKind).length;
+
+    return [
+      { label: 'Events', value: events.length },
+      { label: 'Transactions', value: transactions.length },
+      { label: 'Errors', value: errorCount },
+      { label: 'Orphans', value: orphanCount },
+      { label: 'Unmatched content', value: unmatchedContentData.length },
+      { label: 'Unparsed', value: unparsedLines.length },
+    ];
+  }, [events.length, transactions, unmatchedContentData.length, unparsedLines.length]);
 
   const processText = useCallback((text: string, sourceName: string, syncRawText = true) => {
     if (syncRawText) setRawText(text);
+    setLastParsedRawText(text);
     const parsedEvents = parseLogText(text);
     setEvents(parsedEvents);
     const {
@@ -88,9 +122,12 @@ export function LogViewer() {
     setSelectedTxId(txs[0]?.id ?? null);
     setIsImportOpen(txs.length === 0 && nextUnparsedLines.length === 0 && nextUnmatchedContentData.length === 0);
     setEndpointFilter('');
+    setLineTypeFilter('');
+    setStatusFilter('');
   }, []);
 
   const clearParsedState = useCallback(() => {
+    setLastParsedRawText('');
     setEvents([]);
     setTransactions([]);
     setUnparsedLines([]);
@@ -98,6 +135,8 @@ export function LogViewer() {
     setSelectedTxId(null);
     setIsImportOpen(true);
     setEndpointFilter('');
+    setLineTypeFilter('');
+    setStatusFilter('');
   }, []);
 
   const handleFile = async (file: File) => {
@@ -116,6 +155,11 @@ export function LogViewer() {
       return;
     }
 
+    if (rawText === lastParsedRawText || isLargePastedLog) {
+      setIsAutoParsing(false);
+      return;
+    }
+
     setIsAutoParsing(true);
     const timer = window.setTimeout(() => {
       processText(rawText, autoParseSource, false);
@@ -124,7 +168,7 @@ export function LogViewer() {
     }, 250);
 
     return () => window.clearTimeout(timer);
-  }, [rawText, autoParseSource, clearParsedState, processText]);
+  }, [rawText, autoParseSource, clearParsedState, isLargePastedLog, lastParsedRawText, processText]);
 
   return (
     <div className="w-full min-w-0 max-w-full space-y-6 overflow-x-hidden">
@@ -202,9 +246,38 @@ export function LogViewer() {
             {isAutoParsing && (
               <div className="mt-3 text-right text-xs text-text-muted">Parsing...</div>
             )}
+            {isManualParsePending && (
+              <div className="mt-3 flex flex-col gap-2 rounded-md border border-border-subtle bg-bg-base p-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-text-muted">
+                  Large pasted log detected. Parse when you are ready.
+                </p>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => processText(rawText, 'Pasted log', false)}
+                >
+                  Parse log
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </Card>
+
+      {hasParsedOutput && (
+        <Card className="min-w-0 max-w-full p-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+            {summary.map((item) => (
+              <div key={item.label} className="rounded-md border border-border-subtle bg-bg-base px-3 py-2">
+                <p className="text-xs text-text-muted">{item.label}</p>
+                <p className="mt-1 font-mono text-lg font-bold text-text-primary">
+                  {item.value.toLocaleString()}
+                </p>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {hasParsedOutput && (
         <Card className="min-w-0 max-w-full p-4">
@@ -238,14 +311,51 @@ export function LogViewer() {
               />
             </div>
 
-            <label className="inline-flex h-10 items-center gap-2 text-sm text-text-secondary">
-              <input
-                type="checkbox"
-                checked={errorsOnly}
-                onChange={(e) => setErrorsOnly(e.target.checked)}
+            <div className="min-w-0 md:min-w-[180px]">
+              <label className="mb-1 block text-xs text-text-muted">Line type</label>
+              <Select
+                value={lineTypeFilter}
+                onChange={setLineTypeFilter}
+                className="min-w-0"
+                buttonClassName="py-2 text-sm"
+                ariaLabel="Filter by line type"
+                options={[
+                  { value: '', label: 'All line types' },
+                  { value: 'request', label: 'Requests' },
+                  { value: 'response', label: 'Responses' },
+                  { value: 'content_data', label: 'Content data' },
+                  { value: 'error', label: 'Errors' },
+                  { value: 'crash', label: 'Crashes' },
+                  { value: 'info', label: 'Info' },
+                ]}
               />
-              Errors only
-            </label>
+            </div>
+
+            <div className="min-w-0 md:min-w-[180px]">
+              <label className="mb-1 block text-xs text-text-muted">Status</label>
+              <Select
+                value={statusFilter}
+                onChange={setStatusFilter}
+                className="min-w-0"
+                buttonClassName="py-2 text-sm"
+                ariaLabel="Filter by status"
+                options={[
+                  { value: '', label: 'All statuses' },
+                  { value: 'ok', label: 'No detected error' },
+                  { value: 'errors', label: 'Errors' },
+                  { value: 'orphans', label: 'All orphans' },
+                  { value: 'missing-response', label: 'Missing response' },
+                  { value: 'orphan-response', label: 'Orphan response' },
+                ]}
+              />
+            </div>
+
+            <Toggle
+              checked={errorsOnly}
+              onChange={setErrorsOnly}
+              label="Errors only"
+              className="self-end"
+            />
 
             <Button
               variant="ghost"
@@ -255,6 +365,8 @@ export function LogViewer() {
                 clearParsedState();
                 setQuery('');
                 setErrorsOnly(false);
+                setLineTypeFilter('');
+                setStatusFilter('');
               }}
               icon={<X size={16} />}
               title="Clear"
