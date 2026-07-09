@@ -75,8 +75,7 @@ export async function resolveIdentity(request: NextRequest): Promise<ResolvedIde
  */
 export function canModifyLog(
     identity: ResolvedIdentity,
-    logSource: 'agent' | 'human',
-    allowHumanOverwrite: boolean = false
+    logSource: 'agent' | 'human'
 ): boolean {
     // Admin can modify anything
     if (identity.role === 'admin') {
@@ -88,8 +87,8 @@ export function canModifyLog(
         return true;
     }
 
-    // Agent can only modify human logs if explicitly allowed
-    return allowHumanOverwrite;
+    // Agent API keys cannot modify human-created logs.
+    return false;
 }
 
 /**

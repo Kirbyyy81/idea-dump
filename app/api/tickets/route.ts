@@ -141,11 +141,27 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ data: createMockTicket(body) }, { status: 201 });
         }
 
+        const projectId = body.project_id.trim();
         const admin = createAdminClient();
+        const { data: project, error: projectError } = await admin
+            .from('projects')
+            .select('id')
+            .eq('id', projectId)
+            .eq('user_id', session.user.id)
+            .maybeSingle();
+
+        if (projectError) {
+            throw projectError;
+        }
+
+        if (!project) {
+            return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+        }
+
         const { data, error } = await admin
             .from('tickets')
             .insert({
-                project_id: body.project_id,
+                project_id: projectId,
                 user_id: session.user.id,
                 title: body.title.trim(),
                 description: body.description?.trim() || null,
