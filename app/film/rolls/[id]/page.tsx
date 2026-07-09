@@ -35,6 +35,20 @@ import { RollHeader } from './_components/RollHeader';
 import { StepStepper } from './_components/StepStepper';
 import { StatsCards } from './_components/StatsCards';
 
+const statusRank: Record<FilmRollStatus, number> = {
+    UNUSED: 0,
+    LOADED: 1,
+    SHOOTING: 2,
+    AWAITING_PROCESSING: 3,
+    PROCESSING: 4,
+    PROCESSED: 5,
+    ARCHIVED: 6,
+};
+
+function promoteStatus(currentStatus: FilmRollStatus, targetStatus: FilmRollStatus) {
+    return statusRank[currentStatus] >= statusRank[targetStatus] ? currentStatus : targetStatus;
+}
+
 function getTodayInputDate() {
     const today = new Date();
     const year = today.getFullYear();
@@ -69,6 +83,21 @@ function getRollForm(roll: FilmRoll) {
         notes: roll.notes ?? '',
         drive_folder_id: roll.drive_folder_id ?? '',
     };
+}
+
+function inferStatusForStep(
+    currentStatus: FilmRollStatus,
+    activeStep: string,
+    form: ReturnType<typeof getRollForm>
+) {
+    if (currentStatus === 'ARCHIVED') return currentStatus;
+    if (activeStep === 'processing') return promoteStatus(currentStatus, 'PROCESSED');
+    if (activeStep === 'drive' || activeStep === 'photobook') return promoteStatus(currentStatus, 'PROCESSED');
+
+    const framesTaken = Number(form.frames_taken || 0);
+    if (framesTaken > 0) return promoteStatus(currentStatus, 'AWAITING_PROCESSING');
+    if (form.camera_id) return promoteStatus(currentStatus, 'LOADED');
+    return currentStatus;
 }
 
 function getPhotoImageUrl(photo: Pick<FilmPhoto, 'id'>) {
@@ -226,12 +255,14 @@ function RollDetailContent() {
         setIsSaving(true);
         setError(null);
         try {
+            const nextStatus = inferStatusForStep(rollForm.status, activeStep, rollForm);
             const res = await fetch('/api/film/rolls', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     id: roll.id,
                     ...rollForm,
+                    status: nextStatus,
                     iso: Number(rollForm.iso),
                     film_type: rollForm.film_type,
                     process_type: rollForm.process_type || null,
