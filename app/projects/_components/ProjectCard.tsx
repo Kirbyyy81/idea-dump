@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Project, inferStatus, priorityConfig } from '@/lib/types';
+import { Priority, Project, inferStatus, priorityConfig } from '@/lib/types';
 import { formatRelativeTime, truncate } from '@/lib/utils';
 import { Card } from '@/components/atoms/Card';
 import { StatusBadge } from './StatusBadge';
@@ -7,6 +7,12 @@ import { StatusBadge } from './StatusBadge';
 interface ProjectCardProps {
     project: Project;
 }
+
+const priorityPillClass: Record<Priority, string> = {
+    low: 'border-border-strong bg-bg-hover text-text-primary',
+    medium: 'border-warning bg-warning-bg text-warning',
+    high: 'border-error bg-error-bg text-error',
+};
 
 export function ProjectCard({ project }: ProjectCardProps) {
     const status = inferStatus(project);
@@ -32,13 +38,14 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
                 {/* Footer */}
                 <div className="flex items-center justify-between mt-auto pt-3 border-t border-border-subtle">
-                    <div className="flex items-center gap-2">
-                        <div
-                            className={cn("w-2 h-2 rounded-full", priority.indicatorClass)}
-                            title={`${priority.label} priority`}
-                        />
-                        <span className={cn('text-xs capitalize', priority.textClass)}>{priority.label}</span>
-                    </div>
+                    <span
+                        className={cn(
+                            'inline-flex min-w-[56px] items-center justify-center rounded-full border px-2.5 py-1 text-xs font-semibold capitalize',
+                            priorityPillClass[project.priority]
+                        )}
+                    >
+                        {priority.label}
+                    </span>
 
                     {/* Timestamp */}
                     <p className="text-xs text-text-muted">
