@@ -34,9 +34,7 @@ export function StepStepper({ roll, photos, activeStep, rollId }: StepStepperPro
     return (
         <section className="grid gap-3 md:grid-cols-4">
             {setupSteps.map((step, index) => {
-                const href = step.slug === 'photobook'
-                    ? `/film/rolls/${rollId}/photobook`
-                    : `/film/rolls/${rollId}?step=${step.slug}`;
+                const href = `/film/rolls/${rollId}?step=${step.slug}`;
                 const isActive = activeStep === step.slug;
 
                 return (
