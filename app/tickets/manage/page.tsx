@@ -123,13 +123,13 @@ export default function ManageTicketsPage() {
             projects={projects}
             isLoading={isLoading}
             loadingMessage="Loading tickets..."
-            contentClassName="p-8"
+            contentClassName="p-5 md:p-8"
         >
             <div className="max-w-5xl space-y-6">
-                <header className="flex items-center justify-between">
+                <header className="flex items-center justify-between gap-3">
                     <h1 className="text-2xl font-extrabold">Manage Tickets</h1>
-                    <Link href="/tickets/new">
-                        <Button icon={<Plus size={18} />}>Raise Ticket</Button>
+                    <Link href="/tickets/new" className="shrink-0">
+                        <Button icon={<Plus size={18} />} className="h-10 px-4">Raise Ticket</Button>
                     </Link>
                 </header>
 
@@ -153,7 +153,7 @@ export default function ManageTicketsPage() {
 
                 <Card className="p-4">
                     <div className="flex flex-wrap items-end gap-3">
-                        <div className="min-w-[180px]">
+                        <div className="w-full sm:min-w-[180px] sm:flex-1 lg:flex-none">
                             <label className="mb-1 block text-xs text-text-muted">Project</label>
                             <Select
                                 value={filterProject}
@@ -165,7 +165,7 @@ export default function ManageTicketsPage() {
                                 ]}
                             />
                         </div>
-                        <div className="min-w-[160px]">
+                        <div className="w-full sm:min-w-[160px] sm:flex-1 lg:flex-none">
                             <label className="mb-1 block text-xs text-text-muted">Status</label>
                             <Select
                                 value={filterStatus}
@@ -180,7 +180,7 @@ export default function ManageTicketsPage() {
                                 ]}
                             />
                         </div>
-                        <div className="min-w-[160px]">
+                        <div className="w-full sm:min-w-[160px] sm:flex-1 lg:flex-none">
                             <label className="mb-1 block text-xs text-text-muted">Priority</label>
                             <Select
                                 value={filterPriority}
@@ -194,7 +194,7 @@ export default function ManageTicketsPage() {
                                 ]}
                             />
                         </div>
-                        <div className="min-w-[160px]">
+                        <div className="w-full sm:min-w-[160px] sm:flex-1 lg:flex-none">
                             <label className="mb-1 block text-xs text-text-muted">Source</label>
                             <Select
                                 value={filterSource}
@@ -209,7 +209,7 @@ export default function ManageTicketsPage() {
                                 ]}
                             />
                         </div>
-                        <div className="min-w-[220px] flex-1">
+                        <div className="w-full min-w-0 flex-1 sm:min-w-[220px]">
                             <label className="mb-1 block text-xs text-text-muted">Search</label>
                             <Input
                                 value={query}
@@ -220,6 +220,7 @@ export default function ManageTicketsPage() {
                         </div>
                         <Button
                             variant="ghost"
+                            className="w-full sm:w-auto"
                             onClick={() => {
                                 setFilterProject('');
                                 setFilterStatus('');

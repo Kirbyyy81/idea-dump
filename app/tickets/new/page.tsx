@@ -61,7 +61,7 @@ export default function NewTicketPage() {
     }
 
     return (
-        <AppShell contentClassName="p-8">
+        <AppShell contentClassName="p-5 md:p-8">
             <div className="max-w-3xl space-y-6">
                 <h1 className="text-2xl font-extrabold">Raise Ticket</h1>
 
