@@ -82,6 +82,7 @@ export async function POST(request: NextRequest) {
             .from('film_rolls')
             .update({
                 drive_folder_id: folderId,
+                status: roll.status === 'ARCHIVED' ? roll.status : 'PROCESSED',
                 updated_at: now,
             })
             .eq('id', filmRollId)
@@ -108,6 +109,9 @@ export async function POST(request: NextRequest) {
         });
     } catch (error) {
         console.error('Error syncing Google Drive folder:', error);
-        return jsonError('Failed to sync Google Drive folder', 500);
+        const message = error instanceof Error && error.message
+            ? error.message
+            : 'Failed to sync Google Drive folder';
+        return jsonError(message, 500);
     }
 }

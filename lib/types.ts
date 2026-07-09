@@ -184,6 +184,10 @@ export type FilmRollStatus =
 
 export type FilmFormat = '35mm' | '120' | 'Large Format';
 
+export type FilmType = 'NEGATIVE' | 'REVERSAL' | 'BW_NEGATIVE';
+
+export type FilmProcessType = 'C41' | 'E6' | 'BW' | 'ECN2';
+
 export interface FilmCamera {
     id: string;
     user_id: string;
@@ -233,6 +237,8 @@ export interface FilmRoll {
     film_name: string;
     brand: string;
     format: FilmFormat;
+    film_type: FilmType;
+    process_type: FilmProcessType | null;
     iso: number;
     status: FilmRollStatus;
     purchase_price: number;
@@ -247,6 +253,8 @@ export interface FilmRoll {
     notes: string | null;
     drive_folder_id: string | null;
     cover_photo_id: string | null;
+    cover_image_url: string | null;
+    cover_image_path: string | null;
     created_at: string;
     updated_at: string;
     camera?: FilmCamera | null;
@@ -270,6 +278,8 @@ export interface CreateFilmRollInput {
     film_name: string;
     brand: string;
     format: FilmFormat;
+    film_type?: FilmType;
+    process_type?: FilmProcessType | null;
     iso: number;
     camera_id?: string;
     status?: FilmRollStatus;
@@ -285,6 +295,8 @@ export interface CreateFilmRollInput {
     notes?: string;
     drive_folder_id?: string;
     cover_photo_id?: string | null;
+    cover_image_url?: string | null;
+    cover_image_path?: string | null;
 }
 
 export interface UpdateFilmRollInput extends Partial<CreateFilmRollInput> {
@@ -341,3 +353,20 @@ export const filmRollStatusConfig: Record<FilmRollStatus, { label: string; color
 };
 
 export const filmFormats: FilmFormat[] = ['35mm', '120', 'Large Format'];
+
+export const filmTypeConfig: Record<FilmType, { label: string }> = {
+    NEGATIVE: { label: 'Film negative' },
+    REVERSAL: { label: 'Reversal film' },
+    BW_NEGATIVE: { label: 'B&W negative' },
+};
+
+export const filmProcessTypeConfig: Record<FilmProcessType, { label: string }> = {
+    C41: { label: 'C-41' },
+    E6: { label: 'E-6' },
+    BW: { label: 'B&W' },
+    ECN2: { label: 'ECN-2' },
+};
+
+export const filmTypes: FilmType[] = ['NEGATIVE', 'REVERSAL', 'BW_NEGATIVE'];
+
+export const filmProcessTypes: FilmProcessType[] = ['C41', 'E6', 'BW', 'ECN2'];

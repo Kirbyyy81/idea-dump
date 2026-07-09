@@ -9,7 +9,8 @@ import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
 import { FilmCamera, FilmMaintenanceRecord } from '@/lib/types';
-import { cn } from '@/lib/utils';
+import { useAlert } from '@/lib/contexts/AlertContext';
+import { cn, formatCurrencyMYR } from '@/lib/utils';
 
 const blankCamera = {
     name: '',
@@ -37,14 +38,8 @@ function cameraForm(camera: FilmCamera) {
     };
 }
 
-function money(value: number) {
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-    }).format(value || 0);
-}
-
 export default function FilmCamerasPage() {
+    const { showSuccess } = useAlert();
     const [cameras, setCameras] = useState<FilmCamera[]>([]);
     const [selectedId, setSelectedId] = useState('');
     const [form, setForm] = useState(blankCamera);
@@ -107,6 +102,7 @@ export default function FilmCamerasPage() {
             const payload = await response.json();
             if (!response.ok) throw new Error(payload.error || 'Failed to save camera');
             await loadCameras(payload.data.id);
+            showSuccess(selected ? 'Camera saved.' : 'Camera added.', 'Saved');
         } catch (saveError) {
             setError(saveError instanceof Error ? saveError.message : 'Failed to save camera');
         } finally {
@@ -127,6 +123,7 @@ export default function FilmCamerasPage() {
 
         setSelectedId('');
         await loadCameras();
+        showSuccess('Camera deleted.', 'Deleted');
     }
 
     async function addMaintenance(event: FormEvent) {
@@ -151,6 +148,7 @@ export default function FilmCamerasPage() {
 
             setMaintenance((records) => [payload.data, ...records]);
             setMaintenanceForm(blankMaintenance);
+            showSuccess('Maintenance record added.', 'Saved');
         } catch (saveError) {
             setError(saveError instanceof Error ? saveError.message : 'Failed to add maintenance');
         } finally {
@@ -168,18 +166,19 @@ export default function FilmCamerasPage() {
         }
 
         setMaintenance((records) => records.filter((record) => record.id !== id));
+        showSuccess('Maintenance record deleted.', 'Deleted');
     }
 
     if (isLoading) {
         return (
-            <AppShell isLoading loadingMessage="Opening camera cabinet..." >
+            <AppShell isLoading loadingMessage="Opening camera cabinet..." contentClassName="film-module p-8">
                 <div />
             </AppShell>
         );
     }
 
     return (
-        <AppShell contentClassName="p-5 md:p-8">
+        <AppShell contentClassName="film-module p-5 md:p-8">
             <div className="mx-auto max-w-7xl space-y-7">
                 <header className="space-y-5">
                     <div>
@@ -309,7 +308,7 @@ export default function FilmCamerasPage() {
                                             </div>
                                             <div className="flex items-center gap-3">
                                                 <span className="font-bold">
-                                                    {money(Number(record.maintenance_cost))}
+                                                    {formatCurrencyMYR(Number(record.maintenance_cost))}
                                                 </span>
                                                 <button
                                                     type="button"
