@@ -77,7 +77,7 @@ export default function EditProjectPage() {
     }
 
     return (
-        <AppShell contentClassName="p-8">
+        <AppShell contentClassName="p-5 md:p-8">
             <div className="max-w-3xl">
                 <div className="flex items-center gap-4 mb-8">
                     <Link

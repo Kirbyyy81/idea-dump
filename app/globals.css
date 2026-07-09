@@ -437,32 +437,32 @@ h4 {
   /* Status variants */
   .badge-idea {
     background: var(--info-bg);
-    color: var(--status-idea);
-    border-color: var(--status-idea);
+    color: var(--info);
+    border-color: var(--info);
   }
 
   .badge-prd {
     background: var(--pastel-pink-soft);
-    color: var(--status-prd);
-    border-color: var(--status-prd);
+    color: var(--error);
+    border-color: var(--error);
   }
 
   .badge-dev {
     background: var(--warning-bg);
-    color: var(--status-dev);
-    border-color: var(--status-dev);
+    color: var(--warning);
+    border-color: var(--warning);
   }
 
   .badge-complete {
     background: var(--success-bg);
-    color: var(--status-complete);
-    border-color: var(--status-complete);
+    color: var(--success);
+    border-color: var(--success);
   }
 
   .badge-deployed {
     background: var(--success-bg);
-    color: var(--status-deployed);
-    border-color: var(--status-deployed);
+    color: var(--success);
+    border-color: var(--success);
   }
 
   .input {

@@ -37,7 +37,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
                             className={cn("w-2 h-2 rounded-full", priority.indicatorClass)}
                             title={`${priority.label} priority`}
                         />
-                        <span className="text-xs text-text-muted capitalize">{priority.label}</span>
+                        <span className={cn('text-xs capitalize', priority.textClass)}>{priority.label}</span>
                     </div>
 
                     {/* Timestamp */}

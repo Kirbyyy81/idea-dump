@@ -221,7 +221,7 @@ export default function ProjectPage() {
 
     if (isLoading) {
         return (
-            <AppShell projects={projects} isLoading loadingMessage="Loading project..." contentClassName="p-8">
+            <AppShell projects={projects} isLoading loadingMessage="Loading project..." contentClassName="p-5 md:p-8">
                 <div />
             </AppShell>
         );
@@ -229,7 +229,7 @@ export default function ProjectPage() {
 
     if (error || !project) {
         return (
-            <AppShell projects={projects} isLoading={false} contentClassName="p-8">
+            <AppShell projects={projects} isLoading={false} contentClassName="p-5 md:p-8">
                 <div className="max-w-5xl mx-auto">
                     <div className="flex flex-col items-center justify-center py-16">
                         <p className="text-error mb-4">{error || 'Project not found'}</p>
@@ -243,9 +243,9 @@ export default function ProjectPage() {
     }
 
     return (
-        <AppShell projects={projects} isLoading={isLoading} loadingMessage="Loading project..." contentClassName="p-8">
+        <AppShell projects={projects} isLoading={isLoading} loadingMessage="Loading project..." contentClassName="p-5 md:p-8">
             <div className="max-w-5xl mx-auto">
-                <div className="flex items-center justify-between mb-8">
+                <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <Link
                     href="/projects"
                     className="flex items-center gap-2 transition-colors text-text-secondary hover:text-text-primary"
@@ -253,9 +253,9 @@ export default function ProjectPage() {
                     <ArrowLeft size={20} />
                     Back to Projects
                 </Link>
-                <div className="flex gap-2">
-                    <Link href={`/projects/${project.id}/edit`}>
-                        <Button variant="secondary" icon={<Pencil size={16} />}>
+                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                    <Link href={`/projects/${project.id}/edit`} className="w-full sm:w-auto">
+                        <Button variant="secondary" icon={<Pencil size={16} />} className="w-full sm:w-auto">
                             Edit
                         </Button>
                     </Link>
@@ -264,13 +264,14 @@ export default function ProjectPage() {
                         onClick={handleToggleArchive}
                         disabled={isUpdating}
                         icon={<Archive size={16} />}
+                        className="w-full sm:w-auto"
                     >
                         {project.archived ? 'Unarchive' : 'Archive'}
                     </Button>
                     <Button
                         variant="ghost"
                         onClick={handleDelete}
-                        className="text-error hover:text-error hover:bg-error-bg"
+                        className="w-full text-error hover:text-error hover:bg-error-bg sm:w-auto"
                         icon={<Trash2 size={16} />}
                     >
                         Delete
@@ -279,7 +280,7 @@ export default function ProjectPage() {
             </div>
 
             <div className="mb-8">
-                <div className="flex items-start justify-between gap-4 mb-4">
+                <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                     <h1 className="text-text-primary text-2xl font-extrabold">{project.title}</h1>
                     <StatusBadge status={inferStatus(project)} className="px-3 py-1 text-sm" />
                 </div>
@@ -288,7 +289,7 @@ export default function ProjectPage() {
                     <p className="text-lg mb-6 text-text-secondary">{project.description}</p>
                 )}
 
-                <Card className="grid grid-cols-2 md:grid-cols-5 gap-4 p-4 !border-border-subtle bg-bg-elevated">
+                <Card className="grid grid-cols-1 gap-4 p-4 !border-border-subtle bg-bg-elevated sm:grid-cols-2 md:grid-cols-5">
                     <div>
                         <PriorityBadge priority={project.priority} />
                     </div>
@@ -337,7 +338,7 @@ export default function ProjectPage() {
 
             {project.prd_content && (
                 <section className="mb-8">
-                    <Card className="p-6">
+                    <Card className="p-4 sm:p-6">
                         <h2 className="text-lg font-bold mb-4 flex items-center gap-2 font-body text-text-primary">
                             <FileText size={20} className="text-accent-rose" />
                             PRD
@@ -348,15 +349,15 @@ export default function ProjectPage() {
             )}
 
             <section>
-                <Card className="p-6">
+                <Card className="p-4 sm:p-6">
                     <NotesPanel notes={notes} onAddNote={handleAddNote} />
                 </Card>
             </section>
 
             {canAccessTickets && (
                 <section className="mt-6">
-                    <Card className="p-6">
-                        <div className="mb-4 flex items-center justify-between">
+                    <Card className="p-4 sm:p-6">
+                        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <h2 className="flex items-center gap-2 text-lg font-bold font-body text-text-primary">
                                 <TicketIcon size={20} className="text-accent-rose" />
                                 Tickets
@@ -365,6 +366,7 @@ export default function ProjectPage() {
                             <Button
                                 variant="secondary"
                                 icon={<Plus size={16} />}
+                                className="w-full sm:w-auto"
                                 onClick={() => {
                                     setEditingTicket(null);
                                     setShowTicketForm(true);

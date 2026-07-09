@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { AppShell } from '@/components/organisms/AppShell';
 import { ProjectCard } from './_components/ProjectCard';
 import { Project, Status, statusConfig, inferStatus } from '@/lib/types';
-import { Plus, Search, X } from 'lucide-react';
+import { Check, ChevronDown, Plus, Search, X } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
+import { Input } from '@/components/atoms/Input';
 import { cn } from '@/lib/utils';
 import { iconMap } from '@/lib/icons';
 
@@ -15,7 +16,9 @@ export default function ProjectsPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedStatus, setSelectedStatus] = useState<Status | 'all'>('all');
+    const [selectedStatuses, setSelectedStatuses] = useState<Status[]>([]);
+    const [isStatusFilterOpen, setIsStatusFilterOpen] = useState(false);
+    const statusFilterRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         async function fetchProjects() {
@@ -34,6 +37,19 @@ export default function ProjectsPage() {
         fetchProjects();
     }, []);
 
+    useEffect(() => {
+        if (!isStatusFilterOpen) return;
+
+        function handlePointerDown(event: PointerEvent) {
+            if (!statusFilterRef.current?.contains(event.target as Node)) {
+                setIsStatusFilterOpen(false);
+            }
+        }
+
+        document.addEventListener('pointerdown', handlePointerDown);
+        return () => document.removeEventListener('pointerdown', handlePointerDown);
+    }, [isStatusFilterOpen]);
+
     const filteredProjects = useMemo(() => {
         return projects.filter((project) => {
             const matchesSearch =
@@ -42,11 +58,11 @@ export default function ProjectsPage() {
                 project.description?.toLowerCase().includes(searchQuery.toLowerCase());
 
             const projectStatus = inferStatus(project);
-            const matchesStatus = selectedStatus === 'all' || projectStatus === selectedStatus;
+            const matchesStatus = selectedStatuses.length === 0 || selectedStatuses.includes(projectStatus);
 
             return matchesSearch && matchesStatus;
         });
-    }, [projects, searchQuery, selectedStatus]);
+    }, [projects, searchQuery, selectedStatuses]);
 
     const statusCounts = useMemo(() => {
         const counts: Record<string, number> = { all: projects.length };
@@ -57,9 +73,26 @@ export default function ProjectsPage() {
         return counts;
     }, [projects]);
 
+    const statusFilterLabel = useMemo(() => {
+        if (selectedStatuses.length === 0) return `All statuses (${projects.length})`;
+        if (selectedStatuses.length === 1) {
+            const status = selectedStatuses[0];
+            return `${statusConfig[status].label} (${statusCounts[status] || 0})`;
+        }
+        return `${selectedStatuses.length} statuses selected`;
+    }, [projects.length, selectedStatuses, statusCounts]);
+
+    const toggleStatus = (status: Status) => {
+        setSelectedStatuses((current) =>
+            current.includes(status)
+                ? current.filter((item) => item !== status)
+                : [...current, status]
+        );
+    };
+
     if (error) {
         return (
-            <AppShell contentClassName="p-8">
+            <AppShell contentClassName="p-5 md:p-8">
                 <div className="flex min-h-[60vh] flex-col items-center justify-center">
                     <p className="text-error mb-4">{error}</p>
                     <Button onClick={() => window.location.reload()}>
@@ -73,22 +106,22 @@ export default function ProjectsPage() {
     return (
         <AppShell projects={projects} isLoading={isLoading} loadingMessage="Loading projects...">
             <div>
-                <header className="flex items-center justify-between mb-6">
+                <header className="mb-6 flex items-center justify-between gap-3">
                     <h1 className="text-2xl font-extrabold">Projects</h1>
-                    <Link href="/projects/new">
-                        <Button icon={<Plus size={18} />}>
+                    <Link href="/projects/new" className="shrink-0">
+                        <Button icon={<Plus size={18} />} className="h-10 px-4">
                             New Project
                         </Button>
                     </Link>
                 </header>
 
-                <div className="mb-6 space-y-4">
-                    <div className="relative max-w-md">
+                <div className="mb-6 grid gap-3 sm:grid-cols-[minmax(0,1fr)_260px]">
+                    <div className="relative min-w-0">
                         <Search
                             size={18}
                             className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
                         />
-                        <input
+                        <Input
                             type="text"
                             placeholder="Search projects..."
                             value={searchQuery}
@@ -97,47 +130,82 @@ export default function ProjectsPage() {
                         />
                         {searchQuery && (
                             <button
+                                type="button"
                                 onClick={() => setSearchQuery('')}
                                 className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary"
+                                aria-label="Clear search"
                             >
                                 <X size={16} />
                             </button>
                         )}
                     </div>
 
-                    <div className="flex flex-wrap gap-2">
+                    <div ref={statusFilterRef} className="relative">
                         <button
-                            onClick={() => setSelectedStatus('all')}
-                            className={cn(
-                                'px-3 py-1.5 rounded-full text-sm font-medium transition-colors',
-                                selectedStatus === 'all'
-                                    ? 'bg-accent-rose text-action-primary-text'
-                                    : 'bg-bg-hover text-text-secondary hover:bg-bg-subtle'
-                            )}
+                            type="button"
+                            onClick={() => setIsStatusFilterOpen((current) => !current)}
+                            aria-haspopup="listbox"
+                            aria-expanded={isStatusFilterOpen}
+                            className="input flex h-10 items-center justify-between gap-3 pr-10 text-left"
                         >
-                            All ({statusCounts.all || 0})
+                            <span className="truncate">{statusFilterLabel}</span>
+                            <ChevronDown
+                                size={16}
+                                className={cn(
+                                    'pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-text-muted transition-transform',
+                                    isStatusFilterOpen && 'rotate-180'
+                                )}
+                            />
                         </button>
-                        {(Object.keys(statusConfig) as Status[]).map((status) => {
-                            const config = statusConfig[status];
-                            const IconComponent = iconMap[config.icon];
-                            const count = statusCounts[status] || 0;
 
-                            return (
+                        {isStatusFilterOpen && (
+                            <div
+                                role="listbox"
+                                aria-multiselectable="true"
+                                className="absolute right-0 z-20 mt-2 w-full overflow-hidden rounded-md border border-border-default bg-bg-elevated py-1 text-sm shadow-subtle"
+                            >
                                 <button
-                                    key={status}
-                                    onClick={() => setSelectedStatus(status)}
+                                    type="button"
+                                    onClick={() => setSelectedStatuses([])}
                                     className={cn(
-                                        'px-3 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5',
-                                        selectedStatus === status
-                                            ? 'bg-accent-rose text-action-primary-text'
-                                            : 'bg-bg-hover text-text-secondary hover:bg-bg-subtle'
+                                        'flex w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors hover:bg-bg-subtle',
+                                        selectedStatuses.length === 0 ? 'text-text-primary' : 'text-text-secondary'
                                     )}
+                                    role="option"
+                                    aria-selected={selectedStatuses.length === 0}
                                 >
-                                    {IconComponent && <IconComponent size={14} />}
-                                    {config.label} ({count})
+                                    <span>All statuses ({statusCounts.all || 0})</span>
+                                    {selectedStatuses.length === 0 && <Check size={14} className="text-accent-rose" />}
                                 </button>
-                            );
-                        })}
+
+                                {(Object.keys(statusConfig) as Status[]).map((status) => {
+                                    const config = statusConfig[status];
+                                    const IconComponent = iconMap[config.icon];
+                                    const count = statusCounts[status] || 0;
+                                    const isSelected = selectedStatuses.includes(status);
+
+                                    return (
+                                        <button
+                                            key={status}
+                                            type="button"
+                                            onClick={() => toggleStatus(status)}
+                                            className={cn(
+                                                'flex w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors hover:bg-bg-subtle',
+                                                isSelected ? 'bg-bg-hover text-text-primary' : 'text-text-secondary'
+                                            )}
+                                            role="option"
+                                            aria-selected={isSelected}
+                                        >
+                                            <span className="flex min-w-0 items-center gap-2">
+                                                {IconComponent && <IconComponent size={14} className="shrink-0" />}
+                                                <span className="truncate">{config.label} ({count})</span>
+                                            </span>
+                                            {isSelected && <Check size={14} className="shrink-0 text-accent-rose" />}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -154,7 +222,7 @@ export default function ProjectsPage() {
                                 <button
                                     onClick={() => {
                                         setSearchQuery('');
-                                        setSelectedStatus('all');
+                                        setSelectedStatuses([]);
                                     }}
                                     className="mt-2 text-accent-rose hover:underline"
                                 >
