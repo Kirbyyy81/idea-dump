@@ -9,12 +9,6 @@ interface PriorityIndicatorProps extends Omit<HTMLAttributes<HTMLDivElement>, 'c
     size?: 'sm' | 'md';
 }
 
-const priorityStyles: Record<Priority, { dot: string; text: string }> = {
-    low: { dot: 'bg-border-strong', text: 'text-text-primary' },
-    medium: { dot: 'bg-warning', text: 'text-warning' },
-    high: { dot: 'bg-error', text: 'text-error' },
-};
-
 export function PriorityIndicator({
     priority,
     showCaption = false,
@@ -23,7 +17,6 @@ export function PriorityIndicator({
     ...props
 }: PriorityIndicatorProps) {
     const config = priorityConfig[priority];
-    const styles = priorityStyles[priority];
 
     return (
         <div className={cn('inline-flex flex-col gap-1', className)} {...props}>
@@ -32,8 +25,8 @@ export function PriorityIndicator({
             )}
             <Indicator
                 size={size}
-                dotClassName={styles.dot}
-                textClassName={styles.text}
+                dotClassName={config.indicatorClass}
+                textClassName={config.textClass}
                 aria-label={`${config.label} priority`}
             >
                 {config.label}

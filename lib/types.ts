@@ -52,7 +52,7 @@ export const statusConfig: Record<Status, { label: string; color: string; icon: 
 };
 
 export const priorityConfig: Record<Priority, { label: string; color: string; textClass: string; indicatorClass: string }> = {
-    low: { label: 'Low', color: 'var(--text-secondary)', textClass: 'text-text-secondary', indicatorClass: 'bg-text-secondary' },
+    low: { label: 'Low', color: 'var(--border-strong)', textClass: 'text-text-primary', indicatorClass: 'bg-border-strong' },
     medium: { label: 'Medium', color: 'var(--warning)', textClass: 'text-warning', indicatorClass: 'bg-warning' },
     high: { label: 'High', color: 'var(--error)', textClass: 'text-error', indicatorClass: 'bg-error' },
 };
