@@ -376,7 +376,7 @@ export interface FilmDashboardSummary {
 
 export const filmRollStatusConfig: Record<FilmRollStatus, { label: string; colorClass: string }> = {
     UNUSED: { label: 'Unused', colorClass: 'bg-bg-hover text-text-secondary border-border-default' },
-    LOADED: { label: 'Loaded', colorClass: 'bg-accent-blue/10 text-accent-blue border-accent-blue/40' },
+    LOADED: { label: 'Loaded', colorClass: 'bg-accent-blue/15 text-text-primary border-accent-blue/60' },
     SHOOTING: { label: 'Shooting', colorClass: 'bg-accent-apricot/20 text-text-primary border-accent-apricot' },
     AWAITING_PROCESSING: { label: 'Awaiting Processing', colorClass: 'bg-accent-coral/10 text-accent-rose border-accent-coral' },
     PROCESSING: { label: 'Processing', colorClass: 'bg-accent-rose/10 text-accent-rose border-accent-rose/40' },

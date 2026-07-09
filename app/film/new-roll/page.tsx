@@ -9,6 +9,7 @@ import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
+import { FileUpload } from '@/components/molecules/FileUpload';
 import { useAlert } from '@/lib/contexts/AlertContext';
 import {
     FilmCamera,
@@ -133,8 +134,7 @@ export default function NewFilmRollPage() {
             <div className="mx-auto max-w-5xl space-y-7">
                 <header className="space-y-5">
                     <div>
-                        <p className="text-sm uppercase tracking-wide text-text-muted">Inventory</p>
-                        <h1 className="mt-1">Register a Film Roll</h1>
+                        <h1>Register a Film Roll</h1>
                     </div>
                 </header>
                 {error && <div className="rounded-lg border border-error bg-error-bg px-4 py-3 text-sm text-error">{error}</div>}
@@ -145,16 +145,15 @@ export default function NewFilmRollPage() {
                                 <PackagePlus className="text-accent-apricot" size={22} />
                                 <div>
                                     <h2 className="text-lg font-bold">Unopened roll</h2>
-                                    <p className="text-sm text-text-muted">It will begin on your shelf with the Unused status.</p>
                                 </div>
                             </div>
                         </div>
                         <div className="grid grid-cols-1 gap-x-6 gap-y-4 p-6 md:grid-cols-2">
                             <FieldRow label="Film name *">
-                                <Input required value={form.film_name} onChange={(event) => setForm({ ...form, film_name: event.target.value })} placeholder="Portra 400" />
+                                <Input required value={form.film_name} onChange={(event) => setForm({ ...form, film_name: event.target.value })} />
                             </FieldRow>
                             <FieldRow label="Brand *">
-                                <Input required value={form.brand} onChange={(event) => setForm({ ...form, brand: event.target.value })} placeholder="Kodak" />
+                                <Input required value={form.brand} onChange={(event) => setForm({ ...form, brand: event.target.value })} />
                             </FieldRow>
                             <FieldRow label="Format *">
                                 <Select value={form.format} onChange={(nextValue) => setForm({ ...form, format: nextValue as FilmFormat })} options={filmFormats.map((format) => ({ value: format, label: format }))} />
@@ -169,19 +168,24 @@ export default function NewFilmRollPage() {
                                 <Input required type="number" min="1" value={form.iso} onChange={(event) => setForm({ ...form, iso: event.target.value })} />
                             </FieldRow>
                             <FieldRow label="Frames taken">
-                                <Input type="number" min="0" value={form.frames_taken} onChange={(event) => setForm({ ...form, frames_taken: event.target.value })} placeholder="36" />
+                                <Input type="number" min="0" value={form.frames_taken} onChange={(event) => setForm({ ...form, frames_taken: event.target.value })} />
                             </FieldRow>
                             <FieldRow label="Purchase price">
-                                <Input type="number" min="0" step="0.01" value={form.purchase_price} onChange={(event) => setForm({ ...form, purchase_price: event.target.value })} placeholder="0.00" />
+                                <Input type="number" min="0" step="0.01" value={form.purchase_price} onChange={(event) => setForm({ ...form, purchase_price: event.target.value })} />
                             </FieldRow>
                             <FieldRow label="Camera">
                                 <Select value={form.camera_id} onChange={(nextValue) => setForm({ ...form, camera_id: nextValue })} options={[{ value: '', label: 'Assign later' }, ...cameras.map((camera) => ({ value: camera.id, label: camera.name }))]} />
                             </FieldRow>
-                            <FieldRow label="Cover image" className="md:col-span-2">
-                                <Input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setCoverFile(event.target.files?.[0] || null)} />
-                            </FieldRow>
+                            <div className="md:col-span-2">
+                                <FileUpload
+                                    label="Cover image"
+                                    accept="image/jpeg,image/png,image/webp"
+                                    value={coverFile}
+                                    onChange={setCoverFile}
+                                />
+                            </div>
                             <FieldRow label="Purchase notes" className="md:col-span-2" align="start">
-                                <Textarea value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} placeholder="Where you bought it, expiry, storage notes..." />
+                                <Textarea value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} />
                             </FieldRow>
                         </div>
                         <div className="flex justify-end gap-3 border-t border-border-default px-6 py-4">
