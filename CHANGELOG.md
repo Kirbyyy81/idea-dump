@@ -1,5 +1,39 @@
 # Changelog
 
+## [0.9.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.8.3...idea-dump-v0.9.0) (2026-07-09)
+
+
+### Features
+
+* add project toasts ([73bbba4](https://github.com/Kirbyyy81/idea-dump/commit/73bbba4ce8e4e0e7bf024d7f49c3d0d87341395d))
+* add pwa runtime ([5de0cab](https://github.com/Kirbyyy81/idea-dump/commit/5de0cabfe1313b684c0c02ab541aaf2d3a08fbe1))
+* add roll stepper ([70fafda](https://github.com/Kirbyyy81/idea-dump/commit/70fafda3274962973277d8790da59c3a785c34c3))
+* compact access control ([6182ede](https://github.com/Kirbyyy81/idea-dump/commit/6182ede35fff0d7ad4e5e6f13dae9398eefaedd2))
+* enhance film rolls ([8482ef0](https://github.com/Kirbyyy81/idea-dump/commit/8482ef08326e798e83c7e43d05c5c252c9307071))
+* move api docs ([fed8bd4](https://github.com/Kirbyyy81/idea-dump/commit/fed8bd47b83b9540fa8145e843e9d2c568c3bba2))
+* pin sidebar ([daf7c31](https://github.com/Kirbyyy81/idea-dump/commit/daf7c31007637cc9a28879303c8fa58a8b6f6f39))
+* revamp film dashboard ([b3aba4c](https://github.com/Kirbyyy81/idea-dump/commit/b3aba4cd045b4655c147143ec2914c8b0ed20fd5))
+* search access modules ([2b2a726](https://github.com/Kirbyyy81/idea-dump/commit/2b2a726525ef975c2be96553053827d00ce5b7ec))
+
+
+### Bug Fixes
+
+* add film photobook contact sheet ([c101a4f](https://github.com/Kirbyyy81/idea-dump/commit/c101a4f326c19a4a38a2c52e9db58322338ca144))
+* add reusable file upload control ([8fd4574](https://github.com/Kirbyyy81/idea-dump/commit/8fd45748ae7c5691a7ba8299d74ac16419e06637))
+* auto-promote film roll status ([e04e633](https://github.com/Kirbyyy81/idea-dump/commit/e04e633702a391097207cb922ab3d5ee02113dbc))
+* changed naming of processing only to type ([6003db7](https://github.com/Kirbyyy81/idea-dump/commit/6003db74073c325f25cbc7f15e0906507b3c24a5))
+* clarify film roll details form ([8797f82](https://github.com/Kirbyyy81/idea-dump/commit/8797f8295a8f553b3260e01267f8c277f592ad09))
+* clean up film processing form ([243b121](https://github.com/Kirbyyy81/idea-dump/commit/243b121fe37664ba3f2edc0d70d938966e218352))
+* compact roll form ([876ac4f](https://github.com/Kirbyyy81/idea-dump/commit/876ac4f83ba9bda00f477ce68ef4548fa0b21327))
+* focus photobook view ([4b8dbe6](https://github.com/Kirbyyy81/idea-dump/commit/4b8dbe6ba440b1a867c6ce79becf5c8b941d84e0))
+* improve google drive photo sync ([5ce6f27](https://github.com/Kirbyyy81/idea-dump/commit/5ce6f2766f79a222141b82f6582b9fca4e5ed327))
+* prevent caret on film action links ([28c3ac3](https://github.com/Kirbyyy81/idea-dump/commit/28c3ac3cee903d325738b816f5502df6c6c8571d))
+* remove film shelf caption block ([d51b6c5](https://github.com/Kirbyyy81/idea-dump/commit/d51b6c5330d0f96dad9224b2392d9c3854a048a0))
+* resize film strip ([69f48fe](https://github.com/Kirbyyy81/idea-dump/commit/69f48fea2ef83d4d4e6c569bd1eee2673c0ae9ec))
+* route film cupboard to photobook ([ac03797](https://github.com/Kirbyyy81/idea-dump/commit/ac03797b79c0b285eb81a49dbacea90947f2f747))
+* suppress caret on action links ([d084878](https://github.com/Kirbyyy81/idea-dump/commit/d084878ce97aea5187e9f9e9a9b973b16d765ba2))
+* update film schema snapshot ([3aa58fe](https://github.com/Kirbyyy81/idea-dump/commit/3aa58feacda4e39aa5699bc3fa3d1812bdc2edba))
+
 ## [0.8.3](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.8.2...idea-dump-v0.8.3) (2026-07-02)
 
 
