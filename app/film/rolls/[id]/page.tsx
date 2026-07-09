@@ -284,7 +284,7 @@ function RollDetailContent() {
 
     if (isLoading) {
         return (
-            <AppShell isLoading loadingMessage="Opening film roll..." contentClassName="p-8">
+            <AppShell isLoading loadingMessage="Opening film roll..." contentClassName="film-module p-8">
                 <div />
             </AppShell>
         );
@@ -292,7 +292,7 @@ function RollDetailContent() {
 
     if (!roll || !rollForm) {
         return (
-            <AppShell contentClassName="p-8">
+            <AppShell contentClassName="film-module p-8">
                 <div className="max-w-4xl">
                     <Link href="/film" className="action-link inline-flex items-center gap-2 text-text-secondary hover:text-text-primary">
                         <ArrowLeft size={18} />
@@ -307,7 +307,7 @@ function RollDetailContent() {
     }
 
     return (
-        <AppShell contentClassName="p-8">
+        <AppShell contentClassName="film-module p-8">
             <div className="max-w-7xl space-y-8">
                 <RollHeader roll={roll} isSaving={isSaving} onSave={handleSaveRoll} />
 

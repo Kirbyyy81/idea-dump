@@ -286,6 +286,25 @@ select,
   user-select: text;
 }
 
+.film-module {
+  caret-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.film-module input,
+.film-module textarea,
+.film-module select,
+.film-module .selectable,
+.film-module .select-text,
+.film-module .markdown-body,
+.film-module .markdown-body *,
+.film-module [contenteditable="true"] {
+  caret-color: auto;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 /* ===== TYPOGRAPHY ===== */
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
