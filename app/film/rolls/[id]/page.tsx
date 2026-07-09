@@ -106,7 +106,7 @@ function getPhotoImageUrl(photo: Pick<FilmPhoto, 'id'>) {
 
 export default function FilmRollDetailPage() {
     return (
-        <Suspense fallback={<AppShell isLoading loadingMessage="Opening film roll..." contentClassName="p-8"><div /></AppShell>}>
+        <Suspense fallback={<AppShell isLoading loadingMessage="Opening film roll..." contentClassName="p-5 md:p-8"><div /></AppShell>}>
             <RollDetailContent />
         </Suspense>
     );
@@ -315,7 +315,7 @@ function RollDetailContent() {
 
     if (isLoading) {
         return (
-            <AppShell isLoading loadingMessage="Opening film roll..." contentClassName="film-module p-8">
+            <AppShell isLoading loadingMessage="Opening film roll..." contentClassName="film-module p-5 md:p-8">
                 <div />
             </AppShell>
         );
@@ -323,7 +323,7 @@ function RollDetailContent() {
 
     if (!roll || !rollForm) {
         return (
-            <AppShell contentClassName="film-module p-8">
+            <AppShell contentClassName="film-module p-5 md:p-8">
                 <div className="max-w-4xl">
                     <Link href="/film" className="action-link inline-flex items-center gap-2 text-text-secondary hover:text-text-primary">
                         <ArrowLeft size={18} />
@@ -338,7 +338,7 @@ function RollDetailContent() {
     }
 
     return (
-        <AppShell contentClassName="film-module p-8">
+        <AppShell contentClassName="film-module p-5 md:p-8">
             <div className="max-w-7xl space-y-8">
                 <RollHeader
                     roll={roll}
@@ -384,7 +384,7 @@ function RollDetailContent() {
                                         previewUrl={roll.cover_image_url || (roll.cover_photo ? getPhotoImageUrl(roll.cover_photo) : undefined)}
                                         disabled={isUploadingCover}
                                     />
-                                    <Button type="button" variant="secondary" onClick={handleCoverUpload} disabled={!coverFile} isLoading={isUploadingCover}>
+                                    <Button type="button" variant="secondary" onClick={handleCoverUpload} disabled={!coverFile} isLoading={isUploadingCover} className="w-full sm:w-auto">
                                         Replace Cover
                                     </Button>
                                 </div>
@@ -396,7 +396,7 @@ function RollDetailContent() {
                                     <span className="text-sm text-text-secondary">Brand</span>
                                     <Input value={rollForm.brand} onChange={(event) => setRollForm({ ...rollForm, brand: event.target.value })} />
                                 </label>
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                     <label className="space-y-2">
                                         <span className="text-sm text-text-secondary">Format</span>
                                         <Select
@@ -444,7 +444,7 @@ function RollDetailContent() {
                                     <span className="text-sm text-text-secondary">Location</span>
                                     <Input value={rollForm.location_name} onChange={(event) => setRollForm({ ...rollForm, location_name: event.target.value })} />
                                 </label>
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                     <label className="space-y-2">
                                         <span className="text-sm text-text-secondary">Purchase price</span>
                                         <Input type="number" min="0" step="0.01" value={rollForm.purchase_price} onChange={(event) => setRollForm({ ...rollForm, purchase_price: event.target.value })} />
@@ -501,7 +501,7 @@ function RollDetailContent() {
                                 onChange={(nextValue) => setRollForm({ ...rollForm, processing_date: nextValue })}
                                 ariaLabel="Processing date"
                             />
-                            <Button icon={<Save size={16} />} onClick={handleSaveRoll} isLoading={isSaving}>
+                            <Button icon={<Save size={16} />} onClick={handleSaveRoll} isLoading={isSaving} className="w-full sm:w-auto">
                                 Save Processing
                             </Button>
                         </div>
@@ -510,7 +510,7 @@ function RollDetailContent() {
 
                 {activeStep === 'drive' && (
                     <Card className="p-5">
-                        <div className="flex items-start justify-between gap-4">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                             <div>
                                 <h2 className="text-lg font-bold">Google Drive</h2>
                             </div>
@@ -527,11 +527,11 @@ function RollDetailContent() {
                         </div>
                         <div className="mt-4 space-y-3">
                             <Input value={driveFolderInput} onChange={(event) => setDriveFolderInput(event.target.value)} />
-                            <div className="flex flex-wrap gap-2">
-                                <Button icon={<FolderSync size={16} />} onClick={handleSyncDrive} isLoading={isSyncing}>
+                            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                                <Button icon={<FolderSync size={16} />} onClick={handleSyncDrive} isLoading={isSyncing} className="w-full sm:w-auto">
                                     Sync Metadata
                                 </Button>
-                                <a href={`/api/film/integrations/google/connect?roll_id=${roll.id}`} className="btn-ghost">
+                                <a href={`/api/film/integrations/google/connect?roll_id=${roll.id}`} className="btn-ghost w-full sm:w-auto">
                                     Connect Google
                                 </a>
                             </div>
@@ -597,12 +597,12 @@ function PhotobookContactSheet({
                 <div>
                     <h2 className="text-2xl font-bold">Contact Sheet</h2>
                 </div>
-                <Link href={`/film/rolls/${roll.id}?step=drive`} className="btn-ghost">
+                <Link href={`/film/rolls/${roll.id}?step=drive`} className="btn-ghost w-full sm:w-auto">
                     Manage Drive
                 </Link>
             </div>
 
-            <div className="bg-[#f8f3e7] p-4">
+            <div className="bg-[#f8f3e7] p-2 sm:p-4">
                 <div className="space-y-3 rounded-sm bg-[#171310] p-2 shadow-subtle">
                     {rows.map((row, rowIndex) => {
                         const placeholders = rowIndex === rows.length - 1 ? placeholderCount : 0;
@@ -748,10 +748,10 @@ function PhotoPreviewDialog({
                         )}
                     </div>
                     <aside className="space-y-3 border-t border-border-default p-4 md:border-l md:border-t-0">
-                        <Button type="button" variant="secondary" icon={<Heart size={16} />} onClick={onToggleFavorite} disabled={isUpdating}>
+                        <Button type="button" variant="secondary" icon={<Heart size={16} />} onClick={onToggleFavorite} disabled={isUpdating} className="w-full">
                             {photo.is_favorite ? 'Remove Favorite' : 'Mark Favorite'}
                         </Button>
-                        <Button type="button" variant="secondary" icon={<Star size={16} />} onClick={onSetCover} disabled={isUpdating || isCover}>
+                        <Button type="button" variant="secondary" icon={<Star size={16} />} onClick={onSetCover} disabled={isUpdating || isCover} className="w-full">
                             {isCover ? 'Current Cover' : 'Set as Cover'}
                         </Button>
                         {photo.web_view_link && (

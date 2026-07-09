@@ -17,8 +17,8 @@ interface RollHeaderProps {
 
 export function RollHeader({ roll, isSaving, onSave, showSave = true, alternateAction }: RollHeaderProps) {
     return (
-        <header className="flex flex-wrap items-start justify-between gap-4">
-            <div>
+        <header className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
+            <div className="min-w-0">
                 <Link href="/film" className="action-link inline-flex items-center gap-2 text-sm text-text-secondary hover:text-text-primary">
                     <ArrowLeft size={16} />
                     Back to cupboard
@@ -31,7 +31,7 @@ export function RollHeader({ roll, isSaving, onSave, showSave = true, alternateA
                 </div>
             </div>
             {alternateAction ?? (showSave && (
-                <Button icon={<Save size={16} />} onClick={onSave} isLoading={isSaving}>
+                <Button icon={<Save size={16} />} onClick={onSave} isLoading={isSaving} className="w-full sm:w-auto">
                     Save Roll
                 </Button>
             ))}
