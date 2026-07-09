@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, ReactNode, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PackagePlus } from 'lucide-react';
 import { AppShell } from '@/components/organisms/AppShell';
@@ -21,6 +21,7 @@ import {
     filmTypeConfig,
     filmTypes,
 } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 const initialForm = {
     film_name: '',
@@ -34,6 +35,33 @@ const initialForm = {
     camera_id: '',
     notes: '',
 };
+
+function FieldRow({
+    label,
+    children,
+    className,
+    align = 'center',
+}: {
+    label: string;
+    children: ReactNode;
+    className?: string;
+    align?: 'center' | 'start';
+}) {
+    return (
+        <label
+            className={cn(
+                'grid gap-2 md:grid-cols-[132px_minmax(0,1fr)]',
+                align === 'start' ? 'md:items-start' : 'md:items-center',
+                className
+            )}
+        >
+            <span className={cn('text-sm text-text-secondary md:pt-0', align === 'start' && 'md:pt-2')}>
+                {label}
+            </span>
+            {children}
+        </label>
+    );
+}
 
 export default function NewFilmRollPage() {
     const router = useRouter();
@@ -121,51 +149,40 @@ export default function NewFilmRollPage() {
                                 </div>
                             </div>
                         </div>
-                        <div className="grid grid-cols-1 gap-5 p-6 md:grid-cols-2">
-                            <label className="space-y-2">
-                                <span className="text-sm text-text-secondary">Film name *</span>
+                        <div className="grid grid-cols-1 gap-x-6 gap-y-4 p-6 md:grid-cols-2">
+                            <FieldRow label="Film name *">
                                 <Input required value={form.film_name} onChange={(event) => setForm({ ...form, film_name: event.target.value })} placeholder="Portra 400" />
-                            </label>
-                            <label className="space-y-2">
-                                <span className="text-sm text-text-secondary">Brand *</span>
+                            </FieldRow>
+                            <FieldRow label="Brand *">
                                 <Input required value={form.brand} onChange={(event) => setForm({ ...form, brand: event.target.value })} placeholder="Kodak" />
-                            </label>
-                            <label className="space-y-2">
-                                <span className="text-sm text-text-secondary">Format *</span>
+                            </FieldRow>
+                            <FieldRow label="Format *">
                                 <Select value={form.format} onChange={(nextValue) => setForm({ ...form, format: nextValue as FilmFormat })} options={filmFormats.map((format) => ({ value: format, label: format }))} />
-                            </label>
-                            <label className="space-y-2">
-                                <span className="text-sm text-text-secondary">Film type *</span>
+                            </FieldRow>
+                            <FieldRow label="Film type *">
                                 <Select value={form.film_type} onChange={(nextValue) => setForm({ ...form, film_type: nextValue as FilmType })} options={filmTypes.map((type) => ({ value: type, label: filmTypeConfig[type].label }))} />
-                            </label>
-                            <label className="space-y-2">
-                                <span className="text-sm text-text-secondary">Process type</span>
+                            </FieldRow>
+                            <FieldRow label="Process type">
                                 <Select value={form.process_type} onChange={(nextValue) => setForm({ ...form, process_type: nextValue as FilmProcessType | '' })} options={[{ value: '', label: 'Processing only' }, ...filmProcessTypes.map((type) => ({ value: type, label: filmProcessTypeConfig[type].label }))]} />
-                            </label>
-                            <label className="space-y-2">
-                                <span className="text-sm text-text-secondary">ISO *</span>
+                            </FieldRow>
+                            <FieldRow label="ISO *">
                                 <Input required type="number" min="1" value={form.iso} onChange={(event) => setForm({ ...form, iso: event.target.value })} />
-                            </label>
-                            <label className="space-y-2">
-                                <span className="text-sm text-text-secondary">Frames taken</span>
+                            </FieldRow>
+                            <FieldRow label="Frames taken">
                                 <Input type="number" min="0" value={form.frames_taken} onChange={(event) => setForm({ ...form, frames_taken: event.target.value })} placeholder="36" />
-                            </label>
-                            <label className="space-y-2">
-                                <span className="text-sm text-text-secondary">Purchase price</span>
+                            </FieldRow>
+                            <FieldRow label="Purchase price">
                                 <Input type="number" min="0" step="0.01" value={form.purchase_price} onChange={(event) => setForm({ ...form, purchase_price: event.target.value })} placeholder="0.00" />
-                            </label>
-                            <label className="space-y-2">
-                                <span className="text-sm text-text-secondary">Camera (optional)</span>
+                            </FieldRow>
+                            <FieldRow label="Camera">
                                 <Select value={form.camera_id} onChange={(nextValue) => setForm({ ...form, camera_id: nextValue })} options={[{ value: '', label: 'Assign later' }, ...cameras.map((camera) => ({ value: camera.id, label: camera.name }))]} />
-                            </label>
-                            <label className="space-y-2 md:col-span-2">
-                                <span className="text-sm text-text-secondary">Cover image</span>
+                            </FieldRow>
+                            <FieldRow label="Cover image" className="md:col-span-2">
                                 <Input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setCoverFile(event.target.files?.[0] || null)} />
-                            </label>
-                            <label className="space-y-2 md:col-span-2">
-                                <span className="text-sm text-text-secondary">Purchase notes</span>
+                            </FieldRow>
+                            <FieldRow label="Purchase notes" className="md:col-span-2" align="start">
                                 <Textarea value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} placeholder="Where you bought it, expiry, storage notes..." />
-                            </label>
+                            </FieldRow>
                         </div>
                         <div className="flex justify-end gap-3 border-t border-border-default px-6 py-4">
                             <Button type="button" variant="ghost" onClick={() => router.push('/film')}>Cancel</Button>

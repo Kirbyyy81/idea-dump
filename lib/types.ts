@@ -340,6 +340,38 @@ export interface FilmDashboardSummary {
     latest_camera_added: FilmCamera | null;
     cameras_with_maintenance_records: number;
     most_used_camera: FilmCamera | null;
+    status_breakdown: Array<{
+        status: FilmRollStatus;
+        label: string;
+        count: number;
+        percentage: number;
+    }>;
+    cost_breakdown: Array<{
+        key: 'film' | 'processing' | 'scanning' | 'shipping' | 'maintenance';
+        label: string;
+        amount: number;
+    }>;
+    format_breakdown: Array<{
+        format: FilmFormat;
+        label: string;
+        count: number;
+        percentage: number;
+    }>;
+    camera_usage: Array<{
+        camera_id: string | null;
+        camera: FilmCamera | null;
+        label: string;
+        roll_count: number;
+        latest_roll_at: string | null;
+    }>;
+    activity_trend: Array<{
+        month: string;
+        label: string;
+        roll_count: number;
+        frames_taken: number;
+        spend: number;
+    }>;
+    recent_rolls: FilmRoll[];
 }
 
 export const filmRollStatusConfig: Record<FilmRollStatus, { label: string; colorClass: string }> = {
