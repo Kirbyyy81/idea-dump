@@ -31,6 +31,7 @@ import {
 interface SidebarProps {
     projects: Project[];
     collapsed?: boolean;
+    className?: string;
     onToggleCollapsed?: () => void;
 }
 
@@ -79,7 +80,7 @@ function isFilmRoute(pathname: string) {
     return pathname === '/film' || pathname.startsWith('/film/');
 }
 
-export function Sidebar({ projects, collapsed = false, onToggleCollapsed }: SidebarProps) {
+export function Sidebar({ projects, collapsed = false, className, onToggleCollapsed }: SidebarProps) {
     const pathname = usePathname();
     const [openGroups, setOpenGroups] = useState<Partial<Record<'projects' | 'tickets' | 'film', boolean>>>({});
     const access = useAccess();
@@ -207,7 +208,8 @@ export function Sidebar({ projects, collapsed = false, onToggleCollapsed }: Side
         <aside
             className={cn(
                 'sticky top-3 flex h-[calc(100dvh-24px)] max-h-[calc(100dvh-24px)] flex-col overflow-hidden rounded-lg bg-nav-bg text-nav-text',
-                collapsed ? 'px-2 py-3' : 'px-[14px] py-[18px]'
+                collapsed ? 'px-2 py-3' : 'px-[14px] py-[18px]',
+                className
             )}
         >
             <div className={cn('border-b border-nav-bg-hover pb-4', collapsed && 'pb-3')}>
