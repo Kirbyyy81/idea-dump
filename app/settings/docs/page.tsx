@@ -100,7 +100,7 @@ export default function SettingsApiDocsPage() {
     }, [cdn]);
 
     return (
-        <AppShell contentClassName="p-8">
+        <AppShell contentClassName="p-5 md:p-8">
             <div className="max-w-6xl space-y-8">
                 <header>
                     <h1 className="text-2xl font-extrabold">API Docs</h1>

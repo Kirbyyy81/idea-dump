@@ -7,7 +7,7 @@ export default async function SettingsAccessPage() {
     await requireAccessAdminPage();
     const data = await getAccessAdminData();
     return (
-        <AppShell contentClassName="p-8">
+        <AppShell contentClassName="p-4 md:p-8">
             <AccessControlClient initialData={data} />
         </AppShell>
     );

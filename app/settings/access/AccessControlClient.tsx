@@ -336,8 +336,8 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
     };
 
     return (
-        <div className="mx-auto min-h-screen max-w-7xl space-y-5 p-6">
-            <div className="flex items-center justify-between gap-4">
+        <div className="mx-auto min-h-screen max-w-7xl space-y-5 p-4 md:p-6">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div className="flex items-center gap-4">
                     <Link
                         href="/settings"
@@ -348,7 +348,7 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                     <h1 className="text-text-primary">Access Control</h1>
                 </div>
 
-                <div className="relative w-full max-w-sm">
+                <div className="relative w-full md:max-w-sm">
                     <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
                     <Input
                         value={search}
@@ -365,9 +365,9 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                 </div>
             )}
 
-            <Card className="overflow-hidden rounded-2xl p-0">
+            <Card className="custom-scrollbar overflow-x-auto rounded-2xl p-0">
                 <div className="border-b border-border-default bg-bg-hover px-6 py-3">
-                    <div className="grid grid-cols-[minmax(0,1fr)_120px_120px] items-center gap-4 text-xs uppercase tracking-wide text-text-muted">
+                    <div className="grid min-w-[560px] grid-cols-[minmax(0,1fr)_120px_120px] items-center gap-4 text-xs uppercase tracking-wide text-text-muted">
                         <span>Module visibility</span>
                         <span>Status</span>
                         <span className="text-right">Action</span>
@@ -382,7 +382,7 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                         return (
                             <div
                                 key={`visibility-${moduleRow.slug}`}
-                                className={`grid grid-cols-[minmax(0,1fr)_108px_96px] items-center gap-3 border-b border-border-default px-5 py-3 last:border-b-0 hover:bg-bg-hover ${
+                                className={`grid min-w-[560px] grid-cols-[minmax(0,1fr)_108px_96px] items-center gap-3 border-b border-border-default px-5 py-3 last:border-b-0 hover:bg-bg-hover ${
                                     moduleRow.enabled ? '' : 'bg-bg-subtle text-text-muted'
                                 }`}
                             >
@@ -438,9 +438,9 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                 </div>
             </Card>
 
-            <Card className="overflow-hidden rounded-2xl p-0">
+            <Card className="custom-scrollbar overflow-x-auto rounded-2xl p-0">
                 <div className="border-b border-border-default bg-bg-hover px-6 py-3">
-                    <div className="grid grid-cols-[150px_minmax(0,1fr)_86px] items-center gap-4 text-xs uppercase tracking-wide text-text-muted">
+                    <div className="grid min-w-[680px] grid-cols-[150px_minmax(0,1fr)_86px] items-center gap-4 text-xs uppercase tracking-wide text-text-muted">
                         <span>Role</span>
                         <span>Modules</span>
                         <div className="flex justify-end">
@@ -458,7 +458,7 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
 
                 <div>
                     {showNewRoleRow && (
-                        <div className="grid grid-cols-[150px_minmax(0,1fr)_112px] items-start gap-4 border-b border-border-default px-5 py-3">
+                        <div className="grid min-w-[680px] grid-cols-[150px_minmax(0,1fr)_112px] items-start gap-4 border-b border-border-default px-5 py-3">
                             <div className="space-y-2 pt-0.5">
                                 <span className="text-xs uppercase tracking-[0.14em] text-text-muted">New role</span>
                                 <Input
@@ -524,7 +524,7 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                         return (
                             <div
                                 key={roleRecord.role}
-                                className="grid grid-cols-[150px_minmax(0,1fr)_86px] items-start gap-4 border-b border-border-default px-5 py-3 last:border-b-0 hover:bg-bg-hover"
+                                className="grid min-w-[680px] grid-cols-[150px_minmax(0,1fr)_86px] items-start gap-4 border-b border-border-default px-5 py-3 last:border-b-0 hover:bg-bg-hover"
                             >
                                 <div className="pt-1">
                                     <span className="font-bold uppercase tracking-[0.14em] text-text-primary">
@@ -569,9 +569,9 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                 </div>
             </Card>
 
-            <Card className="overflow-hidden rounded-2xl p-0">
+            <Card className="custom-scrollbar overflow-x-auto rounded-2xl p-0">
                 <div className="border-b border-border-default bg-bg-hover px-6 py-3">
-                    <div className="grid grid-cols-[minmax(0,1.2fr)_150px_minmax(0,1.5fr)_80px] items-center gap-3 text-xs uppercase tracking-wide text-text-muted">
+                    <div className="grid min-w-[820px] grid-cols-[minmax(0,1.2fr)_150px_minmax(0,1.5fr)_80px] items-center gap-3 text-xs uppercase tracking-wide text-text-muted">
                         <span>User</span>
                         <span>Role</span>
                         <span>Exceptions</span>
@@ -594,7 +594,7 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                         return (
                             <div
                                 key={user.id}
-                                className="grid grid-cols-[minmax(0,1.2fr)_150px_minmax(0,1.5fr)_80px] items-start gap-3 border-b border-border-default px-5 py-3 last:border-b-0 hover:bg-bg-hover"
+                                className="grid min-w-[820px] grid-cols-[minmax(0,1.2fr)_150px_minmax(0,1.5fr)_80px] items-start gap-3 border-b border-border-default px-5 py-3 last:border-b-0 hover:bg-bg-hover"
                             >
                                 <div className="flex min-w-0 items-center gap-2.5">
                                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border-default bg-bg-hover text-[11px] font-semibold uppercase text-text-primary">
