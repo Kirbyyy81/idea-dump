@@ -98,7 +98,7 @@ Send \`GET /api/logs\` with optional query params:
 
 ### Update
 
-Send \`PATCH /api/logs/{id}\` with a full replacement \`content\` object and \`allow_human_overwrite\` when needed.
+Send \`PATCH /api/logs/{id}\` with a full replacement \`content\` object. API-key agents can update agent-created logs only; browser sessions can update human-created logs.
 
 ## Writing Rules
 
