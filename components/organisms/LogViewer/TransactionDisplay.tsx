@@ -20,7 +20,9 @@ function formatMsDuration(ms: number): string {
 function getStandaloneTimelineEvent(tx: Transaction): LogEvent | undefined {
   const event = tx.responses.length === 1 ? tx.responses[0] : undefined;
   if (!event || tx.request) return undefined;
-  return event.lineType === 'crash' || event.lineType === 'error' ? event : undefined;
+  return event.lineType === 'crash' || event.lineType === 'error' || event.lineType === 'info'
+    ? event
+    : undefined;
 }
 
 export function TransactionRow({
@@ -41,6 +43,8 @@ export function TransactionRow({
       ? 'no response'
       : tx.orphanKind === 'response'
         ? 'orphan'
+        : standaloneEvent?.lineType === 'info'
+          ? 'info'
         : isError
           ? 'error'
           : status != null
@@ -89,9 +93,11 @@ export function TransactionRow({
               ? `${standaloneEvent.lineType} event`
               : `${tx.responses.length} resp`}
           </span>
+          {lastResponse?.durationMs != null && <span>- {formatMsDuration(lastResponse.durationMs)}</span>}
           {durationMs != null && <span>- {formatMsDuration(durationMs)}</span>}
           {tx.lineRefs.length > 0 && <span>- lines {tx.lineRefs.join(', ')}</span>}
           {tx.contentData && <span>- content data</span>}
+          {tx.correlationId && <span>- id {tx.correlationId}</span>}
           {tx.hadConcurrency && <span title="Multiple outstanding requests on same endpoint">- low conf</span>}
           {!tx.hadConcurrency && tx.confidence !== 'unknown' && <span>- {tx.confidence} conf</span>}
           {isError && (
@@ -117,7 +123,11 @@ function TransactionDetails({ tx }: { tx: Transaction }) {
         <div className="space-y-2">
           <EventHeader event={standaloneEvent} />
           <JsonOrText
-            title={standaloneEvent.lineType === 'crash' ? 'Crash details' : 'Error details'}
+            title={standaloneEvent.lineType === 'crash'
+              ? 'Crash details'
+              : standaloneEvent.lineType === 'error'
+                ? 'Error details'
+                : 'Info details'}
             event={standaloneEvent}
           />
           <details className="min-w-0 rounded-md border border-border-subtle bg-bg-base">

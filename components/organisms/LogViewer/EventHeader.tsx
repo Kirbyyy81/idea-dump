@@ -18,6 +18,18 @@ export function EventHeader({ event }: { event: LogEvent }) {
       {event.method && (
         <span className="font-mono text-text-secondary">{event.method}</span>
       )}
+      {event.durationMs != null && (
+        <span className="font-mono text-text-secondary">{event.durationMs} ms</span>
+      )}
+      {event.requestId && (
+        <span className="font-mono text-text-secondary">req {event.requestId}</span>
+      )}
+      {event.responseId && (
+        <span className="font-mono text-text-secondary">res {event.responseId}</span>
+      )}
+      {event.clientRequestId && (
+        <span className="font-mono text-text-secondary">client {event.clientRequestId}</span>
+      )}
       {event.endpointKey && (
         <span className="min-w-0 max-w-full break-all font-mono text-text-secondary">{event.endpointKey}</span>
       )}
