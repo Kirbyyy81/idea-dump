@@ -13,6 +13,7 @@ import { formatDate } from '@/lib/utils';
 import { useAlert } from '@/lib/contexts/AlertContext';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
+import { Textarea } from '@/components/atoms/Textarea';
 
 export default function LogsPage() {
     const [logs, setLogs] = useState<DailyLogEntry[]>([]);
@@ -253,19 +254,19 @@ export default function LogsPage() {
     return (
         <AppShell projects={projects} isLoading={isLoading}>
                 {/* Header */}
-                <header className="flex items-center justify-between mb-8">
+                <header className="mb-8 flex flex-wrap items-center justify-between gap-3">
                     <h1 className="text-2xl font-extrabold">Weekly Productivity Log</h1>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-2">
                         <Link href="/logs/api-tools">
-                            <Button variant="ghost" icon={<BookOpen size={18} />}>
+                            <Button variant="ghost" icon={<BookOpen size={18} />} className="h-10 px-3">
                                 API Tools
                             </Button>
                         </Link>
-                        <Button variant="ghost" onClick={handleRefresh} icon={<RefreshCw size={18} />}>
+                        <Button variant="ghost" onClick={handleRefresh} icon={<RefreshCw size={18} />} className="h-10 px-3">
                             Refresh
                         </Button>
-                        <Button variant="primary" onClick={() => setShowNewForm(true)} icon={<Plus size={18} />}>
+                        <Button variant="primary" onClick={() => setShowNewForm(true)} icon={<Plus size={18} />} className="h-10 px-4">
                             New Entry
                         </Button>
                     </div>
@@ -290,26 +291,26 @@ export default function LogsPage() {
                 <Card className="p-4 mb-6">
                     <div className="flex flex-col gap-3">
                         <div className="flex flex-wrap items-end gap-3">
-                            <div className="flex items-center gap-2">
+                            <div className="grid w-full grid-cols-1 gap-2 sm:w-auto sm:grid-cols-[auto_auto_auto_auto] sm:items-center">
                                 <Calendar size={16} className="text-text-muted" />
-                                <input
+                                <Input
                                     type="date"
                                     value={exportFrom}
                                     onChange={(e) => setExportFrom(e.target.value)}
-                                    className="bg-transparent text-sm text-text-primary border border-border-subtle rounded-md px-2 py-1"
+                                    className="h-9 text-sm"
                                     title="From date"
                                 />
                                 <span className="text-text-muted text-sm">→</span>
-                                <input
+                                <Input
                                     type="date"
                                     value={exportTo}
                                     onChange={(e) => setExportTo(e.target.value)}
-                                    className="bg-transparent text-sm text-text-primary border border-border-subtle rounded-md px-2 py-1"
+                                    className="h-9 text-sm"
                                     title="To date"
                                 />
                             </div>
 
-                            <div className="min-w-[160px]">
+                            <div className="w-full sm:min-w-[160px] sm:flex-1 lg:flex-none">
                                 <label className="block text-xs text-text-muted mb-1">Source</label>
                                 <Select
                                     value={sourceFilter}
@@ -323,7 +324,7 @@ export default function LogsPage() {
                                 />
                             </div>
 
-                            <div className="flex-1 min-w-[220px]">
+                            <div className="w-full min-w-0 flex-1 sm:min-w-[220px]">
                                 <label className="block text-xs text-text-muted mb-1">Search</label>
                                 <Input
                                     value={query}
@@ -333,9 +334,10 @@ export default function LogsPage() {
                                 />
                             </div>
 
-                            <div className="flex items-center gap-2">
+                            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
                                 <Button
                                     variant="ghost"
+                                    className="w-full sm:w-auto"
                                     onClick={() => {
                                         setExportFrom('');
                                         setExportTo('');
@@ -348,6 +350,7 @@ export default function LogsPage() {
 
                                 <Button
                                     variant="ghost"
+                                    className="w-full sm:w-auto"
                                     onClick={handleExport}
                                     isLoading={isExporting}
                                     icon={<Download size={16} />}
@@ -358,7 +361,7 @@ export default function LogsPage() {
                             </div>
                         </div>
 
-                        <div className="flex items-center justify-between text-sm text-text-muted">
+                        <div className="flex flex-col gap-2 text-sm text-text-muted sm:flex-row sm:items-center sm:justify-between">
                             <span>
                                 Showing {filteredLogs.length} of {logs.length} entries
                                 {(exportFrom || exportTo) && filterFrom && filterTo ? ` (${filterFrom} → ${filterTo})` : ''}
@@ -392,7 +395,7 @@ export default function LogsPage() {
                                 Dismiss
                             </Button>
                         </div>
-                        <textarea
+                        <Textarea
                             className="input w-full text-sm min-h-[160px] font-mono"
                             value={exportMarkdown}
                             readOnly

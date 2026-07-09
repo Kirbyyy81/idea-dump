@@ -1,6 +1,8 @@
 'use client';
 
 import { DailyLogContent } from '@/lib/types';
+import { Input } from '@/components/atoms/Input';
+import { Textarea } from '@/components/atoms/Textarea';
 
 interface LogContentFieldsProps {
     content: DailyLogContent;
@@ -27,10 +29,10 @@ export function LogContentFields({ content, onChange, compact = false }: LogCont
 
     return (
         <>
-            <div className={`grid grid-cols-2 ${compact ? 'gap-3' : 'gap-4'} ${fieldGap}`}>
+            <div className={`grid grid-cols-1 sm:grid-cols-2 ${compact ? 'gap-3' : 'gap-4'} ${fieldGap}`}>
                 <div>
                     <label className={labelClass}>Date</label>
-                    <input
+                    <Input
                         type="date"
                         value={content.date}
                         onChange={(e) => onChange({ ...content, date: e.target.value })}
@@ -39,7 +41,7 @@ export function LogContentFields({ content, onChange, compact = false }: LogCont
                 </div>
                 <div>
                     <label className={labelClass}>Day</label>
-                    <input
+                    <Input
                         type="text"
                         value={content.day || ''}
                         onChange={(e) => onChange({ ...content, day: e.target.value })}
@@ -52,7 +54,7 @@ export function LogContentFields({ content, onChange, compact = false }: LogCont
                 <label className={labelClass}>
                     {compact ? 'Task' : 'Operation / Task'}
                 </label>
-                <textarea
+                <Textarea
                     value={content.operation_task || ''}
                     onChange={(e) => onChange({ ...content, operation_task: e.target.value })}
                     className={`${inputClass} ${compact ? 'min-h-[60px]' : 'min-h-[80px] resize-y'}`}
@@ -63,7 +65,7 @@ export function LogContentFields({ content, onChange, compact = false }: LogCont
                 <label className={labelClass}>
                     {compact ? 'Tools' : 'Tools Used'}
                 </label>
-                <input
+                <Input
                     type="text"
                     value={content.tools_used || ''}
                     onChange={(e) => onChange({ ...content, tools_used: e.target.value })}
@@ -75,7 +77,7 @@ export function LogContentFields({ content, onChange, compact = false }: LogCont
                 <label className={labelClass}>
                     {compact ? 'Lesson' : 'Lesson Learned'}
                 </label>
-                <textarea
+                <Textarea
                     value={content.lesson_learned || ''}
                     onChange={(e) => onChange({ ...content, lesson_learned: e.target.value })}
                     className={`${inputClass} ${compact ? 'min-h-[40px]' : 'min-h-[60px] resize-y'}`}

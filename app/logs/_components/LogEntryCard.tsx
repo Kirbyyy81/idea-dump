@@ -38,11 +38,11 @@ export function LogEntryCard({
             <Card className="p-4">
                 <div className="space-y-3">
                     <LogContentFields content={editContent} onChange={onEditContentChange} compact />
-                    <div className="flex gap-2">
-                        <Button variant="primary" onClick={onSaveEdit} isLoading={isSaving} className="text-sm py-1">
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                        <Button variant="primary" onClick={onSaveEdit} isLoading={isSaving} className="w-full text-sm py-1 sm:w-auto">
                             Save
                         </Button>
-                        <Button variant="ghost" onClick={onCancelEdit} className="text-sm py-1">
+                        <Button variant="ghost" onClick={onCancelEdit} className="w-full text-sm py-1 sm:w-auto">
                             Cancel
                         </Button>
                     </div>
@@ -53,9 +53,9 @@ export function LogEntryCard({
 
     return (
         <Card className="p-4">
-            <div className="flex items-start justify-between">
-                <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
                         <span className={cn(
                             "text-xs px-2 py-0.5 rounded-full",
                             log.source === 'agent'
@@ -82,7 +82,7 @@ export function LogEntryCard({
                         </p>
                     )}
                 </div>
-                <div className="flex gap-1">
+                <div className="flex gap-1 sm:justify-end">
                     <Button variant="ghost" onClick={() => onStartEdit(log)} className="text-xs p-2">
                         Edit
                     </Button>

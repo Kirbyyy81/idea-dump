@@ -48,14 +48,14 @@ export function LogForm({
     };
 
     return (
-        <Card className="p-6 mb-6">
+        <Card className="p-4 mb-6 sm:p-6">
             <h3 className="font-heading text-lg mb-4">{title}</h3>
             <LogContentFields content={content} onChange={setContent} />
-            <div className="flex gap-2">
-                <Button variant="primary" onClick={handleSubmit} isLoading={isLoading} icon={<Save size={16} />}>
+            <div className="flex flex-col gap-2 sm:flex-row">
+                <Button variant="primary" onClick={handleSubmit} isLoading={isLoading} icon={<Save size={16} />} className="w-full sm:w-auto">
                     Save Entry
                 </Button>
-                <Button variant="ghost" onClick={onCancel}>
+                <Button variant="ghost" onClick={onCancel} className="w-full sm:w-auto">
                     Cancel
                 </Button>
             </div>
