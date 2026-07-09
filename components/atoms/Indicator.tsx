@@ -8,6 +8,16 @@ interface IndicatorProps extends Omit<HTMLAttributes<HTMLSpanElement>, 'children
     textClassName?: string;
 }
 
+interface IndicatorConfig {
+    label: string;
+    textClass: string;
+    indicatorClass: string;
+}
+
+interface ConfigIndicatorProps extends Omit<IndicatorProps, 'children' | 'dotClassName' | 'textClassName'> {
+    config: IndicatorConfig;
+}
+
 const sizeStyles = {
     sm: {
         dot: 'size-2.5',
@@ -37,3 +47,16 @@ export const Indicator = forwardRef<HTMLSpanElement, IndicatorProps>(
 );
 
 Indicator.displayName = 'Indicator';
+
+export function ConfigIndicator({ config, 'aria-label': ariaLabel, ...props }: ConfigIndicatorProps) {
+    return (
+        <Indicator
+            dotClassName={config.indicatorClass}
+            textClassName={config.textClass}
+            aria-label={ariaLabel ?? config.label}
+            {...props}
+        >
+            {config.label}
+        </Indicator>
+    );
+}

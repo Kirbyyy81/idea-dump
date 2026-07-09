@@ -1,8 +1,8 @@
 import Link from 'next/link';
-import { Project, inferStatus } from '@/lib/types';
+import { Project, inferStatus, priorityConfig } from '@/lib/types';
 import { formatRelativeTime, truncate } from '@/lib/utils';
 import { Card } from '@/components/atoms/Card';
-import { PriorityIndicator } from '@/components/atoms/PriorityIndicator';
+import { ConfigIndicator } from '@/components/atoms/Indicator';
 import { StatusBadge } from './StatusBadge';
 
 interface ProjectCardProps {
@@ -11,6 +11,7 @@ interface ProjectCardProps {
 
 export function ProjectCard({ project }: ProjectCardProps) {
     const status = inferStatus(project);
+    const priority = priorityConfig[project.priority];
 
     return (
         <Link href={`/projects/${project.id}`} className="block h-full">
@@ -32,7 +33,11 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
                 {/* Footer */}
                 <div className="flex items-center justify-between mt-auto pt-3 border-t border-border-subtle">
-                    <PriorityIndicator priority={project.priority} size="sm" />
+                    <ConfigIndicator
+                        config={priority}
+                        size="sm"
+                        aria-label={`${priority.label} priority`}
+                    />
 
                     {/* Timestamp */}
                     <p className="text-xs text-text-muted">
