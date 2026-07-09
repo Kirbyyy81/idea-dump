@@ -129,7 +129,7 @@ export default function NewFilmRollPage() {
     }
 
     return (
-        <AppShell contentClassName="p-5 md:p-8">
+        <AppShell contentClassName="film-module p-5 md:p-8">
             <div className="mx-auto max-w-5xl space-y-7">
                 <header className="space-y-5">
                     <div>

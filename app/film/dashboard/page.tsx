@@ -348,14 +348,14 @@ export default function FilmDashboardPage() {
 
     if (!summary && !error) {
         return (
-            <AppShell isLoading loadingMessage="Developing dashboard totals..." contentClassName="p-5 md:p-8">
+            <AppShell isLoading loadingMessage="Developing dashboard totals..." contentClassName="film-module p-5 md:p-8">
                 <div />
             </AppShell>
         );
     }
 
     return (
-        <AppShell contentClassName="p-5 md:p-8">
+        <AppShell contentClassName="film-module p-5 md:p-8">
             <div className="mx-auto max-w-7xl space-y-7">
                 <header className="flex flex-wrap items-end justify-between gap-4">
                     <div>

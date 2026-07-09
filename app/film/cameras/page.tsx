@@ -171,14 +171,14 @@ export default function FilmCamerasPage() {
 
     if (isLoading) {
         return (
-            <AppShell isLoading loadingMessage="Opening camera cabinet..." >
+            <AppShell isLoading loadingMessage="Opening camera cabinet..." contentClassName="film-module p-8">
                 <div />
             </AppShell>
         );
     }
 
     return (
-        <AppShell contentClassName="p-5 md:p-8">
+        <AppShell contentClassName="film-module p-5 md:p-8">
             <div className="mx-auto max-w-7xl space-y-7">
                 <header className="space-y-5">
                     <div>

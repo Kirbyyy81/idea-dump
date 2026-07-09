@@ -22,6 +22,25 @@ interface DriveFile {
     };
 }
 
+async function getGoogleApiErrorMessage(res: Response, fallback: string) {
+    let detail = '';
+
+    try {
+        const payload = await res.json() as { error?: { message?: string; status?: string } };
+        const message = payload.error?.message;
+        const status = payload.error?.status;
+        detail = [status, message].filter(Boolean).join(': ');
+    } catch {
+        try {
+            detail = await res.text();
+        } catch {
+            detail = '';
+        }
+    }
+
+    return detail ? `${fallback}: ${detail}` : fallback;
+}
+
 function getRequiredEnv(name: string) {
     const value = process.env[name];
     if (!value) {
@@ -101,7 +120,7 @@ export async function exchangeCodeForTokens(code: string) {
     });
 
     if (!res.ok) {
-        throw new Error('Failed to exchange Google authorization code');
+        throw new Error(await getGoogleApiErrorMessage(res, 'Failed to exchange Google authorization code'));
     }
 
     return (await res.json()) as GoogleTokenResponse;
@@ -122,7 +141,7 @@ export async function refreshAccessToken(refreshToken: string) {
     });
 
     if (!res.ok) {
-        throw new Error('Failed to refresh Google access token');
+        throw new Error(await getGoogleApiErrorMessage(res, 'Failed to refresh Google access token'));
     }
 
     return (await res.json()) as GoogleTokenResponse;
@@ -190,9 +209,11 @@ export async function listDriveImages(folderId: string, accessToken: string) {
     const mimeQuery = DRIVE_IMAGE_MIME_TYPES.map((mimeType) => `mimeType='${mimeType}'`).join(' or ');
     const params = new URLSearchParams({
         fields: 'files(id,name,mimeType,webViewLink,thumbnailLink,imageMediaMetadata(width,height))',
+        includeItemsFromAllDrives: 'true',
         orderBy: 'name_natural',
         pageSize: '1000',
         q: `'${folderId}' in parents and trashed=false and (${mimeQuery})`,
+        supportsAllDrives: 'true',
     });
 
     const res = await fetch(`https://www.googleapis.com/drive/v3/files?${params.toString()}`, {
@@ -202,7 +223,7 @@ export async function listDriveImages(folderId: string, accessToken: string) {
     });
 
     if (!res.ok) {
-        throw new Error('Failed to list Google Drive folder images');
+        throw new Error(await getGoogleApiErrorMessage(res, 'Failed to list Google Drive folder images'));
     }
 
     const payload = (await res.json()) as { files?: DriveFile[] };

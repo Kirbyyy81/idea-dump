@@ -35,6 +35,20 @@ import { RollHeader } from './_components/RollHeader';
 import { StepStepper } from './_components/StepStepper';
 import { StatsCards } from './_components/StatsCards';
 
+const statusRank: Record<FilmRollStatus, number> = {
+    UNUSED: 0,
+    LOADED: 1,
+    SHOOTING: 2,
+    AWAITING_PROCESSING: 3,
+    PROCESSING: 4,
+    PROCESSED: 5,
+    ARCHIVED: 6,
+};
+
+function promoteStatus(currentStatus: FilmRollStatus, targetStatus: FilmRollStatus) {
+    return statusRank[currentStatus] >= statusRank[targetStatus] ? currentStatus : targetStatus;
+}
+
 function getTodayInputDate() {
     const today = new Date();
     const year = today.getFullYear();
@@ -69,6 +83,25 @@ function getRollForm(roll: FilmRoll) {
         notes: roll.notes ?? '',
         drive_folder_id: roll.drive_folder_id ?? '',
     };
+}
+
+function inferStatusForStep(
+    currentStatus: FilmRollStatus,
+    activeStep: string,
+    form: ReturnType<typeof getRollForm>
+) {
+    if (currentStatus === 'ARCHIVED') return currentStatus;
+    if (activeStep === 'processing') return promoteStatus(currentStatus, 'PROCESSED');
+    if (activeStep === 'drive' || activeStep === 'photobook') return promoteStatus(currentStatus, 'PROCESSED');
+
+    const framesTaken = Number(form.frames_taken || 0);
+    if (framesTaken > 0) return promoteStatus(currentStatus, 'AWAITING_PROCESSING');
+    if (form.camera_id) return promoteStatus(currentStatus, 'LOADED');
+    return currentStatus;
+}
+
+function getPhotoImageUrl(photo: Pick<FilmPhoto, 'id'>) {
+    return `/api/film/photos/${photo.id}/image`;
 }
 
 export default function FilmRollDetailPage() {
@@ -222,12 +255,14 @@ function RollDetailContent() {
         setIsSaving(true);
         setError(null);
         try {
+            const nextStatus = inferStatusForStep(rollForm.status, activeStep, rollForm);
             const res = await fetch('/api/film/rolls', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     id: roll.id,
                     ...rollForm,
+                    status: nextStatus,
                     iso: Number(rollForm.iso),
                     film_type: rollForm.film_type,
                     process_type: rollForm.process_type || null,
@@ -280,7 +315,7 @@ function RollDetailContent() {
 
     if (isLoading) {
         return (
-            <AppShell isLoading loadingMessage="Opening film roll..." contentClassName="p-8">
+            <AppShell isLoading loadingMessage="Opening film roll..." contentClassName="film-module p-8">
                 <div />
             </AppShell>
         );
@@ -288,7 +323,7 @@ function RollDetailContent() {
 
     if (!roll || !rollForm) {
         return (
-            <AppShell contentClassName="p-8">
+            <AppShell contentClassName="film-module p-8">
                 <div className="max-w-4xl">
                     <Link href="/film" className="action-link inline-flex items-center gap-2 text-text-secondary hover:text-text-primary">
                         <ArrowLeft size={18} />
@@ -303,7 +338,7 @@ function RollDetailContent() {
     }
 
     return (
-        <AppShell contentClassName="p-8">
+        <AppShell contentClassName="film-module p-8">
             <div className="max-w-7xl space-y-8">
                 <RollHeader roll={roll} isSaving={isSaving} onSave={handleSaveRoll} />
 
@@ -313,7 +348,7 @@ function RollDetailContent() {
                     </div>
                 )}
 
-                <StatsCards roll={roll} />
+                {activeStep !== 'photobook' && <StatsCards roll={roll} />}
 
                 <StepStepper roll={roll} photos={photos} activeStep={activeStep} rollId={roll.id} />
 
@@ -325,7 +360,7 @@ function RollDetailContent() {
                                 {(roll.cover_image_url || roll.cover_photo?.thumbnail_link) && (
                                     <div className="overflow-hidden rounded-lg border border-border-default bg-bg-hover">
                                         <img
-                                            src={roll.cover_image_url || roll.cover_photo?.thumbnail_link || ''}
+                                            src={roll.cover_image_url || (roll.cover_photo ? getPhotoImageUrl(roll.cover_photo) : '')}
                                             alt={`${roll.film_name} cover`}
                                             className="aspect-[4/3] w-full object-cover"
                                         />
@@ -338,7 +373,7 @@ function RollDetailContent() {
                                         accept="image/jpeg,image/png,image/webp"
                                         value={coverFile}
                                         onChange={setCoverFile}
-                                        previewUrl={roll.cover_image_url || roll.cover_photo?.thumbnail_link}
+                                        previewUrl={roll.cover_image_url || (roll.cover_photo ? getPhotoImageUrl(roll.cover_photo) : undefined)}
                                         disabled={isUploadingCover}
                                     />
                                     <Button type="button" variant="secondary" onClick={handleCoverUpload} disabled={!coverFile} isLoading={isUploadingCover}>
@@ -635,7 +670,7 @@ function FilmFrame({
         <div className="group relative aspect-[4/3] overflow-hidden bg-black">
             <button type="button" onClick={onSelect} className="h-full w-full text-left">
                 {photo.thumbnail_link ? (
-                    <img src={photo.thumbnail_link} alt={photo.name} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                    <img src={getPhotoImageUrl(photo)} alt={photo.name} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
                 ) : (
                     <div className="grid h-full place-items-center p-3 text-center text-xs text-on-dark/70">
                         <ImageIcon size={22} className="mx-auto mb-2" />
@@ -710,7 +745,7 @@ function PhotoPreviewDialog({
                 <div className="grid gap-0 md:grid-cols-[1fr_260px]">
                     <div className="grid min-h-[320px] place-items-center bg-[#120f0d] p-4">
                         {photo.thumbnail_link ? (
-                            <img src={photo.thumbnail_link} alt={photo.name} className="max-h-[70vh] max-w-full rounded-lg object-contain" />
+                            <img src={getPhotoImageUrl(photo)} alt={photo.name} className="max-h-[70vh] max-w-full rounded-lg object-contain" />
                         ) : (
                             <div className="text-center text-on-dark/70">
                                 <ImageIcon size={36} className="mx-auto mb-3" />
