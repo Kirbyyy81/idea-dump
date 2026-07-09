@@ -5,12 +5,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
     Aperture,
-    Camera,
     CircleDollarSign,
     Film,
     Heart,
-    Image as ImageIcon,
-    Wrench,
 } from 'lucide-react';
 import {
     Bar,
@@ -330,12 +327,8 @@ export default function FilmDashboardPage() {
     const metrics = useMemo(() => summary ? [
         { label: 'Pictures taken', value: summary.total_pictures_taken.toLocaleString(), icon: Aperture },
         { label: 'Total spending', value: formatCurrencyMYR(summary.total_money_spent), icon: CircleDollarSign },
-        { label: 'Cameras owned', value: summary.total_cameras.toLocaleString(), icon: Camera },
         { label: 'Rolls tracked', value: summary.total_rolls.toLocaleString(), icon: Film },
-        { label: 'Successful photos', value: summary.successful_photos.toLocaleString(), icon: ImageIcon },
         { label: 'Favorite photos', value: summary.favorite_photos.toLocaleString(), icon: Heart },
-        { label: 'Maintenance cost', value: formatCurrencyMYR(summary.maintenance_cost), icon: Wrench },
-        { label: 'Average cost / photo', value: formatCurrencyMYR(summary.average_cost_per_photo), icon: CircleDollarSign },
     ] : [], [summary]);
 
     if (!summary && !error) {
