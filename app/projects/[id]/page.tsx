@@ -5,14 +5,14 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { AppShell } from '@/components/organisms/AppShell';
 import { StatusBadge } from '../_components/StatusBadge';
-import { PriorityIndicator } from '@/components/atoms/PriorityIndicator';
+import { ConfigIndicator } from '@/components/atoms/Indicator';
 import { MarkdownRenderer } from '../_components/MarkdownRenderer';
 import { NotesPanel } from '../_components/NotesPanel';
 import { TicketCard } from '@/components/organisms/TicketCard';
 import { TicketForm } from '@/components/organisms/TicketForm';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
-import { CreateTicketInput, Note, Project, Ticket, inferStatus } from '@/lib/types';
+import { CreateTicketInput, Note, Project, Ticket, inferStatus, priorityConfig } from '@/lib/types';
 import {
     ArrowLeft,
     ExternalLink,
@@ -242,6 +242,8 @@ export default function ProjectPage() {
         );
     }
 
+    const priority = priorityConfig[project.priority];
+
     return (
         <AppShell projects={projects} isLoading={isLoading} loadingMessage="Loading project..." contentClassName="p-5 md:p-8">
             <div className="max-w-5xl mx-auto">
@@ -291,7 +293,11 @@ export default function ProjectPage() {
 
                 <Card className="grid grid-cols-1 gap-4 p-4 !border-border-subtle bg-bg-elevated sm:grid-cols-2 md:grid-cols-5">
                     <div>
-                        <PriorityIndicator priority={project.priority} showCaption />
+                        <p className="text-xs uppercase mb-1 text-text-muted">Priority</p>
+                        <ConfigIndicator
+                            config={priority}
+                            aria-label={`${priority.label} priority`}
+                        />
                     </div>
                     <div>
                         <p className="text-xs uppercase mb-1 text-text-muted">Created</p>
