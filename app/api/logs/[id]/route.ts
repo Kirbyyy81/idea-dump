@@ -34,10 +34,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         }
 
         // Check permissions
-        if (!canModifyLog(identity, existingLog.log.source, body.allow_human_overwrite)) {
+        if (!canModifyLog(identity, existingLog.log.source)) {
             return NextResponse.json({
                 error: 'Forbidden',
-                message: 'Agent cannot overwrite human logs without allow_human_overwrite=true'
+                message: 'Agent cannot overwrite human logs'
             }, { status: 403 });
         }
 

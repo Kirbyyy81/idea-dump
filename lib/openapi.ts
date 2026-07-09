@@ -244,7 +244,6 @@ export function getOpenApiSpec() {
                                     required: ['content'],
                                     properties: {
                                         content: { $ref: '#/components/schemas/DailyLogContent' },
-                                        allow_human_overwrite: { type: 'boolean' },
                                     },
                                 },
                             },

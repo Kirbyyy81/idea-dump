@@ -118,7 +118,6 @@ export interface CreateDailyLogInput {
 
 export interface UpdateDailyLogInput {
     content: DailyLogContent;
-    allow_human_overwrite?: boolean;
 }
 
 export type TicketStatus = 'todo' | 'in_progress' | 'to_review' | 'done' | 'closed';
