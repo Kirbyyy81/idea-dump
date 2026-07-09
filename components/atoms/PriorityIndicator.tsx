@@ -1,5 +1,6 @@
 import { HTMLAttributes } from 'react';
 import { Priority, priorityConfig } from '@/lib/types';
+import { Badge, BadgeProps } from '@/components/atoms/Badge';
 import { cn } from '@/lib/utils';
 
 interface PriorityIndicatorProps extends Omit<HTMLAttributes<HTMLDivElement>, 'children'> {
@@ -8,15 +9,15 @@ interface PriorityIndicatorProps extends Omit<HTMLAttributes<HTMLDivElement>, 'c
     size?: 'sm' | 'md';
 }
 
-const priorityStyles: Record<Priority, { dot: string; text: string }> = {
-    low: { dot: 'bg-border-strong', text: 'text-text-primary' },
-    medium: { dot: 'bg-warning', text: 'text-warning' },
-    high: { dot: 'bg-error', text: 'text-error' },
+const priorityStyles: Record<Priority, { dot: string; variant: BadgeProps['variant'] }> = {
+    low: { dot: 'bg-border-strong', variant: 'priorityLow' },
+    medium: { dot: 'bg-warning', variant: 'priorityMedium' },
+    high: { dot: 'bg-error', variant: 'priorityHigh' },
 };
 
 const sizeStyles = {
-    sm: { dot: 'size-2.5', text: 'text-xs' },
-    md: { dot: 'size-3', text: 'text-sm' },
+    sm: 'px-2.5 py-0.5 text-xs',
+    md: 'px-3 py-1 text-xs',
 };
 
 export function PriorityIndicator({
@@ -28,23 +29,20 @@ export function PriorityIndicator({
 }: PriorityIndicatorProps) {
     const config = priorityConfig[priority];
     const styles = priorityStyles[priority];
-    const sizes = sizeStyles[size];
 
     return (
         <div className={cn('inline-flex flex-col gap-1', className)} {...props}>
             {showCaption && (
                 <p className="text-xs uppercase text-text-muted">Priority</p>
             )}
-            <span
-                className={cn('inline-flex items-center gap-2 font-medium', sizes.text, styles.text)}
+            <Badge
+                variant={styles.variant}
+                dotClassName={styles.dot}
+                className={cn('w-fit', sizeStyles[size])}
                 aria-label={`${config.label} priority`}
             >
-                <span
-                    className={cn('shrink-0 rounded-full', sizes.dot, styles.dot)}
-                    aria-hidden="true"
-                />
                 {config.label}
-            </span>
+            </Badge>
         </div>
     );
 }
