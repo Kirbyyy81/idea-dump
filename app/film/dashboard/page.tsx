@@ -1,7 +1,5 @@
 'use client';
 
-/* eslint-disable @next/next/no-img-element */
-
 import { useEffect, useMemo, useState } from 'react';
 import {
     Aperture,
@@ -27,8 +25,8 @@ import {
 } from 'recharts';
 import { AppShell } from '@/components/organisms/AppShell';
 import { Card } from '@/components/atoms/Card';
-import { FilmDashboardSummary, FilmRoll, FilmRollStatus, filmRollStatusConfig } from '@/lib/types';
-import { cn, formatCurrencyMYR } from '@/lib/utils';
+import { FilmDashboardSummary, FilmRollStatus, filmRollStatusConfig } from '@/lib/types';
+import { formatCurrencyMYR } from '@/lib/utils';
 
 const chartColors = [
     'var(--chart-1)',
@@ -282,34 +280,6 @@ function CameraUsageChart({ summary }: { summary: FilmDashboardSummary }) {
     );
 }
 
-function RecentRollTile({ roll }: { roll: FilmRoll }) {
-    const cover = roll.cover_image_url || roll.cover_photo?.thumbnail_link;
-
-    return (
-        <article className="flex h-[316px] w-[214px] flex-none flex-col overflow-hidden rounded-lg border border-border-default bg-bg-elevated">
-            <div className="relative h-40 shrink-0 bg-bg-hover">
-                {cover ? (
-                    <img src={cover} alt={`${roll.film_name} cover`} className="h-full w-full object-cover" />
-                ) : (
-                    <div className="grid h-full place-items-center text-text-muted">
-                        <Film size={28} />
-                    </div>
-                )}
-                <span className={cn('absolute left-2 top-2 rounded-full border px-2 py-1 text-[10px] font-bold', filmRollStatusConfig[roll.status].colorClass)}>
-                    {filmRollStatusConfig[roll.status].label}
-                </span>
-            </div>
-            <div className="flex min-h-0 flex-1 flex-col justify-between gap-3 p-3">
-                <p className="truncate text-sm font-bold text-text-primary">{roll.brand} {roll.film_name}</p>
-                <div className="flex items-center justify-between gap-2 text-xs text-text-muted">
-                    <span>{roll.frames_taken || 0} frames</span>
-                    <span>{formatCurrencyMYR(Number(roll.purchase_price || 0))}</span>
-                </div>
-            </div>
-        </article>
-    );
-}
-
 export default function FilmDashboardPage() {
     const [summary, setSummary] = useState<FilmDashboardSummary | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -387,17 +357,6 @@ export default function FilmDashboardPage() {
                             </ChartCard>
                         </section>
 
-                        <ChartCard title="Recent rolls">
-                            {summary.recent_rolls.length ? (
-                                <div className="scrollbar-hidden flex gap-3 overflow-x-auto pb-1">
-                                    {summary.recent_rolls.map((roll) => (
-                                        <RecentRollTile key={roll.id} roll={roll} />
-                                    ))}
-                                </div>
-                            ) : (
-                                <EmptyChart label="No recent rolls." />
-                            )}
-                        </ChartCard>
                     </>
                 )}
             </div>
