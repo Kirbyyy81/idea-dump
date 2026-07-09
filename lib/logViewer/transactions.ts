@@ -127,7 +127,7 @@ function hasFailurePayload(value: unknown): boolean {
 
 function eventHasError(event: LogEvent): boolean {
   if (event.lineType === 'crash' || event.lineType === 'error') return true;
-  const t = `${event.eventType} ${event.rawLine}`.toUpperCase();
+  const t = event.eventType.toUpperCase();
   if (t.includes('ERROR')) return true;
   if (event.httpStatus != null && (event.httpStatus < 200 || event.httpStatus > 299)) return true;
   return hasFailurePayload(event.bodyJson);
