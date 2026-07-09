@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Save } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
@@ -11,9 +12,10 @@ interface RollHeaderProps {
     isSaving?: boolean;
     onSave?: () => void;
     showSave?: boolean;
+    alternateAction?: ReactNode;
 }
 
-export function RollHeader({ roll, isSaving, onSave, showSave = true }: RollHeaderProps) {
+export function RollHeader({ roll, isSaving, onSave, showSave = true, alternateAction }: RollHeaderProps) {
     return (
         <header className="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -28,11 +30,11 @@ export function RollHeader({ roll, isSaving, onSave, showSave = true }: RollHead
                     </span>
                 </div>
             </div>
-            {showSave && (
+            {alternateAction ?? (showSave && (
                 <Button icon={<Save size={16} />} onClick={onSave} isLoading={isSaving}>
                     Save Roll
                 </Button>
-            )}
+            ))}
         </header>
     );
 }
