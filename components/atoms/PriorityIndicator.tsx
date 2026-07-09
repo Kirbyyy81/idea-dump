@@ -1,6 +1,6 @@
 import { HTMLAttributes } from 'react';
 import { Priority, priorityConfig } from '@/lib/types';
-import { Badge, BadgeProps } from '@/components/atoms/Badge';
+import { Indicator } from '@/components/atoms/Indicator';
 import { cn } from '@/lib/utils';
 
 interface PriorityIndicatorProps extends Omit<HTMLAttributes<HTMLDivElement>, 'children'> {
@@ -9,15 +9,10 @@ interface PriorityIndicatorProps extends Omit<HTMLAttributes<HTMLDivElement>, 'c
     size?: 'sm' | 'md';
 }
 
-const priorityStyles: Record<Priority, { dot: string; variant: BadgeProps['variant'] }> = {
-    low: { dot: 'bg-border-strong', variant: 'priorityLow' },
-    medium: { dot: 'bg-warning', variant: 'priorityMedium' },
-    high: { dot: 'bg-error', variant: 'priorityHigh' },
-};
-
-const sizeStyles = {
-    sm: 'px-2.5 py-0.5 text-xs',
-    md: 'px-3 py-1 text-xs',
+const priorityStyles: Record<Priority, { dot: string; text: string }> = {
+    low: { dot: 'bg-border-strong', text: 'text-text-primary' },
+    medium: { dot: 'bg-warning', text: 'text-warning' },
+    high: { dot: 'bg-error', text: 'text-error' },
 };
 
 export function PriorityIndicator({
@@ -35,14 +30,14 @@ export function PriorityIndicator({
             {showCaption && (
                 <p className="text-xs uppercase text-text-muted">Priority</p>
             )}
-            <Badge
-                variant={styles.variant}
+            <Indicator
+                size={size}
                 dotClassName={styles.dot}
-                className={cn('w-fit', sizeStyles[size])}
+                textClassName={styles.text}
                 aria-label={`${config.label} priority`}
             >
                 {config.label}
-            </Badge>
+            </Indicator>
         </div>
     );
 }
