@@ -61,7 +61,7 @@ const MODULE_ICONS: Record<string, JSX.Element> = {
 const NAV_ITEM_CLASS =
     'flex min-h-10 w-full items-center gap-2 rounded-sm border border-transparent px-3 py-2 text-left text-[12px] font-semibold leading-none transition-colors';
 const NAV_SUBITEM_CLASS =
-    'flex min-h-9 w-full items-center gap-2 rounded-sm border border-transparent px-3 py-2 text-left text-[12px] font-medium leading-none transition-colors';
+    'flex min-h-8 w-full items-center gap-2 rounded-sm border border-transparent px-3 py-1.5 text-left text-[12px] font-medium leading-none transition-colors';
 const GROUP_ACTIVE_CLASS = 'bg-nav-bg-hover text-nav-text hover:bg-nav-bg-hover hover:text-nav-text';
 const GROUP_INACTIVE_CLASS = 'text-nav-text-muted hover:bg-nav-bg-hover hover:text-nav-text';
 const SUBITEM_ACTIVE_CLASS =
@@ -198,7 +198,7 @@ export function Sidebar({ projects, collapsed = false, onToggleCollapsed }: Side
                         isOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
                     )}
                 >
-                    <div className="pl-4 space-y-1 pt-1">{children}</div>
+                    <div className="space-y-0.5 pl-4 pt-0.5">{children}</div>
                 </div>
             </div>
         );
@@ -231,7 +231,7 @@ export function Sidebar({ projects, collapsed = false, onToggleCollapsed }: Side
                         <button
                             type="button"
                             onClick={onToggleCollapsed}
-                            className="grid size-8 shrink-0 place-items-center rounded-sm border border-nav-bg-hover text-nav-text-muted transition-colors hover:bg-nav-bg-hover hover:text-nav-text"
+                            className="grid size-8 shrink-0 place-items-center rounded-sm text-nav-text-muted transition-colors hover:bg-nav-bg-hover hover:text-nav-text"
                             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
                             aria-expanded={!collapsed}
                             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
