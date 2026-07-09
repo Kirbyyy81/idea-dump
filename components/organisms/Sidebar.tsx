@@ -20,6 +20,8 @@ import {
     Film,
     FolderKanban,
     LayoutDashboard,
+    PanelLeftClose,
+    PanelLeftOpen,
     Plus,
     Settings,
     Settings2,
@@ -29,6 +31,8 @@ import {
 
 interface SidebarProps {
     projects: Project[];
+    collapsed?: boolean;
+    onToggleCollapsed?: () => void;
 }
 
 interface SidebarSubItem {
@@ -76,7 +80,7 @@ function isFilmRoute(pathname: string) {
     return pathname === '/film' || pathname.startsWith('/film/');
 }
 
-export function Sidebar({ projects }: SidebarProps) {
+export function Sidebar({ projects, collapsed = false, onToggleCollapsed }: SidebarProps) {
     const pathname = usePathname();
     const [openGroups, setOpenGroups] = useState<Partial<Record<'projects' | 'tickets' | 'film', boolean>>>({});
     const access = useAccess();
@@ -107,13 +111,15 @@ export function Sidebar({ projects }: SidebarProps) {
         <Link
             key={href}
             href={href}
+            title={collapsed ? label : undefined}
             className={cn(
                 NAV_SUBITEM_CLASS,
+                collapsed && 'justify-center px-2',
                 isActive ? SUBITEM_ACTIVE_CLASS : SUBITEM_INACTIVE_CLASS
             )}
         >
             {icon && <span className="grid size-4 shrink-0 place-items-center">{icon}</span>}
-            <span className="truncate">{label}</span>
+            {!collapsed && <span className="truncate">{label}</span>}
         </Link>
     );
 
@@ -130,13 +136,15 @@ export function Sidebar({ projects }: SidebarProps) {
     }) => (
         <Link
             href={href}
+            title={collapsed ? label : undefined}
             className={cn(
                 NAV_ITEM_CLASS,
+                collapsed && 'justify-center px-2',
                 active ? GROUP_ACTIVE_CLASS : GROUP_INACTIVE_CLASS
             )}
         >
             <span className="grid size-5 shrink-0 place-items-center">{icon}</span>
-            <span className="flex-1 text-left truncate">{label}</span>
+            {!collapsed && <span className="flex-1 text-left truncate">{label}</span>}
         </Link>
     );
 
@@ -156,6 +164,10 @@ export function Sidebar({ projects }: SidebarProps) {
         label: string;
     }) => {
         const isOpen = Boolean(openGroups[group] || active);
+
+        if (collapsed) {
+            return renderModuleLink({ active, href, icon, label });
+        }
 
         return (
             <div
@@ -193,23 +205,44 @@ export function Sidebar({ projects }: SidebarProps) {
     };
 
     return (
-        <aside className="sticky top-8 flex h-[calc(100dvh-64px)] max-h-[calc(100dvh-64px)] flex-col overflow-hidden rounded-lg bg-nav-bg px-[14px] py-[18px] text-nav-text md:top-10 md:h-[calc(100dvh-80px)] md:max-h-[calc(100dvh-80px)]">
-            <div className="border-b border-nav-bg-hover pb-4">
-                <Link href="/dashboard" className="flex items-center gap-2">
-                    <Image
-                        src="/logo.png"
-                        alt="IdeaDump Logo"
-                        width={28}
-                        height={28}
-                        className="size-7 object-contain"
-                    />
-                    <span className="font-heading text-base font-extrabold leading-none text-nav-text">
-                        IdeaDump
-                    </span>
-                </Link>
+        <aside
+            className={cn(
+                'sticky top-3 flex h-[calc(100dvh-24px)] max-h-[calc(100dvh-24px)] flex-col overflow-hidden rounded-lg bg-nav-bg text-nav-text',
+                collapsed ? 'px-2 py-3' : 'px-[14px] py-[18px]'
+            )}
+        >
+            <div className={cn('border-b border-nav-bg-hover pb-4', collapsed && 'pb-3')}>
+                <div className={cn('flex gap-2', collapsed ? 'flex-col items-center' : 'items-center justify-between')}>
+                    <Link href="/dashboard" className={cn('flex min-w-0 items-center gap-2', collapsed && 'justify-center')}>
+                        <Image
+                            src="/logo.png"
+                            alt="IdeaDump Logo"
+                            width={28}
+                            height={28}
+                            className="size-7 shrink-0 object-contain"
+                        />
+                        {!collapsed && (
+                            <span className="truncate font-heading text-base font-extrabold leading-none text-nav-text">
+                                IdeaDump
+                            </span>
+                        )}
+                    </Link>
+                    {onToggleCollapsed && (
+                        <button
+                            type="button"
+                            onClick={onToggleCollapsed}
+                            className="grid size-8 shrink-0 place-items-center rounded-sm border border-nav-bg-hover text-nav-text-muted transition-colors hover:bg-nav-bg-hover hover:text-nav-text"
+                            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                            aria-expanded={!collapsed}
+                            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                        >
+                            {collapsed ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
+                        </button>
+                    )}
+                </div>
             </div>
 
-            <nav className="custom-scrollbar-nav flex-1 space-y-1 overflow-y-auto py-4">
+            <nav className={cn('custom-scrollbar-nav flex-1 space-y-1 overflow-y-auto py-4', collapsed && 'py-3')}>
                 {canAccessModule('dashboard') && (
                     renderModuleLink({
                         active: isDashboardActive,
