@@ -312,7 +312,7 @@ function RollDetailContent() {
                     showSave={activeStep === 'film'}
                     saveLabel="Save & Continue"
                     alternateAction={activeStep === 'photobook' ? (
-                        <Link href={`/film/rolls/${roll.id}?step=film`} className="btn-secondary">
+                        <Link href={`/film/rolls/${roll.id}?step=film`} className="btn-secondary min-h-8 self-start px-3 py-1.5 text-xs">
                             Roll Details
                         </Link>
                     ) : undefined}
@@ -549,11 +549,9 @@ function PhotobookContactSheet({
 
     return (
         <Card className="overflow-hidden p-0">
-            <div className="flex flex-col gap-3 border-b border-border-default bg-bg-elevated p-5 md:flex-row md:items-center md:justify-between">
-                <div>
-                    <h2 className="text-2xl font-bold">Contact Sheet</h2>
-                </div>
-                <Link href={`/film/rolls/${roll.id}?step=drive`} className="btn-ghost w-full sm:w-auto">
+            <div className="flex items-center justify-between gap-3 border-b border-border-default bg-bg-elevated p-5">
+                <h2 className="text-xl font-bold sm:text-2xl">Contact Sheet</h2>
+                <Link href={`/film/rolls/${roll.id}?step=drive`} className="btn-ghost min-h-8 shrink-0 px-2.5 py-1 text-xs">
                     Manage Drive
                 </Link>
             </div>

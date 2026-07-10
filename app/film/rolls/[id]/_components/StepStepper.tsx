@@ -26,38 +26,51 @@ export function StepStepper({ roll, photos, activeStep, rollId }: StepStepperPro
     ];
 
     return (
-        <section className="grid gap-3 md:grid-cols-4">
-            {setupSteps.map((step, index) => {
-                const href = `/film/rolls/${rollId}?step=${step.slug}`;
-                const isActive = activeStep === step.slug;
+        <nav aria-label="Film roll workflow" className="rounded-lg border border-border-default bg-bg-elevated p-2 sm:p-3">
+            <ol className="grid grid-cols-4">
+                {setupSteps.map((step, index) => {
+                    const href = `/film/rolls/${rollId}?step=${step.slug}`;
+                    const isActive = activeStep === step.slug;
 
-                return (
-                    <Link
-                        key={step.slug}
-                        href={href}
-                        className={cn(
-                            'action-link flex items-center gap-3 rounded-lg border px-4 py-3 text-sm transition-colors',
-                            isActive
-                                ? 'border-accent-sage bg-pastel-olive-soft text-text-primary'
-                                : step.isComplete
-                                    ? 'border-accent-sage bg-pastel-olive-soft text-text-primary hover:bg-pastel-olive-soft/80'
-                                    : 'border-border-default bg-bg-elevated text-text-muted hover:bg-bg-hover'
-                        )}
-                    >
-                        <span
-                            className={cn(
-                                'grid size-6 shrink-0 place-items-center rounded-full border text-xs font-bold',
-                                step.isComplete
-                                    ? 'border-accent-sage bg-accent-sage text-text-primary'
-                                    : 'border-border-default bg-bg-hover text-text-muted'
+                    return (
+                        <li key={step.slug} className="relative min-w-0">
+                            {index < setupSteps.length - 1 && (
+                                <span
+                                    aria-hidden="true"
+                                    className={cn(
+                                        'absolute left-[calc(50%+1rem)] right-[calc(-50%+1rem)] top-[1.15rem] h-0.5',
+                                        step.isComplete ? 'bg-accent-sage' : 'bg-border-default'
+                                    )}
+                                />
                             )}
-                        >
-                            {step.isComplete ? <CheckCircle size={14} /> : index + 1}
-                        </span>
-                        <span className="font-semibold">{step.label}</span>
-                    </Link>
-                );
-            })}
-        </section>
+                            <Link
+                                href={href}
+                                aria-current={isActive ? 'step' : undefined}
+                                className={cn(
+                                    'action-link relative z-10 flex min-w-0 flex-col items-center gap-1 rounded-md px-1 py-1.5 text-center text-[11px] transition-colors sm:text-xs',
+                                    isActive
+                                        ? 'bg-pastel-olive-soft text-text-primary'
+                                        : 'text-text-muted hover:bg-bg-hover hover:text-text-primary'
+                                )}
+                            >
+                                <span
+                                    className={cn(
+                                        'grid size-7 shrink-0 place-items-center rounded-full border bg-bg-elevated text-xs font-bold',
+                                        step.isComplete
+                                            ? 'border-accent-sage bg-accent-sage text-text-primary'
+                                            : isActive
+                                                ? 'border-accent-sage text-text-primary'
+                                                : 'border-border-default text-text-muted'
+                                    )}
+                                >
+                                    {step.isComplete ? <CheckCircle size={14} /> : index + 1}
+                                </span>
+                                <span className={cn('truncate font-semibold', isActive && 'text-text-primary')}>{step.label}</span>
+                            </Link>
+                        </li>
+                    );
+                })}
+            </ol>
+        </nav>
     );
 }
