@@ -119,7 +119,7 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
             )}
         >
             {icon && <span className="grid size-4 shrink-0 place-items-center">{icon}</span>}
-            {!collapsed && <span className="truncate">{label}</span>}
+            {!collapsed && <span className="min-w-0 flex-1 truncate">{label}</span>}
         </Link>
     );
 
@@ -144,7 +144,7 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
             )}
         >
             <span className="grid size-5 shrink-0 place-items-center">{icon}</span>
-            {!collapsed && <span className="flex-1 text-left truncate">{label}</span>}
+            {!collapsed && <span className="min-w-0 flex-1 text-left truncate">{label}</span>}
         </Link>
     );
 
@@ -185,10 +185,10 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
                     onClick={() => setOpenGroups((current) => ({ ...current, [group]: !isOpen }))}
                 >
                     <span className="grid size-5 shrink-0 place-items-center">{icon}</span>
-                    <span className="flex-1 text-left">{label}</span>
+                    <span className="min-w-0 flex-1 text-left truncate">{label}</span>
                     <ChevronRight
                         size={14}
-                        className={cn('transition-transform text-nav-text-muted', isOpen && 'rotate-90')}
+                        className={cn('shrink-0 transition-transform text-nav-text-muted', isOpen && 'rotate-90')}
                     />
                 </Link>
 

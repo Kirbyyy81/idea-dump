@@ -181,7 +181,7 @@ export function AppShell({ children, contentClassName = 'p-5 md:p-6', projects: 
                             </button>
                             <Sidebar
                                 projects={projects}
-                                className="static h-dvh max-h-dvh rounded-none px-4 py-5 pr-14"
+                                className="static h-dvh max-h-dvh rounded-none px-4 py-5"
                             />
                         </div>
                     </div>
