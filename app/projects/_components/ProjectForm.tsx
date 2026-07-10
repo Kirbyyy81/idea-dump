@@ -112,10 +112,7 @@ export function ProjectForm({
 
                 {/* PRD Content */}
                 <div>
-                    <div className="flex items-center justify-between mb-2">
-                        <label className="block text-sm font-medium text-text-secondary">
-                            PRD Content (Markdown)
-                        </label>
+                    <div className="mb-2 flex justify-end">
                         <label className="btn-secondary text-sm flex items-center gap-2 cursor-pointer h-8 px-3 py-1">
                             <Upload size={14} />
                             Upload .md file
@@ -145,7 +142,7 @@ export function ProjectForm({
                     >
                         <div className={cn("rounded-lg", isDragOver && "border border-dashed border-accent-rose/50")}>
                             <FormField // Using FormField for textarea via multiline prop
-                                label="" // Label is handled above custom
+                                label="PRD Content (Markdown)"
                                 multiline
                                 value={prdContent}
                                 onChange={(e) => setPrdContent(e.target.value)}
@@ -181,16 +178,16 @@ export function ProjectForm({
                 />
 
                 {/* Priority */}
-                <div>
-                    <label className="block text-sm font-medium text-text-secondary mb-2">
-                        Priority
-                    </label>
-                    <div className="flex gap-2">
+                <fieldset>
+                    <legend className="mb-2 block text-sm font-medium text-text-secondary">Priority</legend>
+                    <div role="radiogroup" aria-label="Priority" className="flex gap-2">
                         {(['low', 'medium', 'high'] as const).map((p) => (
                             <button
                                 key={p}
                                 type="button"
                                 onClick={() => setPriority(p)}
+                                role="radio"
+                                aria-checked={priority === p}
                                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${priority === p
                                     ? p === 'high'
                                         ? 'bg-accent-rose text-action-primary-text'
@@ -204,7 +201,7 @@ export function ProjectForm({
                             </button>
                         ))}
                     </div>
-                </div>
+                </fieldset>
             </Card>
 
             {/* Actions */}

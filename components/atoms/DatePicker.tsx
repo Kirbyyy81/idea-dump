@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -62,6 +62,12 @@ export function DatePicker({
     const [menuPosition, setMenuPosition] = useState({ left: 0, top: 0, width: 0 });
     const selectedDate = parseInputDate(value);
     const [viewDate, setViewDate] = useState(() => selectedDate ?? parseInputDate(getTodayInputDate()) ?? new Date());
+    const dialogId = `date-picker-${useId()}`;
+
+    const closePicker = () => {
+        setIsOpen(false);
+        requestAnimationFrame(() => buttonRef.current?.focus());
+    };
 
     useEffect(() => {
         const nextSelectedDate = parseInputDate(value);
@@ -71,13 +77,56 @@ export function DatePicker({
     useEffect(() => {
         if (!isOpen) return;
 
+        const focusableSelector = 'button:not([disabled]), [tabindex]:not([tabindex="-1"])';
+        const focusFirst = () => menuRef.current?.querySelector<HTMLElement>(focusableSelector)?.focus();
+        requestAnimationFrame(focusFirst);
+
+        const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                closePicker();
+                return;
+            }
+            if (event.key !== 'Tab' || !menuRef.current) return;
+            const focusable = Array.from(menuRef.current.querySelectorAll<HTMLElement>(focusableSelector));
+            if (focusable.length === 0) return;
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+            if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first.focus();
+            }
+        };
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [isOpen]);
+
+    useEffect(() => {
+        if (!isOpen) return;
+
         function updateMenuPosition() {
             const rect = buttonRef.current?.getBoundingClientRect();
             if (!rect) return;
+
+            const viewportPadding = 8;
+            const menuWidth = Math.min(Math.max(rect.width, 260), window.innerWidth - viewportPadding * 2);
+            const menuHeight = menuRef.current?.offsetHeight ?? 320;
+            const left = Math.min(
+                Math.max(viewportPadding, rect.left),
+                Math.max(viewportPadding, window.innerWidth - menuWidth - viewportPadding)
+            );
+            const top = Math.min(
+                rect.bottom + 4,
+                Math.max(viewportPadding, window.innerHeight - menuHeight - viewportPadding)
+            );
+
             setMenuPosition({
-                left: rect.left,
-                top: rect.bottom + 4,
-                width: Math.max(rect.width, 260),
+                left,
+                top,
+                width: menuWidth,
             });
         }
 
@@ -100,7 +149,7 @@ export function DatePicker({
             const isInsideMenu = menuRef.current?.contains(target);
 
             if (!isInsideTrigger && !isInsideMenu) {
-                setIsOpen(false);
+                closePicker();
             }
         }
 
@@ -124,8 +173,7 @@ export function DatePicker({
 
     const chooseDate = (date: Date) => {
         onChange(formatInputDate(date));
-        setIsOpen(false);
-        requestAnimationFrame(() => buttonRef.current?.focus());
+        closePicker();
     };
 
     const changeMonth = (offset: number) => {
@@ -151,8 +199,9 @@ export function DatePicker({
                 disabled={disabled}
                 aria-haspopup="dialog"
                 aria-expanded={isOpen}
-                aria-label={ariaLabel}
-                onClick={() => setIsOpen((current) => !current)}
+                aria-controls={dialogId}
+                aria-label={`${ariaLabel ?? 'Date'}${value ? `, ${formatDisplayDate(value)}` : ', no date selected'}`}
+                onClick={() => (isOpen ? closePicker() : setIsOpen(true))}
                 className={cn(
                     'input flex h-10 items-center justify-between gap-2 pr-10 text-left',
                     disabled && 'cursor-not-allowed opacity-60',
@@ -171,8 +220,11 @@ export function DatePicker({
             {isOpen && createPortal(
                 <div
                     ref={menuRef}
+                    id={dialogId}
                     role="dialog"
-                    aria-label={ariaLabel ?? 'Choose date'}
+                    aria-modal="true"
+                    aria-label={`Choose ${ariaLabel ?? 'date'}${value ? `, currently ${formatDisplayDate(value)}` : ''}`}
+                    tabIndex={-1}
                     style={{
                         left: menuPosition.left,
                         top: menuPosition.top,
@@ -208,6 +260,8 @@ export function DatePicker({
                                     key={inputDate}
                                     type="button"
                                     onClick={() => chooseDate(date)}
+                                    aria-label={new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).format(date)}
+                                    aria-pressed={isSelected}
                                     className={cn(
                                         'grid size-7 place-items-center rounded-full text-xs transition-colors',
                                         isSelected
