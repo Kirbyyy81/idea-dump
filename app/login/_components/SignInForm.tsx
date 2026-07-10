@@ -9,7 +9,6 @@ import { LoaderOne } from '@/components/atoms/Loader';
 import { buildCachedProfile, clearCachedProfile, setCachedProfile } from '@/lib/auth/profileCache';
 import { AUTH_PATHS } from '@/lib/auth/routes';
 import { createClient } from '@/lib/supabase/client';
-import { cn } from '@/lib/utils';
 
 type AuthMethod = 'otp' | 'password';
 
@@ -28,6 +27,11 @@ export function SignInForm({ queryError }: SignInFormProps) {
     const [error, setError] = useState<string | null>(queryError ?? null);
 
     const redirectToApp = () => window.location.assign('/');
+
+    const switchAuthMethod = () => {
+        setAuthMethod((current) => (current === 'otp' ? 'password' : 'otp'));
+        setError(null);
+    };
 
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
@@ -132,7 +136,8 @@ export function SignInForm({ queryError }: SignInFormProps) {
         return (
             <form onSubmit={handleVerifyCode} className="space-y-4">
                 <AuthNotice tone="success">
-                    We sent a one-time code to <strong>{email}</strong>.
+                    We sent a magic link to <strong>{email}</strong>. You can also use the
+                    one-time code from that email.
                 </AuthNotice>
 
                 <AuthField
@@ -192,34 +197,6 @@ export function SignInForm({ queryError }: SignInFormProps) {
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
-            <div
-                role="group"
-                aria-label="Sign-in method"
-                className="grid grid-cols-2 gap-1 rounded-md bg-bg-subtle p-1"
-            >
-                {(['otp', 'password'] as const).map((method) => {
-                    const active = authMethod === method;
-                    return (
-                        <Button
-                            key={method}
-                            type="button"
-                            variant="ghost"
-                            aria-pressed={active}
-                            onClick={() => {
-                                setAuthMethod(method);
-                                setError(null);
-                            }}
-                            className={cn(
-                                'min-h-9',
-                                active && 'border-border-default bg-bg-surface text-text-primary'
-                            )}
-                        >
-                            {method === 'otp' ? 'Email code' : 'Password'}
-                        </Button>
-                    );
-                })}
-            </div>
-
             <AuthField
                 id="signin-email"
                 label="Email address"
@@ -256,13 +233,22 @@ export function SignInForm({ queryError }: SignInFormProps) {
                 {isLoading ? (
                     <>
                         <LoaderOne size="sm" dotClassName="bg-action-primary-text" />
-                        {authMethod === 'otp' ? 'Sending code' : 'Signing in'}
+                        {authMethod === 'otp' ? 'Sending magic link' : 'Signing in'}
                     </>
                 ) : authMethod === 'otp' ? (
-                    'Send sign-in code'
+                    'Send magic link'
                 ) : (
                     'Sign in'
                 )}
+            </Button>
+
+            <Button
+                type="button"
+                variant="ghost"
+                onClick={switchAuthMethod}
+                className="mx-auto flex min-h-10 w-fit px-1 text-xs underline decoration-border-strong underline-offset-4 hover:bg-transparent"
+            >
+                {authMethod === 'otp' ? 'Sign in with password' : 'Use a magic link'}
             </Button>
 
             {authMethod === 'password' && (
