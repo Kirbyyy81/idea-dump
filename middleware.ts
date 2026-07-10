@@ -1,7 +1,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import {
-    AUTH_VIEWS,
+    AUTH_PATHS,
     PUBLIC_AUTH_PATH_PREFIXES,
 } from '@/lib/auth/routes';
 
@@ -58,11 +58,12 @@ export async function middleware(request: NextRequest) {
     }
 
     // If logged in and trying to access login page, redirect to dashboard
-    const isPasswordRecovery =
-        request.nextUrl.pathname === '/login' &&
-        request.nextUrl.searchParams.get('view') === AUTH_VIEWS.resetPassword;
+    const isLoginRoute =
+        request.nextUrl.pathname === AUTH_PATHS.signIn ||
+        request.nextUrl.pathname.startsWith(`${AUTH_PATHS.signIn}/`);
+    const isPasswordRecovery = request.nextUrl.pathname === AUTH_PATHS.resetPassword;
 
-    if (user && request.nextUrl.pathname === '/login' && !isPasswordRecovery) {
+    if (user && isLoginRoute && !isPasswordRecovery) {
         const url = request.nextUrl.clone();
         url.pathname = '/';
         const redirectResponse = NextResponse.redirect(url);
