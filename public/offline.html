@@ -13,18 +13,21 @@
       }
 
       body {
-        min-height: 100vh;
+        min-height: 100svh;
         margin: 0;
+        padding: 16px;
         display: grid;
         place-items: center;
+        box-sizing: border-box;
       }
 
       main {
-        width: min(100% - 32px, 440px);
+        width: min(100%, 440px);
+        box-sizing: border-box;
         border: 1px solid #d8d0c2;
-        border-radius: 16px;
+        border-radius: 8px;
         background: #fffaf2;
-        padding: 32px;
+        padding: clamp(24px, 8vw, 32px);
       }
 
       h1 {
@@ -34,16 +37,39 @@
       }
 
       p {
-        margin: 0;
+        margin: 0 0 24px;
         color: #61594e;
         line-height: 1.6;
+      }
+
+      button {
+        min-height: 44px;
+        border: 1px solid #1f1f1f;
+        border-radius: 6px;
+        padding: 10px 16px;
+        color: #fffaf2;
+        background: #1f1f1f;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      button:focus-visible {
+        outline: 3px solid #b66b3d;
+        outline-offset: 3px;
       }
     </style>
   </head>
   <body>
     <main>
       <h1>IdeaDump is offline</h1>
-      <p>Reconnect to the internet and refresh the app to continue.</p>
+      <p>Reconnect to the internet, then try again.</p>
+      <button type="button" id="retry">Retry</button>
     </main>
+    <script>
+      document.getElementById('retry').addEventListener('click', function () {
+        window.location.reload();
+      });
+    </script>
   </body>
 </html>
