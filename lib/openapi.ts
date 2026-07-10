@@ -84,7 +84,7 @@ export function getOpenApiSpec() {
             film_type: { type: 'string', enum: ['NEGATIVE', 'REVERSAL', 'BW_NEGATIVE'] },
             process_type: { type: 'string', enum: ['C41', 'E6', 'BW', 'ECN2'], nullable: true },
             iso: { type: 'integer' },
-            status: { type: 'string', enum: ['UNUSED', 'LOADED', 'SHOOTING', 'AWAITING_PROCESSING', 'PROCESSING', 'PROCESSED', 'ARCHIVED'] },
+            status: { type: 'string', enum: ['UNUSED', 'SHOOTING', 'PROCESSING', 'PROCESSED'] },
             purchase_price: { type: 'number' },
             lab_name: { type: 'string', nullable: true },
             processing_cost: { type: 'number', minimum: 0 },

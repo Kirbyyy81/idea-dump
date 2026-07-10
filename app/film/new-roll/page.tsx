@@ -107,7 +107,7 @@ export default function NewFilmRollPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     ...form,
-                    status: 'UNUSED',
+                    status: form.camera_id ? 'SHOOTING' : 'UNUSED',
                     iso: Number(form.iso),
                     film_type: form.film_type,
                     process_type: form.process_type || null,

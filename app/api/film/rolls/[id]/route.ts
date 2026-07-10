@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authorizeFilmJournal, jsonError } from '@/lib/film/api';
+import { normalizeFilmRoll } from '@/lib/film/status';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,7 +32,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
         if (error) throw error;
         if (!data) return jsonError('Film roll not found', 404);
 
-        return NextResponse.json({ data });
+        return NextResponse.json({ data: normalizeFilmRoll(data) });
     } catch (error) {
         console.error('Error fetching film roll:', error);
         return jsonError('Failed to fetch film roll', 500);

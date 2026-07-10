@@ -13,22 +13,16 @@ interface StepStepperProps {
 }
 
 export function StepStepper({ roll, photos, activeStep, rollId }: StepStepperProps) {
-    const hasProcessingDetails = Boolean(
-        roll.lab_name ||
-        roll.processing_date ||
-        Number(roll.processing_cost || 0) > 0 ||
-        Number(roll.scanning_cost || 0) > 0 ||
-        Number(roll.shipping_cost || 0) > 0
-    );
     const hasDriveFolder = Boolean(roll.drive_folder_id);
     const hasSyncedPhotos = photos.length > 0;
-    const canShowPhotobook = hasProcessingDetails && hasSyncedPhotos;
+    const hasFinishedFilm = roll.status === 'PROCESSING' || roll.status === 'PROCESSED';
+    const hasFinishedProcessing = roll.status === 'PROCESSED';
 
     const setupSteps = [
-        { label: 'Film', slug: 'film', isComplete: true },
-        { label: 'Processing', slug: 'processing', isComplete: hasProcessingDetails },
+        { label: 'Film', slug: 'film', isComplete: hasFinishedFilm },
+        { label: 'Processing', slug: 'processing', isComplete: hasFinishedProcessing },
         { label: 'Drive', slug: 'drive', isComplete: hasDriveFolder },
-        { label: 'Photobook', slug: 'photobook', isComplete: canShowPhotobook },
+        { label: 'Photobook', slug: 'photobook', isComplete: hasSyncedPhotos },
     ];
 
     return (

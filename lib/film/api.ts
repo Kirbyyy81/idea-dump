@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authorizeSessionModule } from '@/lib/rbac/guards';
 import { FilmCamera, FilmMaintenanceRecord, FilmRoll } from '@/lib/types';
+import { normalizeFilmRoll } from '@/lib/film/status';
 
 export async function authorizeFilmJournal() {
     const access = await authorizeSessionModule('film_journal');
@@ -26,7 +27,7 @@ export async function getOwnedFilmRoll(userId: string, rollId: string) {
         .maybeSingle();
 
     if (error) throw error;
-    return data as FilmRoll | null;
+    return data ? normalizeFilmRoll(data) as FilmRoll : null;
 }
 
 export async function getOwnedFilmCamera(userId: string, cameraId: string) {

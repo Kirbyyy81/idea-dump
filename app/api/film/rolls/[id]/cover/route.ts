@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authorizeFilmJournal, getOwnedFilmRoll, jsonError } from '@/lib/film/api';
 import { FILM_COVER_BUCKET, FILM_COVER_MAX_BYTES, FILM_COVER_MIME_TYPES } from '@/lib/film/constants';
+import { normalizeFilmRoll } from '@/lib/film/status';
 
 export const dynamic = 'force-dynamic';
 
@@ -69,7 +70,7 @@ export async function POST(request: NextRequest, { params }: CoverRouteProps) {
 
         if (error) throw error;
 
-        return NextResponse.json({ data });
+        return NextResponse.json({ data: normalizeFilmRoll(data) });
     } catch (error) {
         console.error('Error uploading film cover:', error);
         return jsonError('Failed to upload film cover', 500);

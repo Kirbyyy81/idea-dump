@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authorizeFilmJournal, getOwnedFilmCamera, jsonError } from '@/lib/film/api';
+import { getStoredFilmRollStatuses, normalizeFilmRoll } from '@/lib/film/status';
 import {
     isFilmFormat,
     isFilmProcessType,
@@ -149,7 +150,7 @@ export async function GET(request: NextRequest) {
             .eq('user_id', session.user.id)
             .order('created_at', { ascending: false });
 
-        if (isFilmRollStatus(status)) requestQuery = requestQuery.eq('status', status);
+        if (isFilmRollStatus(status)) requestQuery = requestQuery.in('status', getStoredFilmRollStatuses(status));
         if (cameraId) requestQuery = requestQuery.eq('camera_id', cameraId);
         if (query) {
             requestQuery = requestQuery.or(
@@ -160,7 +161,7 @@ export async function GET(request: NextRequest) {
         const { data, error } = await requestQuery;
         if (error) throw error;
 
-        return NextResponse.json({ data: data || [] });
+        return NextResponse.json({ data: (data || []).map(normalizeFilmRoll) });
     } catch (error) {
         console.error('Error fetching film rolls:', error);
         return jsonError('Failed to fetch film rolls', 500);
@@ -190,7 +191,7 @@ export async function POST(request: NextRequest) {
             .single();
 
         if (error) throw error;
-        return NextResponse.json({ data }, { status: 201 });
+        return NextResponse.json({ data: normalizeFilmRoll(data) }, { status: 201 });
     } catch (error) {
         console.error('Error creating film roll:', error);
         return jsonError('Failed to create film roll', 500);
@@ -248,7 +249,7 @@ export async function PUT(request: NextRequest) {
             .single();
 
         if (error) throw error;
-        return NextResponse.json({ data });
+        return NextResponse.json({ data: normalizeFilmRoll(data) });
     } catch (error) {
         console.error('Error updating film roll:', error);
         return jsonError('Failed to update film roll', 500);

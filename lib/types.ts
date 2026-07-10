@@ -174,12 +174,9 @@ export const ticketSourceConfig: Record<TicketSource, { label: string }> = {
 
 export type FilmRollStatus =
     | 'UNUSED'
-    | 'LOADED'
     | 'SHOOTING'
-    | 'AWAITING_PROCESSING'
     | 'PROCESSING'
-    | 'PROCESSED'
-    | 'ARCHIVED';
+    | 'PROCESSED';
 
 export type FilmFormat = '35mm' | '120' | 'Large Format';
 
@@ -375,12 +372,9 @@ export interface FilmDashboardSummary {
 
 export const filmRollStatusConfig: Record<FilmRollStatus, { label: string; colorClass: string }> = {
     UNUSED: { label: 'Unused', colorClass: 'bg-bg-hover text-text-secondary border-border-default' },
-    LOADED: { label: 'Loaded', colorClass: 'bg-accent-blue/15 text-text-primary border-accent-blue/60' },
     SHOOTING: { label: 'Shooting', colorClass: 'bg-accent-apricot/20 text-text-primary border-accent-apricot' },
-    AWAITING_PROCESSING: { label: 'Awaiting Processing', colorClass: 'bg-accent-coral/10 text-accent-rose border-accent-coral' },
     PROCESSING: { label: 'Processing', colorClass: 'bg-accent-rose/10 text-accent-rose border-accent-rose/40' },
     PROCESSED: { label: 'Processed', colorClass: 'bg-accent-sage/20 text-text-primary border-accent-sage' },
-    ARCHIVED: { label: 'Archived', colorClass: 'bg-bg-subtle text-text-muted border-border-default' },
 };
 
 export const filmFormats: FilmFormat[] = ['35mm', '120', 'Large Format'];
