@@ -20,23 +20,11 @@ interface AuthFlowProps {
     view: AuthView;
 }
 
-const VIEW_COPY: Record<AuthView, { title: string; description: string }> = {
-    [AUTH_VIEWS.signIn]: {
-        title: 'Welcome back',
-        description: 'Sign in with an email code or your password.',
-    },
-    [AUTH_VIEWS.signUp]: {
-        title: 'Create your account',
-        description: 'Use your email and a password to get started.',
-    },
-    [AUTH_VIEWS.forgotPassword]: {
-        title: 'Reset your password',
-        description: 'We will email you a secure password reset link.',
-    },
-    [AUTH_VIEWS.resetPassword]: {
-        title: 'Choose a new password',
-        description: 'Set a new password for your IdeaDump account.',
-    },
+const VIEW_TITLES: Record<AuthView, string> = {
+    [AUTH_VIEWS.signIn]: 'Welcome back',
+    [AUTH_VIEWS.signUp]: 'Create your account',
+    [AUTH_VIEWS.forgotPassword]: 'Reset your password',
+    [AUTH_VIEWS.resetPassword]: 'Choose a new password',
 };
 
 export function AuthFlow({ queryError, view }: AuthFlowProps) {
@@ -97,10 +85,8 @@ export function AuthFlow({ queryError, view }: AuthFlowProps) {
         };
     }, []);
 
-    const copy = VIEW_COPY[view];
-
     return (
-        <AuthShell view={view} title={copy.title} description={copy.description}>
+        <AuthShell view={view} title={VIEW_TITLES[view]}>
             {isCompletingAuth ? (
                 <div className="flex min-h-32 flex-col items-center justify-center gap-3 text-sm text-text-muted">
                     <LoaderOne size="md" />
