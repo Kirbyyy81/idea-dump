@@ -49,7 +49,7 @@ export function StepStepper({ roll, photos, activeStep, rollId }: StepStepperPro
                                 className={cn(
                                     'action-link relative z-10 flex min-w-0 flex-col items-center gap-1 rounded-md px-1 py-1.5 text-center text-[11px] transition-colors sm:text-xs',
                                     isActive
-                                        ? 'bg-pastel-olive-soft text-text-primary'
+                                        ? 'text-text-primary'
                                         : 'text-text-muted hover:bg-bg-hover hover:text-text-primary'
                                 )}
                             >
@@ -59,7 +59,7 @@ export function StepStepper({ roll, photos, activeStep, rollId }: StepStepperPro
                                         step.isComplete
                                             ? 'border-accent-sage bg-accent-sage text-text-primary'
                                             : isActive
-                                                ? 'border-accent-sage text-text-primary'
+                                                ? 'border-accent-sage bg-pastel-olive-soft text-text-primary shadow-subtle'
                                                 : 'border-border-default text-text-muted'
                                     )}
                                 >
