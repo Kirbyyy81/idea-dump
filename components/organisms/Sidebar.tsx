@@ -59,9 +59,9 @@ const MODULE_ICONS: Record<string, JSX.Element> = {
 };
 
 const NAV_ITEM_CLASS =
-    'flex min-h-10 w-full items-center gap-2 rounded-sm border border-transparent px-3 py-2 text-left text-[12px] font-semibold leading-none transition-colors';
+    'flex min-h-10 w-full items-center gap-2 rounded-sm border border-transparent px-3 py-2 text-left text-[12px] font-semibold leading-normal transition-colors';
 const NAV_SUBITEM_CLASS =
-    'flex min-h-8 w-full items-center gap-2 rounded-sm border border-transparent px-3 py-1.5 text-left text-[12px] font-medium leading-none transition-colors';
+    'flex min-h-8 w-full items-center gap-2 rounded-sm border border-transparent px-3 py-1.5 text-left text-[12px] font-medium leading-normal transition-colors';
 const GROUP_ACTIVE_CLASS = 'bg-nav-bg-hover text-nav-text hover:bg-nav-bg-hover hover:text-nav-text';
 const GROUP_INACTIVE_CLASS = 'text-nav-text-muted hover:bg-nav-bg-hover hover:text-nav-text';
 const SUBITEM_ACTIVE_CLASS =
