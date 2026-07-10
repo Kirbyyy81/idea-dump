@@ -244,10 +244,6 @@ export function canAccessModule(access: UserAppAccess, moduleSlug: AppModuleSlug
     return access.allowedModules.includes(moduleSlug);
 }
 
-export function getFirstAllowedModulePath(access: UserAppAccess) {
-    return access.modules[0]?.path ?? '/settings';
-}
-
 export function normalizeRoleSlug(value?: string | null): AppRoleSlug {
     return value?.trim() || DEFAULT_APP_ROLE;
 }

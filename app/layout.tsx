@@ -4,6 +4,7 @@ import './globals.css';
 import { AlertProvider } from '@/lib/contexts/AlertContext';
 import { AlertDialog } from '@/components/molecules/AlertDialog';
 import { PwaRegister } from '@/components/molecules/PwaRegister';
+import { AuthenticatedAppShell } from '@/components/organisms/AuthenticatedAppShell';
 
 const plusJakartaSans = Plus_Jakarta_Sans({
     subsets: ['latin'],
@@ -43,7 +44,7 @@ export default function RootLayout({
         <html lang="en" className={plusJakartaSans.variable}>
             <body className="min-h-screen antialiased">
                 <AlertProvider>
-                    {children}
+                    <AuthenticatedAppShell>{children}</AuthenticatedAppShell>
                     <AlertDialog />
                 </AlertProvider>
                 <PwaRegister />
