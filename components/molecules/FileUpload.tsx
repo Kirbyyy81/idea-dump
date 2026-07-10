@@ -7,7 +7,6 @@ import { cn } from '@/lib/utils';
 
 interface FileUploadProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'value' | 'onChange'> {
     label: string;
-    hint?: string;
     value: File | null;
     onChange: (file: File | null) => void;
     error?: boolean;
@@ -16,7 +15,6 @@ interface FileUploadProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 't
 
 export function FileUpload({
     label,
-    hint,
     value,
     onChange,
     error,
@@ -86,9 +84,11 @@ export function FileUpload({
                         </span>
                         <span className="min-w-0">
                             <span className="block text-sm font-semibold text-text-primary">{label}</span>
-                            <span className="mt-1 block truncate text-sm text-text-muted">
-                                {value?.name || hint || 'Choose an image from your device'}
-                            </span>
+                            {value?.name && (
+                                <span className="mt-1 block truncate text-sm text-text-muted">
+                                    {value.name}
+                                </span>
+                            )}
                         </span>
                     </label>
 
@@ -100,8 +100,7 @@ export function FileUpload({
                     )}
                 </div>
 
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-xs text-text-muted">{accept ? `Accepted: ${accept.replaceAll(',', ', ')}` : hint}</p>
+                <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
                     <div className="flex gap-2">
                         <Button type="button" variant="ghost" onClick={() => inputRef.current?.click()} disabled={disabled}>
                             {value ? 'Change file' : 'Choose file'}

@@ -378,7 +378,6 @@ function RollDetailContent() {
                                 <div className="space-y-3 rounded-lg border border-border-default bg-bg-hover/40 p-3">
                                     <FileUpload
                                         label="Cover image"
-                                        hint="Upload a JPEG, PNG, or WebP cover"
                                         accept="image/jpeg,image/png,image/webp"
                                         value={coverFile}
                                         onChange={setCoverFile}
@@ -391,11 +390,11 @@ function RollDetailContent() {
                                 </div>
                                 <label className="space-y-2">
                                     <span className="text-sm text-text-secondary">Film name</span>
-                                    <Input value={rollForm.film_name} onChange={(event) => setRollForm({ ...rollForm, film_name: event.target.value })} placeholder="Film stock name" />
+                                    <Input value={rollForm.film_name} onChange={(event) => setRollForm({ ...rollForm, film_name: event.target.value })} />
                                 </label>
                                 <label className="space-y-2">
                                     <span className="text-sm text-text-secondary">Brand</span>
-                                    <Input value={rollForm.brand} onChange={(event) => setRollForm({ ...rollForm, brand: event.target.value })} placeholder="Kodak, Fujifilm, Harman..." />
+                                    <Input value={rollForm.brand} onChange={(event) => setRollForm({ ...rollForm, brand: event.target.value })} />
                                 </label>
                                 <div className="grid grid-cols-2 gap-3">
                                     <label className="space-y-2">
@@ -408,7 +407,7 @@ function RollDetailContent() {
                                     </label>
                                     <label className="space-y-2">
                                         <span className="text-sm text-text-secondary">ISO</span>
-                                        <Input type="number" min="1" value={rollForm.iso} onChange={(event) => setRollForm({ ...rollForm, iso: event.target.value })} placeholder="400" />
+                                        <Input type="number" min="1" value={rollForm.iso} onChange={(event) => setRollForm({ ...rollForm, iso: event.target.value })} />
                                     </label>
                                 </div>
                                 <label className="space-y-2">
@@ -443,25 +442,25 @@ function RollDetailContent() {
                                 </label>
                                 <label className="space-y-2">
                                     <span className="text-sm text-text-secondary">Location</span>
-                                    <Input placeholder="Where this roll was shot or stored" value={rollForm.location_name} onChange={(event) => setRollForm({ ...rollForm, location_name: event.target.value })} />
+                                    <Input value={rollForm.location_name} onChange={(event) => setRollForm({ ...rollForm, location_name: event.target.value })} />
                                 </label>
                                 <div className="grid grid-cols-2 gap-3">
                                     <label className="space-y-2">
                                         <span className="text-sm text-text-secondary">Purchase price</span>
-                                        <Input type="number" min="0" step="0.01" value={rollForm.purchase_price} onChange={(event) => setRollForm({ ...rollForm, purchase_price: event.target.value })} placeholder="0.00" />
+                                        <Input type="number" min="0" step="0.01" value={rollForm.purchase_price} onChange={(event) => setRollForm({ ...rollForm, purchase_price: event.target.value })} />
                                     </label>
                                     <label className="space-y-2">
                                         <span className="text-sm text-text-secondary">Frames taken</span>
-                                        <Input type="number" min="0" value={rollForm.frames_taken} onChange={(event) => setRollForm({ ...rollForm, frames_taken: event.target.value })} placeholder="0" />
+                                        <Input type="number" min="0" value={rollForm.frames_taken} onChange={(event) => setRollForm({ ...rollForm, frames_taken: event.target.value })} />
                                     </label>
                                 </div>
                                 <label className="space-y-2">
                                     <span className="text-sm text-text-secondary">Successful photos</span>
-                                    <Input type="number" min="0" value={rollForm.successful_photos} onChange={(event) => setRollForm({ ...rollForm, successful_photos: event.target.value })} placeholder="0" />
+                                    <Input type="number" min="0" value={rollForm.successful_photos} onChange={(event) => setRollForm({ ...rollForm, successful_photos: event.target.value })} />
                                 </label>
                                 <label className="space-y-2">
                                     <span className="text-sm text-text-secondary">Journal notes</span>
-                                    <Textarea value={rollForm.notes} onChange={(event) => setRollForm({ ...rollForm, notes: event.target.value })} placeholder="Notes about this roll, shoot, or inventory" />
+                                    <Textarea value={rollForm.notes} onChange={(event) => setRollForm({ ...rollForm, notes: event.target.value })} />
                                 </label>
                             </div>
                         </Card>
@@ -472,24 +471,21 @@ function RollDetailContent() {
                     <Card className="p-5">
                         <div>
                             <h2 className="text-lg font-bold">Processing</h2>
-                            <p className="mt-1 text-sm text-text-muted">
-                                Complete this before opening the photobook.
-                            </p>
                         </div>
                         <div className="mt-4 space-y-3">
-                            <Input placeholder="Lab name" value={rollForm.lab_name} onChange={(event) => setRollForm({ ...rollForm, lab_name: event.target.value })} />
+                            <Input value={rollForm.lab_name} onChange={(event) => setRollForm({ ...rollForm, lab_name: event.target.value })} />
                             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                                 <label className="space-y-2">
                                     <span className="text-sm text-text-secondary">Processing cost</span>
-                                    <Input type="number" min="0" step="0.01" placeholder="0.00" value={rollForm.processing_cost} onChange={(event) => setRollForm({ ...rollForm, processing_cost: event.target.value })} />
+                                    <Input type="number" min="0" step="0.01" value={rollForm.processing_cost} onChange={(event) => setRollForm({ ...rollForm, processing_cost: event.target.value })} />
                                 </label>
                                 <label className="space-y-2">
                                     <span className="text-sm text-text-secondary">Scanning cost</span>
-                                    <Input type="number" min="0" step="0.01" placeholder="0.00" value={rollForm.scanning_cost} onChange={(event) => setRollForm({ ...rollForm, scanning_cost: event.target.value })} />
+                                    <Input type="number" min="0" step="0.01" value={rollForm.scanning_cost} onChange={(event) => setRollForm({ ...rollForm, scanning_cost: event.target.value })} />
                                 </label>
                                 <label className="space-y-2">
                                     <span className="text-sm text-text-secondary">Shipping cost</span>
-                                    <Input type="number" min="0" step="0.01" placeholder="0.00" value={rollForm.shipping_cost} onChange={(event) => setRollForm({ ...rollForm, shipping_cost: event.target.value })} />
+                                    <Input type="number" min="0" step="0.01" value={rollForm.shipping_cost} onChange={(event) => setRollForm({ ...rollForm, shipping_cost: event.target.value })} />
                                 </label>
                             </div>
                             <Select
@@ -517,9 +513,6 @@ function RollDetailContent() {
                         <div className="flex items-start justify-between gap-4">
                             <div>
                                 <h2 className="text-lg font-bold">Google Drive</h2>
-                                <p className="mt-1 text-sm text-text-muted">
-                                    Link a folder now, or come back after processing is logged.
-                                </p>
                             </div>
                             <span className={cn(
                                 'rounded-full border px-3 py-1 text-xs font-semibold',
@@ -529,11 +522,11 @@ function RollDetailContent() {
                                         ? 'border-accent-blue bg-pastel-blue-soft text-text-primary'
                                         : 'border-accent-apricot bg-pastel-yellow-soft text-text-primary'
                             )}>
-                                {hasSyncedPhotos ? 'Synced' : hasDriveFolder ? 'Folder linked' : 'Needed'}
+                                {hasSyncedPhotos ? 'Synced' : hasDriveFolder ? 'Linked' : 'Needed'}
                             </span>
                         </div>
                         <div className="mt-4 space-y-3">
-                            <Input value={driveFolderInput} onChange={(event) => setDriveFolderInput(event.target.value)} placeholder="Drive folder URL or ID" />
+                            <Input value={driveFolderInput} onChange={(event) => setDriveFolderInput(event.target.value)} />
                             <div className="flex flex-wrap gap-2">
                                 <Button icon={<FolderSync size={16} />} onClick={handleSyncDrive} isLoading={isSyncing}>
                                     Sync Metadata
@@ -602,15 +595,7 @@ function PhotobookContactSheet({
         <Card className="overflow-hidden p-0">
             <div className="flex flex-col gap-3 border-b border-border-default bg-bg-elevated p-5 md:flex-row md:items-center md:justify-between">
                 <div>
-                    <p className="text-sm uppercase tracking-wide text-text-muted">Photobook</p>
                     <h2 className="text-2xl font-bold">Contact Sheet</h2>
-                    <p className="mt-1 text-sm text-text-muted">
-                        {photos.length > 0
-                            ? `${photos.length} Drive photo${photos.length === 1 ? '' : 's'} synced for ${roll.film_name}.`
-                            : roll.drive_folder_id
-                                ? 'Folder linked, but no supported Drive photos are synced yet.'
-                                : 'Connect Google Drive and sync a folder to build this contact sheet.'}
-                    </p>
                 </div>
                 <Link href={`/film/rolls/${roll.id}?step=drive`} className="btn-ghost">
                     Manage Drive
@@ -758,7 +743,7 @@ function PhotoPreviewDialog({
                         ) : (
                             <div className="text-center text-on-dark/70">
                                 <ImageIcon size={36} className="mx-auto mb-3" />
-                                <p>No public thumbnail available.</p>
+                                <p>No thumbnail.</p>
                             </div>
                         )}
                     </div>

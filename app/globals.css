@@ -228,17 +228,18 @@ body {
 }
 
 .custom-scrollbar-nav::-webkit-scrollbar {
-  width: var(--scrollbar-size);
-  height: var(--scrollbar-size);
+  width: 6px;
+  height: 6px;
 }
 
 .custom-scrollbar-nav::-webkit-scrollbar-track {
-  background: var(--scrollbar-nav-track);
+  background: transparent;
+  border-radius: var(--radius-pill);
 }
 
 .custom-scrollbar-nav::-webkit-scrollbar-thumb {
   background: var(--scrollbar-nav-thumb);
-  border: 2px solid var(--scrollbar-nav-track);
+  border: 1px solid var(--nav-bg);
   border-radius: var(--radius-pill);
 }
 

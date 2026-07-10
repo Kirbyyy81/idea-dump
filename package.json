@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test:log-viewer": "node scripts/log-viewer-tests.mjs"
+    "test:log-viewer": "node scripts/test-log-viewer.js"
   },
   "dependencies": {
     "@supabase/ssr": "^0.1.0",

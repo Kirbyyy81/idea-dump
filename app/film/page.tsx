@@ -283,8 +283,7 @@ export default function FilmJournalPage() {
             <div className="mx-auto max-w-7xl space-y-5">
                 <header>
                     <div>
-                        <p className="text-sm uppercase tracking-wide text-text-muted">Film Photography</p>
-                        <h1 className="mt-1">The Film Cupboard</h1>
+                        <h1>The Film Cupboard</h1>
                     </div>
                 </header>
 
@@ -307,7 +306,7 @@ export default function FilmJournalPage() {
                             <div className="flex flex-wrap gap-3 xl:justify-end">
                                 <div className="relative min-w-[240px] flex-1 xl:w-[340px] xl:flex-none">
                                     <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
-                                    <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search film, camera, location, notes" className="pl-9 pr-9" />
+                                    <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search" className="pl-9 pr-9" />
                                     {query && (
                                         <button
                                             type="button"
@@ -346,7 +345,7 @@ export default function FilmJournalPage() {
                     {filteredRolls.length === 0 ? (
                         <div className="px-6 py-20 text-center text-nav-text-muted">
                             <Film className="mx-auto mb-4 opacity-60" size={38} />
-                            <p>{rolls.length ? 'No rolls match these filters.' : 'Your cupboard is ready for its first roll.'}</p>
+                            <p>{rolls.length ? 'No rolls match these filters.' : 'No rolls yet.'}</p>
                             {!rolls.length && (
                                 <Link href="/film/new-roll" className="action-link mt-4 inline-flex rounded-full bg-action-primary px-5 py-2 text-sm font-medium text-action-primary-text">
                                     Register a roll

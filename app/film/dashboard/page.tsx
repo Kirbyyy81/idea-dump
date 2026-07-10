@@ -1,16 +1,11 @@
 'use client';
 
-/* eslint-disable @next/next/no-img-element */
-
 import { useEffect, useMemo, useState } from 'react';
 import {
     Aperture,
-    Camera,
     CircleDollarSign,
     Film,
     Heart,
-    Image as ImageIcon,
-    Wrench,
 } from 'lucide-react';
 import {
     Bar,
@@ -30,8 +25,8 @@ import {
 } from 'recharts';
 import { AppShell } from '@/components/organisms/AppShell';
 import { Card } from '@/components/atoms/Card';
-import { FilmDashboardSummary, FilmRoll, FilmRollStatus, filmRollStatusConfig } from '@/lib/types';
-import { cn, formatCurrencyMYR } from '@/lib/utils';
+import { FilmDashboardSummary, FilmRollStatus, filmRollStatusConfig } from '@/lib/types';
+import { formatCurrencyMYR } from '@/lib/utils';
 
 const chartColors = [
     'var(--chart-1)',
@@ -81,18 +76,15 @@ function MetricCard({
 
 function ChartCard({
     title,
-    subtitle,
     children,
 }: {
     title: string;
-    subtitle?: string;
     children: React.ReactNode;
 }) {
     return (
         <Card className="p-5">
             <div className="mb-4">
                 <h2 className="text-lg font-bold">{title}</h2>
-                {subtitle && <p className="mt-1 text-sm text-text-muted">{subtitle}</p>}
             </div>
             {children}
         </Card>
@@ -104,7 +96,7 @@ function TrendChart({ summary }: { summary: FilmDashboardSummary }) {
         (entry) => entry.roll_count > 0 || entry.frames_taken > 0 || entry.spend > 0
     );
 
-    if (!hasTrendData) return <EmptyChart label="Create rolls to build a monthly trend." />;
+    if (!hasTrendData) return <EmptyChart label="No trend data." />;
 
     return (
         <div className="h-[280px]">
@@ -147,7 +139,6 @@ function KeeperGauge({ summary }: { summary: FilmDashboardSummary }) {
             <div className="flex items-start justify-between gap-3">
                 <div>
                     <h2 className="text-lg font-bold">Keeper rate</h2>
-                    <p className="mt-1 text-sm text-text-muted">Successful photos from tracked frames.</p>
                 </div>
                 <Aperture size={20} className="text-text-primary" />
             </div>
@@ -164,9 +155,6 @@ function KeeperGauge({ summary }: { summary: FilmDashboardSummary }) {
                     </div>
                 </div>
             </div>
-            <p className="text-sm text-text-secondary">
-                {summary.successful_photos.toLocaleString()} successful from {summary.total_pictures_taken.toLocaleString()} frames.
-            </p>
         </Card>
     );
 }
@@ -184,7 +172,6 @@ function PipelineCard({ summary }: { summary: FilmDashboardSummary }) {
             <div className="flex items-start justify-between gap-3">
                 <div>
                     <h2 className="text-lg font-bold">Roll pipeline</h2>
-                    <p className="mt-1 text-sm text-text-muted">Where your rolls are right now.</p>
                 </div>
                 <Film size={20} className="text-text-primary" />
             </div>
@@ -220,7 +207,7 @@ function PipelineCard({ summary }: { summary: FilmDashboardSummary }) {
 
 function CostBreakdownChart({ summary }: { summary: FilmDashboardSummary }) {
     const data = summary.cost_breakdown.filter((entry) => entry.amount > 0);
-    if (!data.length) return <EmptyChart label="Add roll and processing costs to see spending." />;
+    if (!data.length) return <EmptyChart label="No cost data." />;
 
     return (
         <div className="h-[220px]">
@@ -276,7 +263,7 @@ function FormatChart({ summary }: { summary: FilmDashboardSummary }) {
 
 function CameraUsageChart({ summary }: { summary: FilmDashboardSummary }) {
     const data = summary.camera_usage.filter((entry) => entry.roll_count > 0);
-    if (!data.length) return <EmptyChart label="Assign rolls to cameras to see usage." />;
+    if (!data.length) return <EmptyChart label="No camera usage." />;
 
     return (
         <div className="h-[220px]">
@@ -290,34 +277,6 @@ function CameraUsageChart({ summary }: { summary: FilmDashboardSummary }) {
                 </BarChart>
             </ResponsiveContainer>
         </div>
-    );
-}
-
-function RecentRollTile({ roll }: { roll: FilmRoll }) {
-    const cover = roll.cover_image_url || roll.cover_photo?.thumbnail_link;
-
-    return (
-        <article className="min-w-[178px] overflow-hidden rounded-lg border border-border-default bg-bg-elevated">
-            <div className="relative aspect-[4/3] bg-bg-hover">
-                {cover ? (
-                    <img src={cover} alt={`${roll.film_name} cover`} className="h-full w-full object-cover" />
-                ) : (
-                    <div className="grid h-full place-items-center text-text-muted">
-                        <Film size={28} />
-                    </div>
-                )}
-                <span className={cn('absolute left-2 top-2 rounded-full border px-2 py-1 text-[10px] font-bold', filmRollStatusConfig[roll.status].colorClass)}>
-                    {filmRollStatusConfig[roll.status].label}
-                </span>
-            </div>
-            <div className="space-y-2 p-3">
-                <p className="truncate text-sm font-bold text-text-primary">{roll.brand} {roll.film_name}</p>
-                <div className="flex items-center justify-between gap-2 text-xs text-text-muted">
-                    <span>{roll.frames_taken || 0} frames</span>
-                    <span>{formatCurrencyMYR(Number(roll.purchase_price || 0))}</span>
-                </div>
-            </div>
-        </article>
     );
 }
 
@@ -338,12 +297,8 @@ export default function FilmDashboardPage() {
     const metrics = useMemo(() => summary ? [
         { label: 'Pictures taken', value: summary.total_pictures_taken.toLocaleString(), icon: Aperture },
         { label: 'Total spending', value: formatCurrencyMYR(summary.total_money_spent), icon: CircleDollarSign },
-        { label: 'Cameras owned', value: summary.total_cameras.toLocaleString(), icon: Camera },
         { label: 'Rolls tracked', value: summary.total_rolls.toLocaleString(), icon: Film },
-        { label: 'Successful photos', value: summary.successful_photos.toLocaleString(), icon: ImageIcon },
         { label: 'Favorite photos', value: summary.favorite_photos.toLocaleString(), icon: Heart },
-        { label: 'Maintenance cost', value: formatCurrencyMYR(summary.maintenance_cost), icon: Wrench },
-        { label: 'Average cost / photo', value: formatCurrencyMYR(summary.average_cost_per_photo), icon: CircleDollarSign },
     ] : [], [summary]);
 
     if (!summary && !error) {
@@ -359,14 +314,7 @@ export default function FilmDashboardPage() {
             <div className="mx-auto max-w-7xl space-y-7">
                 <header className="flex flex-wrap items-end justify-between gap-4">
                     <div>
-                        <p className="text-sm uppercase tracking-wide text-text-muted">At a glance</p>
-                        <h1 className="mt-1">Film Dashboard</h1>
-                        {summary && (
-                            <p className="mt-2 max-w-2xl text-sm text-text-secondary">
-                                {summary.total_rolls.toLocaleString()} rolls, {summary.total_pictures_taken.toLocaleString()} frames,
-                                and {formatCurrencyMYR(summary.total_money_spent)} tracked across your film cupboard.
-                            </p>
-                        )}
+                        <h1>Film Dashboard</h1>
                     </div>
                 </header>
 
@@ -384,14 +332,11 @@ export default function FilmDashboardPage() {
                             <Card className="border-dashed p-8 text-center">
                                 <Film className="mx-auto mb-3 text-text-muted" size={34} />
                                 <h2 className="text-lg font-bold">No rolls tracked yet</h2>
-                                <p className="mt-2 text-sm text-text-muted">
-                                    Register your first roll to unlock spending, keeper rate, camera usage, and activity charts.
-                                </p>
                             </Card>
                         )}
 
                         <section className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(280px,0.55fr)]">
-                            <ChartCard title="Monthly exposure" subtitle="Frames, spend, and roll starts over the last six months.">
+                            <ChartCard title="Monthly exposure">
                                 <TrendChart summary={summary} />
                             </ChartCard>
                             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1">
@@ -401,28 +346,17 @@ export default function FilmDashboardPage() {
                         </section>
 
                         <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-                            <ChartCard title="Cost breakdown" subtitle="Where the money goes.">
+                            <ChartCard title="Cost breakdown">
                                 <CostBreakdownChart summary={summary} />
                             </ChartCard>
-                            <ChartCard title="Format mix" subtitle="Roll formats in your cupboard.">
+                            <ChartCard title="Format mix">
                                 <FormatChart summary={summary} />
                             </ChartCard>
-                            <ChartCard title="Camera usage" subtitle="Top cameras by assigned rolls.">
+                            <ChartCard title="Camera usage">
                                 <CameraUsageChart summary={summary} />
                             </ChartCard>
                         </section>
 
-                        <ChartCard title="Recent rolls" subtitle="The latest rolls added to your shelf.">
-                            {summary.recent_rolls.length ? (
-                                <div className="scrollbar-hidden flex gap-3 overflow-x-auto pb-1">
-                                    {summary.recent_rolls.map((roll) => (
-                                        <RecentRollTile key={roll.id} roll={roll} />
-                                    ))}
-                                </div>
-                            ) : (
-                                <EmptyChart label="Recent rolls will appear here." />
-                            )}
-                        </ChartCard>
                     </>
                 )}
             </div>

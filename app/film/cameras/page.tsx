@@ -182,8 +182,7 @@ export default function FilmCamerasPage() {
             <div className="mx-auto max-w-7xl space-y-7">
                 <header className="space-y-5">
                     <div>
-                        <p className="text-sm uppercase tracking-wide text-text-muted">Gear cabinet</p>
-                        <h1 className="mt-1">Cameras & Maintenance</h1>
+                        <h1>Cameras & Maintenance</h1>
                     </div>
                 </header>
 
@@ -212,9 +211,11 @@ export default function FilmCamerasPage() {
                                     )}
                                 >
                                     <p className="font-bold text-text-primary">{item.name}</p>
-                                    <p className="text-sm text-text-muted">
-                                        {[item.brand, item.model].filter(Boolean).join(' ') || 'No model details'}
-                                    </p>
+                                    {[item.brand, item.model].filter(Boolean).length > 0 && (
+                                        <p className="text-sm text-text-muted">
+                                            {[item.brand, item.model].filter(Boolean).join(' ')}
+                                        </p>
+                                    )}
                                 </button>
                             ))}
                             {!cameras.length && (
@@ -244,33 +245,43 @@ export default function FilmCamerasPage() {
                                 </div>
 
                                 <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
-                                    <Input
-                                        required
-                                        placeholder="Camera name"
-                                        value={form.name}
-                                        onChange={(event) => setForm({ ...form, name: event.target.value })}
-                                    />
-                                    <Input
-                                        placeholder="Brand"
-                                        value={form.brand}
-                                        onChange={(event) => setForm({ ...form, brand: event.target.value })}
-                                    />
-                                    <Input
-                                        placeholder="Model"
-                                        value={form.model}
-                                        onChange={(event) => setForm({ ...form, model: event.target.value })}
-                                    />
-                                    <Input
-                                        type="date"
-                                        value={form.purchase_date}
-                                        onChange={(event) => setForm({ ...form, purchase_date: event.target.value })}
-                                    />
-                                    <Textarea
-                                        className="md:col-span-2"
-                                        placeholder="Camera notes"
-                                        value={form.notes}
-                                        onChange={(event) => setForm({ ...form, notes: event.target.value })}
-                                    />
+                                    <label className="space-y-2">
+                                        <span className="text-sm text-text-secondary">Camera name</span>
+                                        <Input
+                                            required
+                                            value={form.name}
+                                            onChange={(event) => setForm({ ...form, name: event.target.value })}
+                                        />
+                                    </label>
+                                    <label className="space-y-2">
+                                        <span className="text-sm text-text-secondary">Brand</span>
+                                        <Input
+                                            value={form.brand}
+                                            onChange={(event) => setForm({ ...form, brand: event.target.value })}
+                                        />
+                                    </label>
+                                    <label className="space-y-2">
+                                        <span className="text-sm text-text-secondary">Model</span>
+                                        <Input
+                                            value={form.model}
+                                            onChange={(event) => setForm({ ...form, model: event.target.value })}
+                                        />
+                                    </label>
+                                    <label className="space-y-2">
+                                        <span className="text-sm text-text-secondary">Purchase date</span>
+                                        <Input
+                                            type="date"
+                                            value={form.purchase_date}
+                                            onChange={(event) => setForm({ ...form, purchase_date: event.target.value })}
+                                        />
+                                    </label>
+                                    <label className="space-y-2 md:col-span-2">
+                                        <span className="text-sm text-text-secondary">Camera notes</span>
+                                        <Textarea
+                                            value={form.notes}
+                                            onChange={(event) => setForm({ ...form, notes: event.target.value })}
+                                        />
+                                    </label>
                                 </div>
 
                                 <div className="mt-4 flex justify-end">
@@ -298,10 +309,11 @@ export default function FilmCamerasPage() {
                                                 <p className="font-bold text-text-primary">
                                                     {record.service_type || 'Maintenance'}
                                                 </p>
-                                                <p className="text-sm text-text-muted">
-                                                    {[record.service_date, record.provider_name].filter(Boolean).join(' - ')
-                                                        || 'No date or provider'}
-                                                </p>
+                                                {[record.service_date, record.provider_name].filter(Boolean).length > 0 && (
+                                                    <p className="text-sm text-text-muted">
+                                                        {[record.service_date, record.provider_name].filter(Boolean).join(' - ')}
+                                                    </p>
+                                                )}
                                                 {record.notes && (
                                                     <p className="mt-2 text-sm text-text-secondary">{record.notes}</p>
                                                 )}
@@ -332,57 +344,68 @@ export default function FilmCamerasPage() {
                                     onSubmit={addMaintenance}
                                     className="mt-5 grid grid-cols-1 gap-3 border-t border-border-default pt-5 md:grid-cols-2"
                                 >
-                                    <Select
-                                        value={maintenanceForm.service_type}
-                                        onChange={(nextValue) => setMaintenanceForm({
-                                            ...maintenanceForm,
-                                            service_type: nextValue,
-                                        })}
-                                        options={[
-                                            { value: 'CLA', label: 'CLA' },
-                                            { value: 'Lens Cleaning', label: 'Lens Cleaning' },
-                                            { value: 'Light Seal Replacement', label: 'Light Seal Replacement' },
-                                            { value: 'Repair', label: 'Repair' },
-                                            { value: 'Battery Replacement', label: 'Battery Replacement' },
-                                            { value: 'Custom Maintenance', label: 'Custom Maintenance' },
-                                        ]}
-                                    />
-                                    <Input
-                                        placeholder="Provider or shop"
-                                        value={maintenanceForm.provider_name}
-                                        onChange={(event) => setMaintenanceForm({
-                                            ...maintenanceForm,
-                                            provider_name: event.target.value,
-                                        })}
-                                    />
-                                    <Input
-                                        type="number"
-                                        min="0"
-                                        step="0.01"
-                                        placeholder="Cost"
-                                        value={maintenanceForm.maintenance_cost}
-                                        onChange={(event) => setMaintenanceForm({
-                                            ...maintenanceForm,
-                                            maintenance_cost: event.target.value,
-                                        })}
-                                    />
-                                    <Input
-                                        type="date"
-                                        value={maintenanceForm.service_date}
-                                        onChange={(event) => setMaintenanceForm({
-                                            ...maintenanceForm,
-                                            service_date: event.target.value,
-                                        })}
-                                    />
-                                    <Textarea
-                                        className="md:col-span-2"
-                                        placeholder="Service notes"
-                                        value={maintenanceForm.notes}
-                                        onChange={(event) => setMaintenanceForm({
-                                            ...maintenanceForm,
-                                            notes: event.target.value,
-                                        })}
-                                    />
+                                    <label className="space-y-2">
+                                        <span className="text-sm text-text-secondary">Service type</span>
+                                        <Select
+                                            value={maintenanceForm.service_type}
+                                            onChange={(nextValue) => setMaintenanceForm({
+                                                ...maintenanceForm,
+                                                service_type: nextValue,
+                                            })}
+                                            options={[
+                                                { value: 'CLA', label: 'CLA' },
+                                                { value: 'Lens Cleaning', label: 'Lens Cleaning' },
+                                                { value: 'Light Seal Replacement', label: 'Light Seal Replacement' },
+                                                { value: 'Repair', label: 'Repair' },
+                                                { value: 'Battery Replacement', label: 'Battery Replacement' },
+                                                { value: 'Custom Maintenance', label: 'Custom Maintenance' },
+                                            ]}
+                                        />
+                                    </label>
+                                    <label className="space-y-2">
+                                        <span className="text-sm text-text-secondary">Provider</span>
+                                        <Input
+                                            value={maintenanceForm.provider_name}
+                                            onChange={(event) => setMaintenanceForm({
+                                                ...maintenanceForm,
+                                                provider_name: event.target.value,
+                                            })}
+                                        />
+                                    </label>
+                                    <label className="space-y-2">
+                                        <span className="text-sm text-text-secondary">Cost</span>
+                                        <Input
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            value={maintenanceForm.maintenance_cost}
+                                            onChange={(event) => setMaintenanceForm({
+                                                ...maintenanceForm,
+                                                maintenance_cost: event.target.value,
+                                            })}
+                                        />
+                                    </label>
+                                    <label className="space-y-2">
+                                        <span className="text-sm text-text-secondary">Service date</span>
+                                        <Input
+                                            type="date"
+                                            value={maintenanceForm.service_date}
+                                            onChange={(event) => setMaintenanceForm({
+                                                ...maintenanceForm,
+                                                service_date: event.target.value,
+                                            })}
+                                        />
+                                    </label>
+                                    <label className="space-y-2 md:col-span-2">
+                                        <span className="text-sm text-text-secondary">Service notes</span>
+                                        <Textarea
+                                            value={maintenanceForm.notes}
+                                            onChange={(event) => setMaintenanceForm({
+                                                ...maintenanceForm,
+                                                notes: event.target.value,
+                                            })}
+                                        />
+                                    </label>
                                     <div className="md:col-span-2">
                                         <Button type="submit" isLoading={isSaving}>
                                             Add Maintenance
