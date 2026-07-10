@@ -31,7 +31,7 @@
   --nav-text-muted: #B8B4AA;
   --text-primary: #1B1B18;
   --text-secondary: #5F5C55;
-  --text-muted: #8D887D;
+  --text-muted: #6F6A61;
   --text-disabled: #B8B2A5;
   --text-on-dark: #FFFDF6;
 
@@ -58,11 +58,12 @@
   --pastel-blue-soft: #E0EBFB;
   --pastel-lilac: #D8C8EC;
   --pastel-peach: #F2C8AE;
-  --accent-rose: var(--pastel-pink);
-  --accent-coral: var(--pastel-peach);
-  --accent-sage: var(--pastel-olive);
-  --accent-blue: var(--pastel-blue);
-  --accent-apricot: var(--pastel-yellow);
+  --accent-rose: #8B3E67;
+  --accent-coral: #9D4D2F;
+  --accent-sage: #5E7130;
+  --accent-blue: #365B9A;
+  --accent-apricot: #835800;
+  --focus-ring: #8B3E67;
 
   /* ===== STATUS COLORS ===== */
   --surface-idea: var(--pastel-blue);
@@ -78,10 +79,10 @@
   --status-archived: var(--surface-archived);
 
   /* ===== SEMANTIC COLORS ===== */
-  --success: #688743;
-  --warning: #9A6D11;
-  --error: #B5485D;
-  --info: #5577B1;
+  --success: #4E6F2D;
+  --warning: #835800;
+  --error: #A5304A;
+  --info: #365B9A;
 
   /* Status backgrounds */
   --success-bg: #E8F0DB;
@@ -306,6 +307,11 @@ select,
   user-select: text;
 }
 
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
 /* ===== TYPOGRAPHY ===== */
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
@@ -477,9 +483,8 @@ h4 {
     transition: border-color 0.2s ease;
   }
 
-  .input:focus {
-    outline: none;
-    border-color: var(--accent-rose);
+  .input:focus-visible {
+    border-color: var(--focus-ring);
   }
 
   .input::placeholder {
