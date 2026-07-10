@@ -78,16 +78,17 @@ export function TicketForm({
     };
 
     return (
-        <Card className="p-6 mb-6">
+        <Card className="p-4 mb-6 sm:p-6">
             <h3 className="font-heading text-lg mb-4">{title}</h3>
 
             <div className="space-y-4">
                 {!lockedProjectId && (
                     <div>
-                        <label className="block text-sm text-text-secondary mb-1">Project</label>
+                        <label className="block text-sm text-text-secondary mb-1">Project <span className="text-accent-rose">*</span></label>
                         <Select
                             value={projectId}
                             onChange={setProjectId}
+                            ariaLabel={error === 'Project is required' ? 'Project, required, error: Project is required' : 'Project, required'}
                             options={[
                                 { value: '', label: 'Select a project' },
                                 ...projects.map((project) => ({ value: project.id, label: project.title })),
@@ -97,17 +98,22 @@ export function TicketForm({
                 )}
 
                 <div>
-                    <label className="block text-sm text-text-secondary mb-1">Title</label>
+                    <label htmlFor="ticket-title" className="block text-sm text-text-secondary mb-1">Title <span className="text-accent-rose">*</span></label>
                     <Input
+                        id="ticket-title"
                         value={ticketTitle}
+                        required
+                        aria-invalid={error === 'Title is required' ? true : undefined}
+                        aria-describedby={error === 'Title is required' ? 'ticket-form-error' : undefined}
                         onChange={(e) => setTicketTitle(e.target.value)}
                         placeholder="What needs to be fixed or tracked?"
                     />
                 </div>
 
                 <div>
-                    <label className="block text-sm text-text-secondary mb-1">Description</label>
+                    <label htmlFor="ticket-description" className="block text-sm text-text-secondary mb-1">Description</label>
                     <Textarea
+                        id="ticket-description"
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                         placeholder="Add context for the issue or task"
@@ -115,8 +121,9 @@ export function TicketForm({
                 </div>
 
                 <div>
-                    <label className="block text-sm text-text-secondary mb-1">Notes</label>
+                    <label htmlFor="ticket-notes" className="block text-sm text-text-secondary mb-1">Notes</label>
                     <Textarea
+                        id="ticket-notes"
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
                         placeholder="Optional implementation notes or follow-up detail"
@@ -129,6 +136,7 @@ export function TicketForm({
                         <Select
                             value={status}
                             onChange={(nextValue) => setStatus(nextValue as TicketStatus)}
+                            ariaLabel="Status"
                             options={statusOptions.map(([value, config]) => ({
                                 value,
                                 label: config.label,
@@ -141,6 +149,7 @@ export function TicketForm({
                         <Select
                             value={source}
                             onChange={(nextValue) => setSource(nextValue as TicketSource)}
+                            ariaLabel="Source"
                             options={Object.entries(ticketSourceConfig).map(([value, config]) => ({
                                 value,
                                 label: config.label,
@@ -149,15 +158,17 @@ export function TicketForm({
                     </div>
                 </div>
 
-                <div>
-                    <label className="block text-sm font-medium text-text-secondary mb-2">Priority</label>
-                    <div className="flex gap-2">
+                <fieldset>
+                    <legend className="mb-2 block text-sm font-medium text-text-secondary">Priority</legend>
+                    <div role="radiogroup" aria-label="Priority" className="flex flex-wrap gap-2">
                         {(['low', 'medium', 'high'] as const).map((value) => (
                             <button
                                 key={value}
                                 type="button"
                                 onClick={() => setPriority(value)}
-                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                role="radio"
+                                aria-checked={priority === value}
+                                className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors sm:flex-none ${
                                     priority === value
                                         ? value === 'high'
                                             ? 'bg-accent-rose text-action-primary-text'
@@ -171,11 +182,12 @@ export function TicketForm({
                             </button>
                         ))}
                     </div>
-                </div>
+                </fieldset>
 
                 <div>
-                    <label className="block text-sm text-text-secondary mb-1">Tags</label>
+                    <label htmlFor="ticket-tags" className="block text-sm text-text-secondary mb-1">Tags</label>
                     <Input
+                        id="ticket-tags"
                         value={tags}
                         onChange={(e) => setTags(e.target.value)}
                         placeholder="bug, checkout, onboarding"
@@ -183,16 +195,16 @@ export function TicketForm({
                 </div>
 
                 {error && (
-                    <div className="rounded-lg border border-error bg-error-bg px-3 py-2 text-sm text-error">
+                    <div id="ticket-form-error" role="alert" className="rounded-lg border border-error bg-error-bg px-3 py-2 text-sm text-error">
                         {error}
                     </div>
                 )}
 
-                <div className="flex gap-2">
-                    <Button variant="primary" onClick={handleSubmit} isLoading={isLoading} icon={<Save size={16} />}>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                    <Button variant="primary" onClick={handleSubmit} isLoading={isLoading} icon={<Save size={16} />} className="w-full sm:w-auto">
                         Save Ticket
                     </Button>
-                    <Button variant="ghost" onClick={onCancel}>
+                    <Button variant="ghost" onClick={onCancel} className="w-full sm:w-auto">
                         Cancel
                     </Button>
                 </div>

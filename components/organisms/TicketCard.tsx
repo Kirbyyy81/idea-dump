@@ -3,7 +3,8 @@
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
-import { priorityConfig, Ticket, TicketStatus, ticketSourceConfig, ticketStatusConfig } from '@/lib/types';
+import { ConfigIndicator } from '@/components/atoms/Indicator';
+import { Ticket, TicketStatus, priorityConfig, ticketSourceConfig, ticketStatusConfig } from '@/lib/types';
 import { cn, formatDate } from '@/lib/utils';
 
 interface TicketCardProps {
@@ -24,16 +25,17 @@ const statusStyles: Record<TicketStatus, string> = {
 
 export function TicketCard({ ticket, projectTitle, canManage = false, onEdit, onDelete }: TicketCardProps) {
     const showActions = canManage || Boolean(onEdit) || Boolean(onDelete);
+    const priority = priorityConfig[ticket.priority];
 
     return (
         <Card className="p-4">
             <div className="space-y-3">
-                <div className="flex items-start justify-between gap-4">
-                    <div>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                    <div className="min-w-0">
                         <h3 className="text-text-primary font-bold">{ticket.title}</h3>
                         {projectTitle && <p className="text-sm text-text-muted">{projectTitle}</p>}
                     </div>
-                    <span className={cn('status-badge', statusStyles[ticket.status])}>
+                    <span className={cn('status-badge w-fit shrink-0', statusStyles[ticket.status])}>
                         {ticketStatusConfig[ticket.status].label}
                     </span>
                 </div>
@@ -48,9 +50,11 @@ export function TicketCard({ ticket, projectTitle, canManage = false, onEdit, on
                             #{tag}
                         </span>
                     ))}
-                    <span className={cn('rounded-full bg-bg-hover px-2 py-0.5', priorityConfig[ticket.priority].textClass)}>
-                        {priorityConfig[ticket.priority].label}
-                    </span>
+                    <ConfigIndicator
+                        config={priority}
+                        size="sm"
+                        aria-label={`${priority.label} priority`}
+                    />
                     <span className="rounded-full bg-bg-hover px-2 py-0.5">
                         {ticketSourceConfig[ticket.source].label}
                     </span>
@@ -62,9 +66,9 @@ export function TicketCard({ ticket, projectTitle, canManage = false, onEdit, on
                 )}
 
                 {showActions && (
-                    <div className="flex gap-2">
+                    <div className="flex flex-col gap-2 sm:flex-row">
                         {onEdit && (
-                            <Button variant="ghost" onClick={() => onEdit(ticket)} className="text-sm">
+                            <Button variant="ghost" onClick={() => onEdit(ticket)} className="w-full text-sm sm:w-auto">
                                 Edit
                             </Button>
                         )}
@@ -72,7 +76,7 @@ export function TicketCard({ ticket, projectTitle, canManage = false, onEdit, on
                             <Button
                                 variant="ghost"
                                 onClick={() => onDelete(ticket.id)}
-                                className="text-sm text-error hover:text-error"
+                                className="w-full text-sm text-error hover:text-error sm:w-auto"
                                 icon={<Trash2 size={14} />}
                             >
                                 Delete

@@ -52,9 +52,9 @@ export const statusConfig: Record<Status, { label: string; color: string; icon: 
 };
 
 export const priorityConfig: Record<Priority, { label: string; color: string; textClass: string; indicatorClass: string }> = {
-    low: { label: 'Low', color: 'var(--text-muted)', textClass: 'text-text-muted', indicatorClass: 'bg-text-muted' },
-    medium: { label: 'Medium', color: 'var(--accent-apricot)', textClass: 'text-accent-apricot', indicatorClass: 'bg-accent-apricot' },
-    high: { label: 'High', color: 'var(--accent-rose)', textClass: 'text-accent-rose', indicatorClass: 'bg-accent-rose' },
+    low: { label: 'Low', color: 'var(--border-strong)', textClass: 'text-text-primary', indicatorClass: 'bg-border-strong' },
+    medium: { label: 'Medium', color: 'var(--warning)', textClass: 'text-warning', indicatorClass: 'bg-warning' },
+    high: { label: 'High', color: 'var(--error)', textClass: 'text-error', indicatorClass: 'bg-error' },
 };
 
 // Form types

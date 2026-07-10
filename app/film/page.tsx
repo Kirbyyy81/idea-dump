@@ -98,8 +98,8 @@ function FilmCanister({ roll, index }: { roll: FilmRoll; index: number }) {
                 className="action-link group block"
                 aria-label={`Open ${roll.film_name} photobook`}
             >
-                <article className="relative flex min-h-[330px] flex-col items-center justify-center">
-                    <div className="relative h-[300px] w-[300px]">
+                <article className="relative flex min-h-[300px] flex-col items-center justify-center sm:min-h-[330px]">
+                    <div className="relative h-[300px] w-[300px] origin-top scale-[0.9] sm:scale-100">
                         <div
                             className="absolute left-[106px] top-[90px] z-0 h-[136px] w-[160px] [clip-path:inset(-50px_-50px_-50px_0)]"
                             aria-hidden="true"
@@ -303,8 +303,8 @@ export default function FilmJournalPage() {
                                 </div>
                                 <span className="shrink-0 text-sm text-nav-text-muted">{filteredRolls.length} of {rolls.length} rolls</span>
                             </div>
-                            <div className="flex flex-wrap gap-3 xl:justify-end">
-                                <div className="relative min-w-[240px] flex-1 xl:w-[340px] xl:flex-none">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap xl:justify-end">
+                                <div className="relative min-w-0 flex-1 xl:w-[340px] xl:flex-none">
                                     <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
                                     <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search" className="pl-9 pr-9" />
                                     {query && (
@@ -321,7 +321,7 @@ export default function FilmJournalPage() {
                                 <Select
                                     value={status}
                                     onChange={(nextValue) => setStatus(nextValue as FilmRollStatus | 'all')}
-                                    className="min-w-48 xl:w-48"
+                                    className="w-full sm:min-w-48 sm:flex-1 xl:w-48 xl:flex-none"
                                     options={[
                                         { value: 'all', label: 'All stages' },
                                         ...Object.entries(filmRollStatusConfig).map(([value, config]) => ({
@@ -333,7 +333,7 @@ export default function FilmJournalPage() {
                                 <Select
                                     value={cameraId}
                                     onChange={setCameraId}
-                                    className="min-w-48 xl:w-48"
+                                    className="w-full sm:min-w-48 sm:flex-1 xl:w-48 xl:flex-none"
                                     options={[
                                         { value: '', label: 'All cameras' },
                                         ...cameras.map((camera) => ({ value: camera.id, label: camera.name })),
@@ -353,7 +353,7 @@ export default function FilmJournalPage() {
                             )}
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 gap-x-5 gap-y-8 bg-surface-film-shelf px-5 py-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                        <div className="grid grid-cols-1 gap-x-5 gap-y-8 bg-surface-film-shelf px-3 py-8 sm:grid-cols-2 sm:px-5 lg:grid-cols-3 xl:grid-cols-4">
                             {filteredRolls.map((roll, index) => (
                                 <FilmCanister key={roll.id} roll={roll} index={index} />
                             ))}

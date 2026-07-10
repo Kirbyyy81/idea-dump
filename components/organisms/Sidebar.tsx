@@ -31,6 +31,7 @@ import {
 interface SidebarProps {
     projects: Project[];
     collapsed?: boolean;
+    className?: string;
     onToggleCollapsed?: () => void;
 }
 
@@ -58,9 +59,9 @@ const MODULE_ICONS: Record<string, JSX.Element> = {
 };
 
 const NAV_ITEM_CLASS =
-    'flex min-h-10 w-full items-center gap-2 rounded-sm border border-transparent px-3 py-2 text-left text-[12px] font-semibold leading-none transition-colors';
+    'flex min-h-10 w-full items-center gap-2 rounded-sm border border-transparent px-3 py-2 text-left text-[12px] font-semibold leading-normal transition-colors';
 const NAV_SUBITEM_CLASS =
-    'flex min-h-8 w-full items-center gap-2 rounded-sm border border-transparent px-3 py-1.5 text-left text-[12px] font-medium leading-none transition-colors';
+    'flex min-h-8 w-full items-center gap-2 rounded-sm border border-transparent px-3 py-1.5 text-left text-[12px] font-medium leading-normal transition-colors';
 const GROUP_ACTIVE_CLASS = 'bg-nav-bg-hover text-nav-text hover:bg-nav-bg-hover hover:text-nav-text';
 const GROUP_INACTIVE_CLASS = 'text-nav-text-muted hover:bg-nav-bg-hover hover:text-nav-text';
 const SUBITEM_ACTIVE_CLASS =
@@ -79,7 +80,7 @@ function isFilmRoute(pathname: string) {
     return pathname === '/film' || pathname.startsWith('/film/');
 }
 
-export function Sidebar({ projects, collapsed = false, onToggleCollapsed }: SidebarProps) {
+export function Sidebar({ projects, collapsed = false, className, onToggleCollapsed }: SidebarProps) {
     const pathname = usePathname();
     const [openGroups, setOpenGroups] = useState<Partial<Record<'projects' | 'tickets' | 'film', boolean>>>({});
     const access = useAccess();
@@ -118,7 +119,7 @@ export function Sidebar({ projects, collapsed = false, onToggleCollapsed }: Side
             )}
         >
             {icon && <span className="grid size-4 shrink-0 place-items-center">{icon}</span>}
-            {!collapsed && <span className="truncate">{label}</span>}
+            {!collapsed && <span className="min-w-0 flex-1 truncate">{label}</span>}
         </Link>
     );
 
@@ -143,7 +144,7 @@ export function Sidebar({ projects, collapsed = false, onToggleCollapsed }: Side
             )}
         >
             <span className="grid size-5 shrink-0 place-items-center">{icon}</span>
-            {!collapsed && <span className="flex-1 text-left truncate">{label}</span>}
+            {!collapsed && <span className="min-w-0 flex-1 text-left truncate">{label}</span>}
         </Link>
     );
 
@@ -184,10 +185,10 @@ export function Sidebar({ projects, collapsed = false, onToggleCollapsed }: Side
                     onClick={() => setOpenGroups((current) => ({ ...current, [group]: !isOpen }))}
                 >
                     <span className="grid size-5 shrink-0 place-items-center">{icon}</span>
-                    <span className="flex-1 text-left">{label}</span>
+                    <span className="min-w-0 flex-1 text-left truncate">{label}</span>
                     <ChevronRight
                         size={14}
-                        className={cn('transition-transform text-nav-text-muted', isOpen && 'rotate-90')}
+                        className={cn('shrink-0 transition-transform text-nav-text-muted', isOpen && 'rotate-90')}
                     />
                 </Link>
 
@@ -207,7 +208,8 @@ export function Sidebar({ projects, collapsed = false, onToggleCollapsed }: Side
         <aside
             className={cn(
                 'sticky top-3 flex h-[calc(100dvh-24px)] max-h-[calc(100dvh-24px)] flex-col overflow-hidden rounded-lg bg-nav-bg text-nav-text',
-                collapsed ? 'px-2 py-3' : 'px-[14px] py-[18px]'
+                collapsed ? 'px-2 py-3' : 'px-[14px] py-[18px]',
+                className
             )}
         >
             <div className={cn('border-b border-nav-bg-hover pb-4', collapsed && 'pb-3')}>

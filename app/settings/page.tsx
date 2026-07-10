@@ -190,7 +190,7 @@ export default function SettingsPage() {
         : null;
 
     return (
-        <AppShell contentClassName="p-8" projects={projects} isLoading={isLoading}>
+        <AppShell contentClassName="p-5 md:p-8" projects={projects} isLoading={isLoading}>
             <div className="max-w-3xl space-y-6">
                 <h1 className="text-text-primary text-2xl font-extrabold">Settings</h1>
 

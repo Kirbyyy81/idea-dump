@@ -336,8 +336,8 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
     };
 
     return (
-        <div className="mx-auto min-h-screen max-w-7xl space-y-5 p-6">
-            <div className="flex items-center justify-between gap-4">
+        <div className="mx-auto min-h-screen max-w-7xl space-y-5 p-4 md:p-6">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div className="flex items-center gap-4">
                     <Link
                         href="/settings"
@@ -348,12 +348,13 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                     <h1 className="text-text-primary">Access Control</h1>
                 </div>
 
-                <div className="relative w-full max-w-sm">
+                <div className="relative w-full md:max-w-sm">
                     <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
                     <Input
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         placeholder="Search users or modules"
+                        aria-label="Search users or modules"
                         className="pl-9"
                     />
                 </div>
@@ -365,13 +366,14 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                 </div>
             )}
 
-            <Card className="overflow-hidden rounded-2xl p-0">
+            <Card className="rounded-2xl p-0">
                 <div className="border-b border-border-default bg-bg-hover px-6 py-3">
-                    <div className="grid grid-cols-[minmax(0,1fr)_120px_120px] items-center gap-4 text-xs uppercase tracking-wide text-text-muted">
+                    <div className="hidden min-w-[560px] grid-cols-[minmax(0,1fr)_120px_120px] items-center gap-4 text-xs uppercase tracking-wide text-text-muted md:grid">
                         <span>Module visibility</span>
                         <span>Status</span>
                         <span className="text-right">Action</span>
                     </div>
+                    <span className="text-xs font-semibold uppercase tracking-wide text-text-muted md:hidden">Module visibility</span>
                 </div>
 
                 <div>
@@ -382,7 +384,7 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                         return (
                             <div
                                 key={`visibility-${moduleRow.slug}`}
-                                className={`grid grid-cols-[minmax(0,1fr)_108px_96px] items-center gap-3 border-b border-border-default px-5 py-3 last:border-b-0 hover:bg-bg-hover ${
+                                className={`grid grid-cols-1 gap-3 border-b border-border-default px-5 py-3 last:border-b-0 hover:bg-bg-hover md:min-w-[560px] md:grid-cols-[minmax(0,1fr)_108px_96px] md:items-center ${
                                     moduleRow.enabled ? '' : 'bg-bg-subtle text-text-muted'
                                 }`}
                             >
@@ -398,7 +400,8 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                                     )}
                                 </div>
 
-                                <div>
+                                <div className="flex items-center justify-between gap-3 md:block">
+                                    <span className="text-xs font-medium uppercase tracking-wide text-text-muted md:hidden">Status</span>
                                     <Badge
                                         variant={moduleRow.enabled ? 'complete' : 'archived'}
                                         className="capitalize"
@@ -407,7 +410,9 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                                     </Badge>
                                 </div>
 
-                                <div className="flex justify-end">
+                                <div className="flex items-center justify-between gap-3 md:block">
+                                    <span className="text-xs font-medium uppercase tracking-wide text-text-muted md:hidden">Action</span>
+                                    <div className="flex justify-end">
                                     {isProtected ? (
                                         <Button
                                             type="button"
@@ -431,6 +436,7 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                                             {moduleRow.enabled ? 'Hide' : 'Show'}
                                         </Button>
                                     )}
+                                    </div>
                                 </div>
                             </div>
                         );
@@ -438,11 +444,11 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                 </div>
             </Card>
 
-            <Card className="overflow-hidden rounded-2xl p-0">
+            <Card className="rounded-2xl p-0">
                 <div className="border-b border-border-default bg-bg-hover px-6 py-3">
-                    <div className="grid grid-cols-[150px_minmax(0,1fr)_86px] items-center gap-4 text-xs uppercase tracking-wide text-text-muted">
-                        <span>Role</span>
-                        <span>Modules</span>
+                    <div className="grid grid-cols-[1fr_auto] items-center gap-4 text-xs uppercase tracking-wide text-text-muted md:min-w-[680px] md:grid-cols-[150px_minmax(0,1fr)_86px]">
+                        <span>Role access</span>
+                        <span className="hidden md:block">Modules</span>
                         <div className="flex justify-end">
                             <button
                                 type="button"
@@ -458,7 +464,7 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
 
                 <div>
                     {showNewRoleRow && (
-                        <div className="grid grid-cols-[150px_minmax(0,1fr)_112px] items-start gap-4 border-b border-border-default px-5 py-3">
+                        <div className="grid grid-cols-1 gap-4 border-b border-border-default px-5 py-3 md:min-w-[680px] md:grid-cols-[150px_minmax(0,1fr)_112px]">
                             <div className="space-y-2 pt-0.5">
                                 <span className="text-xs uppercase tracking-[0.14em] text-text-muted">New role</span>
                                 <Input
@@ -474,7 +480,7 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                                 />
                             </div>
 
-                            <div className="flex flex-wrap gap-1.5 pt-6">
+                            <div className="flex flex-wrap gap-1.5 pt-0 md:pt-6">
                                 {data?.modules.map((moduleRow) => {
                                     const selected = newRoleDraft.modules.includes(moduleRow.slug);
 
@@ -495,7 +501,7 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                                 })}
                             </div>
 
-                            <div className="flex justify-end gap-2 pt-6">
+                            <div className="flex justify-start gap-2 pt-0 md:justify-end md:pt-6">
                                 <Button
                                     type="button"
                                     variant="ghost"
@@ -524,7 +530,7 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                         return (
                             <div
                                 key={roleRecord.role}
-                                className="grid grid-cols-[150px_minmax(0,1fr)_86px] items-start gap-4 border-b border-border-default px-5 py-3 last:border-b-0 hover:bg-bg-hover"
+                                className="grid grid-cols-1 gap-4 border-b border-border-default px-5 py-3 last:border-b-0 hover:bg-bg-hover md:min-w-[680px] md:grid-cols-[150px_minmax(0,1fr)_86px]"
                             >
                                 <div className="pt-1">
                                     <span className="font-bold uppercase tracking-[0.14em] text-text-primary">
@@ -553,7 +559,7 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                                     })}
                                 </div>
 
-                                <div className="flex justify-end">
+                                <div className="flex justify-start md:justify-end">
                                     <Button
                                         onClick={() => saveRole(roleRecord)}
                                         isLoading={savingRole === roleRecord.role}
@@ -569,13 +575,13 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                 </div>
             </Card>
 
-            <Card className="overflow-hidden rounded-2xl p-0">
+            <Card className="rounded-2xl p-0">
                 <div className="border-b border-border-default bg-bg-hover px-6 py-3">
-                    <div className="grid grid-cols-[minmax(0,1.2fr)_150px_minmax(0,1.5fr)_80px] items-center gap-3 text-xs uppercase tracking-wide text-text-muted">
-                        <span>User</span>
-                        <span>Role</span>
-                        <span>Exceptions</span>
-                        <span>Action</span>
+                    <div className="grid grid-cols-1 items-center gap-3 text-xs uppercase tracking-wide text-text-muted md:min-w-[820px] md:grid-cols-[minmax(0,1.2fr)_150px_minmax(0,1.5fr)_80px]">
+                        <span>Users</span>
+                        <span className="hidden md:block">Role</span>
+                        <span className="hidden md:block">Exceptions</span>
+                        <span className="hidden md:block">Action</span>
                     </div>
                 </div>
 
@@ -594,7 +600,7 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                         return (
                             <div
                                 key={user.id}
-                                className="grid grid-cols-[minmax(0,1.2fr)_150px_minmax(0,1.5fr)_80px] items-start gap-3 border-b border-border-default px-5 py-3 last:border-b-0 hover:bg-bg-hover"
+                                className="grid grid-cols-1 gap-3 border-b border-border-default px-5 py-3 last:border-b-0 hover:bg-bg-hover md:min-w-[820px] md:grid-cols-[minmax(0,1.2fr)_150px_minmax(0,1.5fr)_80px]"
                             >
                                 <div className="flex min-w-0 items-center gap-2.5">
                                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border-default bg-bg-hover text-[11px] font-semibold uppercase text-text-primary">
@@ -606,17 +612,21 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                                     </div>
                                 </div>
 
-                                <div className="pt-0.5">
+                                <div className="space-y-1 pt-0.5">
+                                    <span className="text-xs font-medium uppercase tracking-wide text-text-muted md:hidden">Role</span>
                                     <Select
                                         value={draft.role}
                                         onChange={(nextValue) => updateUserRole(user, nextValue as AppRoleSlug)}
-                                        className="min-w-[160px]"
+                                        ariaLabel={`Role for ${userLabel}`}
+                                        className="w-full md:min-w-[160px]"
                                         buttonClassName="h-8 text-sm"
                                         options={(data?.roles ?? []).map((role) => ({ value: role, label: role }))}
                                     />
                                 </div>
 
-                                <div className="flex flex-wrap items-center gap-2">
+                                <div className="space-y-1">
+                                    <span className="text-xs font-medium uppercase tracking-wide text-text-muted md:hidden">Exceptions</span>
+                                    <div className="flex flex-wrap items-center gap-2">
                                     {overrideEntries.length > 0 ? (
                                         <>
                                             {overrideEntries.map((moduleSlug) => (
@@ -634,7 +644,8 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                                                                 nextValue as ModuleOverrideEffect
                                                             )
                                                         }
-                                                        className="min-w-[96px]"
+                                                        ariaLabel={`${getModuleLabel(moduleSlug)} override for ${userLabel}`}
+                                                        className="w-full sm:w-auto md:min-w-[96px]"
                                                         buttonClassName="h-8 border-0 bg-transparent px-2 text-xs"
                                                         options={[
                                                             { value: 'allow', label: 'Allow' },
@@ -669,7 +680,8 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                                                         nextValue as AppModuleSlug | ''
                                                     )
                                                 }
-                                                className="min-w-[132px]"
+                                                ariaLabel={`Add exception module for ${userLabel}`}
+                                                className="w-full sm:w-auto md:min-w-[132px]"
                                                 buttonClassName="h-8 text-xs"
                                                 options={[
                                                     { value: '', label: 'Add module' },
@@ -688,7 +700,8 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                                                         nextValue as ModuleOverrideEffect
                                                     )
                                                 }
-                                                className="min-w-[96px]"
+                                                ariaLabel={`Exception effect for ${userLabel}`}
+                                                className="w-full sm:w-auto md:min-w-[96px]"
                                                 buttonClassName="h-8 text-xs"
                                                 options={[
                                                     { value: 'allow', label: 'Allow' },
@@ -706,9 +719,10 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                                             </Button>
                                         </>
                                     )}
+                                    </div>
                                 </div>
 
-                                <div className="flex justify-end">
+                                <div className="flex justify-start md:justify-end">
                                     <Button
                                         onClick={() => saveUser(user)}
                                         isLoading={savingUserId === user.id}

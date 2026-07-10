@@ -230,7 +230,7 @@ export default function LogApiToolsPage() {
     };
 
     return (
-        <AppShell contentClassName="p-8">
+        <AppShell contentClassName="p-5 md:p-8">
             <div className="max-w-5xl space-y-8">
                 <header className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
