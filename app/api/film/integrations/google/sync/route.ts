@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
             .from('film_rolls')
             .update({
                 drive_folder_id: folderId,
-                status: roll.status === 'ARCHIVED' ? roll.status : 'PROCESSED',
+                status: 'PROCESSED',
                 updated_at: now,
             })
             .eq('id', filmRollId)

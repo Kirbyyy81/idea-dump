@@ -4,7 +4,7 @@
 
 import { ReactNode, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, ExternalLink, FolderSync, Heart, ImageIcon, Save, Star, X } from 'lucide-react';
 import { AppShell } from '@/components/organisms/AppShell';
 import { Button } from '@/components/atoms/Button';
@@ -20,34 +20,24 @@ import {
     FilmPhoto,
     FilmProcessType,
     FilmRoll,
-    FilmRollStatus,
     FilmType,
     filmFormats,
     filmProcessTypeConfig,
     filmProcessTypes,
-    filmRollStatusConfig,
     filmTypeConfig,
     filmTypes,
 } from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
 import { cn } from '@/lib/utils';
+import {
+    getNextFilmRollStep,
+    getOpeningFilmRollStep,
+    getStatusAfterSavingFilmRollStep,
+    isFilmRollStep,
+} from '@/lib/film/workflow';
 import { RollHeader } from './_components/RollHeader';
 import { StepStepper } from './_components/StepStepper';
 import { StatsCards } from './_components/StatsCards';
-
-const statusRank: Record<FilmRollStatus, number> = {
-    UNUSED: 0,
-    LOADED: 1,
-    SHOOTING: 2,
-    AWAITING_PROCESSING: 3,
-    PROCESSING: 4,
-    PROCESSED: 5,
-    ARCHIVED: 6,
-};
-
-function promoteStatus(currentStatus: FilmRollStatus, targetStatus: FilmRollStatus) {
-    return statusRank[currentStatus] >= statusRank[targetStatus] ? currentStatus : targetStatus;
-}
 
 function getTodayInputDate() {
     const today = new Date();
@@ -85,21 +75,6 @@ function getRollForm(roll: FilmRoll) {
     };
 }
 
-function inferStatusForStep(
-    currentStatus: FilmRollStatus,
-    activeStep: string,
-    form: ReturnType<typeof getRollForm>
-) {
-    if (currentStatus === 'ARCHIVED') return currentStatus;
-    if (activeStep === 'processing') return promoteStatus(currentStatus, 'PROCESSED');
-    if (activeStep === 'drive' || activeStep === 'photobook') return promoteStatus(currentStatus, 'PROCESSED');
-
-    const framesTaken = Number(form.frames_taken || 0);
-    if (framesTaken > 0) return promoteStatus(currentStatus, 'AWAITING_PROCESSING');
-    if (form.camera_id) return promoteStatus(currentStatus, 'LOADED');
-    return currentStatus;
-}
-
 function getPhotoImageUrl(photo: Pick<FilmPhoto, 'id'>) {
     return `/api/film/photos/${photo.id}/image`;
 }
@@ -115,6 +90,7 @@ export default function FilmRollDetailPage() {
 function RollDetailContent() {
     const params = useParams();
     const rollId = params.id as string;
+    const router = useRouter();
     const searchParams = useSearchParams();
     const { showSuccess, showError: setAlertError } = useAlert();
     const [roll, setRoll] = useState<FilmRoll | null>(null);
@@ -162,27 +138,11 @@ function RollDetailContent() {
     }, [loadRoll]);
 
     const photos = useMemo(() => roll?.photos ?? [], [roll?.photos]);
-    const hasProcessingDetails = Boolean(
-        roll?.lab_name ||
-        roll?.processing_date ||
-        Number(roll?.processing_cost || 0) > 0 ||
-        Number(roll?.scanning_cost || 0) > 0 ||
-        Number(roll?.shipping_cost || 0) > 0
-    );
     const hasDriveFolder = Boolean(roll?.drive_folder_id);
     const hasSyncedPhotos = photos.length > 0;
-    const canShowPhotobook = hasProcessingDetails && hasSyncedPhotos;
-
-    const steps = [
-        { slug: 'film', isComplete: true },
-        { slug: 'processing', isComplete: hasProcessingDetails },
-        { slug: 'drive', isComplete: hasDriveFolder },
-        { slug: 'photobook', isComplete: canShowPhotobook },
-    ];
-    const inlineSteps = steps.filter((step) => step.slug !== 'photobook');
-    const defaultStep = inlineSteps.find((step) => !step.isComplete)?.slug ?? 'film';
+    const defaultStep = getOpeningFilmRollStep(roll?.status ?? 'UNUSED', hasSyncedPhotos);
     const stepParam = searchParams.get('step');
-    const activeStep = ['film', 'processing', 'drive', 'photobook'].includes(stepParam || '') ? stepParam! : defaultStep;
+    const activeStep = isFilmRollStep(stepParam) ? stepParam : defaultStep;
 
     useEffect(() => {
         const googleStatus = searchParams.get('google');
@@ -255,7 +215,8 @@ function RollDetailContent() {
         setIsSaving(true);
         setError(null);
         try {
-            const nextStatus = inferStatusForStep(rollForm.status, activeStep, rollForm);
+            const nextStatus = getStatusAfterSavingFilmRollStep(activeStep, roll.status);
+            const nextStep = getNextFilmRollStep(activeStep);
             const res = await fetch('/api/film/rolls', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -280,6 +241,7 @@ function RollDetailContent() {
             if (!res.ok) throw new Error('Failed to save film roll');
             await loadRoll();
             showSuccess('Film roll saved.', 'Saved');
+            router.replace(`/film/rolls/${roll.id}?step=${nextStep}`);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to save film roll');
         } finally {
@@ -306,6 +268,9 @@ function RollDetailContent() {
             if (!res.ok) throw new Error(payload.error || 'Failed to sync Google Drive folder');
             await loadRoll();
             showSuccess('Drive metadata synced.', 'Synced');
+            if (Number(payload.data?.synced_count || 0) > 0) {
+                router.replace(`/film/rolls/${roll.id}?step=photobook`);
+            }
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to sync Google Drive folder');
         } finally {
@@ -344,8 +309,10 @@ function RollDetailContent() {
                     roll={roll}
                     isSaving={isSaving}
                     onSave={handleSaveRoll}
+                    showSave={activeStep === 'film'}
+                    saveLabel="Save & Continue"
                     alternateAction={activeStep === 'photobook' ? (
-                        <Link href={`/film/rolls/${roll.id}?step=film`} className="btn-secondary">
+                        <Link href={`/film/rolls/${roll.id}?step=film`} className="btn-secondary min-h-8 self-start px-3 py-1.5 text-xs">
                             Roll Details
                         </Link>
                     ) : undefined}
@@ -416,17 +383,6 @@ function RollDetailContent() {
                                         value={rollForm.film_type}
                                         onChange={(nextValue) => setRollForm({ ...rollForm, film_type: nextValue as FilmType })}
                                         options={filmTypes.map((type) => ({ value: type, label: filmTypeConfig[type].label }))}
-                                    />
-                                </label>
-                                <label className="space-y-2">
-                                    <span className="text-sm text-text-secondary">Roll status</span>
-                                    <Select
-                                        value={rollForm.status}
-                                        onChange={(nextValue) => setRollForm({ ...rollForm, status: nextValue as FilmRollStatus })}
-                                        options={Object.entries(filmRollStatusConfig).map(([status, config]) => ({
-                                            value: status,
-                                            label: config.label,
-                                        }))}
                                     />
                                 </label>
                                 <label className="space-y-2">
@@ -502,7 +458,7 @@ function RollDetailContent() {
                                 ariaLabel="Processing date"
                             />
                             <Button icon={<Save size={16} />} onClick={handleSaveRoll} isLoading={isSaving} className="w-full sm:w-auto">
-                                Save Processing
+                                Save & Continue
                             </Button>
                         </div>
                     </Card>
@@ -529,7 +485,7 @@ function RollDetailContent() {
                             <Input value={driveFolderInput} onChange={(event) => setDriveFolderInput(event.target.value)} />
                             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                                 <Button icon={<FolderSync size={16} />} onClick={handleSyncDrive} isLoading={isSyncing} className="w-full sm:w-auto">
-                                    Sync Metadata
+                                    Sync & Continue
                                 </Button>
                                 <a href={`/api/film/integrations/google/connect?roll_id=${roll.id}`} className="btn-ghost w-full sm:w-auto">
                                     Connect Google
@@ -593,11 +549,9 @@ function PhotobookContactSheet({
 
     return (
         <Card className="overflow-hidden p-0">
-            <div className="flex flex-col gap-3 border-b border-border-default bg-bg-elevated p-5 md:flex-row md:items-center md:justify-between">
-                <div>
-                    <h2 className="text-2xl font-bold">Contact Sheet</h2>
-                </div>
-                <Link href={`/film/rolls/${roll.id}?step=drive`} className="btn-ghost w-full sm:w-auto">
+            <div className="flex items-center justify-between gap-3 border-b border-border-default bg-bg-elevated p-5">
+                <h2 className="text-xl font-bold sm:text-2xl">Contact Sheet</h2>
+                <Link href={`/film/rolls/${roll.id}?step=drive`} className="btn-ghost min-h-8 shrink-0 px-2.5 py-1 text-xs">
                     Manage Drive
                 </Link>
             </div>

@@ -12,10 +12,11 @@ interface RollHeaderProps {
     isSaving?: boolean;
     onSave?: () => void;
     showSave?: boolean;
+    saveLabel?: string;
     alternateAction?: ReactNode;
 }
 
-export function RollHeader({ roll, isSaving, onSave, showSave = true, alternateAction }: RollHeaderProps) {
+export function RollHeader({ roll, isSaving, onSave, showSave = true, saveLabel = 'Save Roll', alternateAction }: RollHeaderProps) {
     return (
         <header className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
             <div className="min-w-0">
@@ -32,7 +33,7 @@ export function RollHeader({ roll, isSaving, onSave, showSave = true, alternateA
             </div>
             {alternateAction ?? (showSave && (
                 <Button icon={<Save size={16} />} onClick={onSave} isLoading={isSaving} className="w-full sm:w-auto">
-                    Save Roll
+                    {saveLabel}
                 </Button>
             ))}
         </header>

@@ -1,36 +1,108 @@
 'use client';
 
-import { PropsWithChildren, useEffect, useRef, useState } from 'react';
+import { createContext, PropsWithChildren, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
 import { Sidebar } from '@/components/organisms/Sidebar';
 import { LoaderOne } from '@/components/atoms/Loader';
 import { Project } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { AppModuleSlug } from '@/lib/rbac/constants';
+import { useAccess } from '@/lib/contexts/AccessContext';
 
 interface AppShellProps extends PropsWithChildren {
     contentClassName?: string;
     projects?: Project[];
     isLoading?: boolean;
     loadingMessage?: string;
+    persistent?: boolean;
 }
 
-export function AppShell({ children, contentClassName = 'p-5 md:p-6', projects: externalProjects, isLoading, loadingMessage }: AppShellProps) {
+interface ShellContextValue {
+    setProjects: (projects: Project[]) => void;
+}
+
+interface ModuleRouteRule {
+    module: AppModuleSlug;
+    prefix: string;
+    requiresManager?: boolean;
+}
+
+const ShellContext = createContext<ShellContextValue | null>(null);
+const PUBLIC_PATH_PREFIXES = ['/login', '/signup', '/reset-password', '/auth'];
+const MODULE_ROUTE_RULES: ModuleRouteRule[] = [
+    { prefix: '/settings/access', module: 'access_control', requiresManager: true },
+    { prefix: '/dashboard', module: 'dashboard' },
+    { prefix: '/projects', module: 'projects' },
+    { prefix: '/tickets/manage', module: 'tickets', requiresManager: true },
+    { prefix: '/tickets', module: 'tickets' },
+    { prefix: '/logs', module: 'logs' },
+    { prefix: '/api-tools', module: 'logs' },
+    { prefix: '/log-viewer', module: 'log_viewer' },
+    { prefix: '/article-creation', module: 'article_creation' },
+    { prefix: '/film', module: 'film_journal' },
+    { prefix: '/settings', module: 'settings' },
+    { prefix: '/docs', module: 'settings' },
+];
+
+function matchesPath(pathname: string, prefix: string) {
+    return pathname === prefix || pathname.startsWith(`${prefix}/`);
+}
+
+function ShellContent({
+    children,
+    isLoading,
+    loadingMessage,
+}: PropsWithChildren<Pick<AppShellProps, 'isLoading' | 'loadingMessage'>>) {
+    if (!isLoading) return children;
+
+    return (
+        <div className="flex flex-col items-center justify-center gap-4 py-16">
+            <LoaderOne size="lg" />
+            {loadingMessage && (
+                <p className="animate-pulse text-sm text-text-muted">{loadingMessage}</p>
+            )}
+        </div>
+    );
+}
+
+export function AppShell({
+    children,
+    contentClassName = 'p-5 md:p-6',
+    projects: externalProjects,
+    isLoading,
+    loadingMessage,
+    persistent = false,
+}: AppShellProps) {
     const pathname = usePathname();
+    const router = useRouter();
+    const access = useAccess();
+    const parentShell = useContext(ShellContext);
     const [internalProjects, setInternalProjects] = useState<Project[]>([]);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
     const mobileNavRef = useRef<HTMLDivElement>(null);
     const mobileNavTriggerRef = useRef<HTMLButtonElement>(null);
+    const isPublicPath = PUBLIC_PATH_PREFIXES.some((prefix) => matchesPath(pathname, prefix));
+    const routeRule = MODULE_ROUTE_RULES.find((rule) => matchesPath(pathname, rule.prefix));
+    const isAccessDenied = Boolean(
+        persistent &&
+        access &&
+        routeRule &&
+        (
+            !access.allowedModules.includes(routeRule.module) ||
+            (routeRule.requiresManager && !access.canManageAccess)
+        )
+    );
+    const shellContextValue = useMemo<ShellContextValue>(
+        () => ({ setProjects: setInternalProjects }),
+        []
+    );
 
-    // Only fetch projects internally if external projects not provided
     useEffect(() => {
-        // Skip fetching if projects provided externally
-        if (externalProjects !== undefined) {
-            return;
-        }
+        if (!persistent || isPublicPath || !access?.allowedModules.includes('projects')) return;
 
         let cancelled = false;
 
@@ -53,10 +125,23 @@ export function AppShell({ children, contentClassName = 'p-5 md:p-6', projects: 
         return () => {
             cancelled = true;
         };
-    }, [externalProjects]);
+    }, [access, isPublicPath, persistent]);
 
-    // Use external projects if provided, otherwise use internal projects
-    const projects = externalProjects !== undefined ? externalProjects : internalProjects;
+    useEffect(() => {
+        if (persistent || !parentShell || externalProjects === undefined) return;
+        parentShell.setProjects(externalProjects);
+    }, [externalProjects, parentShell, persistent]);
+
+    useEffect(() => {
+        if (!isAccessDenied || !access) return;
+        router.replace(access.modules[0]?.path ?? '/settings');
+    }, [access, isAccessDenied, router]);
+
+    const projects = persistent
+        ? internalProjects
+        : externalProjects !== undefined
+            ? externalProjects
+            : internalProjects;
 
     const closeMobileNav = () => {
         setIsMobileNavOpen(false);
@@ -112,7 +197,26 @@ export function AppShell({ children, contentClassName = 'p-5 md:p-6', projects: 
         };
     }, [isMobileNavOpen]);
 
+    if (persistent && isPublicPath) {
+        return children;
+    }
+
+    if (persistent && (!access || isAccessDenied)) {
+        return null;
+    }
+
+    if (!persistent && parentShell) {
+        return (
+            <div className={cn('min-w-0', contentClassName)}>
+                <ShellContent isLoading={isLoading} loadingMessage={loadingMessage}>
+                    {children}
+                </ShellContent>
+            </div>
+        );
+    }
+
     return (
+        <ShellContext.Provider value={shellContextValue}>
         <div className="min-h-screen bg-bg-canvas font-body text-text-primary md:p-3">
             <div
                 className={cn(
@@ -187,19 +291,20 @@ export function AppShell({ children, contentClassName = 'p-5 md:p-6', projects: 
                     </div>
                 )}
 
-                <main aria-hidden={isMobileNavOpen || undefined} className={cn('min-w-0 flex-1', contentClassName)}>
-                    {isLoading ? (
-                        <div className="flex flex-col items-center justify-center py-16 gap-4">
-                            <LoaderOne size="lg" />
-                            {loadingMessage && (
-                                <p className="text-text-muted text-sm animate-pulse">{loadingMessage}</p>
-                            )}
-                        </div>
-                    ) : (
+                <main
+                    aria-hidden={isMobileNavOpen || undefined}
+                    className={cn('min-w-0 flex-1', !persistent && contentClassName)}
+                >
+                    {persistent ? (
                         children
+                    ) : (
+                        <ShellContent isLoading={isLoading} loadingMessage={loadingMessage}>
+                            {children}
+                        </ShellContent>
                     )}
                 </main>
             </div>
         </div>
+        </ShellContext.Provider>
     );
 }

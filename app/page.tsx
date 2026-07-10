@@ -1,12 +1,5 @@
 import { redirect } from 'next/navigation';
-import { getSessionUserAppAccess } from '@/lib/rbac/access';
 
-export default async function HomePage() {
-    const session = await getSessionUserAppAccess();
-
-    if (!session) {
-        redirect('/login');
-    }
-
+export default function HomePage() {
     redirect('/dashboard');
 }

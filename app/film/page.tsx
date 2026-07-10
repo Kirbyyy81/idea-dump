@@ -94,9 +94,9 @@ function FilmCanister({ roll, index }: { roll: FilmRoll; index: number }) {
     return (
         <div className="mx-auto flex max-w-[300px] flex-col items-center">
             <Link
-                href={`/film/rolls/${roll.id}?step=photobook`}
+                href={`/film/rolls/${roll.id}`}
                 className="action-link group block"
-                aria-label={`Open ${roll.film_name} photobook`}
+                aria-label={`Open ${roll.film_name} roll`}
             >
                 <article className="relative flex min-h-[300px] flex-col items-center justify-center sm:min-h-[330px]">
                     <div className="relative h-[300px] w-[300px] origin-top scale-[0.9] sm:scale-100">

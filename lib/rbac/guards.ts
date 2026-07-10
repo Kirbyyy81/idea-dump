@@ -1,39 +1,11 @@
 import { NextResponse } from 'next/server';
-import { redirect } from 'next/navigation';
 import { AppModuleSlug } from '@/lib/rbac/constants';
 import {
     canAccessModule,
-    getFirstAllowedModulePath,
     getSessionUserAppAccess,
     getUserAppAccess,
 } from '@/lib/rbac/access';
 import { ResolvedIdentity } from '@/lib/auth/resolveIdentity';
-
-export async function requirePageModuleAccess(moduleSlug: AppModuleSlug) {
-    const session = await getSessionUserAppAccess();
-    if (!session) {
-        redirect('/login');
-    }
-
-    if (!canAccessModule(session.access, moduleSlug)) {
-        redirect(getFirstAllowedModulePath(session.access));
-    }
-
-    return session;
-}
-
-export async function requireAccessAdminPage() {
-    const session = await getSessionUserAppAccess();
-    if (!session) {
-        redirect('/login');
-    }
-
-    if (!canAccessModule(session.access, 'access_control') || !session.access.canManageAccess) {
-        redirect(getFirstAllowedModulePath(session.access));
-    }
-
-    return session;
-}
 
 export async function authorizeSessionModule(moduleSlug: AppModuleSlug) {
     const session = await getSessionUserAppAccess();

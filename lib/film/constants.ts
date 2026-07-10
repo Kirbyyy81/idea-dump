@@ -2,12 +2,9 @@ import { FilmFormat, FilmProcessType, FilmRollStatus, FilmType } from '@/lib/typ
 
 export const FILM_ROLL_STATUSES: FilmRollStatus[] = [
     'UNUSED',
-    'LOADED',
     'SHOOTING',
-    'AWAITING_PROCESSING',
     'PROCESSING',
     'PROCESSED',
-    'ARCHIVED',
 ];
 
 export const FILM_FORMATS: FilmFormat[] = ['35mm', '120', 'Large Format'];

@@ -9,7 +9,7 @@ export function AccessProvider({
     access,
     children,
 }: {
-    access: UserAppAccess;
+    access: UserAppAccess | null;
     children: React.ReactNode;
 }) {
     return <AccessContext.Provider value={access}>{children}</AccessContext.Provider>;

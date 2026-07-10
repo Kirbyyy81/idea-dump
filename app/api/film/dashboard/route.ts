@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authorizeFilmJournal, getMaintenanceCost, getRollCost, jsonError } from '@/lib/film/api';
 import { FILM_FORMATS, FILM_ROLL_STATUSES } from '@/lib/film/constants';
+import { normalizeFilmRoll } from '@/lib/film/status';
 import { FilmCamera, FilmDashboardSummary, FilmMaintenanceRecord, FilmRoll, filmRollStatusConfig } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -50,7 +51,7 @@ export async function GET() {
         if (photosResult.error) throw photosResult.error;
         if (favoritesResult.error) throw favoritesResult.error;
 
-        const rolls = (rollsResult.data || []) as FilmRoll[];
+        const rolls = (rollsResult.data || []).map(normalizeFilmRoll) as FilmRoll[];
         const cameras = (camerasResult.data || []) as FilmCamera[];
         const maintenanceRecords = (maintenanceResult.data || []) as FilmMaintenanceRecord[];
         const camerasById = new Map(cameras.map((camera) => [camera.id, camera]));
@@ -100,15 +101,15 @@ export async function GET() {
             total_money_spent: totalMoneySpent,
             total_cameras: cameras.length,
             total_rolls: rolls.length,
-            processed_rolls: rolls.filter((roll) => roll.status === 'PROCESSED' || roll.status === 'ARCHIVED').length,
-            unprocessed_rolls: rolls.filter((roll) => roll.status !== 'PROCESSED' && roll.status !== 'ARCHIVED').length,
+            processed_rolls: rolls.filter((roll) => roll.status === 'PROCESSED').length,
+            unprocessed_rolls: rolls.filter((roll) => roll.status !== 'PROCESSED').length,
             favorite_photos: favoritesResult.count ?? 0,
             average_spend_per_roll: rolls.length ? totalMoneySpent / rolls.length : 0,
             maintenance_cost: maintenanceCost,
             total_photos: photosResult.count ?? 0,
             successful_photos: successfulPhotos,
             average_cost_per_photo: successfulPhotos ? totalMoneySpent / successfulPhotos : 0,
-            rolls_loaded_or_shooting: rolls.filter((roll) => roll.status === 'LOADED' || roll.status === 'SHOOTING').length,
+            rolls_loaded_or_shooting: rolls.filter((roll) => roll.status === 'SHOOTING').length,
             latest_camera_added: cameras[0] ?? null,
             cameras_with_maintenance_records: new Set(maintenanceRecords.map((record) => record.camera_id)).size,
             most_used_camera: mostUsedCameraId ? camerasById.get(mostUsedCameraId) ?? null : null,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authorizeFilmJournal, getOwnedFilmRoll, jsonError } from '@/lib/film/api';
+import { normalizeFilmRoll } from '@/lib/film/status';
 import { toRequiredText } from '@/lib/film/validation';
 
 export const dynamic = 'force-dynamic';
@@ -83,7 +84,7 @@ export async function PUT(request: NextRequest) {
                 .single();
 
             if (rollError) throw rollError;
-            return NextResponse.json({ data, roll: updatedRoll });
+            return NextResponse.json({ data, roll: normalizeFilmRoll(updatedRoll) });
         }
 
         return NextResponse.json({ data });

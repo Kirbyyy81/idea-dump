@@ -36,14 +36,13 @@ const chartColors = [
     'var(--chart-5)',
 ];
 
-const pipelineStatuses: FilmRollStatus[] = ['UNUSED', 'LOADED', 'SHOOTING', 'PROCESSED', 'ARCHIVED'];
+const pipelineStatuses: FilmRollStatus[] = ['UNUSED', 'SHOOTING', 'PROCESSING', 'PROCESSED'];
 
 const pipelineLabels: Partial<Record<FilmRollStatus, string>> = {
     UNUSED: 'Unused',
-    LOADED: 'Loaded',
     SHOOTING: 'Shooting',
+    PROCESSING: 'Processing',
     PROCESSED: 'Processed',
-    ARCHIVED: 'Archived',
 };
 
 function EmptyChart({ label = 'No data yet' }: { label?: string }) {
