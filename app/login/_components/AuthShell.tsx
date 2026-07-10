@@ -17,6 +17,36 @@ export function AuthShell({ children, title, view }: AuthShellProps) {
     return (
         <main className="flex min-h-screen items-center justify-center bg-bg-canvas px-4 py-8 sm:px-6">
             <div className="w-full max-w-md">
+                <nav
+                    aria-label="Account access"
+                    className="mb-3 flex items-center justify-center gap-8"
+                >
+                    <Link
+                        href={AUTH_PATHS.signIn}
+                        aria-current={signInActive ? 'page' : undefined}
+                        className={cn(
+                            'flex min-h-10 items-center justify-center border-b-2 px-1 text-sm font-bold transition-colors',
+                            signInActive
+                                ? 'border-action-primary text-text-primary'
+                                : 'border-transparent text-text-muted hover:text-text-primary'
+                        )}
+                    >
+                        Sign in
+                    </Link>
+                    <Link
+                        href={AUTH_PATHS.signUp}
+                        aria-current={signUpActive ? 'page' : undefined}
+                        className={cn(
+                            'flex min-h-10 items-center justify-center border-b-2 px-1 text-sm font-bold transition-colors',
+                            signUpActive
+                                ? 'border-action-primary text-text-primary'
+                                : 'border-transparent text-text-muted hover:text-text-primary'
+                        )}
+                    >
+                        Create account
+                    </Link>
+                </nav>
+
                 <Card className="border-border-strong p-6 sm:p-8">
                     <div className="mb-5 flex items-center justify-center gap-2">
                         <Image
@@ -29,36 +59,6 @@ export function AuthShell({ children, title, view }: AuthShellProps) {
                         />
                         <span className="text-lg font-extrabold text-text-primary">IdeaDump</span>
                     </div>
-
-                    <nav
-                        aria-label="Account access"
-                        className="mb-6 flex items-center justify-center gap-8"
-                    >
-                        <Link
-                            href={AUTH_PATHS.signIn}
-                            aria-current={signInActive ? 'page' : undefined}
-                            className={cn(
-                                'flex min-h-10 items-center justify-center border-b-2 px-1 text-sm font-bold transition-colors',
-                                signInActive
-                                    ? 'border-action-primary text-text-primary'
-                                    : 'border-transparent text-text-muted hover:text-text-primary'
-                            )}
-                        >
-                            Sign in
-                        </Link>
-                        <Link
-                            href={AUTH_PATHS.signUp}
-                            aria-current={signUpActive ? 'page' : undefined}
-                            className={cn(
-                                'flex min-h-10 items-center justify-center border-b-2 px-1 text-sm font-bold transition-colors',
-                                signUpActive
-                                    ? 'border-action-primary text-text-primary'
-                                    : 'border-transparent text-text-muted hover:text-text-primary'
-                            )}
-                        >
-                            Create account
-                        </Link>
-                    </nav>
 
                     <header className="mb-6 text-center">
                         <h1 className="text-2xl font-extrabold text-text-primary">{title}</h1>
