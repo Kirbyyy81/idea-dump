@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { AUTH_PATHS, getSafeNextPath } from '@/lib/auth/routes';
 
 export async function GET(request: NextRequest) {
     const { searchParams, origin } = new URL(request.url);
@@ -7,8 +8,10 @@ export async function GET(request: NextRequest) {
     const tokenHash = searchParams.get('token_hash') ?? searchParams.get('token');
     const authType = searchParams.get('type');
 
-    const requestedNext = searchParams.get('next') ?? '/';
-    const nextPath = requestedNext.startsWith('/') ? requestedNext : '/';
+    const nextPath = getSafeNextPath(searchParams.get('next'));
+    const isPasswordRecovery =
+        authType === 'recovery' || nextPath === AUTH_PATHS.resetPassword;
+    const authTarget = isPasswordRecovery ? AUTH_PATHS.resetPassword : nextPath;
 
     let errorMsg = 'Could not authenticate user';
 
@@ -18,9 +21,10 @@ export async function GET(request: NextRequest) {
     const errorCode = searchParams.get('error_code');
 
     if (error) {
-        const errorTarget = authType === 'recovery' ? '/reset-password' : '/login';
+        const errorTarget = isPasswordRecovery ? AUTH_PATHS.resetPassword : AUTH_PATHS.signIn;
+        const separator = errorTarget.includes('?') ? '&' : '?';
         return NextResponse.redirect(
-            `${origin}${errorTarget}?error=${encodeURIComponent(errorDescription || error)}&code=${errorCode}`
+            `${origin}${errorTarget}${separator}error=${encodeURIComponent(errorDescription || error)}&code=${errorCode}`
         );
     }
 
@@ -28,12 +32,11 @@ export async function GET(request: NextRequest) {
         const forwardedHost = request.headers.get('x-forwarded-host');
         const isLocalEnv = process.env.NODE_ENV === 'development';
 
-        const redirectPath = authType === 'recovery' ? '/reset-password' : nextPath;
         const redirectUrl = isLocalEnv
-            ? `${origin}${redirectPath}`
+            ? `${origin}${authTarget}`
             : forwardedHost
-                ? `https://${forwardedHost}${redirectPath}`
-                : `${origin}${redirectPath}`;
+                ? `https://${forwardedHost}${authTarget}`
+                : `${origin}${authTarget}`;
 
         const response = NextResponse.redirect(redirectUrl);
         const supabase = createServerClient(
@@ -71,6 +74,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Return the user to an error page with instructions
-    const errorTarget = authType === 'recovery' ? '/reset-password' : '/login';
-    return NextResponse.redirect(`${origin}${errorTarget}?error=${encodeURIComponent(errorMsg)}`);
+    const errorTarget = isPasswordRecovery ? AUTH_PATHS.resetPassword : AUTH_PATHS.signIn;
+    const separator = errorTarget.includes('?') ? '&' : '?';
+    return NextResponse.redirect(
+        `${origin}${errorTarget}${separator}error=${encodeURIComponent(errorMsg)}`
+    );
 }

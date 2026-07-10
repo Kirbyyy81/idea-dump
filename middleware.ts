@@ -1,5 +1,9 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import {
+    AUTH_VIEWS,
+    PUBLIC_AUTH_PATH_PREFIXES,
+} from '@/lib/auth/routes';
 
 export async function middleware(request: NextRequest) {
     let supabaseResponse = NextResponse.next({
@@ -38,8 +42,7 @@ export async function middleware(request: NextRequest) {
     } = await supabase.auth.getUser();
 
     // Public routes - allow access without authentication
-    const publicPaths = ['/login', '/signup', '/reset-password', '/auth'];
-    const isPublicPath = publicPaths.some((path) =>
+    const isPublicPath = PUBLIC_AUTH_PATH_PREFIXES.some((path) =>
         request.nextUrl.pathname.startsWith(path)
     );
 
@@ -55,7 +58,11 @@ export async function middleware(request: NextRequest) {
     }
 
     // If logged in and trying to access login page, redirect to dashboard
-    if (user && request.nextUrl.pathname === '/login') {
+    const isPasswordRecovery =
+        request.nextUrl.pathname === '/login' &&
+        request.nextUrl.searchParams.get('view') === AUTH_VIEWS.resetPassword;
+
+    if (user && request.nextUrl.pathname === '/login' && !isPasswordRecovery) {
         const url = request.nextUrl.clone();
         url.pathname = '/';
         const redirectResponse = NextResponse.redirect(url);
