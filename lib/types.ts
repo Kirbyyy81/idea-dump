@@ -395,3 +395,143 @@ export const filmProcessTypeConfig: Record<FilmProcessType, { label: string }> =
 export const filmTypes: FilmType[] = ['NEGATIVE', 'REVERSAL', 'BW_NEGATIVE'];
 
 export const filmProcessTypes: FilmProcessType[] = ['C41', 'E6', 'BW', 'ECN2'];
+
+export type FinanceAccountKind = 'bank' | 'cash' | 'credit_card' | 'ewallet';
+export type FinanceCategoryType = 'expense' | 'income';
+export type FinanceTransactionDirection = 'expense' | 'income' | 'transfer';
+export type FinanceTransactionSource = 'manual' | 'screenshot';
+export type FinanceTransactionStatus = 'confirmed' | 'review' | 'duplicate' | 'rejected';
+
+export interface FinanceAccount {
+    id: string;
+    user_id: string;
+    name: string;
+    kind: FinanceAccountKind;
+    institution: string | null;
+    color: string | null;
+    opening_balance: number;
+    is_archived: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface FinanceCategory {
+    id: string;
+    user_id: string;
+    name: string;
+    type: FinanceCategoryType;
+    color: string | null;
+    icon: string | null;
+    is_archived: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface FinanceTransaction {
+    id: string;
+    user_id: string;
+    account_id: string;
+    category_id: string | null;
+    direction: FinanceTransactionDirection;
+    amount: number;
+    merchant: string | null;
+    transaction_date: string;
+    notes: string | null;
+    source: FinanceTransactionSource;
+    status: FinanceTransactionStatus;
+    created_at: string;
+    updated_at: string;
+    account?: FinanceAccount | null;
+    category?: FinanceCategory | null;
+}
+
+export interface FinanceDashboardSummary {
+    total_expense: number;
+    total_income: number;
+    net_cash_flow: number;
+    review_count: number;
+    recent_transactions: FinanceTransaction[];
+    expense_by_category: Array<{
+        category_id: string | null;
+        label: string;
+        amount: number;
+    }>;
+}
+
+export type FinanceIntakeStatus =
+    | 'pending'
+    | 'processing'
+    | 'review'
+    | 'completed'
+    | 'duplicate'
+    | 'failed'
+    | 'rejected';
+
+export interface FinanceIntakeItem {
+    id: string;
+    user_id: string;
+    source: 'screenshot' | 'notification';
+    status: FinanceIntakeStatus;
+    image_hash: string | null;
+    ocr_text: string | null;
+    received_at: string;
+    processed_at: string | null;
+    error_message: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface FinanceCandidatePayload {
+    amount: number | null;
+    merchant: string | null;
+    direction: FinanceTransactionDirection | null;
+    transaction_date: string | null;
+    account_id: string | null;
+    category_id: string | null;
+    reference: string | null;
+    matched_rule_names: string[];
+    duplicate_transaction_id: string | null;
+}
+
+export interface FinanceCandidateTransaction {
+    id: string;
+    user_id: string;
+    intake_item_id: string;
+    payload: FinanceCandidatePayload;
+    confidence: number | null;
+    matched_rule_id: string | null;
+    status: 'pending' | 'accepted' | 'rejected' | 'duplicate';
+    created_at: string;
+    updated_at: string;
+    intake?: FinanceIntakeItem | null;
+}
+
+export interface FinanceRule {
+    id: string;
+    user_id: string;
+    name: string;
+    match_type: 'exact_phrase' | 'merchant_alias' | 'keyword' | 'account_hint';
+    pattern: string;
+    category_id: string | null;
+    account_id: string | null;
+    direction: FinanceTransactionDirection | null;
+    priority: number;
+    is_active: boolean;
+    source: 'manual' | 'learning';
+    created_at: string;
+    updated_at: string;
+}
+
+export interface FinanceRuleSuggestion {
+    id: string;
+    user_id: string;
+    name: string;
+    pattern: string;
+    category_id: string;
+    direction: 'expense' | 'income';
+    evidence_count: number;
+    status: 'pending' | 'accepted' | 'rejected';
+    created_at: string;
+    updated_at: string;
+    category?: FinanceCategory | null;
+}

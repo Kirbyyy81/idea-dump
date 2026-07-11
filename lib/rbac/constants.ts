@@ -11,6 +11,7 @@ export const APP_MODULE_SLUGS = [
     'access_control',
     'article_creation',
     'film_journal',
+    'finance',
     'settings',
 ] as const;
 export type AppModuleSlug = (typeof APP_MODULE_SLUGS)[number];

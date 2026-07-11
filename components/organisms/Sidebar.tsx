@@ -19,6 +19,7 @@ import {
     FileSearch,
     Film,
     FolderKanban,
+    Landmark,
     LayoutDashboard,
     PanelLeftClose,
     Plus,
@@ -54,6 +55,7 @@ const MODULE_ICONS: Record<string, JSX.Element> = {
     FileSearch: <FileSearch size={18} />,
     Film: <Film size={18} />,
     FolderKanban: <FolderKanban size={18} />,
+    Landmark: <Landmark size={18} />,
     ShieldCheck: <ShieldCheck size={18} />,
     Ticket: <Ticket size={18} />,
 };
