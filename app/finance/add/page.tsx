@@ -17,7 +17,7 @@ const initialForm = { source_id: '', category_id: '', direction: 'expense' as Fi
 
 export default function AddFinanceTransactionPage() {
     const { showError, showSuccess } = useAlert();
-    const [mode, setMode] = useState<'manual' | 'screenshot'>('manual');
+    const [mode, setMode] = useState<'manual' | 'screenshot'>('screenshot');
     const [sources, setSources] = useState<FinanceSource[]>([]);
     const [categories, setCategories] = useState<FinanceCategory[]>([]);
     const [form, setForm] = useState(initialForm);
