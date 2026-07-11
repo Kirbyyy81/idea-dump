@@ -1,14 +1,14 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, FileText, ScanLine, UploadCloud } from 'lucide-react';
+import { ArrowLeft, FileText, ScanLine } from 'lucide-react';
 import { AppShell } from '@/components/organisms/AppShell';
 import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
+import { FileUpload } from '@/components/molecules/FileUpload';
 import { FinanceCategory, FinanceSource, FinanceTransactionDirection } from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
 
@@ -23,7 +23,6 @@ export default function AddFinanceTransactionPage() {
     const [form, setForm] = useState(initialForm);
     const [newSource, setNewSource] = useState('');
     const [file, setFile] = useState<File | null>(null);
-    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
@@ -36,7 +35,6 @@ export default function AddFinanceTransactionPage() {
         }).catch((error) => showError(error instanceof Error ? error.message : 'Could not load transaction options'));
     }, [showError]);
 
-    useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
     const availableCategories = useMemo(() => categories.filter((category) => !category.is_archived && category.type === (form.direction === 'income' ? 'income' : 'expense')), [categories, form.direction]);
 
     const submitManual = async (event: FormEvent) => {
@@ -71,12 +69,10 @@ export default function AddFinanceTransactionPage() {
             const payload = await response.json();
             if (!response.ok) throw new Error(payload.error || 'Could not process screenshot');
             showSuccess(payload.data.auto_confirmed ? 'Transaction confirmed automatically' : 'Screenshot sent to review');
-            setFile(null); setPreviewUrl(null);
+            setFile(null);
         } catch (error) { showError(error instanceof Error ? error.message : 'Could not process screenshot'); }
         finally { setIsSaving(false); }
     };
-
-    const chooseFile = (nextFile: File | null) => { if (previewUrl) URL.revokeObjectURL(previewUrl); setFile(nextFile); setPreviewUrl(nextFile ? URL.createObjectURL(nextFile) : null); };
 
     return <AppShell contentClassName="p-5 md:p-8"><div className="mx-auto max-w-2xl">
         <header><Link href="/finance" className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-text-secondary hover:text-text-primary"><ArrowLeft size={16} />Finance</Link><h1>Add transaction</h1><p className="mt-1 text-sm text-text-muted">Enter the details or import a payment screenshot.</p></header>
@@ -91,6 +87,6 @@ export default function AddFinanceTransactionPage() {
             <label className="block space-y-2"><span className="text-sm text-text-secondary">Merchant or payee</span><Input value={form.merchant} onChange={(event) => setForm({ ...form, merchant: event.target.value })} /></label>
             <label className="block space-y-2"><span className="text-sm text-text-secondary">Notes</span><Textarea value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></label>
             <Button type="submit" className="w-full" isLoading={isSaving} disabled={!form.source_id || (form.source_id === NEW_SOURCE && !newSource.trim())}>Add transaction</Button>
-        </form> : <form onSubmit={submitScreenshot} className="mt-6"><label className="block space-y-2"><span className="text-sm text-text-secondary">PNG, JPEG, or WebP up to 10 MB</span><Input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => chooseFile(event.target.files?.[0] || null)} /></label><div className="relative mt-4 aspect-[4/3] overflow-hidden border border-dashed border-border-strong bg-bg-subtle">{previewUrl ? <Image src={previewUrl} alt="Selected transaction screenshot" fill unoptimized className="object-contain" /> : <div className="absolute inset-0 grid place-items-center text-center text-text-muted"><div><UploadCloud size={32} className="mx-auto mb-3" /><p className="text-sm">Choose a screenshot</p></div></div>}</div><Button type="submit" className="mt-5 w-full" isLoading={isSaving} disabled={!file}>Process screenshot</Button><p className="mt-4 text-center text-sm text-text-muted">Items OCR cannot confirm will appear in the <Link href="/finance/review" className="font-semibold text-accent-blue hover:underline">review queue</Link>.</p></form>}
+        </form> : <form onSubmit={submitScreenshot} className="mt-6"><FileUpload label="Transaction screenshot" accept="image/png,image/jpeg,image/webp" value={file} onChange={setFile} /><p className="mt-2 text-sm text-text-muted">PNG, JPEG, or WebP up to 10 MB</p><Button type="submit" className="mt-5 w-full" isLoading={isSaving} disabled={!file}>Process screenshot</Button><p className="mt-4 text-center text-sm text-text-muted">Items OCR cannot confirm will appear in the <Link href="/finance/review" className="font-semibold text-accent-blue hover:underline">review queue</Link>.</p></form>}
     </div></AppShell>;
 }
