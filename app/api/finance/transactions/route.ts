@@ -47,7 +47,7 @@ async function validateOwnedReferences(
     userId: string,
     sourceId: string,
     categoryId: string | null,
-    direction: 'expense' | 'income' | 'transfer'
+    direction: 'expense' | 'income'
 ) {
     const source = await getOwnedFinanceSource(userId, sourceId);
     if (!source) return 'Source not found';
@@ -55,7 +55,7 @@ async function validateOwnedReferences(
     if (categoryId) {
         const category = await getOwnedFinanceCategory(userId, categoryId);
         if (!category) return 'Category not found';
-        if (direction === 'transfer' || category.type !== direction) {
+        if (category.type !== direction) {
             return 'Category type must match the transaction direction';
         }
     }

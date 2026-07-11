@@ -12,7 +12,7 @@ import {
 } from '@/lib/types';
 
 const categoryTypes: FinanceCategoryType[] = ['expense', 'income'];
-const transactionDirections: FinanceTransactionDirection[] = ['expense', 'income', 'transfer'];
+const transactionDirections: FinanceTransactionDirection[] = ['expense', 'income'];
 const transactionSources: FinanceTransactionSource[] = ['manual', 'screenshot'];
 const transactionStatuses: FinanceTransactionStatus[] = ['confirmed', 'review', 'duplicate', 'rejected'];
 

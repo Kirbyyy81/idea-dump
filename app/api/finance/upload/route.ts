@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
             && Boolean(parsed.payload.transaction_date)
             && Boolean(parsed.payload.direction)
             && Boolean(parsed.payload.source_id)
-            && (parsed.payload.direction === 'transfer' || Boolean(parsed.payload.category_id))
+            && Boolean(parsed.payload.category_id)
             && !parsed.payload.duplicate_transaction_id;
 
         const { data: candidate, error: candidateError } = await admin

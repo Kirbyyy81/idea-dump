@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
         if (categoryId) {
             const category = await getOwnedFinanceCategory(session.user.id, categoryId);
             if (!category) return jsonError('Category not found', 404);
-            if (body.direction === 'transfer' || category.type !== body.direction) return jsonError('Category type must match the transaction direction');
+            if (category.type !== body.direction) return jsonError('Category type must match the transaction direction');
         }
 
         const transactionData = {
