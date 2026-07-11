@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowDownRight, ArrowUpRight, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { AppShell } from '@/components/organisms/AppShell';
+import { MonthPicker } from '@/components/atoms/MonthPicker';
 import { FinanceDashboardSummary } from '@/lib/types';
 import { formatCurrencyMYR } from '@/lib/utils';
 
@@ -19,8 +20,6 @@ export default function FinancePage() {
     const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
     const [summary, setSummary] = useState<FinanceDashboardSummary | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const monthLabel = useMemo(() => new Date(`${month}-01T00:00:00Z`).toLocaleDateString('en-MY', { month: 'long', year: 'numeric' }), [month]);
-
     useEffect(() => {
         setError(null);
         fetch(`/api/finance/dashboard?month=${month}`)
@@ -42,7 +41,7 @@ export default function FinancePage() {
 
                 <div className="mt-6 flex items-center justify-between border-y border-border-default py-3">
                     <button type="button" title="Previous month" aria-label="Previous month" onClick={() => setMonth(shiftMonth(month, -1))} className="grid size-9 place-items-center text-text-secondary hover:text-text-primary"><ChevronLeft size={19} /></button>
-                    <p className="font-semibold">{monthLabel}</p>
+                    <MonthPicker value={month} onChange={setMonth} />
                     <button type="button" title="Next month" aria-label="Next month" onClick={() => setMonth(shiftMonth(month, 1))} className="grid size-9 place-items-center text-text-secondary hover:text-text-primary"><ChevronRight size={19} /></button>
                 </div>
 
