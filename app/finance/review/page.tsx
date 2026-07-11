@@ -13,6 +13,9 @@ import { FinanceCandidateTransaction, FinanceCategory, FinanceSource, FinanceTra
 import { useAlert } from '@/lib/contexts/AlertContext';
 import { cn, formatCurrencyMYR } from '@/lib/utils';
 
+const NEW_SOURCE = '__new_source__';
+const NEW_CATEGORY = '__new_category__';
+
 interface ReviewForm {
     source_id: string;
     category_id: string;
@@ -45,6 +48,8 @@ export default function FinanceReviewPage() {
     const [categories, setCategories] = useState<FinanceCategory[]>([]);
     const [selectedId, setSelectedId] = useState('');
     const [form, setForm] = useState<ReviewForm | null>(null);
+    const [newSourceName, setNewSourceName] = useState('');
+    const [newCategoryName, setNewCategoryName] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const selected = candidates.find((candidate) => candidate.id === selectedId) || null;
 
@@ -70,7 +75,11 @@ export default function FinanceReviewPage() {
     }, [showError]);
 
     useEffect(() => { void loadQueue(); }, [loadQueue]);
-    useEffect(() => { setForm(selected ? formFromCandidate(selected) : null); }, [selected]);
+    useEffect(() => {
+        setForm(selected ? formFromCandidate(selected) : null);
+        setNewSourceName('');
+        setNewCategoryName('');
+    }, [selected]);
 
     const availableCategories = useMemo(() => categories.filter((category) =>
         !category.is_archived && category.type === (form?.direction === 'income' ? 'income' : 'expense')
@@ -81,10 +90,37 @@ export default function FinanceReviewPage() {
         if (!selected || !form) return;
         setIsSaving(true);
         try {
+            let sourceId = form.source_id;
+            let categoryId = form.category_id;
+            if (action === 'confirm' && sourceId === NEW_SOURCE) {
+                const sourceResponse = await fetch('/api/finance/sources', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: newSourceName }),
+                });
+                const sourcePayload = await sourceResponse.json();
+                if (!sourceResponse.ok) throw new Error(sourcePayload.error || 'Could not create source');
+                sourceId = sourcePayload.data.id;
+                setSources((current) => [...current, sourcePayload.data]);
+            }
+            if (action === 'confirm' && categoryId === NEW_CATEGORY) {
+                const categoryResponse = await fetch('/api/finance/categories', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: newCategoryName,
+                        type: form.direction === 'income' ? 'income' : 'expense',
+                    }),
+                });
+                const categoryPayload = await categoryResponse.json();
+                if (!categoryResponse.ok) throw new Error(categoryPayload.error || 'Could not create category');
+                categoryId = categoryPayload.data.id;
+                setCategories((current) => [...current, categoryPayload.data]);
+            }
             const response = await fetch('/api/finance/review', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ candidate_id: selected.id, action, ...form }),
+                body: JSON.stringify({ candidate_id: selected.id, action, ...form, source_id: sourceId, category_id: categoryId }),
             });
             const payload = await response.json();
             if (!response.ok) throw new Error(payload.error || 'Could not update review item');
@@ -126,8 +162,8 @@ export default function FinanceReviewPage() {
                                 <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
                                     <label className="space-y-2"><span className="text-sm text-text-secondary">Direction</span><Select value={form.direction} onChange={(direction) => setForm({ ...form, direction: direction as FinanceTransactionDirection, category_id: '' })} options={[{ value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }, { value: 'transfer', label: 'Transfer' }]} /></label>
                                     <label className="space-y-2"><span className="text-sm text-text-secondary">Amount</span><Input required type="number" min="0.01" step="0.01" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} /></label>
-                                <label className="space-y-2"><span className="text-sm text-text-secondary">Source</span><Select value={form.source_id} onChange={(source_id) => setForm({ ...form, source_id })} placeholder="Choose a source" options={sources.filter((source) => !source.is_archived).map((source) => ({ value: source.id, label: source.name }))} /></label>
-                                    <label className="space-y-2"><span className="text-sm text-text-secondary">Category</span><Select value={form.category_id} onChange={(category_id) => setForm({ ...form, category_id })} placeholder="Uncategorised" options={[{ value: '', label: 'Uncategorised' }, ...availableCategories.map((category) => ({ value: category.id, label: category.name }))]} /></label>
+                                    <div className="space-y-2"><label className="block space-y-2"><span className="text-sm text-text-secondary">Source</span><Select value={form.source_id} onChange={(source_id) => setForm({ ...form, source_id })} placeholder="Choose a source" options={[...sources.filter((source) => !source.is_archived).map((source) => ({ value: source.id, label: source.name })), { value: NEW_SOURCE, label: '+ Add new source' }]} /></label>{form.source_id === NEW_SOURCE && <Input required value={newSourceName} onChange={(event) => setNewSourceName(event.target.value)} placeholder="Source name, e.g. Maybank" />}</div>
+                                    <div className="space-y-2"><label className="block space-y-2"><span className="text-sm text-text-secondary">Category</span><Select value={form.category_id} onChange={(category_id) => setForm({ ...form, category_id })} placeholder="Uncategorised" options={[{ value: '', label: 'Uncategorised' }, ...availableCategories.map((category) => ({ value: category.id, label: category.name })), ...(form.direction === 'transfer' ? [] : [{ value: NEW_CATEGORY, label: '+ Add new category' }])]} /></label>{form.category_id === NEW_CATEGORY && <Input required value={newCategoryName} onChange={(event) => setNewCategoryName(event.target.value)} placeholder={form.direction === 'income' ? 'e.g. Salary' : 'e.g. Groceries'} />}</div>
                                     <label className="space-y-2"><span className="text-sm text-text-secondary">Merchant or payee</span><Input value={form.merchant} onChange={(event) => setForm({ ...form, merchant: event.target.value })} /></label>
                                     <label className="space-y-2"><span className="text-sm text-text-secondary">Date</span><Input required type="date" value={form.transaction_date} onChange={(event) => setForm({ ...form, transaction_date: event.target.value })} /></label>
                                     <label className="space-y-2 md:col-span-2"><span className="text-sm text-text-secondary">Notes</span><Textarea value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></label>
@@ -135,7 +171,7 @@ export default function FinanceReviewPage() {
 
                                 <details className="mt-5 border border-border-default bg-bg-subtle"><summary className="cursor-pointer px-4 py-3 text-sm font-semibold">OCR text</summary><pre className="max-h-64 overflow-auto whitespace-pre-wrap border-t border-border-default p-4 text-xs text-text-secondary">{selected.intake?.ocr_text || 'No OCR text available.'}</pre></details>
 
-                                <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"><Button type="button" variant="ghost" icon={<X size={15} />} onClick={() => void resolveItem('reject')} disabled={isSaving}>Reject</Button><Button type="submit" icon={<Check size={15} />} isLoading={isSaving}>Confirm transaction</Button></div>
+                                <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"><Button type="button" variant="ghost" icon={<X size={15} />} onClick={() => void resolveItem('reject')} disabled={isSaving}>Reject</Button><Button type="submit" icon={<Check size={15} />} isLoading={isSaving} disabled={!form.source_id || (form.source_id === NEW_SOURCE && !newSourceName.trim()) || (form.category_id === NEW_CATEGORY && !newCategoryName.trim())}>Confirm transaction</Button></div>
                             </Card>
                         </form>
                     ) : <div className="grid min-h-72 place-items-center border border-dashed border-border-default text-sm text-text-muted">Select a review item.</div>}
