@@ -39,7 +39,7 @@ export function Select({
     const menuRef = useRef<HTMLDivElement>(null);
     const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
     const [isOpen, setIsOpen] = useState(false);
-    const [menuPosition, setMenuPosition] = useState({ left: 0, top: 0, width: 0 });
+    const [menuPosition, setMenuPosition] = useState({ left: 0, maxHeight: 256, top: 0, width: 0 });
     const selectedIndex = options.findIndex((option) => option.value === value);
     const selectedOption = selectedIndex >= 0 ? options[selectedIndex] : null;
     const enabledOptions = useMemo(
@@ -54,9 +54,17 @@ export function Select({
             const rect = buttonRef.current?.getBoundingClientRect();
             if (!rect) return;
 
+            const viewportGutter = 8;
+            const desiredHeight = Math.min(256, options.length * 40 + 8);
+            const availableBelow = window.innerHeight - rect.bottom - viewportGutter;
+            const availableAbove = rect.top - viewportGutter;
+            const openAbove = availableBelow < desiredHeight && availableAbove > availableBelow;
+            const maxHeight = Math.max(80, Math.min(desiredHeight, openAbove ? availableAbove : availableBelow));
+
             setMenuPosition({
                 left: rect.left,
-                top: rect.bottom + 4,
+                maxHeight,
+                top: openAbove ? Math.max(viewportGutter, rect.top - maxHeight - 4) : rect.bottom + 4,
                 width: rect.width,
             });
         }
@@ -69,7 +77,7 @@ export function Select({
             window.removeEventListener('resize', updateMenuPosition);
             window.removeEventListener('scroll', updateMenuPosition, true);
         };
-    }, [isOpen]);
+    }, [isOpen, options.length]);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -184,6 +192,7 @@ export function Select({
                     role="listbox"
                     style={{
                         left: menuPosition.left,
+                        maxHeight: menuPosition.maxHeight,
                         top: menuPosition.top,
                         width: menuPosition.width,
                     }}

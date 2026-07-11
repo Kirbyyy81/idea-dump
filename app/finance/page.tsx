@@ -102,7 +102,7 @@ export default function FinancePage() {
                     </section>
                 </div>
 
-                <Link href="/finance/transactions?status=review" className="mt-5 flex items-center justify-between border border-border-default bg-bg-subtle px-5 py-4 transition-colors hover:bg-bg-hover">
+                <Link href="/finance/review" className="mt-5 flex items-center justify-between border border-border-default bg-bg-subtle px-5 py-4 transition-colors hover:bg-bg-hover">
                     <span className="flex items-center gap-3 font-semibold"><ClipboardCheck size={18} className="text-accent-apricot" />Review queue</span>
                     <span className="text-sm text-text-muted">{summary?.review_count || 0} awaiting review</span>
                 </Link>
