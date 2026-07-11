@@ -1,0 +1,96 @@
+'use client';
+
+import Image from 'next/image';
+import Link from 'next/link';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { ArrowLeft, FileText, ScanLine, UploadCloud } from 'lucide-react';
+import { AppShell } from '@/components/organisms/AppShell';
+import { Button } from '@/components/atoms/Button';
+import { Input } from '@/components/atoms/Input';
+import { Select } from '@/components/atoms/Select';
+import { Textarea } from '@/components/atoms/Textarea';
+import { FinanceCategory, FinanceSource, FinanceTransactionDirection } from '@/lib/types';
+import { useAlert } from '@/lib/contexts/AlertContext';
+
+const NEW_SOURCE = '__new__';
+const initialForm = { source_id: '', category_id: '', direction: 'expense' as FinanceTransactionDirection, amount: '', merchant: '', transaction_date: new Date().toISOString().slice(0, 10), notes: '' };
+
+export default function AddFinanceTransactionPage() {
+    const { showError, showSuccess } = useAlert();
+    const [mode, setMode] = useState<'manual' | 'screenshot'>('manual');
+    const [sources, setSources] = useState<FinanceSource[]>([]);
+    const [categories, setCategories] = useState<FinanceCategory[]>([]);
+    const [form, setForm] = useState(initialForm);
+    const [newSource, setNewSource] = useState('');
+    const [file, setFile] = useState<File | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+        Promise.all([fetch('/api/finance/sources'), fetch('/api/finance/categories')]).then(async ([sourceResponse, categoryResponse]) => {
+            const [sourcePayload, categoryPayload] = await Promise.all([sourceResponse.json(), categoryResponse.json()]);
+            if (!sourceResponse.ok) throw new Error(sourcePayload.error || 'Could not load sources');
+            if (!categoryResponse.ok) throw new Error(categoryPayload.error || 'Could not load categories');
+            setSources(sourcePayload.data || []);
+            setCategories(categoryPayload.data || []);
+        }).catch((error) => showError(error instanceof Error ? error.message : 'Could not load transaction options'));
+    }, [showError]);
+
+    useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
+    const availableCategories = useMemo(() => categories.filter((category) => !category.is_archived && category.type === (form.direction === 'income' ? 'income' : 'expense')), [categories, form.direction]);
+
+    const submitManual = async (event: FormEvent) => {
+        event.preventDefault();
+        setIsSaving(true);
+        try {
+            let sourceId = form.source_id;
+            if (sourceId === NEW_SOURCE) {
+                const sourceResponse = await fetch('/api/finance/sources', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newSource }) });
+                const sourcePayload = await sourceResponse.json();
+                if (!sourceResponse.ok) throw new Error(sourcePayload.error || 'Could not create source');
+                sourceId = sourcePayload.data.id;
+                setSources((current) => [...current, sourcePayload.data]);
+            }
+            const response = await fetch('/api/finance/transactions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...form, source_id: sourceId }) });
+            const payload = await response.json();
+            if (!response.ok) throw new Error(payload.error || 'Could not add transaction');
+            showSuccess('Transaction added');
+            setForm({ ...initialForm, transaction_date: new Date().toISOString().slice(0, 10) });
+            setNewSource('');
+        } catch (error) { showError(error instanceof Error ? error.message : 'Could not add transaction'); }
+        finally { setIsSaving(false); }
+    };
+
+    const submitScreenshot = async (event: FormEvent) => {
+        event.preventDefault();
+        if (!file) return;
+        setIsSaving(true);
+        try {
+            const data = new FormData(); data.set('screenshot', file);
+            const response = await fetch('/api/finance/upload', { method: 'POST', body: data });
+            const payload = await response.json();
+            if (!response.ok) throw new Error(payload.error || 'Could not process screenshot');
+            showSuccess(payload.data.auto_confirmed ? 'Transaction confirmed automatically' : 'Screenshot sent to review');
+            setFile(null); setPreviewUrl(null);
+        } catch (error) { showError(error instanceof Error ? error.message : 'Could not process screenshot'); }
+        finally { setIsSaving(false); }
+    };
+
+    const chooseFile = (nextFile: File | null) => { if (previewUrl) URL.revokeObjectURL(previewUrl); setFile(nextFile); setPreviewUrl(nextFile ? URL.createObjectURL(nextFile) : null); };
+
+    return <AppShell contentClassName="p-5 md:p-8"><div className="mx-auto max-w-2xl">
+        <header><Link href="/finance" className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-text-secondary hover:text-text-primary"><ArrowLeft size={16} />Finance</Link><h1>Add transaction</h1><p className="mt-1 text-sm text-text-muted">Enter the details or import a payment screenshot.</p></header>
+        <div className="mt-6 grid grid-cols-2 border border-border-default p-1" role="group" aria-label="Transaction entry method"><button type="button" onClick={() => setMode('manual')} className={`flex h-10 items-center justify-center gap-2 text-sm font-semibold ${mode === 'manual' ? 'bg-action-primary text-action-primary-text' : 'text-text-secondary hover:bg-bg-hover'}`}><FileText size={16} />Manual</button><button type="button" onClick={() => setMode('screenshot')} className={`flex h-10 items-center justify-center gap-2 text-sm font-semibold ${mode === 'screenshot' ? 'bg-action-primary text-action-primary-text' : 'text-text-secondary hover:bg-bg-hover'}`}><ScanLine size={16} />Screenshot</button></div>
+
+        {mode === 'manual' ? <form onSubmit={submitManual} className="mt-6 space-y-4">
+            <label className="block space-y-2"><span className="text-sm text-text-secondary">Type</span><Select value={form.direction} onChange={(direction) => setForm({ ...form, direction: direction as FinanceTransactionDirection, category_id: '' })} options={[{ value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }, { value: 'transfer', label: 'Transfer' }]} /></label>
+            <label className="block space-y-2"><span className="text-sm text-text-secondary">Source</span><Select value={form.source_id} onChange={(source_id) => setForm({ ...form, source_id })} placeholder="Choose or add a source" options={[...sources.filter((source) => !source.is_archived).map((source) => ({ value: source.id, label: source.name })), { value: NEW_SOURCE, label: '+ Add new source' }]} /></label>
+            {form.source_id === NEW_SOURCE && <label className="block space-y-2"><span className="text-sm text-text-secondary">New source name</span><Input required value={newSource} onChange={(event) => setNewSource(event.target.value)} placeholder="e.g. Maybank debit card" /></label>}
+            <label className="block space-y-2"><span className="text-sm text-text-secondary">Category</span><Select value={form.category_id} onChange={(category_id) => setForm({ ...form, category_id })} placeholder="Uncategorised" options={[{ value: '', label: 'Uncategorised' }, ...availableCategories.map((category) => ({ value: category.id, label: category.name }))]} /></label>
+            <div className="grid gap-4 sm:grid-cols-2"><label className="block space-y-2"><span className="text-sm text-text-secondary">Amount</span><Input required type="number" inputMode="decimal" min="0.01" step="0.01" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} placeholder="0.00" /></label><label className="block space-y-2"><span className="text-sm text-text-secondary">Date</span><Input required type="date" value={form.transaction_date} onChange={(event) => setForm({ ...form, transaction_date: event.target.value })} /></label></div>
+            <label className="block space-y-2"><span className="text-sm text-text-secondary">Merchant or payee</span><Input value={form.merchant} onChange={(event) => setForm({ ...form, merchant: event.target.value })} /></label>
+            <label className="block space-y-2"><span className="text-sm text-text-secondary">Notes</span><Textarea value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></label>
+            <Button type="submit" className="w-full" isLoading={isSaving} disabled={!form.source_id || (form.source_id === NEW_SOURCE && !newSource.trim())}>Add transaction</Button>
+        </form> : <form onSubmit={submitScreenshot} className="mt-6"><label className="block space-y-2"><span className="text-sm text-text-secondary">PNG, JPEG, or WebP up to 10 MB</span><Input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => chooseFile(event.target.files?.[0] || null)} /></label><div className="relative mt-4 aspect-[4/3] overflow-hidden border border-dashed border-border-strong bg-bg-subtle">{previewUrl ? <Image src={previewUrl} alt="Selected transaction screenshot" fill unoptimized className="object-contain" /> : <div className="absolute inset-0 grid place-items-center text-center text-text-muted"><div><UploadCloud size={32} className="mx-auto mb-3" /><p className="text-sm">Choose a screenshot</p></div></div>}</div><Button type="submit" className="mt-5 w-full" isLoading={isSaving} disabled={!file}>Process screenshot</Button><p className="mt-4 text-center text-sm text-text-muted">Items OCR cannot confirm will appear in the <Link href="/finance/review" className="font-semibold text-accent-blue hover:underline">review queue</Link>.</p></form>}
+    </div></AppShell>;
+}

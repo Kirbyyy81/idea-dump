@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import {
     authorizeFinance,
-    getOwnedFinanceAccount,
+    getOwnedFinanceSource,
     getOwnedFinanceCategory,
     isFinanceTransactionDirection,
     isFinanceTransactionSource,
@@ -18,11 +18,11 @@ import {
 export const dynamic = 'force-dynamic';
 
 function buildTransactionPayload(body: Record<string, unknown>, userId: string) {
-    const accountId = toRequiredText(body.account_id);
+    const sourceId = toRequiredText(body.source_id);
     const amount = toPositiveNumber(body.amount);
     const transactionDate = normalizeDate(body.transaction_date);
 
-    if (!accountId) return { error: 'Account is required' };
+    if (!sourceId) return { error: 'Source is required' };
     if (!amount) return { error: 'Amount must be greater than zero' };
     if (!isFinanceTransactionDirection(body.direction)) return { error: 'Select a valid transaction direction' };
     if (!transactionDate) return { error: 'Transaction date is required' };
@@ -30,7 +30,7 @@ function buildTransactionPayload(body: Record<string, unknown>, userId: string) 
     return {
         data: {
             user_id: userId,
-            account_id: accountId,
+            source_id: sourceId,
             category_id: toNullableText(body.category_id),
             direction: body.direction,
             amount,
@@ -45,12 +45,12 @@ function buildTransactionPayload(body: Record<string, unknown>, userId: string) 
 
 async function validateOwnedReferences(
     userId: string,
-    accountId: string,
+    sourceId: string,
     categoryId: string | null,
     direction: 'expense' | 'income' | 'transfer'
 ) {
-    const account = await getOwnedFinanceAccount(userId, accountId);
-    if (!account) return 'Account not found';
+    const source = await getOwnedFinanceSource(userId, sourceId);
+    if (!source) return 'Source not found';
 
     if (categoryId) {
         const category = await getOwnedFinanceCategory(userId, categoryId);
@@ -69,18 +69,18 @@ export async function GET(request: NextRequest) {
         if ('response' in session) return session.response;
         const { searchParams } = new URL(request.url);
         const status = searchParams.get('status');
-        const accountId = searchParams.get('account_id');
+        const sourceId = searchParams.get('source_id');
         const query = searchParams.get('q')?.trim();
 
         const admin = createAdminClient();
         let requestQuery = admin
             .from('finance_transactions')
-            .select('*, account:finance_accounts(*), category:finance_categories(*)')
+            .select('*, finance_source:finance_sources(*), category:finance_categories(*)')
             .eq('user_id', session.user.id)
             .order('transaction_date', { ascending: false })
             .order('created_at', { ascending: false });
         if (isFinanceTransactionStatus(status)) requestQuery = requestQuery.eq('status', status);
-        if (accountId) requestQuery = requestQuery.eq('account_id', accountId);
+        if (sourceId) requestQuery = requestQuery.eq('source_id', sourceId);
         if (query) requestQuery = requestQuery.or(`merchant.ilike.%${query}%,notes.ilike.%${query}%`);
 
         const { data, error } = await requestQuery;
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
 
         const referenceError = await validateOwnedReferences(
             session.user.id,
-            payload.data.account_id,
+            payload.data.source_id,
             payload.data.category_id,
             payload.data.direction
         );
@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
         const { data, error } = await admin
             .from('finance_transactions')
             .insert(payload.data)
-            .select('*, account:finance_accounts(*), category:finance_categories(*)')
+            .select('*, finance_source:finance_sources(*), category:finance_categories(*)')
             .single();
         if (error) throw error;
         return NextResponse.json({ data: normalizeFinanceTransaction(data) }, { status: 201 });
@@ -145,7 +145,7 @@ export async function PUT(request: NextRequest) {
         if ('error' in payload) return jsonError(payload.error ?? 'Invalid transaction');
         const referenceError = await validateOwnedReferences(
             session.user.id,
-            payload.data.account_id,
+            payload.data.source_id,
             payload.data.category_id,
             payload.data.direction
         );
@@ -157,7 +157,7 @@ export async function PUT(request: NextRequest) {
             .update(updates)
             .eq('id', id)
             .eq('user_id', session.user.id)
-            .select('*, account:finance_accounts(*), category:finance_categories(*)')
+            .select('*, finance_source:finance_sources(*), category:finance_categories(*)')
             .single();
         if (error) throw error;
 

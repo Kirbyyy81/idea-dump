@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
                 match_type: 'merchant_alias',
                 pattern: suggestion.pattern,
                 category_id: suggestion.category_id,
-                account_id: null,
+                source_id: null,
                 direction: suggestion.direction,
                 priority: 100,
                 is_active: true,

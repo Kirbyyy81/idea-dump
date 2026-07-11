@@ -4,7 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { authorizeFinance, jsonError } from '@/lib/finance/api';
 import { recognizeFinanceScreenshot } from '@/lib/finance/ocr';
 import { parseFinanceText } from '@/lib/finance/parser';
-import { FinanceAccount, FinanceRule } from '@/lib/types';
+import { FinanceRule, FinanceSource } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -81,17 +81,17 @@ export async function POST(request: NextRequest) {
         const ocrText = await recognizeFinanceScreenshot(image);
         if (!ocrText) throw new Error('No readable text was found in the screenshot');
 
-        const [accountsResult, rulesResult] = await Promise.all([
-            admin.from('finance_accounts').select('*').eq('user_id', session.user.id).eq('is_archived', false),
+        const [sourcesResult, rulesResult] = await Promise.all([
+            admin.from('finance_sources').select('*').eq('user_id', session.user.id).eq('is_archived', false),
             admin.from('finance_rules').select('*').eq('user_id', session.user.id).eq('is_active', true),
         ]);
-        if (accountsResult.error) throw accountsResult.error;
+        if (sourcesResult.error) throw sourcesResult.error;
         if (rulesResult.error) throw rulesResult.error;
 
         const parsed = parseFinanceText(
             ocrText,
             (rulesResult.data || []) as FinanceRule[],
-            (accountsResult.data || []).map((account) => ({ ...account, opening_balance: Number(account.opening_balance) })) as FinanceAccount[]
+            (sourcesResult.data || []) as FinanceSource[]
         );
 
         if (parsed.payload.amount && parsed.payload.transaction_date) {
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
             && Boolean(parsed.payload.amount)
             && Boolean(parsed.payload.transaction_date)
             && Boolean(parsed.payload.direction)
-            && Boolean(parsed.payload.account_id)
+            && Boolean(parsed.payload.source_id)
             && (parsed.payload.direction === 'transfer' || Boolean(parsed.payload.category_id))
             && !parsed.payload.duplicate_transaction_id;
 
@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
                 .from('finance_transactions')
                 .insert({
                     user_id: session.user.id,
-                    account_id: parsed.payload.account_id,
+                    source_id: parsed.payload.source_id,
                     category_id: parsed.payload.category_id,
                     intake_item_id: intakeId,
                     direction: parsed.payload.direction,

@@ -396,20 +396,15 @@ export const filmTypes: FilmType[] = ['NEGATIVE', 'REVERSAL', 'BW_NEGATIVE'];
 
 export const filmProcessTypes: FilmProcessType[] = ['C41', 'E6', 'BW', 'ECN2'];
 
-export type FinanceAccountKind = 'bank' | 'cash' | 'credit_card' | 'ewallet';
 export type FinanceCategoryType = 'expense' | 'income';
 export type FinanceTransactionDirection = 'expense' | 'income' | 'transfer';
 export type FinanceTransactionSource = 'manual' | 'screenshot';
 export type FinanceTransactionStatus = 'confirmed' | 'review' | 'duplicate' | 'rejected';
 
-export interface FinanceAccount {
+export interface FinanceSource {
     id: string;
     user_id: string;
     name: string;
-    kind: FinanceAccountKind;
-    institution: string | null;
-    color: string | null;
-    opening_balance: number;
     is_archived: boolean;
     created_at: string;
     updated_at: string;
@@ -430,7 +425,7 @@ export interface FinanceCategory {
 export interface FinanceTransaction {
     id: string;
     user_id: string;
-    account_id: string;
+    source_id: string;
     category_id: string | null;
     direction: FinanceTransactionDirection;
     amount: number;
@@ -441,11 +436,12 @@ export interface FinanceTransaction {
     status: FinanceTransactionStatus;
     created_at: string;
     updated_at: string;
-    account?: FinanceAccount | null;
+    finance_source?: FinanceSource | null;
     category?: FinanceCategory | null;
 }
 
 export interface FinanceDashboardSummary {
+    month: string;
     total_expense: number;
     total_income: number;
     net_cash_flow: number;
@@ -455,6 +451,12 @@ export interface FinanceDashboardSummary {
         category_id: string | null;
         label: string;
         amount: number;
+    }>;
+    daily_cash_flow: Array<{
+        date: string;
+        label: string;
+        income: number;
+        expense: number;
     }>;
 }
 
@@ -486,7 +488,7 @@ export interface FinanceCandidatePayload {
     merchant: string | null;
     direction: FinanceTransactionDirection | null;
     transaction_date: string | null;
-    account_id: string | null;
+    source_id: string | null;
     category_id: string | null;
     reference: string | null;
     matched_rule_names: string[];
@@ -513,7 +515,7 @@ export interface FinanceRule {
     match_type: 'exact_phrase' | 'merchant_alias' | 'keyword' | 'account_hint';
     pattern: string;
     category_id: string | null;
-    account_id: string | null;
+    source_id: string | null;
     direction: FinanceTransactionDirection | null;
     priority: number;
     is_active: boolean;

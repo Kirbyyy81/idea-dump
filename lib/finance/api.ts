@@ -2,8 +2,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authorizeSessionModule } from '@/lib/rbac/guards';
 import {
-    FinanceAccount,
-    FinanceAccountKind,
+    FinanceSource,
     FinanceCategory,
     FinanceCategoryType,
     FinanceTransaction,
@@ -12,7 +11,6 @@ import {
     FinanceTransactionStatus,
 } from '@/lib/types';
 
-const accountKinds: FinanceAccountKind[] = ['bank', 'cash', 'credit_card', 'ewallet'];
 const categoryTypes: FinanceCategoryType[] = ['expense', 'income'];
 const transactionDirections: FinanceTransactionDirection[] = ['expense', 'income', 'transfer'];
 const transactionSources: FinanceTransactionSource[] = ['manual', 'screenshot'];
@@ -50,10 +48,6 @@ export function normalizeDate(value: unknown) {
     return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : null;
 }
 
-export function isFinanceAccountKind(value: unknown): value is FinanceAccountKind {
-    return accountKinds.includes(value as FinanceAccountKind);
-}
-
 export function isFinanceCategoryType(value: unknown): value is FinanceCategoryType {
     return categoryTypes.includes(value as FinanceCategoryType);
 }
@@ -70,17 +64,17 @@ export function isFinanceTransactionStatus(value: unknown): value is FinanceTran
     return transactionStatuses.includes(value as FinanceTransactionStatus);
 }
 
-export async function getOwnedFinanceAccount(userId: string, accountId: string) {
+export async function getOwnedFinanceSource(userId: string, sourceId: string) {
     const admin = createAdminClient();
     const { data, error } = await admin
-        .from('finance_accounts')
+        .from('finance_sources')
         .select('*')
-        .eq('id', accountId)
+        .eq('id', sourceId)
         .eq('user_id', userId)
         .maybeSingle();
 
     if (error) throw error;
-    return data as FinanceAccount | null;
+    return data as FinanceSource | null;
 }
 
 export async function getOwnedFinanceCategory(userId: string, categoryId: string) {
@@ -100,6 +94,5 @@ export function normalizeFinanceTransaction(transaction: FinanceTransaction) {
     return {
         ...transaction,
         amount: Number(transaction.amount),
-        account: transaction.account ? { ...transaction.account, opening_balance: Number(transaction.account.opening_balance) } : null,
     };
 }

@@ -1,5 +1,5 @@
 import {
-    FinanceAccount,
+    FinanceSource,
     FinanceCandidatePayload,
     FinanceRule,
     FinanceTransactionDirection,
@@ -99,15 +99,11 @@ function parseReference(text: string) {
     return match?.[1] ?? null;
 }
 
-function inferAccount(text: string, accounts: FinanceAccount[]) {
+function inferSource(text: string, sources: FinanceSource[]) {
     const lower = text.toLowerCase();
-    const matching = accounts.filter((account) =>
-        [account.name, account.institution]
-            .filter(Boolean)
-            .some((value) => lower.includes(String(value).toLowerCase()))
-    );
+    const matching = sources.filter((source) => lower.includes(source.name.toLowerCase()));
     if (matching.length === 1) return matching[0].id;
-    return accounts.length === 1 ? accounts[0].id : null;
+    return sources.length === 1 ? sources[0].id : null;
 }
 
 function ruleMatches(rule: FinanceRule, text: string, merchant: string | null) {
@@ -117,7 +113,7 @@ function ruleMatches(rule: FinanceRule, text: string, merchant: string | null) {
     return text.includes(pattern);
 }
 
-export function parseFinanceText(text: string, rules: FinanceRule[], accounts: FinanceAccount[]): ParsedCandidate {
+export function parseFinanceText(text: string, rules: FinanceRule[], sources: FinanceSource[]): ParsedCandidate {
     const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
     const normalized = lines.join('\n').toLowerCase();
     const payload: FinanceCandidatePayload = {
@@ -125,7 +121,7 @@ export function parseFinanceText(text: string, rules: FinanceRule[], accounts: F
         merchant: parseMerchant(lines),
         direction: parseDirection(text),
         transaction_date: parseTransactionDate(text),
-        account_id: inferAccount(text, accounts.filter((account) => !account.is_archived)),
+        source_id: inferSource(text, sources.filter((source) => !source.is_archived)),
         category_id: null,
         reference: parseReference(text),
         matched_rule_names: [],
@@ -134,7 +130,7 @@ export function parseFinanceText(text: string, rules: FinanceRule[], accounts: F
 
     let matchedRuleId: string | null = null;
     const parsedMerchant = payload.merchant;
-    let accountAssigned = false;
+    let sourceAssigned = false;
     let categoryAssigned = false;
     let directionAssigned = false;
     let merchantAssigned = false;
@@ -146,9 +142,9 @@ export function parseFinanceText(text: string, rules: FinanceRule[], accounts: F
             payload.category_id = rule.category_id;
             categoryAssigned = true;
         }
-        if (rule.account_id && !accountAssigned) {
-            payload.account_id = rule.account_id;
-            accountAssigned = true;
+        if (rule.source_id && !sourceAssigned) {
+            payload.source_id = rule.source_id;
+            sourceAssigned = true;
         }
         if (rule.direction && !directionAssigned) {
             payload.direction = rule.direction;
@@ -165,7 +161,7 @@ export function parseFinanceText(text: string, rules: FinanceRule[], accounts: F
     if (payload.transaction_date) confidence += 0.2;
     if (payload.merchant) confidence += 0.15;
     if (payload.direction) confidence += 0.1;
-    if (payload.account_id) confidence += 0.1;
+    if (payload.source_id) confidence += 0.1;
     if (payload.category_id) confidence += 0.05;
     if (matchedRuleId) confidence += 0.05;
 

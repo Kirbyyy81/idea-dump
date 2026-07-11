@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import {
     authorizeFinance,
-    getOwnedFinanceAccount,
+    getOwnedFinanceSource,
     getOwnedFinanceCategory,
     isFinanceTransactionDirection,
     jsonError,
@@ -18,8 +18,8 @@ function isMatchType(value: unknown): value is (typeof matchTypes)[number] {
     return matchTypes.includes(value as (typeof matchTypes)[number]);
 }
 
-async function validateTargets(userId: string, accountId: string | null, categoryId: string | null) {
-    if (accountId && !(await getOwnedFinanceAccount(userId, accountId))) return 'Account not found';
+async function validateTargets(userId: string, sourceId: string | null, categoryId: string | null) {
+    if (sourceId && !(await getOwnedFinanceSource(userId, sourceId))) return 'Source not found';
     if (categoryId && !(await getOwnedFinanceCategory(userId, categoryId))) return 'Category not found';
     return null;
 }
@@ -31,7 +31,7 @@ export async function GET() {
         const admin = createAdminClient();
         const { data, error } = await admin
             .from('finance_rules')
-            .select('*, account:finance_accounts(*), category:finance_categories(*)')
+            .select('*, finance_source:finance_sources(*), category:finance_categories(*)')
             .eq('user_id', session.user.id)
             .order('is_active', { ascending: false })
             .order('priority')
@@ -51,14 +51,14 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
         const name = toRequiredText(body.name);
         const pattern = toRequiredText(body.pattern);
-        const accountId = toNullableText(body.account_id);
+        const sourceId = toNullableText(body.source_id);
         const categoryId = toNullableText(body.category_id);
         if (!name) return jsonError('Rule name is required');
         if (!pattern) return jsonError('Match pattern is required');
         if (!isMatchType(body.match_type)) return jsonError('Select a valid match type');
         if (body.direction && !isFinanceTransactionDirection(body.direction)) return jsonError('Select a valid direction');
-        if (!accountId && !categoryId && !body.direction) return jsonError('Choose at least one result for this rule');
-        const targetError = await validateTargets(session.user.id, accountId, categoryId);
+        if (!sourceId && !categoryId && !body.direction) return jsonError('Choose at least one result for this rule');
+        const targetError = await validateTargets(session.user.id, sourceId, categoryId);
         if (targetError) return jsonError(targetError, 404);
 
         const priority = Number.isInteger(Number(body.priority)) ? Number(body.priority) : 100;
@@ -70,14 +70,14 @@ export async function POST(request: NextRequest) {
                 name,
                 match_type: body.match_type,
                 pattern,
-                account_id: accountId,
+                source_id: sourceId,
                 category_id: categoryId,
                 direction: body.direction || null,
                 priority,
                 is_active: true,
                 source: 'manual',
             })
-            .select('*, account:finance_accounts(*), category:finance_categories(*)')
+            .select('*, finance_source:finance_sources(*), category:finance_categories(*)')
             .single();
         if (error) throw error;
         return NextResponse.json({ data }, { status: 201 });
@@ -110,7 +110,7 @@ export async function PUT(request: NextRequest) {
             if (!isMatchType(body.match_type)) return jsonError('Select a valid match type');
             updates.match_type = body.match_type;
         }
-        if (body.account_id !== undefined) updates.account_id = toNullableText(body.account_id);
+        if (body.source_id !== undefined) updates.source_id = toNullableText(body.source_id);
         if (body.category_id !== undefined) updates.category_id = toNullableText(body.category_id);
         if (body.direction !== undefined) {
             if (body.direction && !isFinanceTransactionDirection(body.direction)) return jsonError('Select a valid direction');
@@ -121,7 +121,7 @@ export async function PUT(request: NextRequest) {
 
         const targetError = await validateTargets(
             session.user.id,
-            (updates.account_id as string | null | undefined) ?? null,
+            (updates.source_id as string | null | undefined) ?? null,
             (updates.category_id as string | null | undefined) ?? null
         );
         if (targetError) return jsonError(targetError, 404);
@@ -132,7 +132,7 @@ export async function PUT(request: NextRequest) {
             .update(updates)
             .eq('id', id)
             .eq('user_id', session.user.id)
-            .select('*, account:finance_accounts(*), category:finance_categories(*)')
+            .select('*, finance_source:finance_sources(*), category:finance_categories(*)')
             .single();
         if (error) throw error;
         return NextResponse.json({ data });

@@ -9,13 +9,12 @@ import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
 import { Toggle } from '@/components/atoms/Toggle';
-import { FinanceNav } from '@/components/finance/FinanceNav';
-import { FinanceAccount, FinanceCandidateTransaction, FinanceCategory, FinanceTransactionDirection } from '@/lib/types';
+import { FinanceCandidateTransaction, FinanceCategory, FinanceSource, FinanceTransactionDirection } from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
 import { cn, formatCurrencyMYR } from '@/lib/utils';
 
 interface ReviewForm {
-    account_id: string;
+    source_id: string;
     category_id: string;
     direction: FinanceTransactionDirection;
     amount: string;
@@ -28,7 +27,7 @@ interface ReviewForm {
 function formFromCandidate(candidate: FinanceCandidateTransaction): ReviewForm {
     const payload = candidate.payload;
     return {
-        account_id: payload.account_id || '',
+        source_id: payload.source_id || '',
         category_id: payload.category_id || '',
         direction: payload.direction || 'expense',
         amount: payload.amount?.toString() || '',
@@ -42,7 +41,7 @@ function formFromCandidate(candidate: FinanceCandidateTransaction): ReviewForm {
 export default function FinanceReviewPage() {
     const { showError, showSuccess } = useAlert();
     const [candidates, setCandidates] = useState<FinanceCandidateTransaction[]>([]);
-    const [accounts, setAccounts] = useState<FinanceAccount[]>([]);
+    const [sources, setSources] = useState<FinanceSource[]>([]);
     const [categories, setCategories] = useState<FinanceCategory[]>([]);
     const [selectedId, setSelectedId] = useState('');
     const [form, setForm] = useState<ReviewForm | null>(null);
@@ -51,18 +50,18 @@ export default function FinanceReviewPage() {
 
     const loadQueue = useCallback(async () => {
         try {
-            const [reviewResponse, accountsResponse, categoriesResponse] = await Promise.all([
-                fetch('/api/finance/review'), fetch('/api/finance/accounts'), fetch('/api/finance/categories'),
+            const [reviewResponse, sourcesResponse, categoriesResponse] = await Promise.all([
+                fetch('/api/finance/review'), fetch('/api/finance/sources'), fetch('/api/finance/categories'),
             ]);
-            const [reviewPayload, accountsPayload, categoriesPayload] = await Promise.all([
-                reviewResponse.json(), accountsResponse.json(), categoriesResponse.json(),
+            const [reviewPayload, sourcesPayload, categoriesPayload] = await Promise.all([
+                reviewResponse.json(), sourcesResponse.json(), categoriesResponse.json(),
             ]);
             if (!reviewResponse.ok) throw new Error(reviewPayload.error || 'Could not load review queue');
-            if (!accountsResponse.ok) throw new Error(accountsPayload.error || 'Could not load accounts');
+            if (!sourcesResponse.ok) throw new Error(sourcesPayload.error || 'Could not load sources');
             if (!categoriesResponse.ok) throw new Error(categoriesPayload.error || 'Could not load categories');
             const nextCandidates = (reviewPayload.data || []) as FinanceCandidateTransaction[];
             setCandidates(nextCandidates);
-            setAccounts(accountsPayload.data || []);
+            setSources(sourcesPayload.data || []);
             setCategories(categoriesPayload.data || []);
             setSelectedId((current) => nextCandidates.some((item) => item.id === current) ? current : nextCandidates[0]?.id || '');
         } catch (error) {
@@ -107,7 +106,6 @@ export default function FinanceReviewPage() {
         <AppShell contentClassName="p-5 md:p-8">
             <div className="mx-auto max-w-7xl">
                 <header className="pb-5"><h1>Review queue</h1><p className="mt-1 text-sm text-text-muted">Confirm or correct transactions that need human judgment.</p></header>
-                <FinanceNav currentPath="/finance/review" />
 
                 <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
                     <section className="border border-border-default bg-bg-surface">
@@ -128,7 +126,7 @@ export default function FinanceReviewPage() {
                                 <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
                                     <label className="space-y-2"><span className="text-sm text-text-secondary">Direction</span><Select value={form.direction} onChange={(direction) => setForm({ ...form, direction: direction as FinanceTransactionDirection, category_id: '' })} options={[{ value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }, { value: 'transfer', label: 'Transfer' }]} /></label>
                                     <label className="space-y-2"><span className="text-sm text-text-secondary">Amount</span><Input required type="number" min="0.01" step="0.01" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} /></label>
-                                    <label className="space-y-2"><span className="text-sm text-text-secondary">Account</span><Select value={form.account_id} onChange={(account_id) => setForm({ ...form, account_id })} placeholder="Choose an account" options={accounts.filter((account) => !account.is_archived).map((account) => ({ value: account.id, label: account.name }))} /></label>
+                                <label className="space-y-2"><span className="text-sm text-text-secondary">Source</span><Select value={form.source_id} onChange={(source_id) => setForm({ ...form, source_id })} placeholder="Choose a source" options={sources.filter((source) => !source.is_archived).map((source) => ({ value: source.id, label: source.name }))} /></label>
                                     <label className="space-y-2"><span className="text-sm text-text-secondary">Category</span><Select value={form.category_id} onChange={(category_id) => setForm({ ...form, category_id })} placeholder="Uncategorised" options={[{ value: '', label: 'Uncategorised' }, ...availableCategories.map((category) => ({ value: category.id, label: category.name }))]} /></label>
                                     <label className="space-y-2"><span className="text-sm text-text-secondary">Merchant or payee</span><Input value={form.merchant} onChange={(event) => setForm({ ...form, merchant: event.target.value })} /></label>
                                     <label className="space-y-2"><span className="text-sm text-text-secondary">Date</span><Input required type="date" value={form.transaction_date} onChange={(event) => setForm({ ...form, transaction_date: event.target.value })} /></label>

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import {
     authorizeFinance,
-    getOwnedFinanceAccount,
+    getOwnedFinanceSource,
     getOwnedFinanceCategory,
     isFinanceTransactionDirection,
     jsonError,
@@ -12,7 +12,7 @@ import {
     toRequiredText,
 } from '@/lib/finance/api';
 import { parseFinanceText } from '@/lib/finance/parser';
-import { FinanceAccount, FinanceCandidatePayload, FinanceRule } from '@/lib/types';
+import { FinanceCandidatePayload, FinanceRule, FinanceSource } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -67,16 +67,16 @@ export async function POST(request: NextRequest) {
         }
 
         if (action === 'retry') {
-            const [accountsResult, rulesResult] = await Promise.all([
-                admin.from('finance_accounts').select('*').eq('user_id', session.user.id).eq('is_archived', false),
+            const [sourcesResult, rulesResult] = await Promise.all([
+                admin.from('finance_sources').select('*').eq('user_id', session.user.id).eq('is_archived', false),
                 admin.from('finance_rules').select('*').eq('user_id', session.user.id).eq('is_active', true),
             ]);
-            if (accountsResult.error) throw accountsResult.error;
+            if (sourcesResult.error) throw sourcesResult.error;
             if (rulesResult.error) throw rulesResult.error;
             const parsed = parseFinanceText(
                 candidate.intake?.ocr_text || '',
                 (rulesResult.data || []) as FinanceRule[],
-                (accountsResult.data || []).map((account) => ({ ...account, opening_balance: Number(account.opening_balance) })) as FinanceAccount[]
+                (sourcesResult.data || []) as FinanceSource[]
             );
             const { data, error } = await admin
                 .from('finance_candidate_transactions')
@@ -94,17 +94,17 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'This looks like an existing transaction. Confirm it as a duplicate override to continue.' }, { status: 409 });
         }
 
-        const accountId = toRequiredText(body.account_id);
+        const sourceId = toRequiredText(body.source_id);
         const categoryId = toNullableText(body.category_id);
         const amount = toPositiveNumber(body.amount);
         const transactionDate = normalizeDate(body.transaction_date);
-        if (!accountId) return jsonError('Account is required');
+        if (!sourceId) return jsonError('Source is required');
         if (!amount) return jsonError('Amount must be greater than zero');
         if (!transactionDate) return jsonError('Transaction date is required');
         if (!isFinanceTransactionDirection(body.direction)) return jsonError('Select a valid transaction direction');
 
-        const account = await getOwnedFinanceAccount(session.user.id, accountId);
-        if (!account) return jsonError('Account not found', 404);
+        const source = await getOwnedFinanceSource(session.user.id, sourceId);
+        if (!source) return jsonError('Source not found', 404);
         if (categoryId) {
             const category = await getOwnedFinanceCategory(session.user.id, categoryId);
             if (!category) return jsonError('Category not found', 404);
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
 
         const transactionData = {
             user_id: session.user.id,
-            account_id: accountId,
+            source_id: sourceId,
             category_id: categoryId,
             intake_item_id: candidate.intake_item_id,
             direction: body.direction,
@@ -127,12 +127,12 @@ export async function POST(request: NextRequest) {
         const { data: transaction, error: transactionError } = await admin
             .from('finance_transactions')
             .insert(transactionData)
-            .select('*, account:finance_accounts(*), category:finance_categories(*)')
+            .select('*, finance_source:finance_sources(*), category:finance_categories(*)')
             .single();
         if (transactionError) throw transactionError;
 
         const correctedPayload: Record<string, unknown> = {
-            account_id: accountId,
+            source_id: sourceId,
             category_id: categoryId,
             direction: body.direction,
             amount,
