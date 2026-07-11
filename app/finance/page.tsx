@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowDownRight, ArrowUpRight, ChevronLeft, ChevronRight, ClipboardCheck, List, Plus, Settings2, Tags } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { AppShell } from '@/components/organisms/AppShell';
 import { FinanceDashboardSummary } from '@/lib/types';
@@ -57,13 +57,6 @@ export default function FinancePage() {
                 <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(280px,1fr)]">
                     <section><h2 className="text-base font-bold">Cash flow</h2><div className="mt-3 h-64 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={summary?.daily_cash_flow || []}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="label" /><YAxis width={45} /><Tooltip formatter={(value) => formatCurrencyMYR(Number(value))} /><Bar dataKey="income" name="Income" fill="#2a9d8f" radius={[3, 3, 0, 0]} /><Bar dataKey="expense" name="Spent" fill="#e76f51" radius={[3, 3, 0, 0]} /></BarChart></ResponsiveContainer></div>{!summary?.daily_cash_flow.length && <p className="-mt-36 text-center text-sm text-text-muted">No activity this month.</p>}</section>
                     <section><h2 className="text-base font-bold">Spending by category</h2><div className="mt-3 h-64 w-full"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={summary?.expense_by_category || []} dataKey="amount" nameKey="label" innerRadius="55%" outerRadius="82%" paddingAngle={2}>{(summary?.expense_by_category || []).map((item, index) => <Cell key={item.label} fill={CHART_COLORS[index % CHART_COLORS.length]} />)}</Pie><Tooltip formatter={(value) => formatCurrencyMYR(Number(value))} /></PieChart></ResponsiveContainer></div><div className="space-y-2">{(summary?.expense_by_category || []).slice(0, 5).map((item, index) => <div key={item.label} className="flex items-center justify-between gap-3 text-sm"><span className="flex min-w-0 items-center gap-2"><span className="size-2.5 shrink-0" style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }} /><span className="truncate">{item.label}</span></span><span>{formatCurrencyMYR(item.amount)}</span></div>)}</div></section>
-                </div>
-
-                <div className="mt-7 flex flex-wrap gap-2 border-y border-border-default py-3 text-sm font-semibold">
-                    <Link href="/finance/transactions" className="btn-secondary"><List size={15} className="mr-2" />Transactions</Link>
-                    <Link href="/finance/categories" className="btn-secondary"><Tags size={15} className="mr-2" />Categories</Link>
-                    <Link href="/finance/rules" className="btn-secondary"><Settings2 size={15} className="mr-2" />Rules</Link>
-                    <Link href="/finance/review" className="btn-secondary"><ClipboardCheck size={15} className="mr-2" />Review ({summary?.review_count || 0})</Link>
                 </div>
 
                 <section className="mt-6"><div className="flex items-center justify-between"><h2 className="text-base font-bold">Recent transactions</h2><Link href="/finance/transactions" className="text-sm font-semibold text-accent-blue hover:underline">View all</Link></div><div className="mt-3 divide-y divide-border-default border-y border-border-default">{(summary?.recent_transactions || []).map((transaction) => { const isIncome = transaction.direction === 'income'; return <div key={transaction.id} className="flex items-center justify-between gap-4 py-4"><div className="flex min-w-0 items-center gap-3">{isIncome ? <ArrowDownRight size={18} className="shrink-0 text-success" /> : <ArrowUpRight size={18} className="shrink-0 text-error" />}<div className="min-w-0"><p className="truncate font-semibold">{transaction.merchant || 'Untitled transaction'}</p><p className="truncate text-sm text-text-muted">{transaction.finance_source?.name || 'Unknown source'} · {transaction.transaction_date}</p></div></div><p className={isIncome ? 'font-bold text-success' : 'font-bold text-error'}>{isIncome ? '+' : '-'}{formatCurrencyMYR(transaction.amount)}</p></div>; })}{!summary?.recent_transactions.length && <p className="py-10 text-center text-sm text-text-muted">No transactions yet.</p>}</div></section>
