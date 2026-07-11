@@ -69,14 +69,14 @@ function parseDirection(text: string): FinanceTransactionDirection | null {
 
 function cleanMerchant(value: string) {
     return value
-        .replace(/^(?:to|merchant|recipient|payee)\s*[:\-]?\s*/i, '')
+        .replace(/^(?:to|from|merchant|recipient|payee|sender)\s*[:\-]?\s*/i, '')
         .replace(/\s{2,}/g, ' ')
         .trim();
 }
 
 function parseMerchant(lines: string[]) {
     for (const line of lines) {
-        if (/^(?:to|merchant|recipient|payee)\s*[:\-]/i.test(line)) {
+        if (/^(?:to|from|merchant|recipient|payee|sender)\s*[:\-]/i.test(line)) {
             const merchant = cleanMerchant(line);
             if (merchant.length >= 2) return merchant;
         }
@@ -133,14 +133,31 @@ export function parseFinanceText(text: string, rules: FinanceRule[], accounts: F
     };
 
     let matchedRuleId: string | null = null;
+    const parsedMerchant = payload.merchant;
+    let accountAssigned = false;
+    let categoryAssigned = false;
+    let directionAssigned = false;
+    let merchantAssigned = false;
     for (const rule of [...rules].filter((rule) => rule.is_active).sort((a, b) => a.priority - b.priority)) {
-        if (!ruleMatches(rule, normalized, payload.merchant)) continue;
+        if (!ruleMatches(rule, normalized, parsedMerchant)) continue;
         matchedRuleId ??= rule.id;
         payload.matched_rule_names.push(rule.name);
-        if (rule.category_id) payload.category_id = rule.category_id;
-        if (rule.account_id) payload.account_id = rule.account_id;
-        if (rule.direction) payload.direction = rule.direction;
-        if (rule.match_type === 'merchant_alias') payload.merchant = rule.name;
+        if (rule.category_id && !categoryAssigned) {
+            payload.category_id = rule.category_id;
+            categoryAssigned = true;
+        }
+        if (rule.account_id && !accountAssigned) {
+            payload.account_id = rule.account_id;
+            accountAssigned = true;
+        }
+        if (rule.direction && !directionAssigned) {
+            payload.direction = rule.direction;
+            directionAssigned = true;
+        }
+        if (rule.match_type === 'merchant_alias' && !merchantAssigned) {
+            payload.merchant = rule.name;
+            merchantAssigned = true;
+        }
     }
 
     let confidence = 0;
