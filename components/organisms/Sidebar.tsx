@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { AppModuleSlug } from '@/lib/rbac/constants';
 import { AppModuleMetadata } from '@/lib/rbac/types';
 import { useAccess } from '@/lib/contexts/AccessContext';
+import { CategoryDoodleIcon, SourceDoodleIcon } from '@/components/atoms/DoodleIcons';
 import {
     BarChart3,
     BookOpen,
@@ -386,6 +387,18 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
                                 icon: <ClipboardCheck size={14} />,
                                 isActive: isExactPath(pathname, '/finance/review'),
                                 label: 'Review',
+                            })}
+                            {renderSubItem({
+                                href: '/finance/sources',
+                                icon: <SourceDoodleIcon className="size-4" />,
+                                isActive: isExactPath(pathname, '/finance/sources'),
+                                label: 'Sources',
+                            })}
+                            {renderSubItem({
+                                href: '/finance/categories',
+                                icon: <CategoryDoodleIcon className="size-4" />,
+                                isActive: isExactPath(pathname, '/finance/categories'),
+                                label: 'Categories',
                             })}
                             {renderSubItem({
                                 href: '/finance/rules',

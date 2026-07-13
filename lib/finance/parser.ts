@@ -4,6 +4,8 @@ import {
     FinanceRule,
     FinanceTransactionDirection,
 } from '@/lib/types';
+import { FINANCE_V1_CURRENCY } from '@/lib/finance/constants';
+import { normalizeFinanceMerchantKey } from '@/lib/finance/normalizer';
 
 interface ParsedCandidate {
     confidence: number;
@@ -96,7 +98,7 @@ function parseMerchant(lines: string[]) {
 
 function parseReference(text: string) {
     const match = text.match(/(?:reference|ref(?:erence)?\s*(?:no\.?)?)\s*[:#-]?\s*([A-Z0-9-]{5,})/i);
-    return match?.[1] ?? null;
+    return match?.[1]?.normalize('NFKC').trim().toUpperCase() ?? null;
 }
 
 function inferSource(text: string, sources: FinanceSource[]) {
@@ -109,38 +111,68 @@ function inferSource(text: string, sources: FinanceSource[]) {
 function ruleMatches(rule: FinanceRule, text: string, merchant: string | null) {
     const pattern = rule.pattern.trim().toLowerCase();
     if (!pattern) return false;
-    if (rule.match_type === 'merchant_alias') return Boolean(merchant?.toLowerCase().includes(pattern));
+    if (rule.match_type === 'merchant_alias') {
+        if (rule.auto_created_at) {
+            return Boolean(
+                merchant
+                && normalizeFinanceMerchantKey(merchant) === normalizeFinanceMerchantKey(rule.pattern)
+            );
+        }
+        return Boolean(merchant?.toLowerCase().includes(pattern));
+    }
     return text.includes(pattern);
 }
 
-export function parseFinanceText(text: string, rules: FinanceRule[], sources: FinanceSource[]): ParsedCandidate {
-    const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+const matchTypeRank: Record<FinanceRule['match_type'], number> = {
+    exact_phrase: 0,
+    merchant_alias: 1,
+    keyword: 2,
+    account_hint: 3,
+};
+
+function compareFinanceRules(left: FinanceRule, right: FinanceRule) {
+    return left.priority - right.priority
+        || matchTypeRank[left.match_type] - matchTypeRank[right.match_type]
+        || (left.source === right.source ? 0 : left.source === 'manual' ? -1 : 1)
+        || left.created_at.localeCompare(right.created_at)
+        || left.id.localeCompare(right.id);
+}
+
+export function parseFinanceText(normalizedText: string, rules: FinanceRule[], sources: FinanceSource[]): ParsedCandidate {
+    const lines = normalizedText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
     const normalized = lines.join('\n').toLowerCase();
     const payload: FinanceCandidatePayload = {
         amount: parseAmount(lines),
+        currency: FINANCE_V1_CURRENCY,
         merchant: parseMerchant(lines),
-        direction: parseDirection(text),
-        transaction_date: parseTransactionDate(text),
-        source_id: inferSource(text, sources.filter((source) => !source.is_archived)),
+        direction: parseDirection(normalizedText),
+        transaction_date: parseTransactionDate(normalizedText),
+        source_id: inferSource(normalizedText, sources.filter((source) => !source.is_archived)),
         category_id: null,
-        reference: parseReference(text),
+        reference_number: parseReference(normalizedText),
         matched_rule_names: [],
         duplicate_transaction_id: null,
     };
 
-    let matchedRuleId: string | null = null;
+    let firstMatchedRuleId: string | null = null;
+    let categoryMatchedRuleId: string | null = null;
     const parsedMerchant = payload.merchant;
-    let sourceAssigned = false;
+    const inferredSourceId = payload.source_id;
+    const inferredDirection = payload.direction;
+    let sourceAssigned = Boolean(inferredSourceId);
     let categoryAssigned = false;
     let directionAssigned = false;
     let merchantAssigned = false;
-    for (const rule of [...rules].filter((rule) => rule.is_active).sort((a, b) => a.priority - b.priority)) {
+    for (const rule of [...rules].filter((rule) => rule.is_active).sort(compareFinanceRules)) {
         if (!ruleMatches(rule, normalized, parsedMerchant)) continue;
-        matchedRuleId ??= rule.id;
+        if (rule.auto_created_at && rule.source_id && rule.source_id !== inferredSourceId) continue;
+        if (rule.auto_created_at && inferredDirection && rule.direction && rule.direction !== inferredDirection) continue;
+        firstMatchedRuleId ??= rule.id;
         payload.matched_rule_names.push(rule.name);
         if (rule.category_id && !categoryAssigned) {
             payload.category_id = rule.category_id;
             categoryAssigned = true;
+            categoryMatchedRuleId = rule.id;
         }
         if (rule.source_id && !sourceAssigned) {
             payload.source_id = rule.source_id;
@@ -163,6 +195,7 @@ export function parseFinanceText(text: string, rules: FinanceRule[], sources: Fi
     if (payload.direction) confidence += 0.1;
     if (payload.source_id) confidence += 0.1;
     if (payload.category_id) confidence += 0.05;
+    const matchedRuleId = categoryMatchedRuleId ?? firstMatchedRuleId;
     if (matchedRuleId) confidence += 0.05;
 
     return { confidence: Math.min(Number(confidence.toFixed(2)), 1), matchedRuleId, payload };

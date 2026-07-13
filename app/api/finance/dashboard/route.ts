@@ -10,6 +10,9 @@ export async function GET(request: NextRequest) {
         if ('response' in session) return session.response;
 
         const requestedMonth = request.nextUrl.searchParams.get('month');
+        if (requestedMonth && !/^\d{4}-(0[1-9]|1[0-2])$/.test(requestedMonth)) {
+            return jsonError('Month must use YYYY-MM format');
+        }
         const currentMonth = requestedMonth && /^\d{4}-(0[1-9]|1[0-2])$/.test(requestedMonth)
             ? requestedMonth
             : new Date().toISOString().slice(0, 7);
@@ -20,15 +23,16 @@ export async function GET(request: NextRequest) {
         const [monthResult, recentResult, intakeResult] = await Promise.all([
             admin
                 .from('finance_transactions')
-                .select('amount, direction, transaction_date, category_id, category:finance_categories(name)')
+                .select('amount, direction, transaction_date, category_id, category:dim_finance_categories(name)')
                 .eq('user_id', session.user.id)
                 .eq('status', 'confirmed')
                 .gte('transaction_date', monthStart)
                 .lt('transaction_date', nextMonthStart),
             admin
                 .from('finance_transactions')
-                .select('*, finance_source:finance_sources(*), category:finance_categories(*)')
+                .select('*, finance_source:dim_finance_sources(*), category:dim_finance_categories(*)')
                 .eq('user_id', session.user.id)
+                .eq('status', 'confirmed')
                 .order('transaction_date', { ascending: false })
                 .order('created_at', { ascending: false })
                 .limit(6),
