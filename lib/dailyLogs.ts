@@ -60,7 +60,7 @@ export function normalizeDailyLogEntry(row: unknown): DailyLogEntry {
 
     return {
         id: asString(raw.id) ?? '',
-        user_id: asString(raw.user_id) ?? '',
+        user_id: asString(raw.user_id) ?? null,
         source: coerceLogSource(raw.source),
         content,
         effective_date: normalizedEffectiveDate,

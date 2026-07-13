@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { buildCachedProfile, clearCachedProfile, setCachedProfile } from '@/lib/auth/profileCache';
+import { normalizeAppRedirectPath } from '@/lib/auth/redirects';
 import { Mail, ArrowLeft, CheckCircle, Lock } from 'lucide-react';
 import { LoaderOne } from '@/components/atoms/Loader';
 
@@ -37,12 +38,9 @@ export default function LoginPage() {
         const urlCode = params.get('code');
         const tokenHash = params.get('token_hash') ?? params.get('token');
         const type = params.get('type');
-        const requestedNext = params.get('next') ?? '/';
         const nextPath = type === 'recovery'
             ? '/reset-password'
-            : requestedNext.startsWith('/')
-                ? requestedNext
-                : '/';
+            : normalizeAppRedirectPath(params.get('next'));
 
         if (!urlCode && !(tokenHash && type)) return;
 

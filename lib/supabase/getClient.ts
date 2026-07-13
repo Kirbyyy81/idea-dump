@@ -1,14 +1,10 @@
 import { ResolvedIdentity } from '@/lib/auth/resolveIdentity';
-import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 /**
- * Get the appropriate Supabase client based on identity role.
- * - Admin users get the regular client (respects RLS)
- * - Agent users get the admin client (bypasses RLS)
+ * Application-table access is server-only. Callers must authorize the identity
+ * and scope every query before using this service-role client.
  */
-export async function getClientForIdentity(identity: ResolvedIdentity) {
-    return identity.role === 'agent'
-        ? createAdminClient()
-        : await createClient();
+export async function getClientForIdentity(_identity: ResolvedIdentity) {
+    return createAdminClient();
 }

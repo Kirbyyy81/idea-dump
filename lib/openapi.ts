@@ -19,7 +19,7 @@ export function getOpenApiSpec() {
         required: ['id', 'user_id', 'source', 'content', 'effective_date', 'created_at', 'updated_at'],
         properties: {
             id: { type: 'string', format: 'uuid' },
-            user_id: { type: 'string', format: 'uuid' },
+            user_id: { type: 'string', format: 'uuid', nullable: true },
             source: { type: 'string', enum: ['agent', 'human'] },
             content: dailyLogContentSchema,
             effective_date: { type: 'string', format: 'date' },
@@ -521,9 +521,20 @@ export function getOpenApiSpec() {
                 },
             },
             '/api/film/rolls/{id}/cover': {
+                get: {
+                    summary: 'Read a private film roll cover image',
+                    description: 'Authenticates the current user, verifies roll ownership, and proxies the private Storage object.',
+                    parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+                    responses: {
+                        200: { description: 'Film cover image' },
+                        401: { description: 'Authentication required' },
+                        403: { description: 'Film Journal access required' },
+                        404: { description: 'Film cover not found' },
+                    },
+                },
                 post: {
                     summary: 'Upload a film roll cover image',
-                    description: 'Uploads JPEG, PNG, or WebP cover images to Supabase Storage and stores the resulting URL/path on the roll.',
+                    description: 'Validates and uploads JPEG, PNG, or WebP to private Storage, then stores a same-origin proxy URL on the roll.',
                     parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
                     requestBody: {
                         required: true,
@@ -540,7 +551,7 @@ export function getOpenApiSpec() {
                         },
                     },
                     responses: {
-                        200: { description: 'Updated film roll with cover image URL' },
+                        200: { description: 'Updated film roll with private cover proxy URL' },
                         400: { description: 'Validation error', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
                         404: { description: 'Film roll not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
                     },

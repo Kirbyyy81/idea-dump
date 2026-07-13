@@ -1,224 +1,177 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { authorizeSessionModule } from '@/lib/rbac/guards';
-import { canAccessModule, getUserAppAccess } from '@/lib/rbac/access';
-import { Project } from '@/lib/types';
+import {
+    createOwnedProject,
+    type CreateProjectRecord,
+    deleteOwnedProject,
+    getOwnedProject,
+    listOwnedProjects,
+    type UpdateProjectRecord,
+    updateOwnedProject,
+} from '@/lib/projects/repository';
+import { canAccessModule, getSessionUserAppAccess } from '@/lib/rbac/access';
+import {
+    authorizeSessionModule,
+    createForbiddenModuleResponse,
+    createUnauthorizedResponse,
+} from '@/lib/rbac/guards';
+import type { Priority } from '@/lib/types';
 
-const demoProject: Project = {
-    id: '1',
-    user_id: 'demo',
-    title: 'IdeaDump',
-    description: 'A Notion-inspired, deployable web app to centralize, track, and manage all your PRDs and project ideas.',
-    prd_content: `# IdeaDump - Personal PRD Management Hub
+const PRIORITIES: Priority[] = ['low', 'medium', 'high'];
 
-A Notion-inspired, deployable web app to centralize, track, and manage all your PRDs and project ideas.
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
-## Overview
+function requiredText(value: unknown) {
+    return typeof value === 'string' ? value.trim() : '';
+}
 
-**Problem**: PRDs are scattered across different locations, making it hard to track progress and pick up where you left off.
+function nullableText(value: unknown) {
+    if (value === null || value === '') return null;
+    return typeof value === 'string' ? value.trim() || null : undefined;
+}
 
-**Solution**: IdeaDump - a clean, personal hub where you can:
-- Import and store all PRDs (markdown format)
-- Track project status through defined stages
-- Add notes/journal entries per project
-- Link to GitHub repos
-- Access from any device
+function isPriority(value: unknown): value is Priority {
+    return PRIORITIES.includes(value as Priority);
+}
 
-## Tech Stack
+function parseCreateProject(body: unknown) {
+    if (!isRecord(body)) return { error: 'Request body must be an object' };
 
-| Layer | Technology |
-|-------|------------|
-| Frontend | Next.js 14 (App Router) + TypeScript |
-| Styling | shadcn/ui + Tailwind CSS |
-| Database | Supabase (PostgreSQL) |
-| Auth | Supabase Magic Link |
-| Hosting | Vercel |
-`,
-    github_url: 'https://github.com/user/ideadump',
-    deploy_url: 'https://ideadump.example.com',
-    priority: 'high',
-    completed: false,
-    archived: false,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-};
+    const title = requiredText(body.title);
+    if (!title) return { error: 'Title is required' };
+    if (body.priority !== undefined && !isPriority(body.priority)) {
+        return { error: 'Priority must be low, medium, or high' };
+    }
 
-// GET /api/projects - List all projects or get single project by ID
+    for (const field of ['description', 'prd_content', 'github_url', 'deploy_url'] as const) {
+        if (body[field] !== undefined && nullableText(body[field]) === undefined) {
+            return { error: `${field} must be a string or null` };
+        }
+    }
+
+    const data: CreateProjectRecord = {
+        title,
+        description: nullableText(body.description) ?? null,
+        prd_content: nullableText(body.prd_content) ?? null,
+        github_url: nullableText(body.github_url) ?? null,
+        deploy_url: nullableText(body.deploy_url) ?? null,
+        priority: isPriority(body.priority) ? body.priority : 'medium',
+    };
+
+    return { data };
+}
+
+function parseUpdateProject(body: unknown) {
+    if (!isRecord(body)) return { error: 'Request body must be an object' };
+
+    const id = requiredText(body.id);
+    if (!id) return { error: 'Project ID is required' };
+
+    const data: UpdateProjectRecord = {};
+    if (body.title !== undefined) {
+        const title = requiredText(body.title);
+        if (!title) return { error: 'Title is required' };
+        data.title = title;
+    }
+
+    for (const field of ['description', 'prd_content', 'github_url', 'deploy_url'] as const) {
+        if (body[field] === undefined) continue;
+        const value = nullableText(body[field]);
+        if (value === undefined) return { error: `${field} must be a string or null` };
+        data[field] = value;
+    }
+
+    if (body.priority !== undefined) {
+        if (!isPriority(body.priority)) return { error: 'Priority must be low, medium, or high' };
+        data.priority = body.priority;
+    }
+    if (body.completed !== undefined) {
+        if (typeof body.completed !== 'boolean') return { error: 'completed must be a boolean' };
+        data.completed = body.completed;
+    }
+    if (body.archived !== undefined) {
+        if (typeof body.archived !== 'boolean') return { error: 'archived must be a boolean' };
+        data.archived = body.archived;
+    }
+
+    return { data, id };
+}
+
+// GET /api/projects - List owned projects or fetch one owned project.
+// Ticket users may read their own project metadata for ticket forms.
 export async function GET(request: NextRequest) {
     try {
-        const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-
-        const { searchParams } = new URL(request.url);
-        const id = searchParams.get('id');
-
-        // IF NO USER, RETURN MOCK DATA (For Main Branch Demo)
-        if (!user) {
-            if (id) {
-                if (id === '1') return NextResponse.json({ data: demoProject });
-                return NextResponse.json({ data: null });
-            }
-            return NextResponse.json({ data: [demoProject] });
+        const session = await getSessionUserAppAccess();
+        if (!session) return createUnauthorizedResponse();
+        const canReadProjects = canAccessModule(session.access, 'projects');
+        const canReadTicketProjectOptions = canAccessModule(session.access, 'tickets');
+        if (!canReadProjects && !canReadTicketProjectOptions) {
+            return createForbiddenModuleResponse();
         }
 
-        const access = await getUserAppAccess(user.id);
-        if (!canAccessModule(access, 'projects') && !canAccessModule(access, 'tickets')) {
-            return NextResponse.json(
-                { error: 'Forbidden', message: 'You do not have access to this module' },
-                { status: 403 }
-            );
-        }
+        const exposeProject = <T extends { id: string; title: string }>(project: T) => (
+            canReadProjects ? project : { id: project.id, title: project.title }
+        );
 
-        // If ID is provided, fetch single project
+        const id = new URL(request.url).searchParams.get('id');
         if (id) {
-            const { data, error } = await supabase
-                .from('projects')
-                .select('*')
-                .eq('id', id)
-                .eq('user_id', user.id)
-                .single();
-
-            if (error) throw error;
-
-            return NextResponse.json({ data });
+            const project = await getOwnedProject(session.user.id, id);
+            if (!project) return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+            return NextResponse.json({ data: exposeProject(project) });
         }
 
-        // Otherwise, fetch all projects
-        const { data, error } = await supabase
-            .from('projects')
-            .select('*')
-            .eq('user_id', user.id)
-            .order('updated_at', { ascending: false });
-
-        if (error) throw error;
-
-        return NextResponse.json({ data });
+        const projects = await listOwnedProjects(session.user.id);
+        return NextResponse.json({ data: projects.map(exposeProject) });
     } catch (error) {
         console.error('Error fetching projects:', error);
-        // Fallback to demo data on error as well for main branch stability
-        if (request.url.includes('id=1')) return NextResponse.json({ data: demoProject });
         return NextResponse.json({ error: 'Failed to fetch projects' }, { status: 500 });
     }
 }
 
-// POST /api/projects - Create a new project
 export async function POST(request: NextRequest) {
     try {
-        const access = await authorizeSessionModule('projects');
-        if ('response' in access) {
-            return access.response;
-        }
+        const session = await authorizeSessionModule('projects');
+        if ('response' in session) return session.response;
 
-        const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
+        const input = parseCreateProject(await request.json());
+        if ('error' in input) return NextResponse.json({ error: input.error }, { status: 400 });
 
-        if (!user) {
-            // Mock creation for demo
-            return NextResponse.json({
-                data: { ...demoProject, id: Date.now().toString(), title: "Demo Project" }
-            }, { status: 201 });
-        }
-
-        const body = await request.json();
-        const { title, description, prd_content, github_url, deploy_url, priority } = body;
-
-        if (!title) {
-            return NextResponse.json({ error: 'Title is required' }, { status: 400 });
-        }
-
-        const { data, error } = await supabase
-            .from('projects')
-            .insert({
-                user_id: user.id,
-                title,
-                description: description || null,
-                prd_content: prd_content || null,
-                github_url: github_url || null,
-                deploy_url: deploy_url || null,
-                priority: priority || 'medium',
-            })
-            .select() // Assuming tags column might still exist in DB but we ignore it
-            .single();
-
-        if (error) throw error;
-
-        return NextResponse.json({ data }, { status: 201 });
+        const project = await createOwnedProject(session.user.id, input.data);
+        return NextResponse.json({ data: project }, { status: 201 });
     } catch (error) {
         console.error('Error creating project:', error);
         return NextResponse.json({ error: 'Failed to create project' }, { status: 500 });
     }
 }
 
-// PUT /api/projects - Update a project
 export async function PUT(request: NextRequest) {
     try {
-        const access = await authorizeSessionModule('projects');
-        if ('response' in access) {
-            return access.response;
-        }
+        const session = await authorizeSessionModule('projects');
+        if ('response' in session) return session.response;
 
-        const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
+        const input = parseUpdateProject(await request.json());
+        if ('error' in input) return NextResponse.json({ error: input.error }, { status: 400 });
 
-        if (!user) {
-            // Mock update
-            return NextResponse.json({ data: demoProject });
-        }
-
-        const body = await request.json();
-        const { id, ...updates } = body;
-
-        if (!id) {
-            return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
-        }
-
-        const { data, error } = await supabase
-            .from('projects')
-            .update({ ...updates, updated_at: new Date().toISOString() })
-            .eq('id', id)
-            .eq('user_id', user.id)
-            .select()
-            .single();
-
-        if (error) throw error;
-
-        return NextResponse.json({ data });
+        const project = await updateOwnedProject(session.user.id, input.id, input.data);
+        if (!project) return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+        return NextResponse.json({ data: project });
     } catch (error) {
         console.error('Error updating project:', error);
         return NextResponse.json({ error: 'Failed to update project' }, { status: 500 });
     }
 }
 
-// DELETE /api/projects - Delete a project
 export async function DELETE(request: NextRequest) {
     try {
-        const access = await authorizeSessionModule('projects');
-        if ('response' in access) {
-            return access.response;
-        }
+        const session = await authorizeSessionModule('projects');
+        if ('response' in session) return session.response;
 
-        const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
+        const id = new URL(request.url).searchParams.get('id');
+        if (!id) return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
 
-        if (!user) {
-            return NextResponse.json({ success: true });
-        }
-
-        const { searchParams } = new URL(request.url);
-        const id = searchParams.get('id');
-
-        if (!id) {
-            return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
-        }
-
-        const { error } = await supabase
-            .from('projects')
-            .delete()
-            .eq('id', id)
-            .eq('user_id', user.id);
-
-        if (error) throw error;
-
+        const deleted = await deleteOwnedProject(session.user.id, id);
+        if (!deleted) return NextResponse.json({ error: 'Project not found' }, { status: 404 });
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Error deleting project:', error);

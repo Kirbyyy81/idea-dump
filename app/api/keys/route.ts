@@ -1,40 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authorizeSessionModule } from '@/lib/rbac/guards';
-import crypto from 'crypto';
+import { hashApiKey } from '@/lib/auth/apiKeys';
+import crypto from 'node:crypto';
 
 // Generate a secure random API key
 function generateApiKey(): string {
     return 'id_' + crypto.randomBytes(32).toString('hex');
 }
 
-// Hash an API key for storage
-function hashApiKey(key: string): string {
-    return crypto.createHash('sha256').update(key).digest('hex');
-}
-
 // GET /api/keys - List all API keys for current user
 export async function GET() {
     try {
-        const access = await authorizeSessionModule('logs');
-        if ('response' in access) {
-            return access.response;
-        }
-
-        const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-
-        if (!user) {
-            // Mock empty list for demo
-            return NextResponse.json({ data: [] });
+        const session = await authorizeSessionModule('logs');
+        if ('response' in session) {
+            return session.response;
         }
 
         const admin = createAdminClient();
         const { data, error } = await admin
             .from('api_keys')
             .select('id, name, created_at, last_used_at')
-            .eq('user_id', user.id)
+            .eq('user_id', session.user.id)
+            .is('revoked_at', null)
             .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -42,7 +30,6 @@ export async function GET() {
         return NextResponse.json({ data });
     } catch (error) {
         console.error('Error fetching API keys:', error);
-        if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return NextResponse.json({ data: [] });
         return NextResponse.json({ error: 'Failed to fetch API keys' }, { status: 500 });
     }
 }
@@ -50,17 +37,17 @@ export async function GET() {
 // POST /api/keys - Create a new API key
 export async function POST(request: NextRequest) {
     try {
-        const access = await authorizeSessionModule('logs');
-        if ('response' in access) {
-            return access.response;
+        const session = await authorizeSessionModule('logs');
+        if ('response' in session) {
+            return session.response;
         }
 
-        const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
         const admin = createAdminClient();
 
-        const body = await request.json();
-        const { name } = body;
+        const body: unknown = await request.json();
+        const name = typeof body === 'object' && body !== null && 'name' in body && typeof body.name === 'string'
+            ? body.name.trim()
+            : '';
 
         if (!name) {
             return NextResponse.json({ error: 'Key name is required' }, { status: 400 });
@@ -69,24 +56,12 @@ export async function POST(request: NextRequest) {
         // Generate new API key
         const apiKey = generateApiKey();
 
-        if (!user) {
-            // Mock creation
-            return NextResponse.json({
-                data: {
-                    id: Date.now().toString(),
-                    name,
-                    created_at: new Date().toISOString(),
-                    key: apiKey
-                }
-            }, { status: 201 });
-        }
-
         const keyHash = hashApiKey(apiKey);
 
         const { data, error } = await admin
             .from('api_keys')
             .insert({
-                user_id: user.id,
+                user_id: session.user.id,
                 key_hash: keyHash,
                 name,
             })
@@ -108,21 +83,15 @@ export async function POST(request: NextRequest) {
     }
 }
 
-// DELETE /api/keys?id=xxx - Delete an API key
+// DELETE /api/keys?id=xxx - Revoke an API key without removing its audit record
 export async function DELETE(request: NextRequest) {
     try {
-        const access = await authorizeSessionModule('logs');
-        if ('response' in access) {
-            return access.response;
+        const session = await authorizeSessionModule('logs');
+        if ('response' in session) {
+            return session.response;
         }
 
-        const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
         const admin = createAdminClient();
-
-        if (!user) {
-            return NextResponse.json({ success: true });
-        }
 
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
@@ -131,17 +100,23 @@ export async function DELETE(request: NextRequest) {
             return NextResponse.json({ error: 'Key ID is required' }, { status: 400 });
         }
 
-        const { error } = await admin
+        const { data, error } = await admin
             .from('api_keys')
-            .delete()
+            .update({ revoked_at: new Date().toISOString() })
             .eq('id', id)
-            .eq('user_id', user.id);
+            .eq('user_id', session.user.id)
+            .is('revoked_at', null)
+            .select('id')
+            .maybeSingle();
 
         if (error) throw error;
+        if (!data) {
+            return NextResponse.json({ error: 'API key not found' }, { status: 404 });
+        }
 
         return NextResponse.json({ success: true });
     } catch (error) {
-        console.error('Error deleting API key:', error);
-        return NextResponse.json({ error: 'Failed to delete API key' }, { status: 500 });
+        console.error('Error revoking API key:', error);
+        return NextResponse.json({ error: 'Failed to revoke API key' }, { status: 500 });
     }
 }

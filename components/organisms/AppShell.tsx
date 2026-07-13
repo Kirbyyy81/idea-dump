@@ -43,6 +43,7 @@ const MODULE_ROUTE_RULES: ModuleRouteRule[] = [
     { prefix: '/log-viewer', module: 'log_viewer' },
     { prefix: '/article-creation', module: 'article_creation' },
     { prefix: '/film', module: 'film_journal' },
+    { prefix: '/finance', module: 'finance' },
     { prefix: '/settings', module: 'settings' },
     { prefix: '/docs', module: 'settings' },
 ];

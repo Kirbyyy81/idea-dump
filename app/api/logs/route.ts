@@ -37,8 +37,10 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ data, next_cursor: nextCursor });
     } catch (err) {
         if (err instanceof AuthError) {
-            // Return empty data for unauthenticated users (demo mode)
-            return NextResponse.json({ data: [], next_cursor: null });
+            return NextResponse.json(
+                { error: 'Unauthorized', message: err.message },
+                { status: err.statusCode }
+            );
         }
         console.error('[GET /api/logs] Unexpected error:', err);
         return NextResponse.json({ error: 'Internal error', message: 'An unexpected error occurred' }, { status: 500 });

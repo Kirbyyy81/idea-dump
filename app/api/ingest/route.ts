@@ -1,7 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
+import { consumeActiveApiKey } from '@/lib/auth/apiKeys';
 import { canAccessModule, getUserAppAccess } from '@/lib/rbac/access';
 import { authorizeSessionModule, createForbiddenModuleResponse } from '@/lib/rbac/guards';
+import { createAdminClient } from '@/lib/supabase/admin';
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function optionalText(value: unknown) {
+    return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function stringTags(value: unknown) {
+    if (!Array.isArray(value)) return [];
+    return value
+        .filter((tag): tag is string => typeof tag === 'string')
+        .map((tag) => tag.trim())
+        .filter(Boolean);
+}
 
 // POST /api/ingest - External API for ingesting projects
 // Headers: { "x-api-key": "your-api-key" }
@@ -17,58 +34,38 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Use service role to verify API key
-        const supabase = createServerClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.SUPABASE_SERVICE_ROLE_KEY!,
-            { cookies: { get: () => undefined, set: () => { }, remove: () => { } } }
-        );
-
-        // Hash the API key and look it up
-        const crypto = await import('crypto');
-        const keyHash = crypto.createHash('sha256').update(apiKey).digest('hex');
-
-        const { data: keyData, error: keyError } = await supabase
-            .from('api_keys')
-            .select('user_id')
-            .eq('key_hash', keyHash)
-            .single();
-
-        if (keyError || !keyData) {
+        const keyData = await consumeActiveApiKey(apiKey);
+        if (!keyData) {
             return NextResponse.json({ error: 'Invalid API key' }, { status: 401 });
         }
 
-        const access = await getUserAppAccess(keyData.user_id);
+        const access = await getUserAppAccess(keyData.userId);
         if (!canAccessModule(access, 'projects')) {
             return createForbiddenModuleResponse();
         }
 
-        // Update last_used_at
-        await supabase
-            .from('api_keys')
-            .update({ last_used_at: new Date().toISOString() })
-            .eq('key_hash', keyHash);
+        const rawBody: unknown = await request.json();
+        if (!isRecord(rawBody)) {
+            return NextResponse.json({ error: 'Request body must be an object' }, { status: 400 });
+        }
 
-        // Parse request body
-        const body = await request.json();
-        const { title, description, prd_content, tags } = body;
-
+        const title = typeof rawBody.title === 'string' ? rawBody.title.trim() : '';
         if (!title) {
             return NextResponse.json({ error: 'Title is required' }, { status: 400 });
         }
 
-        // Create the project
-        const { data, error } = await supabase
+        const admin = createAdminClient();
+        const { data, error } = await admin
             .from('projects')
             .insert({
-                user_id: keyData.user_id,
+                user_id: keyData.userId,
                 title,
-                description: description || null,
-                prd_content: prd_content || null,
+                description: optionalText(rawBody.description),
+                prd_content: optionalText(rawBody.prd_content),
                 priority: 'medium',
-                tags: tags || [],
+                tags: stringTags(rawBody.tags),
             })
-            .select()
+            .select('id, title')
             .single();
 
         if (error) throw error;
