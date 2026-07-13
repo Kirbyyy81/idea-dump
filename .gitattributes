@@ -1,0 +1,2 @@
+document/supabase/schema.sql text eol=lf
+supabase/migrations/*.sql text eol=lf
