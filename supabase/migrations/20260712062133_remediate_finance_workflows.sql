@@ -2899,7 +2899,6 @@ begin
       schedule := '15 3 * * *',
       command := 'select public.finance_refresh_rule_suggestions();',
       database := current_database(),
-      username := current_user,
       active := true
     );
   end if;
