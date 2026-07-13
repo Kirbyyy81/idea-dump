@@ -12,7 +12,7 @@ export async function GET() {
 
         const admin = createAdminClient();
         const { data, error } = await admin
-            .from('film_cameras')
+            .from('dim_film_cameras')
             .select('*')
             .eq('user_id', session.user.id)
             .order('created_at', { ascending: false });
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
 
         const admin = createAdminClient();
         const { data, error } = await admin
-            .from('film_cameras')
+            .from('dim_film_cameras')
             .insert({
                 user_id: session.user.id,
                 name,
@@ -78,7 +78,7 @@ export async function PUT(request: NextRequest) {
 
         const admin = createAdminClient();
         const { data, error } = await admin
-            .from('film_cameras')
+            .from('dim_film_cameras')
             .update(updates)
             .eq('id', id)
             .eq('user_id', session.user.id)
@@ -103,7 +103,7 @@ export async function DELETE(request: NextRequest) {
 
         const admin = createAdminClient();
         const { error } = await admin
-            .from('film_cameras')
+            .from('dim_film_cameras')
             .delete()
             .eq('id', id)
             .eq('user_id', session.user.id);

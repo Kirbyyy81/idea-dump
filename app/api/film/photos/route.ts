@@ -80,7 +80,7 @@ export async function PUT(request: NextRequest) {
                 })
                 .eq('id', photo.film_roll_id)
                 .eq('user_id', session.user.id)
-                .select('*, camera:film_cameras(*)')
+                .select('*, camera:dim_film_cameras(*)')
                 .single();
 
             if (rollError) throw rollError;

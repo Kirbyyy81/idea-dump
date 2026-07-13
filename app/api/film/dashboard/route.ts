@@ -39,7 +39,7 @@ export async function GET() {
         const admin = createAdminClient();
         const [rollsResult, camerasResult, maintenanceResult, photosResult, favoritesResult] = await Promise.all([
             admin.from('film_rolls').select('*').eq('user_id', session.user.id),
-            admin.from('film_cameras').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false }),
+            admin.from('dim_film_cameras').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false }),
             admin.from('film_maintenance_records').select('*').eq('user_id', session.user.id),
             admin.from('film_photos').select('id', { count: 'exact', head: true }).eq('user_id', session.user.id),
             admin.from('film_photos').select('id', { count: 'exact', head: true }).eq('user_id', session.user.id).eq('is_favorite', true),
