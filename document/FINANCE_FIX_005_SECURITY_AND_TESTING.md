@@ -297,7 +297,6 @@ Required database tests:
 - confirmation RPC is atomic and idempotent
 - concurrent confirmation creates one transaction
 - mark-duplicate transition is atomic
-- rule suggestion acceptance is atomic
 - uniqueness and foreign-key constraints work
 - server-only grants deny `anon` and `authenticated`
 - service role can perform intended operations
@@ -331,8 +330,10 @@ At minimum, Playwright should cover:
 5. repeated confirmation creates no duplicate
 6. user marks a candidate duplicate and no transaction is created
 7. user creates/edits/archives sources and categories
-8. user creates a rule and accepts an edited suggestion
-9. dashboard totals and recent list show confirmed transactions only
+8. user creates and manages a manual rule
+9. three matching category corrections create one narrow active learning rule
+10. retry updates a pending candidate without creating a transaction
+11. dashboard totals and recent list show confirmed transactions only
 
 Mock OCR for most browser runs. Run the actual OCR smoke test separately because it is slower and more environment-sensitive.
 

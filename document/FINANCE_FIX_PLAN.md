@@ -80,7 +80,7 @@ The Finance remediation is complete when:
 - dashboard summaries and recent activity use confirmed transactions only
 - raw OCR, normalized OCR, OCR confidence, text hash, currency, and reference data have explicit durable fields
 - duplicate decisions are deterministic, reviewable, and auditable
-- review supports rejection, explicit duplicate marking, audited override, confirmation, retry, and optional rule creation
+- review supports rejection, explicit duplicate marking, audited override, confirmation, and non-confirming retry
 - sources and categories are discoverable and manageable from Finance navigation
 - `PRD_007.md` accurately describes the implemented v1 product decisions
 - the database access model is explicit and consistently enforced

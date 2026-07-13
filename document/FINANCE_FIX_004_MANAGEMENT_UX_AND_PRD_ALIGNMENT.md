@@ -117,7 +117,7 @@ Remove or rewrite open questions that these decisions answer. Keep truly future 
 /finance/review          pending candidate review
 /finance/sources         source management
 /finance/categories      category management
-/finance/rules           rule and suggestion management
+/finance/rules           rule management and display of any retained compatibility suggestions
 ```
 
 Do not add `/finance/accounts` unless the product later introduces actual account semantics.

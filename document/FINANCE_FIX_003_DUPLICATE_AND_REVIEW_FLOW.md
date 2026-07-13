@@ -2,7 +2,7 @@
 
 ## Summary
 
-This fix centralizes duplicate assessment and completes the manual-review actions promised by the Finance design. It adds deterministic duplicate signals, an explicit "Mark duplicate" transition, an audited override, optional rule creation from a correction, editable learning suggestions, and safe rule retries.
+This fix centralizes duplicate assessment and completes the settled manual-review actions. It adds deterministic duplicate signals, an explicit "Mark duplicate" transition, an audited override, and safe non-confirming rule retries.
 
 - **Priority:** High
 - **Recommended delivery:** After Fixes 001 and 002
@@ -27,15 +27,7 @@ The UI shows a possible-duplicate warning and allows "Confirm anyway," but the o
 
 An override should record who overrode it, which transaction it resembled, which signals matched, and why the ledger transaction was still created.
 
-### 5. A correction cannot directly create a rule
-
-The current correction history can later produce suggestions, but the review screen does not let the user intentionally create a safe merchant/category/source rule while the context is visible.
-
-### 6. Rule suggestions cannot be edited before activation
-
-The rules screen supports only activation or dismissal. A useful suggestion may need a cleaner name, narrower pattern, different category, source, direction, or priority before it becomes active.
-
-### 7. Retry behavior is underspecified
+### 5. Retry behavior is underspecified
 
 Retry reapplies current rules to OCR text, but duplicate assessment and state-transition expectations are not centralized. Repeated retries should update the same pending candidate and must not create ledger rows unexpectedly.
 
@@ -48,9 +40,8 @@ After this fix:
 - review supports confirm, reject, retry rules, mark duplicate, and audited duplicate override
 - marking a duplicate never creates a ledger transaction
 - confirming an override remains idempotent through Fix 001
-- users can create a reviewed rule from a correction
-- rule suggestions can be edited before activation
 - rule retry updates the existing candidate safely and reapplies duplicate checks
+- rule retry never creates a ledger transaction automatically in v1
 - future duplicate sweeps can reuse the same core assessment logic
 
 ## Scope
@@ -61,20 +52,24 @@ After this fix:
 - structured duplicate metadata
 - explicit duplicate state transition
 - audited override behavior
-- optional manual rule creation from review
-- editable rule suggestions
 - idempotent rule retry behavior
-- review and rule-management UI updates
+- review UI updates
 - automated tests
 
 ### Not included
 
 - probabilistic/ML duplicate matching
 - automatic deletion of suspected duplicates
+- editable rule drafts created directly from review
+- broad or uncertain rule-suggestion generation
 - recurring-payment detection
 - automatic merging of ledger transactions
 - background duplicate sweep scheduling
 - multiple transactions per screenshot
+
+### V1 rule-learning boundary
+
+Rule learning is deliberately separate from the review actions in this fix. The only automatic v1 learning path is the scheduled three-correction workflow: three matching category corrections for the same normalized merchant, category, direction, and source create one narrow active learning rule. Review does not create a rule draft, patterns outside that exact contract create no suggestion, and retry never creates a transaction.
 
 ## Proposed Duplicate Contract
 
@@ -136,12 +131,9 @@ Do not create a `finance_transactions` row when a candidate is marked duplicate.
 - `app/api/finance/upload/route.ts`
 - `app/api/finance/review/route.ts`
 - `app/api/finance/transactions/route.ts` if manual-entry duplicate warnings are included
-- `app/api/finance/rule-suggestions/route.ts`
-- `app/api/finance/rules/route.ts`
 - `app/finance/review/page.tsx`
-- `app/finance/rules/page.tsx`
 - a new forward migration under `document/migrations/`
-- duplicate, review, rule, API, and browser tests
+- duplicate, review, API, and browser tests
 
 ## Detailed Implementation Plan
 
@@ -293,50 +285,7 @@ In `app/finance/review/page.tsx`:
 
 Avoid presenting "Reject" and "Mark duplicate" as synonyms; they have different analytics and learning meaning.
 
-### Step 9: Add optional rule creation from review
-
-After the user corrects merchant/category/source/direction, offer a rule draft based on the candidate's normalized OCR context.
-
-Recommended safe flow:
-
-1. user confirms the transaction successfully
-2. UI presents or submits a separate rule draft
-3. draft defaults to a narrow `merchant_alias` or `exact_phrase`, never a broad keyword
-4. user can edit name, pattern, category, source, direction, and priority
-5. the normal Finance rule endpoint validates ownership and saves it as a manual active rule
-6. the rule records its originating transaction/candidate if provenance fields are added
-
-Rule creation should not cause a confirmed transaction to roll back. If it fails, show "Transaction confirmed; rule could not be created" and let the user retry rule creation.
-
-### Step 10: Make learning suggestions editable
-
-Add an update action for pending `finance_rule_suggestions`, or allow validated overrides during acceptance.
-
-Editable fields should include:
-
-- display name
-- pattern
-- category
-- direction
-- optional source
-- priority
-- match type, limited to safe allowed values
-
-Recommended endpoint split:
-
-- `PUT/PATCH /api/finance/rule-suggestions`: update a pending suggestion owned by the user
-- existing resolve action: accept or reject the current saved version
-
-On acceptance:
-
-1. lock the pending suggestion
-2. validate referenced source/category ownership and direction compatibility
-3. insert the learning rule
-4. mark the suggestion accepted
-
-The insert/update should be transactional to avoid an active rule with a still-pending suggestion.
-
-### Step 11: Make retry deterministic and idempotent
+### Step 9: Make retry deterministic and idempotent
 
 `retry` should:
 
@@ -348,9 +297,9 @@ The insert/update should be transactional to avoid an active rule with a still-p
 6. record a `review_retried` event
 7. not create a ledger transaction automatically in v1
 
-Repeated retries with unchanged rules/data should produce the same candidate result. If future behavior auto-confirms after retry, that should be a separate product decision using the Fix 001 RPC.
+Repeated retries with unchanged rules/data should produce the same candidate result. Retry is explicitly non-confirming in v1; only the user's separate confirm action may create a ledger transaction.
 
-### Step 12: Prepare the service for future jobs
+### Step 10: Prepare the service for future jobs
 
 Keep the duplicate evaluator callable without an HTTP request so a future Cron duplicate sweep can reuse it. Do not schedule that job in this fix.
 
@@ -361,9 +310,7 @@ Keep the duplicate evaluator callable without an HTTP request so a future Cron d
 3. Compare new assessments with current inline results in logs/metrics without changing decisions.
 4. Switch upload and retry to the centralized service.
 5. Enable explicit mark-duplicate and audited override actions.
-6. Enable rule creation from review.
-7. Enable suggestion editing and transactional acceptance.
-8. Remove the old inline duplicate code after validation.
+6. Remove the old inline duplicate code after validation.
 
 ## Testing Plan
 
@@ -390,22 +337,12 @@ Keep the duplicate evaluator callable without an HTTP request so a future Cron d
 - invalid matched transaction ownership is rejected
 - retry updates the same candidate and creates no transaction
 
-### Rule tests
-
-- a corrected review item can produce a narrow rule draft
-- transaction remains confirmed if optional rule creation fails
-- pending suggestion fields can be edited
-- accepting a suggestion atomically creates one active rule and marks it accepted
-- rejected suggestions create no rule
-- user cannot edit or accept another user's suggestion
-
 ### Browser tests
 
 - review shows duplicate strength and signals
 - user can mark duplicate separately from reject
 - strong override requires explicit confirmation/reason
-- rule draft is editable before creation
-- suggestion is editable before activation
+- retry updates the candidate without creating a transaction
 
 ## Acceptance Criteria
 
@@ -417,10 +354,7 @@ Keep the duplicate evaluator callable without an HTTP request so a future Cron d
 - [ ] Marking duplicate updates candidate/intake and creates no ledger transaction.
 - [ ] Override is explicit, audited, and idempotent.
 - [ ] Retry reapplies rules and duplicate assessment to the existing candidate without auto-creating a transaction.
-- [ ] Review can create a narrow editable rule from a correction.
-- [ ] Rule suggestions can be edited before activation.
-- [ ] Rule acceptance is transactional with suggestion status update.
-- [ ] Automated tests cover signal precedence, ownership, state transitions, overrides, retries, and rules.
+- [ ] Automated tests cover signal precedence, ownership, state transitions, overrides, and retries.
 
 ## Risks and Mitigations
 
@@ -430,7 +364,6 @@ Keep the duplicate evaluator callable without an HTTP request so a future Cron d
 | Missing fields act like unsafe wildcards. | Reduce scores for missing fields; never treat null as a strong match. |
 | User cannot understand why an item was flagged. | Persist and display named signals and matched transaction details. |
 | Mark-duplicate partially updates state. | Use a transactional database transition like Fix 001. |
-| Rule created from correction is too broad. | Default to exact phrase/merchant alias and require user review. |
 | Retry unexpectedly confirms a transaction. | Keep retry non-confirming in v1 and document the rule. |
 
 ## Rollback

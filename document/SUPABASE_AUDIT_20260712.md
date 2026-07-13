@@ -13,6 +13,22 @@ The audit is intended to answer four questions:
 
 This is a read-only assessment. No database definition, data, authentication setting, Storage setting, or repository source file was changed while gathering the findings.
 
+## Remediation State
+
+The snapshot and advisor counts below still describe the live project. Forward
+migrations and compatible application changes are prepared locally but have not
+yet been applied to production. Do not interpret a local implementation status
+as a live remediation until the migration ledger, advisors, Storage bucket, and
+verification queries have been checked again after the traffic-drained cutover.
+
+The user accepted these residual v1 boundaries:
+
+- leaked-password protection is not being enabled
+- different screenshots may process concurrently for one user; exact-image intake remains serialized
+- duplicate assessment is limited to screenshot candidates, not ordinary manual creates or edits
+- Film Storage cleanup is best-effort, with a private bucket and periodic orphan review instead of a durable cleanup worker
+- learned rules are pause-only and never automatically reactivated after a user pauses them
+
 ---
 
 ## Source of Truth
@@ -743,11 +759,11 @@ Film processing, scanning, and shipping costs reject negative values, while `fil
 
 **Suggested action:** add nonnegative checks if negative purchase and maintenance amounts are not legitimate adjustments.
 
-### Quoted uppercase RBAC identifiers increase operational risk
+### Quoted uppercase RBAC identifiers increase operational risk — remediated in the pending migration
 
 The live database uses quoted mixed-case names such as `"DIM_roles"` and `"BRIDGE_user_roles"`. These names must be quoted exactly in SQL and are easier to reference incorrectly in migrations and tooling.
 
-**Suggested action:** either standardize on lowercase snake_case through a carefully coordinated rename or document and consistently quote the current identifiers. Treat this as a planned compatibility migration, not an urgent production change.
+**Implemented action:** the coordinated compatibility migration renames the RBAC tables to `dim_roles`, `dim_modules`, `bridge_role_modules`, `bridge_user_roles`, and `bridge_user_module_overrides`. It also normalizes the newer domain dimensions to `dim_film_cameras`, `dim_finance_categories`, and `dim_finance_sources`. Film/Finance facts and workflow tables retain their existing names.
 
 ### Broad default table grants make RLS the primary guard
 
@@ -763,7 +779,7 @@ The live database uses quoted mixed-case names such as `"DIM_roles"` and `"BRIDG
 
 1. Revoke public execution of `finance_refresh_rule_suggestions()`.
 2. Set safe function search paths and default function privileges.
-3. Enable leaked-password protection.
+3. Leaked-password protection is an explicitly accepted exception for this remediation.
 4. Re-run the Security Advisor.
 
 ### Phase 2: Authorization design
@@ -813,7 +829,25 @@ The Supabase remediation is complete when:
 - the existing transfer transaction has a deliberate preserved outcome
 - API keys support uniqueness, revocation, expiry, and appropriate scopes
 - Film covers are private or explicitly approved as public, with upload restrictions
-- leaked-password protection is enabled
+- leaked-password protection is either enabled later or remains the explicitly accepted exception recorded above
 - missing foreign-key indexes and inefficient RLS expressions are resolved
 - the Security and Performance Advisors contain no unexplained warnings
-- automated database tests cover RLS, tenant boundaries, constraints, functions, and Storage access
+- manual verification covers RLS, tenant boundaries, constraints, functions, and Storage access during active development; a persistent testing framework is deferred by product decision
+
+---
+
+## Confirmed Final Decisions (36–48)
+
+- Different screenshot OCR jobs may run in parallel; exact-image intake is serialized.
+- Dimension and bridge tables use lowercase `dim_*` and `bridge_*` names, including Film cameras and Finance categories/sources.
+- Rule learning considers all retained latest/current correction evidence.
+- Learned rules are source-specific, require an independently inferred matching source when applied, and are suppressed by an equivalent active manual merchant rule.
+- Learned rules can only be paused or resumed; manual rules remain deletable.
+- Category/source archive operations are transactional RPCs that pause dependent rules.
+- Duplicate assessment remains screenshot-only in v1.
+- Contended Finance ledger mutations fail fast and return a retryable conflict.
+- RBAC role/module/user changes use atomic database RPCs.
+- Film covers and Finance screenshots are limited to 4 MB; users may compress larger images before upload.
+- Private Film cleanup is best-effort, with the documented orphan audit as the operational backstop.
+- The trusted production origin is `https://idea-dump-alpha.vercel.app`.
+- The pending migration set is applied directly to the linked production project after local validation and atomic commits.
