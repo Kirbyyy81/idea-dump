@@ -15,13 +15,18 @@ export const FILM_PROCESS_TYPES: FilmProcessType[] = ['C41', 'E6', 'BW', 'ECN2']
 
 export const FILM_COVER_BUCKET = 'film-covers';
 
-export const FILM_COVER_MAX_BYTES = 5 * 1024 * 1024;
+export const FILM_COVER_MAX_BYTES = 4 * 1024 * 1024;
 
 export const FILM_COVER_MIME_TYPES = [
     'image/jpeg',
     'image/png',
     'image/webp',
 ] as const;
+
+export function getFilmCoverProxyUrl(rollId: string, version?: string) {
+    const path = `/api/film/rolls/${encodeURIComponent(rollId)}/cover`;
+    return version ? `${path}?v=${encodeURIComponent(version)}` : path;
+}
 
 export const DRIVE_IMAGE_MIME_TYPES = [
     'image/jpeg',

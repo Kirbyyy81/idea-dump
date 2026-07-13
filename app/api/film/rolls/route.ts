@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { authorizeFilmJournal, getOwnedFilmCamera, jsonError } from '@/lib/film/api';
+import { authorizeFilmJournal, getOwnedFilmCamera, getOwnedFilmRoll, jsonError } from '@/lib/film/api';
+import { removeFilmCoverObjects } from '@/lib/film/covers';
 import { getStoredFilmRollStatuses, normalizeFilmRoll } from '@/lib/film/status';
 import {
     isFilmFormat,
@@ -63,8 +64,6 @@ function buildRollInsert(body: Record<string, unknown>, userId: string) {
             notes: toNullableText(body.notes),
             drive_folder_id: toNullableText(body.drive_folder_id),
             cover_photo_id: body.cover_photo_id === null ? null : toNullableText(body.cover_photo_id),
-            cover_image_url: toNullableText(body.cover_image_url),
-            cover_image_path: toNullableText(body.cover_image_path),
         },
     };
 }
@@ -119,9 +118,6 @@ function buildRollUpdates(body: Record<string, unknown>) {
     if (body.cover_photo_id !== undefined) {
         updates.cover_photo_id = body.cover_photo_id === null ? null : toNullableText(body.cover_photo_id);
     }
-    if (body.cover_image_url !== undefined) updates.cover_image_url = toNullableText(body.cover_image_url);
-    if (body.cover_image_path !== undefined) updates.cover_image_path = toNullableText(body.cover_image_path);
-
     if (updates.film_name === '') return { error: 'Film name is required' };
     if (updates.brand === '') return { error: 'Brand is required' };
 
@@ -146,7 +142,7 @@ export async function GET(request: NextRequest) {
         const admin = createAdminClient();
         let requestQuery = admin
             .from('film_rolls')
-            .select('*, camera:film_cameras(*), cover_photo:film_photos!film_rolls_cover_photo_id_fkey(*)')
+            .select('*, camera:dim_film_cameras(*), cover_photo:film_photos!film_rolls_cover_photo_id_fkey(*)')
             .eq('user_id', session.user.id)
             .order('created_at', { ascending: false });
 
@@ -187,7 +183,7 @@ export async function POST(request: NextRequest) {
         const { data, error } = await admin
             .from('film_rolls')
             .insert(insert.data)
-            .select('*, camera:film_cameras(*), cover_photo:film_photos!film_rolls_cover_photo_id_fkey(*)')
+            .select('*, camera:dim_film_cameras(*), cover_photo:film_photos!film_rolls_cover_photo_id_fkey(*)')
             .single();
 
         if (error) throw error;
@@ -245,7 +241,7 @@ export async function PUT(request: NextRequest) {
             .update(updateData)
             .eq('id', id)
             .eq('user_id', session.user.id)
-            .select('*, camera:film_cameras(*), cover_photo:film_photos!film_rolls_cover_photo_id_fkey(*)')
+            .select('*, camera:dim_film_cameras(*), cover_photo:film_photos!film_rolls_cover_photo_id_fkey(*)')
             .single();
 
         if (error) throw error;
@@ -264,14 +260,27 @@ export async function DELETE(request: NextRequest) {
         const id = new URL(request.url).searchParams.get('id');
         if (!id) return jsonError('Roll ID is required');
 
+        const roll = await getOwnedFilmRoll(session.user.id, id);
+        if (!roll) return jsonError('Film roll not found', 404);
+
         const admin = createAdminClient();
-        const { error } = await admin
+        const { data: deleted, error } = await admin
             .from('film_rolls')
             .delete()
             .eq('id', id)
-            .eq('user_id', session.user.id);
+            .eq('user_id', session.user.id)
+            .select('id')
+            .maybeSingle();
 
         if (error) throw error;
+        if (!deleted) return jsonError('Film roll not found', 404);
+
+        try {
+            await removeFilmCoverObjects(session.user.id, roll.id);
+        } catch (cleanupError) {
+            console.error('Failed to remove deleted film roll covers:', cleanupError);
+        }
+
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Error deleting film roll:', error);

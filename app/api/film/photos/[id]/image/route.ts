@@ -31,6 +31,7 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
         const res = await fetch(
             `https://www.googleapis.com/drive/v3/files/${photo.drive_file_id}?${driveParams.toString()}`,
             {
+                cache: 'no-store',
                 headers: {
                     Authorization: `Bearer ${accessToken}`,
                 },
@@ -43,9 +44,12 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
 
         return new Response(res.body, {
             headers: {
-                'Cache-Control': 'private, max-age=300',
+                'Cache-Control': 'private, no-store, max-age=0',
                 'Content-Disposition': `inline; filename="${String(photo.name).replaceAll('"', '')}"`,
                 'Content-Type': photo.mime_type || res.headers.get('content-type') || 'image/jpeg',
+                'Pragma': 'no-cache',
+                'Vary': 'Cookie, Authorization',
+                'X-Content-Type-Options': 'nosniff',
             },
         });
     } catch (error) {

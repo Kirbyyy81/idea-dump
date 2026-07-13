@@ -6,6 +6,7 @@ import { CreateDailyLogInput, DailyLogEntry } from '@/lib/types';
 const DEFAULT_SORT_FIELD = 'created_at';
 const DEFAULT_SORT_DIRECTION = 'desc';
 const SUPPORTED_SORT_FIELDS = new Set(['created_at', 'updated_at', 'effective_date']);
+const DAILY_LOG_COLUMNS = 'id, user_id, source, content, effective_date, created_at, updated_at';
 
 interface LogListOptions {
     cursor?: string | null;
@@ -41,7 +42,7 @@ async function fetchLogsForIdentity(identity: ResolvedIdentity, options: LogList
 
     let query = client
         .from('daily_logs')
-        .select('*')
+        .select(DAILY_LOG_COLUMNS)
         .eq('user_id', identity.user_id);
 
     if (options.limit !== undefined) {
@@ -89,7 +90,7 @@ async function findHumanLog(ownerUserId: string, id: string): Promise<Accessible
     const client = createAdminClient();
     const { data, error } = await client
         .from('daily_logs')
-        .select('*')
+        .select(DAILY_LOG_COLUMNS)
         .eq('id', id)
         .eq('user_id', ownerUserId)
         .maybeSingle();
@@ -133,7 +134,7 @@ export async function createLogForIdentity(identity: ResolvedIdentity, body: Cre
             content: body.content,
             effective_date: effectiveDate,
         })
-        .select()
+        .select(DAILY_LOG_COLUMNS)
         .single();
 
     if (error || !data) {
@@ -161,7 +162,7 @@ export async function updateAccessibleLog(identity: ResolvedIdentity, record: Ac
         })
         .eq('id', record.log.id)
         .eq('user_id', record.storageUserId)
-        .select()
+        .select(DAILY_LOG_COLUMNS)
         .single();
 
     if (error) {

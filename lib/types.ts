@@ -33,6 +33,7 @@ export interface ApiKey {
     name: string;
     created_at: string;
     last_used_at: string | null;
+    revoked_at: string | null;
 }
 
 // Status inference logic from PRD
@@ -103,7 +104,7 @@ export interface DailyLogContent {
 
 export interface DailyLogEntry {
     id: string;
-    user_id: string;
+    user_id: string | null;
     source: LogSource;
     content: DailyLogContent;
     effective_date: string;
@@ -291,8 +292,6 @@ export interface CreateFilmRollInput {
     notes?: string;
     drive_folder_id?: string;
     cover_photo_id?: string | null;
-    cover_image_url?: string | null;
-    cover_image_path?: string | null;
 }
 
 export interface UpdateFilmRollInput extends Partial<CreateFilmRollInput> {
@@ -395,3 +394,179 @@ export const filmProcessTypeConfig: Record<FilmProcessType, { label: string }> =
 export const filmTypes: FilmType[] = ['NEGATIVE', 'REVERSAL', 'BW_NEGATIVE'];
 
 export const filmProcessTypes: FilmProcessType[] = ['C41', 'E6', 'BW', 'ECN2'];
+
+export type FinanceCategoryType = 'expense' | 'income';
+export type FinanceTransactionDirection = 'expense' | 'income';
+export type FinanceTransactionSource = 'manual' | 'screenshot';
+export type FinanceTransactionStatus = 'confirmed' | 'review' | 'duplicate' | 'rejected';
+export type FinanceCurrency = 'MYR';
+export type FinanceDuplicateOutcome = 'none' | 'possible' | 'strong';
+export type FinanceDuplicateSignal =
+    | 'image_hash'
+    | 'ocr_text_hash'
+    | 'reference_number'
+    | 'amount'
+    | 'transaction_date'
+    | 'source'
+    | 'merchant';
+
+export interface FinanceSource {
+    id: string;
+    user_id: string;
+    name: string;
+    is_archived: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface FinanceCategory {
+    id: string;
+    user_id: string;
+    name: string;
+    type: FinanceCategoryType;
+    color: string | null;
+    icon: string | null;
+    is_archived: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface FinanceTransaction {
+    id: string;
+    user_id: string;
+    source_id: string;
+    category_id: string | null;
+    intake_item_id: string | null;
+    direction: FinanceTransactionDirection;
+    amount: number;
+    currency: FinanceCurrency;
+    merchant: string | null;
+    reference_number: string | null;
+    transaction_date: string;
+    notes: string | null;
+    source: FinanceTransactionSource;
+    status: FinanceTransactionStatus;
+    created_at: string;
+    updated_at: string;
+    finance_source?: FinanceSource | null;
+    category?: FinanceCategory | null;
+}
+
+export interface FinanceDashboardSummary {
+    month: string;
+    total_expense: number;
+    total_income: number;
+    net_cash_flow: number;
+    review_count: number;
+    recent_transactions: FinanceTransaction[];
+    expense_by_category: Array<{
+        category_id: string | null;
+        label: string;
+        amount: number;
+    }>;
+    daily_cash_flow: Array<{
+        date: string;
+        label: string;
+        income: number;
+        expense: number;
+    }>;
+}
+
+export type FinanceIntakeStatus =
+    | 'pending'
+    | 'processing'
+    | 'review'
+    | 'completed'
+    | 'duplicate'
+    | 'failed'
+    | 'rejected';
+
+export interface FinanceIntakeItem {
+    id: string;
+    user_id: string;
+    source: 'screenshot' | 'notification';
+    status: FinanceIntakeStatus;
+    image_hash: string | null;
+    ocr_text: string | null;
+    ocr_raw_text: string | null;
+    ocr_normalized_text: string | null;
+    ocr_confidence: number | null;
+    ocr_text_hash: string | null;
+    normalizer_version: number | null;
+    received_at: string;
+    processed_at: string | null;
+    error_message: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface FinanceCandidatePayload {
+    amount: number | null;
+    currency: FinanceCurrency;
+    merchant: string | null;
+    direction: FinanceTransactionDirection | null;
+    transaction_date: string | null;
+    source_id: string | null;
+    category_id: string | null;
+    reference_number: string | null;
+    /** Compatibility key retained for candidates created before the OCR contract migration. */
+    reference?: string | null;
+    matched_rule_names: string[];
+    duplicate_transaction_id: string | null;
+}
+
+export interface FinanceCandidateTransaction {
+    id: string;
+    user_id: string;
+    intake_item_id: string;
+    payload: FinanceCandidatePayload;
+    confidence: number | null;
+    matched_rule_id: string | null;
+    confirmed_transaction_id: string | null;
+    duplicate_outcome: FinanceDuplicateOutcome;
+    duplicate_score: number | null;
+    duplicate_signals: FinanceDuplicateSignal[];
+    duplicate_explanation: string | null;
+    duplicate_checked_at: string | null;
+    status: 'pending' | 'accepted' | 'rejected' | 'duplicate';
+    created_at: string;
+    updated_at: string;
+    intake?: FinanceIntakeItem | null;
+    duplicate_transaction?: FinanceTransaction | null;
+}
+
+export interface FinanceRule {
+    id: string;
+    user_id: string;
+    name: string;
+    match_type: 'exact_phrase' | 'merchant_alias' | 'keyword' | 'account_hint';
+    pattern: string;
+    category_id: string | null;
+    source_id: string | null;
+    direction: FinanceTransactionDirection | null;
+    priority: number;
+    is_active: boolean;
+    source: 'manual' | 'learning';
+    auto_created_at: string | null;
+    learning_evidence_count: number | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface FinanceRuleSuggestion {
+    id: string;
+    user_id: string;
+    name: string;
+    pattern: string;
+    match_type: FinanceRule['match_type'];
+    category_id: string;
+    source_id: string | null;
+    direction: 'expense' | 'income';
+    priority: number;
+    evidence_count: number;
+    status: 'pending' | 'accepted' | 'rejected';
+    created_at: string;
+    updated_at: string;
+    category?: FinanceCategory | null;
+    finance_source?: FinanceSource | null;
+}

@@ -1,7 +1,6 @@
 import { NextRequest } from 'next/server';
-import crypto from 'crypto';
 import { createClient } from '@/lib/supabase/server';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { consumeActiveApiKey } from '@/lib/auth/apiKeys';
 
 export type IdentityRole = 'admin' | 'agent';
 
@@ -43,26 +42,20 @@ export async function resolveIdentity(request: NextRequest): Promise<ResolvedIde
     const apiKey = request.headers.get('x-api-key');
 
     if (apiKey) {
-        const admin = createAdminClient();
-        const keyHash = crypto.createHash('sha256').update(apiKey).digest('hex');
-
-        const { data: apiKeyRecord, error } = await admin
-            .from('api_keys')
-            .select('user_id')
-            .eq('key_hash', keyHash)
-            .maybeSingle();
-
-        if (error) {
+        let apiKeyRecord;
+        try {
+            apiKeyRecord = await consumeActiveApiKey(apiKey);
+        } catch {
             throw new AuthError('Agent authentication lookup failed', 500);
         }
 
-        if (!apiKeyRecord?.user_id) {
+        if (!apiKeyRecord) {
             throw new AuthError('Invalid API key', 401);
         }
 
         return {
             role: 'agent',
-            user_id: apiKeyRecord.user_id,
+            user_id: apiKeyRecord.userId,
         };
     }
 

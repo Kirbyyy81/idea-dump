@@ -33,7 +33,7 @@ export async function getOwnedFilmRoll(userId: string, rollId: string) {
 export async function getOwnedFilmCamera(userId: string, cameraId: string) {
     const admin = createAdminClient();
     const { data, error } = await admin
-        .from('film_cameras')
+        .from('dim_film_cameras')
         .select('*')
         .eq('id', cameraId)
         .eq('user_id', userId)

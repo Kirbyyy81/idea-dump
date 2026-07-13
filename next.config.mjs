@@ -12,6 +12,9 @@ function tryGetGitCommitSha() {
 }
 
 const nextConfig = {
+  experimental: {
+    serverComponentsExternalPackages: ['tesseract.js', '@tesseract.js-data/eng'],
+  },
   env: {
     NEXT_PUBLIC_APP_VERSION:
       process.env.npm_package_version ?? 'dev',

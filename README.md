@@ -63,14 +63,16 @@ Copy `.env.example` to `.env.local` and fill in your Supabase values:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=your-supabase-project-url
+APP_ORIGIN=https://idea-dump-alpha.vercel.app
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
 ```
 
 Notes:
 
-- `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are required for auth and normal app usage.
-- `SUPABASE_SERVICE_ROLE_KEY` is required for admin-style server operations such as API key management and access-control management.
+- `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are used by the browser for Supabase Auth only.
+- `SUPABASE_SERVICE_ROLE_KEY` is required by trusted server routes for all application-table access. Never expose it to browser code.
+- `APP_ORIGIN` is the trusted absolute origin used for production Auth redirects. Production defaults to `https://idea-dump-alpha.vercel.app`, but the environment value should be set explicitly and updated with any domain change.
 - Optional build metadata can also be set if you want the Settings page to show custom version info:
 
 ```env
@@ -80,7 +82,11 @@ BUILD_TIME=2026-03-16T00:00:00.000Z
 
 ### 3. Prepare Supabase
 
-Create a Supabase project and apply the SQL files in [document/migrations](D:\Ash Stuff\Coding\idea-dump\document\migrations) so the required tables, role mappings, and log structures exist.
+The canonical Supabase configuration and forward migrations live in [`supabase`](./supabase). The reviewed live schema baseline is [`document/supabase/schema.sql`](./document/supabase/schema.sql); its SHA-256 is recorded by the first canonical migration.
+
+- For the existing production project, apply only unapplied forward migrations. The baseline marker is intentionally a no-op and must not replay the exported schema over production.
+- For a fresh project, restore the schema-only baseline first, then apply the later canonical migrations in timestamp order. Do not run the remediation migrations against an empty database.
+- Treat the older files in [`document/migrations`](./document/migrations) as historical records rather than the current migration ledger.
 
 You should also configure your Supabase auth redirect URLs, including:
 

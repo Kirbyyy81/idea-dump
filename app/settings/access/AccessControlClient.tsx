@@ -384,24 +384,23 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                         return (
                             <div
                                 key={`visibility-${moduleRow.slug}`}
-                                className={`grid grid-cols-1 gap-3 border-b border-border-default px-5 py-3 last:border-b-0 hover:bg-bg-hover md:min-w-[560px] md:grid-cols-[minmax(0,1fr)_108px_96px] md:items-center ${
+                                className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 border-b border-border-default px-5 py-4 last:border-b-0 hover:bg-bg-hover md:min-w-[560px] md:grid-cols-[minmax(0,1fr)_108px_96px] md:gap-4 md:py-3 ${
                                     moduleRow.enabled ? '' : 'bg-bg-subtle text-text-muted'
                                 }`}
                             >
-                                <div className="min-w-0">
+                                <div className="col-span-2 min-w-0 md:col-span-1">
                                     <div className="flex items-center gap-2">
                                         <p className="truncate font-bold text-text-primary">{moduleRow.label}</p>
                                         {isProtected && <Lock size={14} className="shrink-0 text-text-muted" />}
                                     </div>
                                     {moduleRow.description && (
-                                        <p className="mt-0.5 line-clamp-1 text-xs text-text-secondary">
+                                        <p className="mt-0.5 line-clamp-2 text-xs text-text-secondary md:line-clamp-1">
                                             {moduleRow.description}
                                         </p>
                                     )}
                                 </div>
 
-                                <div className="flex items-center justify-between gap-3 md:block">
-                                    <span className="text-xs font-medium uppercase tracking-wide text-text-muted md:hidden">Status</span>
+                                <div className={isProtected ? 'hidden' : 'flex items-center md:block'}>
                                     <Badge
                                         variant={moduleRow.enabled ? 'complete' : 'archived'}
                                         className="capitalize"
@@ -410,9 +409,7 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                                     </Badge>
                                 </div>
 
-                                <div className="flex items-center justify-between gap-3 md:block">
-                                    <span className="text-xs font-medium uppercase tracking-wide text-text-muted md:hidden">Action</span>
-                                    <div className="flex justify-end">
+                                <div className="col-start-2 flex justify-end md:col-start-3">
                                     {isProtected ? (
                                         <Button
                                             type="button"
@@ -421,7 +418,7 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                                             icon={<Lock size={14} />}
                                             className="h-8 px-3 text-xs"
                                         >
-                                            Locked
+                                            Default
                                         </Button>
                                     ) : (
                                         <Button
@@ -436,7 +433,6 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
                                             {moduleRow.enabled ? 'Hide' : 'Show'}
                                         </Button>
                                     )}
-                                    </div>
                                 </div>
                             </div>
                         );

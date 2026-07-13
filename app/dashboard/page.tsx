@@ -10,6 +10,7 @@ import {
     FilePenLine,
     Film,
     FolderKanban,
+    Landmark,
     LayoutDashboard,
     LucideIcon,
     Settings,
@@ -31,6 +32,7 @@ const MODULE_ICONS: Record<string, LucideIcon> = {
     FileSearch,
     Film,
     FolderKanban,
+    Landmark,
     LayoutDashboard,
     Settings,
     ShieldCheck,
@@ -105,7 +107,7 @@ export default function DashboardPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                     {quickLinks.map((item) => {
-                        const Icon = item.icon ? MODULE_ICONS[item.icon] : LayoutDashboard;
+                        const Icon = item.icon ? MODULE_ICONS[item.icon] ?? LayoutDashboard : LayoutDashboard;
 
                         return (
                             <Link key={item.slug} href={item.path} className="block">

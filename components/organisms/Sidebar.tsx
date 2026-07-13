@@ -9,19 +9,23 @@ import { cn } from '@/lib/utils';
 import { AppModuleSlug } from '@/lib/rbac/constants';
 import { AppModuleMetadata } from '@/lib/rbac/types';
 import { useAccess } from '@/lib/contexts/AccessContext';
+import { CategoryDoodleIcon, SourceDoodleIcon } from '@/components/atoms/DoodleIcons';
 import {
     BarChart3,
     BookOpen,
     Camera,
     ChevronRight,
+    ClipboardCheck,
     ClipboardList,
     FilePenLine,
     FileSearch,
     Film,
     FolderKanban,
+    Landmark,
     LayoutDashboard,
     PanelLeftClose,
     Plus,
+    ReceiptText,
     Settings,
     Settings2,
     ShieldCheck,
@@ -54,6 +58,7 @@ const MODULE_ICONS: Record<string, JSX.Element> = {
     FileSearch: <FileSearch size={18} />,
     Film: <Film size={18} />,
     FolderKanban: <FolderKanban size={18} />,
+    Landmark: <Landmark size={18} />,
     ShieldCheck: <ShieldCheck size={18} />,
     Ticket: <Ticket size={18} />,
 };
@@ -80,9 +85,13 @@ function isFilmRoute(pathname: string) {
     return pathname === '/film' || pathname.startsWith('/film/');
 }
 
+function isFinanceRoute(pathname: string) {
+    return pathname === '/finance' || pathname.startsWith('/finance/');
+}
+
 export function Sidebar({ projects, collapsed = false, className, onToggleCollapsed }: SidebarProps) {
     const pathname = usePathname();
-    const [openGroups, setOpenGroups] = useState<Partial<Record<'projects' | 'tickets' | 'film', boolean>>>({});
+    const [openGroups, setOpenGroups] = useState<Partial<Record<'projects' | 'tickets' | 'film' | 'finance', boolean>>>({});
     const access = useAccess();
     const allowedModules = access?.allowedModules ?? [];
     const modules = access?.modules ?? [];
@@ -93,6 +102,7 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
     const isProjectsActive = isProjectRoute(pathname);
     const isTicketsActive = pathname === '/tickets' || pathname.startsWith('/tickets/');
     const isFilmActive = isFilmRoute(pathname);
+    const isFinanceActive = isFinanceRoute(pathname);
     const isAccessControlActive = pathname.startsWith('/settings/access');
     const moduleBySlug = new Map(modules.map((moduleRow) => [moduleRow.slug, moduleRow]));
     const getModuleLabel = (moduleSlug: AppModuleSlug, fallback: string = moduleSlug) =>
@@ -104,6 +114,7 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
         moduleRow.slug !== 'projects' &&
         moduleRow.slug !== 'tickets' &&
         moduleRow.slug !== 'film_journal' &&
+        moduleRow.slug !== 'finance' &&
         canAccessModule(moduleRow.slug)
     );
 
@@ -158,7 +169,7 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
     }: {
         active: boolean;
         children: JSX.Element;
-        group: 'projects' | 'tickets' | 'film';
+        group: 'projects' | 'tickets' | 'film' | 'finance';
         href: string;
         icon: JSX.Element;
         label: string;
@@ -352,6 +363,48 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
                                 icon: <BarChart3 size={14} />,
                                 isActive: isExactPath(pathname, '/film/dashboard'),
                                 label: 'Dashboard',
+                            })}
+                        </div>
+                    ),
+                })}
+
+                {canAccessModule('finance') && renderModuleGroup({
+                    active: isFinanceActive,
+                    group: 'finance',
+                    href: getModulePath('finance', '/finance'),
+                    icon: <Landmark size={18} />,
+                    label: getModuleLabel('finance', 'Finance'),
+                    children: (
+                        <div className="space-y-0.5">
+                            {renderSubItem({
+                                href: '/finance/transactions',
+                                icon: <ReceiptText size={14} />,
+                                isActive: isExactPath(pathname, '/finance/transactions'),
+                                label: 'Transactions',
+                            })}
+                            {renderSubItem({
+                                href: '/finance/review',
+                                icon: <ClipboardCheck size={14} />,
+                                isActive: isExactPath(pathname, '/finance/review'),
+                                label: 'Review',
+                            })}
+                            {renderSubItem({
+                                href: '/finance/sources',
+                                icon: <SourceDoodleIcon className="size-4" />,
+                                isActive: isExactPath(pathname, '/finance/sources'),
+                                label: 'Sources',
+                            })}
+                            {renderSubItem({
+                                href: '/finance/categories',
+                                icon: <CategoryDoodleIcon className="size-4" />,
+                                isActive: isExactPath(pathname, '/finance/categories'),
+                                label: 'Categories',
+                            })}
+                            {renderSubItem({
+                                href: '/finance/rules',
+                                icon: <Settings2 size={14} />,
+                                isActive: isExactPath(pathname, '/finance/rules'),
+                                label: 'Rules',
                             })}
                         </div>
                     ),

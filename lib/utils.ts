@@ -16,12 +16,16 @@ export function formatDate(dateString: string): string {
     });
 }
 
-export function formatCurrencyMYR(value: number): string {
+export function formatCurrency(value: number, currency = 'MYR'): string {
     return new Intl.NumberFormat('en-MY', {
         style: 'currency',
-        currency: 'MYR',
+        currency,
         maximumFractionDigits: 2,
     }).format(value || 0);
+}
+
+export function formatCurrencyMYR(value: number): string {
+    return formatCurrency(value, 'MYR');
 }
 
 // Format relative time (e.g., "2 days ago")

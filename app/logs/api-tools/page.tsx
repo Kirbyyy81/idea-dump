@@ -145,6 +145,7 @@ export default function LogApiToolsPage() {
     const [newKey, setNewKey] = useState<string | null>(null);
     const [keyError, setKeyError] = useState<string | null>(null);
     const [copiedSkill, setCopiedSkill] = useState(false);
+    const [pendingRevokeKeyId, setPendingRevokeKeyId] = useState<string | null>(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -207,15 +208,15 @@ export default function LogApiToolsPage() {
         }
     };
 
-    const handleDeleteKey = async (id: string) => {
-        if (!confirm('Are you sure you want to delete this API key?')) return;
-
+    const handleRevokeKey = async (id: string) => {
         try {
             const res = await fetch(`/api/keys?id=${id}`, { method: 'DELETE' });
-            if (!res.ok) throw new Error('Failed to delete key');
+            if (!res.ok) throw new Error('Failed to revoke key');
             setApiKeys((prev) => prev.filter((key) => key.id !== id));
         } catch (err) {
-            setKeyError(err instanceof Error ? err.message : 'Failed to delete API key');
+            setKeyError(err instanceof Error ? err.message : 'Failed to revoke API key');
+        } finally {
+            setPendingRevokeKeyId(null);
         }
     };
 
@@ -455,13 +456,31 @@ export default function LogApiToolsPage() {
                                                     : ''}
                                             </p>
                                         </div>
-                                        <Button
-                                            variant="ghost"
-                                            onClick={() => handleDeleteKey(key.id)}
-                                            className="text-text-muted hover:text-error hover:bg-error-bg"
-                                            icon={<Trash2 size={18} />}
-                                            aria-label={`Delete ${key.name}`}
-                                        />
+                                        {pendingRevokeKeyId === key.id ? (
+                                            <div className="flex items-center gap-2">
+                                                <Button
+                                                    variant="secondary"
+                                                    onClick={() => handleRevokeKey(key.id)}
+                                                    className="text-error hover:bg-error-bg"
+                                                >
+                                                    Confirm revoke
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    onClick={() => setPendingRevokeKeyId(null)}
+                                                >
+                                                    Cancel
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            <Button
+                                                variant="ghost"
+                                                onClick={() => setPendingRevokeKeyId(key.id)}
+                                                className="text-text-muted hover:text-error hover:bg-error-bg"
+                                                icon={<Trash2 size={18} />}
+                                                aria-label={`Revoke ${key.name}`}
+                                            />
+                                        )}
                                     </div>
                                 ))}
                             </div>
