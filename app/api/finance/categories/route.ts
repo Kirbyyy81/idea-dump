@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
         const name = toRequiredText(body.name);
         if (!name) return jsonError('Category name is required');
         if (!isFinanceTextWithinLength(body.name, 120)) return jsonError('Category name must be 120 characters or fewer');
+        if (!isFinanceTextWithinLength(body.description, 500)) return jsonError('Category description must be 500 characters or fewer');
         if (!isFinanceTextWithinLength(body.color, 50)) return jsonError('Category color must be 50 characters or fewer');
         if (!isFinanceTextWithinLength(body.icon, 100)) return jsonError('Category icon must be 100 characters or fewer');
         if (!isFinanceCategoryType(body.type)) return jsonError('Select a valid category type');
@@ -74,6 +75,7 @@ export async function POST(request: NextRequest) {
                 user_id: session.user.id,
                 name,
                 type: body.type,
+                description: toNullableText(body.description),
                 color: toNullableText(body.color),
                 icon: toNullableText(body.icon),
             })
@@ -138,6 +140,10 @@ export async function PUT(request: NextRequest) {
                 if (isReferenced) return jsonError('A referenced category cannot change between expense and income', 409);
             }
             updates.type = body.type;
+        }
+        if (body.description !== undefined) {
+            if (!isFinanceTextWithinLength(body.description, 500)) return jsonError('Category description must be 500 characters or fewer');
+            updates.description = toNullableText(body.description);
         }
         if (body.color !== undefined) {
             if (!isFinanceTextWithinLength(body.color, 50)) return jsonError('Category color must be 50 characters or fewer');

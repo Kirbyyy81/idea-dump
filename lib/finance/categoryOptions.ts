@@ -1,4 +1,7 @@
-import { FINANCE_DEFAULT_EXPENSE_CATEGORIES } from '@/lib/finance/constants';
+import {
+    FINANCE_DEFAULT_EXPENSE_CATEGORIES,
+    FINANCE_DEFAULT_EXPENSE_CATEGORY_DESCRIPTIONS,
+} from '@/lib/finance/constants';
 import { FinanceCategory, FinanceCategoryType } from '@/lib/types';
 
 const VIRTUAL_DEFAULT_PREFIX = '__virtual_default_expense_category__:';
@@ -93,7 +96,11 @@ export async function persistVirtualDefaultCategory(value: string) {
     const response = await fetch('/api/finance/categories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, type: 'expense' }),
+        body: JSON.stringify({
+            name,
+            type: 'expense',
+            description: FINANCE_DEFAULT_EXPENSE_CATEGORY_DESCRIPTIONS[name as keyof typeof FINANCE_DEFAULT_EXPENSE_CATEGORY_DESCRIPTIONS],
+        }),
     });
     const payload = await response.json();
     if (!response.ok) {
