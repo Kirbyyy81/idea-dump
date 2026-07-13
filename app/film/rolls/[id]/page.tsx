@@ -326,7 +326,9 @@ function RollDetailContent() {
 
                 {activeStep !== 'photobook' && <StatsCards roll={roll} />}
 
-                <StepStepper roll={roll} photos={photos} activeStep={activeStep} rollId={roll.id} />
+                {!(roll.status === 'PROCESSED' && activeStep === 'photobook') && (
+                    <StepStepper roll={roll} photos={photos} activeStep={activeStep} rollId={roll.id} />
+                )}
 
                 {activeStep === 'film' && (
                     <aside className="space-y-6">

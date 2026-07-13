@@ -11,6 +11,7 @@ import { Project } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { AppModuleSlug } from '@/lib/rbac/constants';
 import { useAccess } from '@/lib/contexts/AccessContext';
+import { PUBLIC_AUTH_PATH_PREFIXES } from '@/lib/auth/routes';
 
 interface AppShellProps extends PropsWithChildren {
     contentClassName?: string;
@@ -31,7 +32,6 @@ interface ModuleRouteRule {
 }
 
 const ShellContext = createContext<ShellContextValue | null>(null);
-const PUBLIC_PATH_PREFIXES = ['/login', '/signup', '/reset-password', '/auth'];
 const MODULE_ROUTE_RULES: ModuleRouteRule[] = [
     { prefix: '/settings/access', module: 'access_control', requiresManager: true },
     { prefix: '/dashboard', module: 'dashboard' },
@@ -86,7 +86,7 @@ export function AppShell({
     const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
     const mobileNavRef = useRef<HTMLDivElement>(null);
     const mobileNavTriggerRef = useRef<HTMLButtonElement>(null);
-    const isPublicPath = PUBLIC_PATH_PREFIXES.some((prefix) => matchesPath(pathname, prefix));
+    const isPublicPath = PUBLIC_AUTH_PATH_PREFIXES.some((prefix) => matchesPath(pathname, prefix));
     const routeRule = MODULE_ROUTE_RULES.find((rule) => matchesPath(pathname, rule.prefix));
     const isAccessDenied = Boolean(
         persistent &&
