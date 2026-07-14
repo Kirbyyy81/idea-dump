@@ -160,8 +160,19 @@ export async function POST(request: NextRequest) {
             const parsed = parseFinanceText(
                 normalizedText,
                 (rulesResult.data || []) as FinanceRule[],
-                (sourcesResult.data || []) as FinanceSource[]
+                (sourcesResult.data || []) as FinanceSource[],
+                candidate.intake?.original_filename || null
             );
+            const { error: sourceEvidenceError } = await admin
+                .from('finance_intake_items')
+                .update({
+                    detected_source_id: parsed.payload.source_id,
+                    source_detection_signals: parsed.sourceDetectionSignals,
+                    updated_at: new Date().toISOString(),
+                })
+                .eq('id', candidate.intake_item_id)
+                .eq('user_id', session.user.id);
+            if (sourceEvidenceError) throw sourceEvidenceError;
             const assessment = await assessFinanceDuplicate({
                 userId: session.user.id,
                 intakeId: candidate.intake_item_id,
