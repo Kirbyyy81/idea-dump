@@ -69,8 +69,8 @@ export function getFinanceCategoryOptions(
     const virtualOptions = getMissingDefaultExpenseCategories(categories).map((name) => ({
         value: virtualDefaultValue(name),
         label: options.includeTypeLabel
-            ? `${name} (expense, suggested)`
-            : `${name} (suggested)`,
+            ? `${name} (expense)`
+            : name,
         isVirtualDefault: true,
     }));
 
