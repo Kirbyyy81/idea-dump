@@ -123,6 +123,15 @@ function readFinanceImageDimensions(image: Buffer, mimeType: string) {
     return null;
 }
 
+function sanitizeFinanceFilename(value: string) {
+    const basename = value.split(/[\\/]/).pop() ?? '';
+    return basename
+        .normalize('NFKC')
+        .replace(/[\u0000-\u001f\u007f]/g, '')
+        .trim()
+        .slice(0, 255);
+}
+
 export async function GET() {
     try {
         const session = await authorizeFinance();
@@ -165,6 +174,8 @@ export async function POST(request: NextRequest) {
         const formData = await request.formData();
         const file = formData.get('screenshot');
         if (!(file instanceof File)) return jsonError('Choose a screenshot to upload');
+        const originalFilename = sanitizeFinanceFilename(file.name);
+        if (!originalFilename) return jsonError('Screenshot filename is invalid');
         if (!ACCEPTED_IMAGE_TYPES.has(file.type)) return jsonError('Use a PNG, JPEG, or WebP screenshot');
         if (file.size <= 0 || file.size > MAX_IMAGE_SIZE) return jsonError('Screenshot must be between 1 byte and 4 MB');
 
@@ -207,11 +218,18 @@ export async function POST(request: NextRequest) {
         const intake = intakeStart.intake;
         intakeId = intake.id;
 
+        const { error: filenameUpdateError } = await admin
+            .from('finance_intake_items')
+            .update({ original_filename: originalFilename, updated_at: new Date().toISOString() })
+            .eq('id', intakeId)
+            .eq('user_id', session.user.id);
+        if (filenameUpdateError) throw filenameUpdateError;
+
         const { error: startEventError } = await admin.from('finance_processing_events').insert({
             user_id: session.user.id,
             intake_item_id: intakeId,
             event_type: 'ocr_started',
-            detail: { mime_type: file.type, size_bytes: file.size },
+            detail: { mime_type: file.type, size_bytes: file.size, original_filename: originalFilename },
         });
         if (startEventError) console.error('Failed to record finance OCR start event:', startEventError);
 
@@ -272,8 +290,19 @@ export async function POST(request: NextRequest) {
         const parsed = parseFinanceText(
             normalized.text,
             activeRules,
-            (sourcesResult.data || []) as FinanceSource[]
+            (sourcesResult.data || []) as FinanceSource[],
+            originalFilename
         );
+        const { error: sourceEvidenceError } = await admin
+            .from('finance_intake_items')
+            .update({
+                detected_source_id: parsed.payload.source_id,
+                source_detection_signals: parsed.sourceDetectionSignals,
+                updated_at: new Date().toISOString(),
+            })
+            .eq('id', intakeId)
+            .eq('user_id', session.user.id);
+        if (sourceEvidenceError) throw sourceEvidenceError;
         const assessment = await assessFinanceDuplicate({
             userId: session.user.id,
             intakeId,
@@ -331,6 +360,7 @@ export async function POST(request: NextRequest) {
                 detail: {
                     candidate_id: candidate.id,
                     confidence: parsed.confidence,
+                    source_detection_signals: parsed.sourceDetectionSignals,
                     fields_found: {
                         amount: parsed.payload.amount !== null,
                         merchant: parsed.payload.merchant !== null,

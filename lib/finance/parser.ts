@@ -6,11 +6,13 @@ import {
 } from '@/lib/types';
 import { FINANCE_V1_CURRENCY } from '@/lib/finance/constants';
 import { normalizeFinanceMerchantKey } from '@/lib/finance/normalizer';
+import { detectFinanceSource } from '@/lib/finance/sourceDetection';
 
 interface ParsedCandidate {
     confidence: number;
     matchedRuleId: string | null;
     payload: FinanceCandidatePayload;
+    sourceDetectionSignals: ReturnType<typeof detectFinanceSource>['signals'];
 }
 
 const ignoredMerchantTerms = [
@@ -65,7 +67,7 @@ function parseTransactionDate(text: string) {
 function parseDirection(text: string): FinanceTransactionDirection | null {
     const lower = text.toLowerCase();
     if (/(?:received|credited|credit to|incoming|salary|cashback|refund)/.test(lower)) return 'income';
-    if (/(?:paid|payment|purchase|debited|debit from|spent|merchant|transfer to)/.test(lower)) return 'expense';
+    if (/(?:-\s*(?:rm|myr)\s*\d|paid from|paid|payment|purchase|debited|debit from|spent|merchant|transfer to|\bto\s+[a-z])/i.test(lower)) return 'expense';
     return null;
 }
 
@@ -78,9 +80,13 @@ function cleanMerchant(value: string) {
 
 function parseMerchant(lines: string[]) {
     for (const line of lines) {
-        if (/^(?:to|from|merchant|recipient|payee|sender)\s*[:\-]/i.test(line)) {
+        if (/^(?:to|from|merchant|recipient|payee|sender)(?:\s*[:\-]\s*|\s+)/i.test(line)) {
             const merchant = cleanMerchant(line);
-            if (merchant.length >= 2) return merchant;
+            const lower = merchant.toLowerCase();
+            if (
+                merchant.length >= 2
+                && !ignoredMerchantTerms.some((term) => lower.includes(term))
+            ) return merchant;
         }
     }
 
@@ -97,15 +103,8 @@ function parseMerchant(lines: string[]) {
 }
 
 function parseReference(text: string) {
-    const match = text.match(/(?:reference|ref(?:erence)?\s*(?:no\.?)?)\s*[:#-]?\s*([A-Z0-9-]{5,})/i);
+    const match = text.match(/(?:reference|ref(?:erence)?)(?:\s*(?:id|no\.?))?\s*[:#-]?\s*([A-Z0-9-]{5,})/i);
     return match?.[1]?.normalize('NFKC').trim().toUpperCase() ?? null;
-}
-
-function inferSource(text: string, sources: FinanceSource[]) {
-    const lower = text.toLowerCase();
-    const matching = sources.filter((source) => lower.includes(source.name.toLowerCase()));
-    if (matching.length === 1) return matching[0].id;
-    return sources.length === 1 ? sources[0].id : null;
 }
 
 function ruleMatches(rule: FinanceRule, text: string, merchant: string | null) {
@@ -138,16 +137,26 @@ function compareFinanceRules(left: FinanceRule, right: FinanceRule) {
         || left.id.localeCompare(right.id);
 }
 
-export function parseFinanceText(normalizedText: string, rules: FinanceRule[], sources: FinanceSource[]): ParsedCandidate {
+export function parseFinanceText(
+    normalizedText: string,
+    rules: FinanceRule[],
+    sources: FinanceSource[],
+    filename: string | null = null
+): ParsedCandidate {
     const lines = normalizedText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
     const normalized = lines.join('\n').toLowerCase();
+    const sourceDetection = detectFinanceSource(
+        normalizedText,
+        filename,
+        sources.filter((source) => !source.is_archived)
+    );
     const payload: FinanceCandidatePayload = {
         amount: parseAmount(lines),
         currency: FINANCE_V1_CURRENCY,
         merchant: parseMerchant(lines),
         direction: parseDirection(normalizedText),
         transaction_date: parseTransactionDate(normalizedText),
-        source_id: inferSource(normalizedText, sources.filter((source) => !source.is_archived)),
+        source_id: sourceDetection.sourceId,
         category_id: null,
         reference_number: parseReference(normalizedText),
         matched_rule_names: [],
@@ -198,5 +207,10 @@ export function parseFinanceText(normalizedText: string, rules: FinanceRule[], s
     const matchedRuleId = categoryMatchedRuleId ?? firstMatchedRuleId;
     if (matchedRuleId) confidence += 0.05;
 
-    return { confidence: Math.min(Number(confidence.toFixed(2)), 1), matchedRuleId, payload };
+    return {
+        confidence: Math.min(Number(confidence.toFixed(2)), 1),
+        matchedRuleId,
+        payload,
+        sourceDetectionSignals: sourceDetection.signals,
+    };
 }

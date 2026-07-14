@@ -8,6 +8,10 @@ import {
     readFinanceJsonObject,
     toRequiredText,
 } from '@/lib/finance/api';
+import {
+    getFinanceSourcePreset,
+    normalizeFinanceSourceAliases,
+} from '@/lib/finance/sourceDetection';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,11 +43,25 @@ export async function POST(request: NextRequest) {
         const name = toRequiredText(body.name);
         if (!name) return jsonError('Source name is required');
         if (!isFinanceTextWithinLength(body.name, 120)) return jsonError('Source name must be 120 characters or fewer');
+        const preset = getFinanceSourcePreset(name);
+        const filenameAliases = body.filename_aliases === undefined
+            ? preset.filenameAliases
+            : normalizeFinanceSourceAliases(body.filename_aliases);
+        const ocrAliases = body.ocr_aliases === undefined
+            ? preset.ocrAliases
+            : normalizeFinanceSourceAliases(body.ocr_aliases);
+        if (!filenameAliases) return jsonError('Filename aliases must contain up to 20 non-empty values of 120 characters or fewer');
+        if (!ocrAliases) return jsonError('OCR aliases must contain up to 20 non-empty values of 120 characters or fewer');
 
         const admin = createAdminClient();
         const { data, error } = await admin
             .from('dim_finance_sources')
-            .insert({ user_id: session.user.id, name })
+            .insert({
+                user_id: session.user.id,
+                name,
+                filename_aliases: filenameAliases,
+                ocr_aliases: ocrAliases,
+            })
             .select('*')
             .single();
         if (error) {
@@ -77,6 +95,16 @@ export async function PATCH(request: NextRequest) {
         if (body.is_archived !== undefined) {
             if (typeof body.is_archived !== 'boolean') return jsonError('Archived state must be true or false');
             updates.is_archived = body.is_archived;
+        }
+        if (body.filename_aliases !== undefined) {
+            const aliases = normalizeFinanceSourceAliases(body.filename_aliases);
+            if (!aliases) return jsonError('Filename aliases must contain up to 20 non-empty values of 120 characters or fewer');
+            updates.filename_aliases = aliases;
+        }
+        if (body.ocr_aliases !== undefined) {
+            const aliases = normalizeFinanceSourceAliases(body.ocr_aliases);
+            if (!aliases) return jsonError('OCR aliases must contain up to 20 non-empty values of 120 characters or fewer');
+            updates.ocr_aliases = aliases;
         }
         if (Object.keys(updates).length === 1) return jsonError('No source changes were provided');
 
