@@ -414,6 +414,8 @@ export interface FinanceSource {
     id: string;
     user_id: string;
     name: string;
+    filename_aliases: string[];
+    ocr_aliases: string[];
     is_archived: boolean;
     created_at: string;
     updated_at: string;
@@ -488,6 +490,9 @@ export interface FinanceIntakeItem {
     source: 'screenshot' | 'notification';
     status: FinanceIntakeStatus;
     image_hash: string | null;
+    original_filename: string | null;
+    detected_source_id: string | null;
+    source_detection_signals: FinanceSourceDetectionSignal[];
     ocr_text: string | null;
     ocr_raw_text: string | null;
     ocr_normalized_text: string | null;
@@ -570,4 +575,12 @@ export interface FinanceRuleSuggestion {
     updated_at: string;
     category?: FinanceCategory | null;
     finance_source?: FinanceSource | null;
+}
+
+export interface FinanceSourceDetectionSignal {
+    source_id: string;
+    source_name: string;
+    kind: 'filename_alias' | 'ocr_alias';
+    alias: string;
+    score: number;
 }

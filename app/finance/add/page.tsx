@@ -20,6 +20,21 @@ import {
 const NEW_SOURCE = '__new__';
 const initialForm = { source_id: '', category_id: '', direction: 'expense' as FinanceTransactionDirection, amount: '', merchant: '', reference_number: '', transaction_date: new Date().toISOString().slice(0, 10), notes: '' };
 
+async function readJsonResponse(response: Response, fallbackMessage: string) {
+    const responseText = await response.text();
+
+    try {
+        return JSON.parse(responseText) as Record<string, any>;
+    } catch {
+        const plainMessage = responseText.trim();
+        const isHtmlResponse = plainMessage.startsWith('<!DOCTYPE') || plainMessage.startsWith('<html');
+        const detail = plainMessage && !isHtmlResponse
+            ? `: ${plainMessage.slice(0, 200)}`
+            : '';
+        throw new Error(`${fallbackMessage} (${response.status})${detail}`);
+    }
+}
+
 export default function AddFinanceTransactionPage() {
     const { showError, showSuccess } = useAlert();
     const [mode, setMode] = useState<'manual' | 'screenshot'>('screenshot');
@@ -53,7 +68,7 @@ export default function AddFinanceTransactionPage() {
             let categoryId = form.category_id;
             if (sourceId === NEW_SOURCE) {
                 const sourceResponse = await fetch('/api/finance/sources', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newSource }) });
-                const sourcePayload = await sourceResponse.json();
+                const sourcePayload = await readJsonResponse(sourceResponse, 'Could not add source');
                 if (!sourceResponse.ok) throw new Error(sourcePayload.error || 'Could not create source');
                 sourceId = sourcePayload.data.id;
                 setSources((current) => [...current, sourcePayload.data]);
@@ -64,7 +79,7 @@ export default function AddFinanceTransactionPage() {
                 setCategories((current) => mergeFinanceCategory(current, persistedCategory));
             }
             const response = await fetch('/api/finance/transactions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...form, source_id: sourceId, category_id: categoryId }) });
-            const payload = await response.json();
+            const payload = await readJsonResponse(response, 'Could not add transaction');
             if (!response.ok) throw new Error(payload.error || 'Could not add transaction');
             showSuccess('Transaction added');
             setForm({ ...initialForm, transaction_date: new Date().toISOString().slice(0, 10) });
@@ -80,7 +95,7 @@ export default function AddFinanceTransactionPage() {
         try {
             const data = new FormData(); data.set('screenshot', file);
             const response = await fetch('/api/finance/upload', { method: 'POST', body: data });
-            const payload = await response.json();
+            const payload = await readJsonResponse(response, 'Could not process screenshot');
             if (!response.ok) throw new Error(payload.error || 'Could not process screenshot');
             showSuccess(payload.data.auto_confirmed ? 'Transaction confirmed automatically' : 'Screenshot sent to review');
             setFile(null);

@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.10.1](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.10.0...idea-dump-v0.10.1) (2026-07-14)
+
+
+### Bug Fixes
+
+* add source aliases ([48c5f0c](https://github.com/Kirbyyy81/idea-dump/commit/48c5f0c48a2a58a53ce45d163605a7e666da51fb))
+* handle non-json finance errors ([07663cb](https://github.com/Kirbyyy81/idea-dump/commit/07663cb98c5226c600eaa32be07826fca5f741fa))
+* improve finance OCR ([3988e86](https://github.com/Kirbyyy81/idea-dump/commit/3988e86f9c89d8e50978b5d2c98b7f24ac5bbc95))
+* refresh renamed dimension references ([5f91572](https://github.com/Kirbyyy81/idea-dump/commit/5f91572e7898de9e7e1e620840c78e51876bbcae))
+
 ## [0.10.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.9.0...idea-dump-v0.10.0) (2026-07-13)
 
 
