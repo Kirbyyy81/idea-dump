@@ -13,8 +13,12 @@ export default function FinanceSourcesPage() {
     const { showError, showSuccess } = useAlert();
     const [sources, setSources] = useState<FinanceSource[]>([]);
     const [name, setName] = useState('');
+    const [filenameAliases, setFilenameAliases] = useState('');
+    const [ocrAliases, setOcrAliases] = useState('');
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editingName, setEditingName] = useState('');
+    const [editingFilenameAliases, setEditingFilenameAliases] = useState('');
+    const [editingOcrAliases, setEditingOcrAliases] = useState('');
     const [deleting, setDeleting] = useState<FinanceSource | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -44,12 +48,18 @@ export default function FinanceSourcesPage() {
             const response = await fetch('/api/finance/sources', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name }),
+                body: JSON.stringify({
+                    name,
+                    ...(filenameAliases.trim() ? { filename_aliases: filenameAliases.split(',') } : {}),
+                    ...(ocrAliases.trim() ? { ocr_aliases: ocrAliases.split(',') } : {}),
+                }),
             });
             const payload = await response.json();
             if (!response.ok) throw new Error(payload.error || 'Could not create source');
             setSources((current) => [...current, payload.data]);
             setName('');
+            setFilenameAliases('');
+            setOcrAliases('');
             showSuccess('Source created');
         } catch (error) {
             showError(error instanceof Error ? error.message : 'Could not create source');
@@ -58,7 +68,10 @@ export default function FinanceSourcesPage() {
         }
     };
 
-    const updateSource = async (source: FinanceSource, updates: Partial<Pick<FinanceSource, 'name' | 'is_archived'>>) => {
+    const updateSource = async (
+        source: FinanceSource,
+        updates: Partial<Pick<FinanceSource, 'name' | 'filename_aliases' | 'ocr_aliases' | 'is_archived'>>
+    ) => {
         try {
             const response = await fetch('/api/finance/sources', {
                 method: 'PATCH',
@@ -116,6 +129,15 @@ export default function FinanceSourcesPage() {
                                 <span className="text-sm text-text-secondary">Name</span>
                                 <Input required value={name} onChange={(event) => setName(event.target.value)} placeholder="Maybank debit card" />
                             </label>
+                            <label className="mt-4 block space-y-2">
+                                <span className="text-sm text-text-secondary">Filename aliases</span>
+                                <Input value={filenameAliases} onChange={(event) => setFilenameAliases(event.target.value)} placeholder="Ryt Bank, Ryt_Bank" />
+                            </label>
+                            <label className="mt-4 block space-y-2">
+                                <span className="text-sm text-text-secondary">OCR aliases</span>
+                                <Input value={ocrAliases} onChange={(event) => setOcrAliases(event.target.value)} placeholder="Ryt Bank" />
+                            </label>
+                            <p className="mt-3 text-xs text-text-muted">Separate aliases with commas. The source name is always checked too.</p>
                             <Button type="submit" className="mt-5 w-full" isLoading={isSaving}>Add source</Button>
                         </Card>
                     </form>
@@ -129,13 +151,19 @@ export default function FinanceSourcesPage() {
                                 <div key={source.id} className="px-5 py-4">
                                     {editingId === source.id ? (
                                         <form
-                                            className="flex flex-col gap-3 sm:flex-row"
+                                            className="flex flex-col gap-3"
                                             onSubmit={(event) => {
                                                 event.preventDefault();
-                                                void updateSource(source, { name: editingName });
+                                                void updateSource(source, {
+                                                    name: editingName,
+                                                    filename_aliases: editingFilenameAliases.split(',').map((alias) => alias.trim()).filter(Boolean),
+                                                    ocr_aliases: editingOcrAliases.split(',').map((alias) => alias.trim()).filter(Boolean),
+                                                });
                                             }}
                                         >
-                                            <Input required value={editingName} onChange={(event) => setEditingName(event.target.value)} className="flex-1" />
+                                            <Input required value={editingName} onChange={(event) => setEditingName(event.target.value)} />
+                                            <Input aria-label="Filename aliases" value={editingFilenameAliases} onChange={(event) => setEditingFilenameAliases(event.target.value)} placeholder="Filename aliases, comma separated" />
+                                            <Input aria-label="OCR aliases" value={editingOcrAliases} onChange={(event) => setEditingOcrAliases(event.target.value)} placeholder="OCR aliases, comma separated" />
                                             <div className="flex gap-2">
                                                 <Button type="submit">Save</Button>
                                                 <Button type="button" variant="ghost" onClick={() => setEditingId(null)}>Cancel</Button>
@@ -150,7 +178,12 @@ export default function FinanceSourcesPage() {
                                                 </div>
                                             </div>
                                             <div className="flex flex-wrap items-center justify-end gap-1">
-                                                <Button type="button" variant="ghost" onClick={() => { setEditingId(source.id); setEditingName(source.name); }}>Rename</Button>
+                                                <Button type="button" variant="ghost" onClick={() => {
+                                                    setEditingId(source.id);
+                                                    setEditingName(source.name);
+                                                    setEditingFilenameAliases(source.filename_aliases.join(', '));
+                                                    setEditingOcrAliases(source.ocr_aliases.join(', '));
+                                                }}>Edit</Button>
                                                 <Button type="button" variant="ghost" onClick={() => void updateSource(source, { is_archived: !source.is_archived })}>{source.is_archived ? 'Restore' : 'Archive'}</Button>
                                                 <Button type="button" variant="ghost" className="text-error hover:text-error" onClick={() => setDeleting(source)}>Delete</Button>
                                             </div>
