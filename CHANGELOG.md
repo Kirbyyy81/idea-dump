@@ -1,5 +1,75 @@
 # Changelog
 
+## [0.10.1](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.10.0...idea-dump-v0.10.1) (2026-07-14)
+
+
+### Bug Fixes
+
+* add source aliases ([48c5f0c](https://github.com/Kirbyyy81/idea-dump/commit/48c5f0c48a2a58a53ce45d163605a7e666da51fb))
+* handle non-json finance errors ([07663cb](https://github.com/Kirbyyy81/idea-dump/commit/07663cb98c5226c600eaa32be07826fca5f741fa))
+* improve finance OCR ([3988e86](https://github.com/Kirbyyy81/idea-dump/commit/3988e86f9c89d8e50978b5d2c98b7f24ac5bbc95))
+* refresh renamed dimension references ([5f91572](https://github.com/Kirbyyy81/idea-dump/commit/5f91572e7898de9e7e1e620840c78e51876bbcae))
+
+## [0.10.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.9.0...idea-dump-v0.10.0) (2026-07-13)
+
+
+### Features
+
+* add finance month picker ([63be26f](https://github.com/Kirbyyy81/idea-dump/commit/63be26f797e913a9b6bc4efbc4146f3309fb69ea))
+* add finance navigation submodules ([e987c7f](https://github.com/Kirbyyy81/idea-dump/commit/e987c7ff01bdf469b1e86c0a363e72185d7b4e1a))
+* add mobile shell ([81bde06](https://github.com/Kirbyyy81/idea-dump/commit/81bde06af3c433cde48dc314e678e4ea741b966a))
+* add screenshot finance tracking ([948946f](https://github.com/Kirbyyy81/idea-dump/commit/948946f81276be98d3708eb4646b50861e16b66a))
+* compact film workflow ([689abf8](https://github.com/Kirbyyy81/idea-dump/commit/689abf89c604e5702c961fdd44ca15e84a4ab512))
+* harden finance workflows ([50cc486](https://github.com/Kirbyyy81/idea-dump/commit/50cc486f92371920c770d7c5395600bf04cde290))
+* harden log viewer ([c483bf2](https://github.com/Kirbyyy81/idea-dump/commit/c483bf29c1bfbeef6b268f2c3e08c089ca0b5a22))
+* nest auth routes ([fbd63ea](https://github.com/Kirbyyy81/idea-dump/commit/fbd63ea85743198ce3c5bb3d2be6b8ed5998fefb))
+* prioritize magic links ([0105064](https://github.com/Kirbyyy81/idea-dump/commit/0105064bcd06c25afe720c342e2ae4e2da3f5842))
+* redesign finance tracking around sources ([23df0f1](https://github.com/Kirbyyy81/idea-dump/commit/23df0f159010e713dda3db883b73b71e7629114b))
+* refine auth header ([fd56195](https://github.com/Kirbyyy81/idea-dump/commit/fd5619562dfd960578e7cd4f818b77df226cd822))
+* simplify film workflow ([cb2d659](https://github.com/Kirbyyy81/idea-dump/commit/cb2d659a1ba57651ffa41fed3c5f80206188b97d))
+* unify auth flow ([07618e5](https://github.com/Kirbyyy81/idea-dump/commit/07618e555063e72b1ae52486e90ac2a2e711d4a0))
+
+
+### Bug Fixes
+
+* adapt film mobile ([936c071](https://github.com/Kirbyyy81/idea-dump/commit/936c071de9f731e58290ff838af122f1a2c2c43b))
+* adapt log mobile ([0eead81](https://github.com/Kirbyyy81/idea-dump/commit/0eead81aa141cc7121a077924195fbd1cc9e9db5))
+* adapt settings mobile ([a062562](https://github.com/Kirbyyy81/idea-dump/commit/a0625624169fa8ae9d4f486135eeba2d99ec9a38))
+* adapt ticket mobile ([92cd811](https://github.com/Kirbyyy81/idea-dump/commit/92cd81106a977fea8122d66f6554869718289faa))
+* align film pages ([95398ec](https://github.com/Kirbyyy81/idea-dump/commit/95398ec304e501f8bde307b8b0a5e5d01645cb64))
+* align priority badge ([e67b194](https://github.com/Kirbyyy81/idea-dump/commit/e67b194d019fd8120ff0625a9cff77a1d6ab0145))
+* align priority colors ([f101555](https://github.com/Kirbyyy81/idea-dump/commit/f101555d3ccf15893e896487d24ef08f77e6c271))
+* allow review dimensions to be created inline ([17aee51](https://github.com/Kirbyyy81/idea-dump/commit/17aee5157e773610a87614b21d29c8a43ee0d3cc))
+* center film workflow ([e7dfa53](https://github.com/Kirbyyy81/idea-dump/commit/e7dfa5348900452e43fdec403c7f2530ff1f689b))
+* classify successful logs ([9923771](https://github.com/Kirbyyy81/idea-dump/commit/9923771c54e1c3ac8d8f94eebed283dcea2b30ec))
+* collapse app sidebar ([a543d97](https://github.com/Kirbyyy81/idea-dump/commit/a543d97319b57c41c59988033eea7ea82edb8fac))
+* enforce Supabase data integrity ([403df0c](https://github.com/Kirbyyy81/idea-dump/commit/403df0cdfec6ddca8769ad34a8cb6b739fd91d73))
+* expand sidebar from logo ([956eeab](https://github.com/Kirbyyy81/idea-dump/commit/956eeabb74a4c42270f18d8239b2e8b40ced56fc))
+* harden authorization ([d485699](https://github.com/Kirbyyy81/idea-dump/commit/d485699849223a04cc665bd6ac6dce0ecaddee8c))
+* harden pwa offline ([097584c](https://github.com/Kirbyyy81/idea-dump/commit/097584c5c80a96e234264619d5d79787e200c95b))
+* harden server access boundaries ([fd9dabb](https://github.com/Kirbyyy81/idea-dump/commit/fd9dabb1438cb034cc3cb99412a4e562ce2572b1))
+* hide completed film steps ([479a689](https://github.com/Kirbyyy81/idea-dump/commit/479a689919aefcd376b065a6b8ce72f04e832cf0))
+* improve finance receipt parsing ([4b1c9b1](https://github.com/Kirbyyy81/idea-dump/commit/4b1c9b1b0538d6379db540b489e89939928f367f))
+* improve form accessibility ([4a867fb](https://github.com/Kirbyyy81/idea-dump/commit/4a867fbcc3cf70dcb76bc6b64250a27d57b84ee4))
+* improve mobile access ([c5beb15](https://github.com/Kirbyyy81/idea-dump/commit/c5beb155997b83a5cb3654db388c1eff28e19082))
+* move migration files ([3d36a6d](https://github.com/Kirbyyy81/idea-dump/commit/3d36a6df8061110e32c04bec35bcc9815063ccdd))
+* move roll details action ([2fd7218](https://github.com/Kirbyyy81/idea-dump/commit/2fd721808d36efc7c6922f525cdb38ca8722fe48))
+* persist app shell ([f274660](https://github.com/Kirbyyy81/idea-dump/commit/f274660a92327bfcd5275cd3299c3d24194755de))
+* polish sidebar spacing ([e252360](https://github.com/Kirbyyy81/idea-dump/commit/e2523603fd4623384368435e1eeb044f95201062))
+* preserve Supabase cron owner ([5772ea6](https://github.com/Kirbyyy81/idea-dump/commit/5772ea6204f578cdee11b463b0c749b5418948b5))
+* prevent mobile nav label clipping ([e02c975](https://github.com/Kirbyyy81/idea-dump/commit/e02c97599e66043be67a9b265801ae74b0712690))
+* prevent sidebar glyph clipping ([0f22187](https://github.com/Kirbyyy81/idea-dump/commit/0f221873370f80e9f8327fbfe279c065d074399a))
+* refine mobile module visibility ([75178fb](https://github.com/Kirbyyy81/idea-dump/commit/75178fbc356b90608c30ffc1fd8cd5125251ae5e))
+* refine project mobile ([bcf3253](https://github.com/Kirbyyy81/idea-dump/commit/bcf3253b8402c9bbedf23df129ce57df77d862b8))
+* remove dashboard recent rolls ([942b821](https://github.com/Kirbyyy81/idea-dump/commit/942b821963a410a8321f4d34514202e5eabd155f))
+* reuse priority indicator ([b1a2266](https://github.com/Kirbyyy81/idea-dump/commit/b1a22668bca85164b056043576d3228b380c4d59))
+* secure film media workflows ([16fd57a](https://github.com/Kirbyyy81/idea-dump/commit/16fd57a36a3b3ea3c28934400f72e2b9065e3a9e))
+* show priority labels ([15df319](https://github.com/Kirbyyy81/idea-dump/commit/15df319cbdb8e230288e57a3847143ca167eee8d))
+* simplify film metrics ([189ac54](https://github.com/Kirbyyy81/idea-dump/commit/189ac549ee47b8c1828d19e8485e67c5cacb18d1))
+* simplify finance upload guidance ([d8ca281](https://github.com/Kirbyyy81/idea-dump/commit/d8ca281654bdfa27daee82716524b94709e3aaeb))
+* update position of sign in and create new ([3574846](https://github.com/Kirbyyy81/idea-dump/commit/3574846c4ad3d9a83cc21743e4e03e0736311cb1))
+* use priority indicator ([7ac5d5e](https://github.com/Kirbyyy81/idea-dump/commit/7ac5d5eb26703008240f81731cfca29d3864555d))
+
 ## [0.9.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.8.3...idea-dump-v0.9.0) (2026-07-09)
 
 
