@@ -8,6 +8,8 @@ AGENTS.md
 .next/
 out/
 build/
+services/finance-ocr/dist/
+services/finance-ocr/coverage/
 
 # Environment files
 .env
