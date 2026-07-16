@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { AppShell } from '@/components/organisms/AppShell';
 import { Button } from '@/components/atoms/Button';
@@ -16,6 +17,13 @@ import {
     mergeFinanceCategory,
     persistVirtualDefaultCategory,
 } from '@/lib/finance/categoryOptions';
+import {
+    FinanceOcrClientError,
+    FinanceOcrPhase,
+    uploadFinanceScreenshot,
+    warmFinanceOcr,
+} from '@/lib/finance/ocrClient';
+import { OcrProgress } from './_components/OcrProgress';
 
 const NEW_SOURCE = '__new__';
 const initialForm = { source_id: '', category_id: '', direction: 'expense' as FinanceTransactionDirection, amount: '', merchant: '', reference_number: '', transaction_date: new Date().toISOString().slice(0, 10), notes: '' };
@@ -35,8 +43,18 @@ async function readJsonResponse(response: Response, fallbackMessage: string) {
     }
 }
 
+function financeOcrErrorMessage(error: unknown) {
+    if (!(error instanceof FinanceOcrClientError)) {
+        return error instanceof Error ? error.message : 'Could not process screenshot';
+    }
+    if (error.retryAfterSeconds === null) return error.message;
+    const seconds = Math.max(1, Math.ceil(error.retryAfterSeconds));
+    return `${error.message} Try again in about ${seconds} second${seconds === 1 ? '' : 's'}.`;
+}
+
 export default function AddFinanceTransactionPage() {
-    const { showError, showSuccess } = useAlert();
+    const router = useRouter();
+    const { showAlert, showError, showSuccess } = useAlert();
     const [mode, setMode] = useState<'manual' | 'screenshot'>('screenshot');
     const [sources, setSources] = useState<FinanceSource[]>([]);
     const [categories, setCategories] = useState<FinanceCategory[]>([]);
@@ -44,6 +62,8 @@ export default function AddFinanceTransactionPage() {
     const [newSource, setNewSource] = useState('');
     const [file, setFile] = useState<File | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [ocrPhase, setOcrPhase] = useState<FinanceOcrPhase>('idle');
+    const [uploadProgress, setUploadProgress] = useState(0);
 
     useEffect(() => {
         Promise.all([fetch('/api/finance/sources'), fetch('/api/finance/categories')]).then(async ([sourceResponse, categoryResponse]) => {
@@ -54,6 +74,10 @@ export default function AddFinanceTransactionPage() {
             setCategories(categoryPayload.data || []);
         }).catch((error) => showError(error instanceof Error ? error.message : 'Could not load transaction options'));
     }, [showError]);
+
+    useEffect(() => {
+        if (mode === 'screenshot') void warmFinanceOcr();
+    }, [mode]);
 
     const availableCategories = useMemo(
         () => getFinanceCategoryOptions(categories, form.direction === 'income' ? 'income' : 'expense'),
@@ -92,20 +116,46 @@ export default function AddFinanceTransactionPage() {
         event.preventDefault();
         if (!file) return;
         setIsSaving(true);
+        setUploadProgress(0);
+        setOcrPhase('uploading');
         try {
-            const data = new FormData(); data.set('screenshot', file);
-            const response = await fetch('/api/finance/upload', { method: 'POST', body: data });
-            const payload = await readJsonResponse(response, 'Could not process screenshot');
-            if (!response.ok) throw new Error(payload.error || 'Could not process screenshot');
-            showSuccess(payload.data.auto_confirmed ? 'Transaction confirmed automatically' : 'Screenshot sent to review');
+            const payload = await uploadFinanceScreenshot(file, {
+                onUploadProgress: (percentage) => {
+                    setOcrPhase('uploading');
+                    setUploadProgress(percentage);
+                },
+                onUploadComplete: () => setOcrPhase('reading'),
+            });
+            setOcrPhase('preparing');
+            await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
             setFile(null);
-        } catch (error) { showError(error instanceof Error ? error.message : 'Could not process screenshot'); }
-        finally { setIsSaving(false); }
+
+            if (payload.data.auto_confirmed && payload.data.transaction?.id) {
+                showSuccess('Transaction confirmed automatically');
+                router.push('/finance/transactions');
+                return;
+            }
+
+            if (payload.warning) {
+                showAlert(payload.warning, 'Review needed', 'warning');
+            } else {
+                showSuccess(payload.data.recovered
+                    ? 'Existing screenshot result opened for review'
+                    : 'Screenshot sent to review');
+            }
+            router.push(`/finance/review?candidate=${encodeURIComponent(payload.data.candidate.id)}`);
+        } catch (error) {
+            setOcrPhase('idle');
+            setUploadProgress(0);
+            showError(financeOcrErrorMessage(error));
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return <AppShell contentClassName="p-5 md:p-8"><div className="mx-auto max-w-2xl">
         <header><Link href="/finance" className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-text-secondary hover:text-text-primary"><BackDoodleIcon size={16} />Finance</Link><h1>Add transaction</h1><p className="mt-1 text-sm text-text-muted">Enter the details or import a payment screenshot.</p></header>
-        <div className="mt-6 grid grid-cols-2 border border-border-default p-1" role="group" aria-label="Transaction entry method"><button type="button" onClick={() => setMode('manual')} className={`flex h-10 items-center justify-center gap-2 text-sm font-semibold ${mode === 'manual' ? 'bg-action-primary text-action-primary-text' : 'text-text-secondary hover:bg-bg-hover'}`}><DocumentDoodleIcon size={16} />Manual</button><button type="button" onClick={() => setMode('screenshot')} className={`flex h-10 items-center justify-center gap-2 text-sm font-semibold ${mode === 'screenshot' ? 'bg-action-primary text-action-primary-text' : 'text-text-secondary hover:bg-bg-hover'}`}><ScanDoodleIcon size={16} />Screenshot</button></div>
+        <div className="mt-6 grid grid-cols-2 border border-border-default p-1" role="group" aria-label="Transaction entry method"><button type="button" disabled={isSaving} onClick={() => setMode('manual')} className={`flex h-10 items-center justify-center gap-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${mode === 'manual' ? 'bg-action-primary text-action-primary-text' : 'text-text-secondary hover:bg-bg-hover'}`}><DocumentDoodleIcon size={16} />Manual</button><button type="button" disabled={isSaving} onClick={() => setMode('screenshot')} className={`flex h-10 items-center justify-center gap-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${mode === 'screenshot' ? 'bg-action-primary text-action-primary-text' : 'text-text-secondary hover:bg-bg-hover'}`}><ScanDoodleIcon size={16} />Screenshot</button></div>
 
         {mode === 'manual' ? <form onSubmit={submitManual} className="mt-6 space-y-4">
             <label className="block space-y-2"><span className="text-sm text-text-secondary">Type</span><Select value={form.direction} onChange={(direction) => setForm({ ...form, direction: direction as FinanceTransactionDirection, category_id: '' })} options={[{ value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }]} /></label>
@@ -117,6 +167,6 @@ export default function AddFinanceTransactionPage() {
             <label className="block space-y-2"><span className="text-sm text-text-secondary">Merchant or payee</span><Input value={form.merchant} onChange={(event) => setForm({ ...form, merchant: event.target.value })} /></label>
             <label className="block space-y-2"><span className="text-sm text-text-secondary">Notes</span><Textarea value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></label>
             <Button type="submit" className="w-full" isLoading={isSaving} disabled={!form.source_id || (form.source_id === NEW_SOURCE && !newSource.trim())}>Add transaction</Button>
-        </form> : <form onSubmit={submitScreenshot} className="mt-6"><FileUpload label="Transaction screenshot" accept="image/png,image/jpeg,image/webp" value={file} onChange={setFile} /><p className="mt-2 text-sm text-text-muted">PNG, JPEG, or WebP · Max 4 MB</p><Button type="submit" className="mt-5 w-full" isLoading={isSaving} disabled={!file}>Process screenshot</Button></form>}
+        </form> : <form onSubmit={submitScreenshot} className="mt-6"><FileUpload label="Transaction screenshot" accept="image/png,image/jpeg,image/webp" value={file} onChange={setFile} disabled={isSaving} /><p className="mt-2 text-sm text-text-muted">PNG, JPEG, or WebP · Max 4 MB</p>{ocrPhase !== 'idle' && <OcrProgress phase={ocrPhase} uploadProgress={uploadProgress} />}<Button type="submit" className="mt-5 w-full" isLoading={isSaving} disabled={!file || isSaving}>Process screenshot</Button></form>}
     </div></AppShell>;
 }

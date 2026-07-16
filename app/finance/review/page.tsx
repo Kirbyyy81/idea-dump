@@ -115,12 +115,17 @@ export default function FinanceReviewPage() {
             if (!sourcesResponse.ok) throw new Error(sourcesPayload.error || 'Could not load sources');
             if (!categoriesResponse.ok) throw new Error(categoriesPayload.error || 'Could not load categories');
             const nextCandidates = (reviewPayload.data || []) as FinanceCandidateTransaction[];
+            const requestedCandidateId = typeof window === 'undefined'
+                ? null
+                : new URLSearchParams(window.location.search).get('candidate');
             setCandidates(nextCandidates);
             setSources(sourcesPayload.data || []);
             setCategories(categoriesPayload.data || []);
             setSelectedId((current) => nextCandidates.some((item) => item.id === current)
                 ? current
-                : nextCandidates[0]?.id || '');
+                : requestedCandidateId && nextCandidates.some((item) => item.id === requestedCandidateId)
+                    ? requestedCandidateId
+                    : nextCandidates[0]?.id || '');
             return true;
         } catch (error) {
             showError(error instanceof Error ? error.message : 'Could not load review queue');
