@@ -116,9 +116,6 @@ export default function FinanceSourcesPage() {
             <div className="mx-auto max-w-5xl">
                 <header className="pb-5">
                     <h1>Sources</h1>
-                    <p className="mt-1 text-sm text-text-muted">
-                        Sources identify where money was paid from or received into. V1 does not calculate source balances.
-                    </p>
                 </header>
 
                 <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[340px_minmax(0,1fr)]">

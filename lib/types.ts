@@ -426,6 +426,7 @@ export interface FinanceCategory {
     user_id: string;
     name: string;
     type: FinanceCategoryType;
+    description: string | null;
     color: string | null;
     icon: string | null;
     is_archived: boolean;

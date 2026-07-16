@@ -12,3 +12,10 @@ export const FINANCE_DEFAULT_EXPENSE_CATEGORIES = [
     'Gifts',
 ] as const;
 
+export const FINANCE_DEFAULT_EXPENSE_CATEGORY_DESCRIPTIONS: Record<(typeof FINANCE_DEFAULT_EXPENSE_CATEGORIES)[number], string> = {
+    Food: 'Meals and food purchases.',
+    Drinks: 'Coffee, beverages, and other drinks.',
+    Transport: 'Public transport, fuel, parking, and ride-hailing.',
+    Gifts: 'Presents and gifts for others.',
+};
+

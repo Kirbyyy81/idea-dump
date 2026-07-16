@@ -1,22 +1,22 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { Plus } from 'lucide-react';
 import { AppShell } from '@/components/organisms/AppShell';
 import { Button } from '@/components/atoms/Button';
-import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
+import { Textarea } from '@/components/atoms/Textarea';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
+import { Modal } from '@/components/molecules/Modal';
 import { FinanceCategory, FinanceCategoryType } from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
-import {
-    getMissingDefaultExpenseCategories,
-    mergeFinanceCategory,
-} from '@/lib/finance/categoryOptions';
+import { mergeFinanceCategory } from '@/lib/finance/categoryOptions';
 
 const initialForm = {
     name: '',
     type: 'expense' as FinanceCategoryType,
+    description: '',
     color: '',
     icon: '',
 };
@@ -30,9 +30,9 @@ export default function FinanceCategoriesPage() {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editingForm, setEditingForm] = useState<CategoryForm>(initialForm);
     const [deleting, setDeleting] = useState<FinanceCategory | null>(null);
+    const [isAddOpen, setIsAddOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
-    const [addingSuggestedName, setAddingSuggestedName] = useState<string | null>(null);
 
     const loadCategories = useCallback(async () => {
         try {
@@ -54,12 +54,13 @@ export default function FinanceCategoriesPage() {
             const response = await fetch('/api/finance/categories', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(form),
+                body: JSON.stringify({ name: form.name, type: form.type, description: form.description }),
             });
             const payload = await response.json();
             if (!response.ok) throw new Error(payload.error || 'Could not add category');
             setCategories((current) => mergeFinanceCategory(current, payload.data));
             setForm(initialForm);
+            setIsAddOpen(false);
             showSuccess(payload.created === false ? 'That category already exists' : 'Category added');
         } catch (error) {
             showError(error instanceof Error ? error.message : 'Could not add category');
@@ -68,28 +69,9 @@ export default function FinanceCategoriesPage() {
         }
     };
 
-    const addSuggestedCategory = async (name: string) => {
-        setAddingSuggestedName(name);
-        try {
-            const response = await fetch('/api/finance/categories', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, type: 'expense' }),
-            });
-            const payload = await response.json();
-            if (!response.ok) throw new Error(payload.error || `Could not add ${name}`);
-            setCategories((current) => mergeFinanceCategory(current, payload.data));
-            showSuccess(payload.created === false ? `${name} already exists` : `${name} category added`);
-        } catch (error) {
-            showError(error instanceof Error ? error.message : `Could not add ${name}`);
-        } finally {
-            setAddingSuggestedName(null);
-        }
-    };
-
     const updateCategory = async (
         category: FinanceCategory,
-        updates: Partial<Pick<FinanceCategory, 'name' | 'type' | 'color' | 'icon' | 'is_archived'>>
+        updates: Partial<Pick<FinanceCategory, 'name' | 'type' | 'description' | 'color' | 'icon' | 'is_archived'>>
     ) => {
         try {
             const response = await fetch('/api/finance/categories', {
@@ -135,6 +117,7 @@ export default function FinanceCategoriesPage() {
         setEditingForm({
             name: category.name,
             type: category.type,
+            description: category.description || '',
             color: category.color || '',
             icon: category.icon || '',
         });
@@ -144,54 +127,19 @@ export default function FinanceCategoriesPage() {
         { title: 'Expense categories', type: 'expense' },
         { title: 'Income categories', type: 'income' },
     ];
-    const missingDefaultExpenseCategories = getMissingDefaultExpenseCategories(categories);
-
     return (
         <AppShell contentClassName="p-5 md:p-8">
-            <div className="mx-auto max-w-7xl">
-                <header className="pb-5">
+            <div className="mx-auto max-w-5xl">
+                <header className="flex items-center justify-between gap-4 pb-5">
                     <h1>Categories</h1>
-                    <p className="mt-1 text-sm text-text-muted">
-                        Food, Drinks, Transport, and Gifts are suggested expense categories. They are saved only when you add or select one.
-                    </p>
+                    <Button type="button" icon={<Plus size={16} />} onClick={() => setIsAddOpen(true)}>Add category</Button>
                 </header>
 
-                <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[360px_minmax(0,1fr)]">
-                    <form onSubmit={addCategory}>
-                        <Card className="p-5">
-                            <h2 className="text-base font-bold">New category</h2>
-                            <div className="mt-5 space-y-4">
-                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Name</span><Input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Groceries" /></label>
-                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Type</span><Select value={form.type} onChange={(type) => setForm({ ...form, type: type as FinanceCategoryType })} options={[{ value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }]} /></label>
-                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Colour label (optional)</span><Input value={form.color} onChange={(event) => setForm({ ...form, color: event.target.value })} placeholder="#e76f51" /></label>
-                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Icon label (optional)</span><Input value={form.icon} onChange={(event) => setForm({ ...form, icon: event.target.value })} placeholder="utensils" /></label>
-                            </div>
-                            <Button type="submit" className="mt-5 w-full" isLoading={isSaving}>Add category</Button>
-                        </Card>
-                    </form>
-
-                    <div className="space-y-5">
+                <div className="mt-5 space-y-5">
                         {groups.map((group) => (
                             <section key={group.type} className="border border-border-default bg-bg-surface">
                                 <div className="border-b border-border-default px-5 py-4"><h2 className="text-base font-bold">{group.title}</h2></div>
                                 <div className="divide-y divide-border-default">
-                                    {group.type === 'expense' && missingDefaultExpenseCategories.map((name) => (
-                                        <div key={`suggested-${name}`} className="flex items-center justify-between gap-4 bg-bg-subtle px-5 py-4">
-                                            <div className="min-w-0">
-                                                <p className="truncate font-semibold">{name}</p>
-                                                <p className="text-sm text-text-muted">Suggested default — not saved yet</p>
-                                            </div>
-                                            <Button
-                                                type="button"
-                                                variant="secondary"
-                                                isLoading={addingSuggestedName === name}
-                                                disabled={addingSuggestedName !== null && addingSuggestedName !== name}
-                                                onClick={() => void addSuggestedCategory(name)}
-                                            >
-                                                Add category
-                                            </Button>
-                                        </div>
-                                    ))}
                                     {categories.filter((category) => category.type === group.type).map((category) => (
                                         <div key={category.id} className="px-5 py-4">
                                             {editingId === category.id ? (
@@ -205,6 +153,7 @@ export default function FinanceCategoriesPage() {
                                                     <div className="grid gap-3 sm:grid-cols-2">
                                                         <Input required value={editingForm.name} onChange={(event) => setEditingForm({ ...editingForm, name: event.target.value })} aria-label="Category name" />
                                                         <Select value={editingForm.type} onChange={(type) => setEditingForm({ ...editingForm, type: type as FinanceCategoryType })} options={[{ value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }]} ariaLabel="Category type" />
+                                                        <Textarea value={editingForm.description} onChange={(event) => setEditingForm({ ...editingForm, description: event.target.value })} placeholder="Description" aria-label="Category description" className="sm:col-span-2" />
                                                         <Input value={editingForm.color} onChange={(event) => setEditingForm({ ...editingForm, color: event.target.value })} placeholder="Colour label" aria-label="Category colour label" />
                                                         <Input value={editingForm.icon} onChange={(event) => setEditingForm({ ...editingForm, icon: event.target.value })} placeholder="Icon label" aria-label="Category icon label" />
                                                     </div>
@@ -218,7 +167,7 @@ export default function FinanceCategoriesPage() {
                                                 <div className="flex items-center justify-between gap-4">
                                                     <div className="flex min-w-0 items-center gap-3">
                                                         <span className="size-3 shrink-0 rounded-full border border-border-default bg-bg-subtle" style={category.color ? { backgroundColor: category.color } : undefined} aria-hidden="true" />
-                                                        <div className="min-w-0"><p className="truncate font-semibold">{category.name}</p>{category.is_archived && <p className="text-sm text-text-muted">Archived — retained for history</p>}</div>
+                                                        <div className="min-w-0"><p className="truncate font-semibold">{category.name}</p>{category.description && <p className="mt-1 text-sm text-text-muted">{category.description}</p>}{category.is_archived && <p className="text-sm text-text-muted">Archived — retained for history</p>}</div>
                                                     </div>
                                                     <div className="flex flex-wrap items-center justify-end gap-1">
                                                         <Button type="button" variant="ghost" onClick={() => beginEditing(category)}>Edit</Button>
@@ -229,15 +178,20 @@ export default function FinanceCategoriesPage() {
                                             )}
                                         </div>
                                     ))}
-                                    {!categories.some((category) => category.type === group.type)
-                                        && !(group.type === 'expense' && missingDefaultExpenseCategories.length > 0)
-                                        && <p className="px-5 py-8 text-center text-sm text-text-muted">No categories yet.</p>}
+                                    {!categories.some((category) => category.type === group.type) && <p className="px-5 py-8 text-center text-sm text-text-muted">No categories yet.</p>}
                                 </div>
                             </section>
                         ))}
-                    </div>
                 </div>
             </div>
+            <Modal isOpen={isAddOpen} title="Add category" onClose={() => setIsAddOpen(false)}>
+                <form onSubmit={addCategory} className="space-y-4">
+                    <label className="block space-y-2"><span className="text-sm text-text-secondary">Name</span><Input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Groceries" /></label>
+                    <label className="block space-y-2"><span className="text-sm text-text-secondary">Type</span><Select value={form.type} onChange={(type) => setForm({ ...form, type: type as FinanceCategoryType })} options={[{ value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }]} /></label>
+                    <label className="block space-y-2"><span className="text-sm text-text-secondary">Description</span><Textarea maxLength={500} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} placeholder="What belongs in this category?" /></label>
+                    <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={() => setIsAddOpen(false)}>Cancel</Button><Button type="submit" isLoading={isSaving}>Add category</Button></div>
+                </form>
+            </Modal>
             <ConfirmDialog
                 isOpen={Boolean(deleting)}
                 title="Permanently delete this category?"

@@ -189,7 +189,7 @@ export default function FinanceRulesPage() {
     return (
         <AppShell contentClassName="p-5 md:p-8">
             <div className="mx-auto max-w-7xl">
-                <header className="pb-5"><h1>Finance rules</h1><p className="mt-1 text-sm text-text-muted">Active rules are applied by priority during screenshot processing.</p></header>
+                <header className="pb-5"><h1>Finance rules</h1></header>
 
                 {suggestions.length > 0 && (
                     <section className="mt-5 border border-border-default bg-bg-subtle">
