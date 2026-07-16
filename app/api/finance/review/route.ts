@@ -201,18 +201,6 @@ export async function POST(request: NextRequest) {
                 .select('*, intake:finance_intake_items(*)')
                 .single();
             if (error) throw error;
-            const { error: eventError } = await admin.from('finance_processing_events').insert({
-                user_id: session.user.id,
-                intake_item_id: candidate.intake_item_id,
-                event_type: 'review_retried',
-                detail: {
-                    candidate_id: candidateId,
-                    matched_rule_id: parsed.matchedRuleId,
-                    duplicate_outcome: assessment.outcome,
-                    duplicate_signals: assessment.signals,
-                },
-            });
-            if (eventError) console.error('Failed to record finance retry event:', eventError);
             const [withDuplicate] = await attachDuplicateTransactions(session.user.id, [data as FinanceCandidateTransaction]);
             return NextResponse.json({ data: withDuplicate });
         }
