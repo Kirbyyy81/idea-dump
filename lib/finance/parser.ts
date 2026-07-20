@@ -150,6 +150,10 @@ export function parseFinanceText(
         filename,
         sources.filter((source) => !source.is_archived)
     );
+    const sourceDetectionSignals = [...sourceDetection.signals];
+    const sourceSignalsConflict = new Set(
+        sourceDetectionSignals.map((signal) => signal.source_id)
+    ).size > 1;
     const payload: FinanceCandidatePayload = {
         amount: parseAmount(lines),
         currency: FINANCE_V1_CURRENCY,
@@ -184,8 +188,26 @@ export function parseFinanceText(
             categoryMatchedRuleId = rule.id;
         }
         if (rule.source_id && !sourceAssigned) {
-            payload.source_id = rule.source_id;
-            sourceAssigned = true;
+            const signaledSourceIds = new Set(
+                sourceDetectionSignals.map((signal) => signal.source_id)
+            );
+            const canAssignRuleSource = !sourceSignalsConflict && (
+                signaledSourceIds.size === 0 || signaledSourceIds.has(rule.source_id)
+            );
+            if (canAssignRuleSource) {
+                payload.source_id = rule.source_id;
+                sourceAssigned = true;
+                const source = sources.find((item) => item.id === rule.source_id);
+                if (source && sourceDetectionSignals.length < 50) {
+                    sourceDetectionSignals.push({
+                        source_id: source.id,
+                        source_name: source.name,
+                        kind: 'rule_match',
+                        alias: rule.pattern,
+                        score: 5,
+                    });
+                }
+            }
         }
         if (rule.direction && !directionAssigned) {
             payload.direction = rule.direction;
@@ -211,6 +233,6 @@ export function parseFinanceText(
         confidence: Math.min(Number(confidence.toFixed(2)), 1),
         matchedRuleId,
         payload,
-        sourceDetectionSignals: sourceDetection.signals,
+        sourceDetectionSignals,
     };
 }

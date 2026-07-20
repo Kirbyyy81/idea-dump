@@ -69,11 +69,18 @@ export function detectFinanceSource(text: string, filename: string | null, sourc
         }
     }
 
-    const scores = new Map<string, number>();
-    for (const signal of signals) scores.set(signal.source_id, (scores.get(signal.source_id) ?? 0) + signal.score);
-    const ranked = Array.from(scores.entries()).sort((left, right) => right[1] - left[1]);
-    const sourceId = ranked.length > 0 && (ranked.length === 1 || ranked[0][1] > ranked[1][1])
-        ? ranked[0][0]
+    const signaledSourceIds = new Set(signals.map((signal) => signal.source_id));
+    const ocrSourceIds = new Set(
+        signals
+            .filter((signal) => signal.kind === 'ocr_alias')
+            .map((signal) => signal.source_id)
+    );
+
+    // A filename is useful evidence, but it is controlled by the client and can
+    // never identify a source by itself. Any cross-source disagreement is left
+    // unresolved for review rather than being hidden by score ordering.
+    const sourceId = signaledSourceIds.size === 1 && ocrSourceIds.size === 1
+        ? Array.from(ocrSourceIds)[0]
         : null;
     return { sourceId, signals: signals.slice(0, 50) };
 }

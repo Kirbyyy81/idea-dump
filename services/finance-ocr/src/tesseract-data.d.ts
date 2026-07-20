@@ -1,9 +1,8 @@
 declare module '@tesseract.js-data/eng' {
-    const languageData: {
+    const data: {
         code: string;
         gzip: boolean;
         langPath: string;
     };
-
-    export default languageData;
+    export default data;
 }

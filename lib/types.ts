@@ -498,6 +498,13 @@ export interface FinanceIntakeItem {
     ocr_confidence: number | null;
     ocr_text_hash: string | null;
     normalizer_version: number | null;
+    processing_attempt_id: string | null;
+    processing_started_at: string | null;
+    processing_lease_expires_at: string | null;
+    processing_attempt_count: number;
+    processing_version: number;
+    failure_code: string | null;
+    failure_stage: string | null;
     received_at: string;
     processed_at: string | null;
     error_message: string | null;
@@ -579,7 +586,7 @@ export interface FinanceRuleSuggestion {
 export interface FinanceSourceDetectionSignal {
     source_id: string;
     source_name: string;
-    kind: 'filename_alias' | 'ocr_alias';
+    kind: 'filename_alias' | 'ocr_alias' | 'rule_match';
     alias: string;
     score: number;
 }

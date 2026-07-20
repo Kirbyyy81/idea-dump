@@ -1,0 +1,45 @@
+services:
+  - type: web
+    name: idea-dump-finance-ocr
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: cd services/finance-ocr && npm ci && npm run build
+    startCommand: cd services/finance-ocr && npm start
+    healthCheckPath: /health
+    maxShutdownDelaySeconds: 120
+    envVars:
+      - key: NODE_VERSION
+        value: "22.22.0"
+      - key: HOST
+        value: 0.0.0.0
+      - key: LOG_LEVEL
+        value: info
+      - key: ALLOWED_ORIGINS
+        value: https://idea-dump-alpha.vercel.app
+      - key: MAX_IMAGE_BYTES
+        value: "4194304"
+      - key: MAX_REQUEST_BYTES
+        value: "4456448"
+      - key: MAX_IMAGE_DIMENSION
+        value: "12000"
+      - key: MAX_IMAGE_PIXELS
+        value: "25000000"
+      - key: PROCESSING_VERSION
+        value: "2"
+      - key: INTAKE_LEASE_SECONDS
+        value: "300"
+      - key: OCR_RATE_LIMIT_WINDOW_SECONDS
+        value: "60"
+      - key: OCR_RATE_LIMIT_MAX_REQUESTS
+        value: "4"
+      - key: WARM_RATE_LIMIT_MAX_REQUESTS
+        value: "6"
+      - key: OCR_BUSY_RETRY_AFTER_SECONDS
+        value: "5"
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
