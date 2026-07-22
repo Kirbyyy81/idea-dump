@@ -16,7 +16,7 @@ services:
       - key: LOG_LEVEL
         value: info
       - key: ALLOWED_ORIGINS
-        value: https://idea-dump-alpha.vercel.app
+        value: https://idea-dump-alpha.vercel.app,http://localhost:3000
       - key: MAX_IMAGE_BYTES
         value: "4194304"
       - key: MAX_REQUEST_BYTES
