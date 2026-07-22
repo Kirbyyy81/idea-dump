@@ -27,6 +27,7 @@ import { OcrProgress } from './_components/OcrProgress';
 import { FinanceLoadingState } from '../_components/FinanceLoadingState';
 
 const NEW_SOURCE = '__new__';
+const MAX_TRANSACTION_AMOUNT = 999_999_999_999.99;
 const initialForm = { source_id: '', category_id: '', direction: 'expense' as FinanceTransactionDirection, amount: '', merchant: '', reference_number: '', transaction_date: new Date().toISOString().slice(0, 10), notes: '' };
 
 async function readJsonResponse(response: Response, fallbackMessage: string) {
@@ -89,6 +90,11 @@ export default function AddFinanceTransactionPage() {
 
     const submitManual = async (event: FormEvent) => {
         event.preventDefault();
+        const amount = Number(form.amount);
+        if (!Number.isFinite(amount) || amount <= 0 || amount > MAX_TRANSACTION_AMOUNT) {
+            showError('Amount must be positive, within range, and use at most two decimals');
+            return;
+        }
         setIsSaving(true);
         try {
             let sourceId = form.source_id;
@@ -99,6 +105,8 @@ export default function AddFinanceTransactionPage() {
                 if (!sourceResponse.ok) throw new Error(sourcePayload.error || 'Could not create source');
                 sourceId = sourcePayload.data.id;
                 setSources((current) => [...current, sourcePayload.data]);
+                setForm((current) => ({ ...current, source_id: sourcePayload.data.id }));
+                setNewSource('');
             }
             const persistedCategory = await persistVirtualDefaultCategory(categoryId);
             if (persistedCategory) {
