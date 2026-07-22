@@ -7,6 +7,7 @@ import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
+import { FinanceLoadingState } from '../_components/FinanceLoadingState';
 import { FinanceCategory, FinanceCategoryType } from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
 import {
@@ -33,8 +34,10 @@ export default function FinanceCategoriesPage() {
     const [isSaving, setIsSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [addingSuggestedName, setAddingSuggestedName] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     const loadCategories = useCallback(async () => {
+        setIsLoading(true);
         try {
             const response = await fetch('/api/finance/categories');
             const payload = await response.json();
@@ -42,6 +45,8 @@ export default function FinanceCategoriesPage() {
             setCategories(payload.data || []);
         } catch (error) {
             showError(error instanceof Error ? error.message : 'Could not load categories');
+        } finally {
+            setIsLoading(false);
         }
     }, [showError]);
 
@@ -171,6 +176,11 @@ export default function FinanceCategoriesPage() {
                     </form>
 
                     <div className="space-y-5">
+                        {isLoading ? (
+                            <section className="border border-border-default bg-bg-surface">
+                                <FinanceLoadingState label="Loading categories..." />
+                            </section>
+                        ) : <>
                         {groups.map((group) => (
                             <section key={group.type} className="border border-border-default bg-bg-surface">
                                 <div className="border-b border-border-default px-5 py-4"><h2 className="text-base font-bold">{group.title}</h2></div>
@@ -235,6 +245,7 @@ export default function FinanceCategoriesPage() {
                                 </div>
                             </section>
                         ))}
+                        </>}
                     </div>
                 </div>
             </div>

@@ -23,6 +23,7 @@ import {
     FinanceTransactionDirection,
 } from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
+import { FinanceLoadingState } from '../_components/FinanceLoadingState';
 import { cn, formatCurrency } from '@/lib/utils';
 import {
     getFinanceCategoryOptions,
@@ -96,10 +97,12 @@ export default function FinanceReviewPage() {
     const [isDirectionProposalPending, setIsDirectionProposalPending] = useState(false);
     const [isDateProposalPending, setIsDateProposalPending] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const pendingDraftRef = useRef<PendingReviewDraft | null>(null);
     const selected = candidates.find((candidate) => candidate.id === selectedId) || null;
 
     const loadQueue = useCallback(async () => {
+        setIsLoading(true);
         try {
             const [reviewResponse, sourcesResponse, categoriesResponse] = await Promise.all([
                 fetch('/api/finance/review'),
@@ -130,6 +133,8 @@ export default function FinanceReviewPage() {
         } catch (error) {
             showError(error instanceof Error ? error.message : 'Could not load review queue');
             return false;
+        } finally {
+            setIsLoading(false);
         }
     }, [showError]);
 
@@ -252,8 +257,11 @@ export default function FinanceReviewPage() {
 
                 <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
                     <section className="border border-border-default bg-bg-surface">
-                        <div className="border-b border-border-default px-5 py-4"><h2 className="text-base font-bold">Awaiting review <span className="text-text-muted">({candidates.length})</span></h2></div>
+                        <div className="border-b border-border-default px-5 py-4"><h2 className="text-base font-bold">Awaiting review <span className="text-text-muted">({isLoading ? '…' : candidates.length})</span></h2></div>
                         <div className="divide-y divide-border-default">
+                            {isLoading ? (
+                                <FinanceLoadingState label="Loading review queue..." />
+                            ) : <>
                             {candidates.map((candidate) => {
                                 const outcome = duplicateOutcome(candidate);
                                 return (
@@ -265,10 +273,15 @@ export default function FinanceReviewPage() {
                                 );
                             })}
                             {!candidates.length && <p className="px-5 py-12 text-center text-sm text-text-muted">Review queue is clear.</p>}
+                            </>}
                         </div>
                     </section>
 
-                    {selected && form ? (
+                    {isLoading ? (
+                        <div className="grid min-h-72 place-items-center border border-dashed border-border-default">
+                            <FinanceLoadingState label="Loading candidate details..." />
+                        </div>
+                    ) : selected && form ? (
                         <form onSubmit={(event) => void resolveItem('confirm', event)}>
                             <Card className="p-5">
                                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-center gap-2"><OcrDoodleIcon size={18} className="text-accent-blue" /><h2 className="text-base font-bold">Candidate details</h2></div><Button type="button" variant="ghost" icon={<RefreshDoodleIcon size={15} />} onClick={() => void resolveItem('retry')} disabled={isSaving}>Retry rules</Button></div>

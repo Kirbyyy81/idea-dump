@@ -6,6 +6,7 @@ import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
+import { FinanceLoadingState } from '../_components/FinanceLoadingState';
 import { FinanceSource } from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
 
@@ -22,8 +23,10 @@ export default function FinanceSourcesPage() {
     const [deleting, setDeleting] = useState<FinanceSource | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
 
     const loadSources = useCallback(async () => {
+        setIsLoading(true);
         try {
             const response = await fetch('/api/finance/sources');
             const payload = await response.json();
@@ -31,6 +34,8 @@ export default function FinanceSourcesPage() {
             setSources(payload.data || []);
         } catch (error) {
             showError(error instanceof Error ? error.message : 'Could not load sources');
+        } finally {
+            setIsLoading(false);
         }
     }, [showError]);
 
@@ -147,6 +152,9 @@ export default function FinanceSourcesPage() {
                             <h2 className="text-base font-bold">Source library</h2>
                         </div>
                         <div className="divide-y divide-border-default">
+                            {isLoading ? (
+                                <FinanceLoadingState label="Loading sources..." />
+                            ) : <>
                             {sortedSources.map((source) => (
                                 <div key={source.id} className="px-5 py-4">
                                     {editingId === source.id ? (
@@ -192,6 +200,7 @@ export default function FinanceSourcesPage() {
                                 </div>
                             ))}
                             {!sortedSources.length && <p className="px-5 py-12 text-center text-sm text-text-muted">No sources yet.</p>}
+                            </>}
                         </div>
                     </section>
                 </div>

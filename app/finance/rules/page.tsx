@@ -16,6 +16,7 @@ import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { Toggle } from '@/components/atoms/Toggle';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
+import { FinanceLoadingState } from '../_components/FinanceLoadingState';
 import { FinanceCategory, FinanceRule, FinanceRuleSuggestion, FinanceSource, FinanceTransactionDirection } from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
 import {
@@ -56,8 +57,10 @@ export default function FinanceRulesPage() {
     const [isSaving, setIsSaving] = useState(false);
     const [deleting, setDeleting] = useState<RuleWithRelations | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
 
     const loadData = useCallback(async () => {
+        setIsLoading(true);
         try {
             const [rulesResponse, sourcesResponse, categoriesResponse, suggestionsResponse] = await Promise.all([
                 fetch('/api/finance/rules'), fetch('/api/finance/sources'), fetch('/api/finance/categories'), fetch('/api/finance/rule-suggestions'),
@@ -75,6 +78,8 @@ export default function FinanceRulesPage() {
             setSuggestions(suggestionsPayload.data || []);
         } catch (error) {
             showError(error instanceof Error ? error.message : 'Could not load finance rules');
+        } finally {
+            setIsLoading(false);
         }
     }, [showError]);
     useEffect(() => { void loadData(); }, [loadData]);
@@ -191,7 +196,7 @@ export default function FinanceRulesPage() {
             <div className="mx-auto max-w-7xl">
                 <header className="pb-5"><h1>Finance rules</h1><p className="mt-1 text-sm text-text-muted">Active rules are applied by priority during screenshot processing.</p></header>
 
-                {suggestions.length > 0 && (
+                {!isLoading && suggestions.length > 0 && (
                     <section className="mt-5 border border-border-default bg-bg-subtle">
                         <div className="flex items-center gap-2 border-b border-border-default px-5 py-4"><SparkleDoodleIcon size={17} className="text-accent-apricot" /><h2 className="text-base font-bold">Learning suggestions</h2></div>
                         <div className="divide-y divide-border-default">
@@ -238,6 +243,9 @@ export default function FinanceRulesPage() {
                     <section className="border border-border-default bg-bg-surface">
                         <div className="border-b border-border-default px-5 py-4"><h2 className="text-base font-bold">Rule library</h2></div>
                         <div className="divide-y divide-border-default">
+                            {isLoading ? (
+                                <FinanceLoadingState label="Loading rules..." />
+                            ) : <>
                             {rules.map((rule) => (
                                 <div key={rule.id} className="px-5 py-4">
                                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -256,6 +264,7 @@ export default function FinanceRulesPage() {
                                 </div>
                             ))}
                             {!rules.length && <p className="px-5 py-12 text-center text-sm text-text-muted">No rules yet.</p>}
+                            </>}
                         </div>
                     </section>
                 </div>
