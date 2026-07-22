@@ -270,7 +270,7 @@ begin
     retry_after_seconds := pg_catalog.greatest(
       1,
       pg_catalog.ceil(
-        pg_catalog.extract(epoch from intake_row.processing_lease_expires_at - lease_now)
+        extract(epoch from intake_row.processing_lease_expires_at - lease_now)
       )::integer
     );
     return jsonb_build_object(
@@ -463,7 +463,7 @@ begin
   end if;
 
   if nullif(p_candidate_payload ->> 'source_id', '') is distinct from
-     case when p_detected_source_id is null then null else p_detected_source_id::text end then
+     (case when p_detected_source_id is null then null else p_detected_source_id::text end) then
     raise exception using errcode = '22023', message = 'Finance candidate source does not match source evidence';
   end if;
 

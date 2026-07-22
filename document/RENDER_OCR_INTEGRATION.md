@@ -90,7 +90,7 @@ Before connecting production traffic, confirm all of the following:
 Apply the committed migration through the project's normal Supabase migration deployment workflow:
 
 ```text
-supabase/migrations/20260715091429_render_ocr_intake_leases.sql
+supabase/migrations/20260721082838_render_ocr_intake_leases.sql
 ```
 
 The migration:
@@ -476,7 +476,7 @@ render.yaml
 - Service operations guide: `services/finance-ocr/README.md`
 - Browser OCR client: `lib/finance/ocrClient.ts`
 - Finance upload page: `app/finance/add/page.tsx`
-- Supabase preparation migration: `supabase/migrations/20260715091429_render_ocr_intake_leases.sql`
+- Supabase preparation migration: `supabase/migrations/20260721082838_render_ocr_intake_leases.sql`
 - Architecture PRD: `document/PRD_008.md`
 
 ## External References
