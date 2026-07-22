@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.11.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.10.1...idea-dump-v0.11.0) (2026-07-22)
+
+
+### Features
+
+* add OCR intake leases ([6b245b4](https://github.com/Kirbyyy81/idea-dump/commit/6b245b474332d6adf2488d092ab392482f00ca31))
+* add Render OCR service ([b65a535](https://github.com/Kirbyyy81/idea-dump/commit/b65a5352439217c3db3dce7a8232fec8695c215d))
+* upload finance OCR to Render ([299c1de](https://github.com/Kirbyyy81/idea-dump/commit/299c1de3fb205546b0c30d61451ec4527af8a5a6))
+
+
+### Bug Fixes
+
+* correct OCR migration SQL ([445d771](https://github.com/Kirbyyy81/idea-dump/commit/445d7715227dce65817c2579e2806c8f0bd1d788))
+
 ## [0.10.1](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.10.0...idea-dump-v0.10.1) (2026-07-14)
 
 
