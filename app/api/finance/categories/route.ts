@@ -37,7 +37,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
     try {
-        const session = await authorizeFinance();
+        const session = await authorizeFinance(request, { requireJson: true });
         if ('response' in session) return session.response;
         const body = await readFinanceJsonObject(request);
         if (!body) return jsonError('Request body must be a JSON object');
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
     try {
-        const session = await authorizeFinance();
+        const session = await authorizeFinance(request, { requireJson: true });
         if ('response' in session) return session.response;
         const body = await readFinanceJsonObject(request);
         if (!body) return jsonError('Request body must be a JSON object');
@@ -165,7 +165,7 @@ export async function PUT(request: NextRequest) {
                 .single();
             if (error) {
                 if (error.code === 'P0002') return jsonError('Category not found', 404);
-                if (error.code === '23514' || error.code === '40001') return jsonError(error.message, 409);
+                if (error.code === '23514' || error.code === '40001') return jsonError('Category changed concurrently. Reload and retry.', 409);
                 throw error;
             }
             return NextResponse.json({ data });
@@ -194,7 +194,7 @@ export const PATCH = PUT;
 
 export async function DELETE(request: NextRequest) {
     try {
-        const session = await authorizeFinance();
+        const session = await authorizeFinance(request);
         if ('response' in session) return session.response;
         const id = request.nextUrl.searchParams.get('id');
         const confirmed = request.nextUrl.searchParams.get('confirm') === 'true';
@@ -209,7 +209,7 @@ export async function DELETE(request: NextRequest) {
         });
         if (error) {
             if (error.code === 'P0001' || error.code === '23503') {
-                return jsonError(error.message || 'Referenced categories cannot be deleted', 409);
+                return jsonError('Referenced categories cannot be deleted', 409);
             }
             throw error;
         }

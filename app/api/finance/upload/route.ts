@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authorizeFinance, jsonError } from '@/lib/finance/api';
 
@@ -25,7 +25,10 @@ export async function GET() {
     }
 }
 
-export async function POST() {
+export async function POST(request: NextRequest) {
+    const session = await authorizeFinance(request);
+    if ('response' in session) return session.response;
+
     return NextResponse.json({
         code: 'FINANCE_OCR_ROUTE_RETIRED',
         message: 'Screenshot OCR is handled by the Render service.',

@@ -44,7 +44,7 @@ export async function GET() {
 
 export async function PATCH(request: NextRequest) {
     try {
-        const session = await authorizeFinance();
+        const session = await authorizeFinance(request, { requireJson: true });
         if ('response' in session) return session.response;
         const body = await readFinanceJsonObject(request);
         if (!body) return jsonError('Request body must be a JSON object');
@@ -104,7 +104,7 @@ export async function PATCH(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
-        const session = await authorizeFinance();
+        const session = await authorizeFinance(request, { requireJson: true });
         if ('response' in session) return session.response;
         const body = await readFinanceJsonObject(request);
         if (!body) return jsonError('Request body must be a JSON object');

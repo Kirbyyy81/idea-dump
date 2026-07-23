@@ -15,14 +15,33 @@ import {
     normalizeFinanceDate,
     toPositiveFinanceAmount,
 } from '@/lib/finance/values';
+import { getFinanceMutationRequestError } from '@/lib/finance/requestSecurity';
 
 const categoryTypes: FinanceCategoryType[] = ['expense', 'income'];
 const transactionDirections: FinanceTransactionDirection[] = ['expense', 'income'];
 const transactionSources: FinanceTransactionSource[] = ['manual', 'screenshot'];
 const transactionStatuses: FinanceTransactionStatus[] = ['confirmed', 'review', 'duplicate', 'rejected'];
 
-export async function authorizeFinance() {
-    return authorizeSessionModule('finance');
+export async function authorizeFinance(
+    request?: NextRequest,
+    options: { requireJson?: boolean } = {}
+) {
+    const session = await authorizeSessionModule('finance');
+    if ('response' in session || !request) return session;
+
+    const requestError = getFinanceMutationRequestError({
+        method: request.method,
+        requestOrigin: request.nextUrl.origin,
+        origin: request.headers.get('origin'),
+        fetchSite: request.headers.get('sec-fetch-site'),
+        contentType: request.headers.get('content-type'),
+        requireJson: options.requireJson,
+    });
+    if (requestError) {
+        return { response: jsonError(requestError.message, requestError.status) };
+    }
+
+    return session;
 }
 
 export function jsonError(message: string, status = 400) {

@@ -32,10 +32,10 @@ const TRANSACTION_PAGE_SIZE = 500;
 function transactionRpcError(error: { code?: string; message?: string }) {
     const message = error.message || 'The transaction could not be updated';
     if (error.code === '40001') return jsonError('Finance data changed concurrently. Retry the action.', 409);
-    if (error.code === 'P0002' || /not found/i.test(message)) return jsonError(message, 404);
-    if (error.code === '23514') return jsonError(message, 409);
+    if (error.code === 'P0002' || /not found/i.test(message)) return jsonError('Transaction not found', 404);
+    if (error.code === '23514') return jsonError('Transaction conflicts with current Finance data', 409);
     if (error.code === '22023' || error.code === '23503' || /invalid|required|compatible/i.test(message)) {
-        return jsonError(message, 400);
+        return jsonError('Transaction details are invalid or no longer available', 400);
     }
     return null;
 }
@@ -143,7 +143,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
-        const session = await authorizeFinance();
+        const session = await authorizeFinance(request, { requireJson: true });
         if ('response' in session) return session.response;
         const body = await readFinanceJsonObject(request);
         if (!body) return jsonError('Request body must be a JSON object');
@@ -176,7 +176,7 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
     try {
-        const session = await authorizeFinance();
+        const session = await authorizeFinance(request, { requireJson: true });
         if ('response' in session) return session.response;
         const body = await readFinanceJsonObject(request);
         if (!body) return jsonError('Request body must be a JSON object');
@@ -240,7 +240,7 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
     try {
-        const session = await authorizeFinance();
+        const session = await authorizeFinance(request);
         if ('response' in session) return session.response;
         const id = new URL(request.url).searchParams.get('id');
         if (!id) return jsonError('Transaction ID is required');

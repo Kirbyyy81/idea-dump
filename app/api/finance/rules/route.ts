@@ -65,7 +65,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
     try {
-        const session = await authorizeFinance();
+        const session = await authorizeFinance(request, { requireJson: true });
         if ('response' in session) return session.response;
         const body = await readFinanceJsonObject(request);
         if (!body) return jsonError('Request body must be a JSON object');
@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
     try {
-        const session = await authorizeFinance();
+        const session = await authorizeFinance(request, { requireJson: true });
         if ('response' in session) return session.response;
         const body = await readFinanceJsonObject(request);
         if (!body) return jsonError('Request body must be a JSON object');
@@ -221,7 +221,7 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
     try {
-        const session = await authorizeFinance();
+        const session = await authorizeFinance(request);
         if ('response' in session) return session.response;
         const id = new URL(request.url).searchParams.get('id');
         if (!id) return jsonError('Rule ID is required');
