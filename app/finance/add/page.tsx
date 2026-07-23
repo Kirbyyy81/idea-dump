@@ -24,8 +24,10 @@ import {
     warmFinanceOcr,
 } from '@/lib/finance/ocrClient';
 import { OcrProgress } from './_components/OcrProgress';
+import { FinanceLoadingState } from '../_components/FinanceLoadingState';
 
 const NEW_SOURCE = '__new__';
+const MAX_TRANSACTION_AMOUNT = 999_999_999_999.99;
 const initialForm = { source_id: '', category_id: '', direction: 'expense' as FinanceTransactionDirection, amount: '', merchant: '', reference_number: '', transaction_date: new Date().toISOString().slice(0, 10), notes: '' };
 
 async function readJsonResponse(response: Response, fallbackMessage: string) {
@@ -64,6 +66,7 @@ export default function AddFinanceTransactionPage() {
     const [isSaving, setIsSaving] = useState(false);
     const [ocrPhase, setOcrPhase] = useState<FinanceOcrPhase>('idle');
     const [uploadProgress, setUploadProgress] = useState(0);
+    const [isOptionsLoading, setIsOptionsLoading] = useState(true);
 
     useEffect(() => {
         Promise.all([fetch('/api/finance/sources'), fetch('/api/finance/categories')]).then(async ([sourceResponse, categoryResponse]) => {
@@ -72,7 +75,8 @@ export default function AddFinanceTransactionPage() {
             if (!categoryResponse.ok) throw new Error(categoryPayload.error || 'Could not load categories');
             setSources(sourcePayload.data || []);
             setCategories(categoryPayload.data || []);
-        }).catch((error) => showError(error instanceof Error ? error.message : 'Could not load transaction options'));
+        }).catch((error) => showError(error instanceof Error ? error.message : 'Could not load transaction options'))
+            .finally(() => setIsOptionsLoading(false));
     }, [showError]);
 
     useEffect(() => {
@@ -86,6 +90,11 @@ export default function AddFinanceTransactionPage() {
 
     const submitManual = async (event: FormEvent) => {
         event.preventDefault();
+        const amount = Number(form.amount);
+        if (!Number.isFinite(amount) || amount <= 0 || amount > MAX_TRANSACTION_AMOUNT) {
+            showError('Amount must be positive, within range, and use at most two decimals');
+            return;
+        }
         setIsSaving(true);
         try {
             let sourceId = form.source_id;
@@ -96,6 +105,8 @@ export default function AddFinanceTransactionPage() {
                 if (!sourceResponse.ok) throw new Error(sourcePayload.error || 'Could not create source');
                 sourceId = sourcePayload.data.id;
                 setSources((current) => [...current, sourcePayload.data]);
+                setForm((current) => ({ ...current, source_id: sourcePayload.data.id }));
+                setNewSource('');
             }
             const persistedCategory = await persistVirtualDefaultCategory(categoryId);
             if (persistedCategory) {
@@ -157,7 +168,9 @@ export default function AddFinanceTransactionPage() {
         <header><Link href="/finance" className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-text-secondary hover:text-text-primary"><BackDoodleIcon size={16} />Finance</Link><h1>Add transaction</h1><p className="mt-1 text-sm text-text-muted">Enter the details or import a payment screenshot.</p></header>
         <div className="mt-6 grid grid-cols-2 border border-border-default p-1" role="group" aria-label="Transaction entry method"><button type="button" disabled={isSaving} onClick={() => setMode('manual')} className={`flex h-10 items-center justify-center gap-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${mode === 'manual' ? 'bg-action-primary text-action-primary-text' : 'text-text-secondary hover:bg-bg-hover'}`}><DocumentDoodleIcon size={16} />Manual</button><button type="button" disabled={isSaving} onClick={() => setMode('screenshot')} className={`flex h-10 items-center justify-center gap-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${mode === 'screenshot' ? 'bg-action-primary text-action-primary-text' : 'text-text-secondary hover:bg-bg-hover'}`}><ScanDoodleIcon size={16} />Screenshot</button></div>
 
-        {mode === 'manual' ? <form onSubmit={submitManual} className="mt-6 space-y-4">
+        {mode === 'manual' ? isOptionsLoading ? (
+            <FinanceLoadingState label="Loading transaction options..." />
+        ) : <form onSubmit={submitManual} className="mt-6 space-y-4">
             <label className="block space-y-2"><span className="text-sm text-text-secondary">Type</span><Select value={form.direction} onChange={(direction) => setForm({ ...form, direction: direction as FinanceTransactionDirection, category_id: '' })} options={[{ value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }]} /></label>
             <label className="block space-y-2"><span className="text-sm text-text-secondary">Source</span><Select value={form.source_id} onChange={(source_id) => setForm({ ...form, source_id })} placeholder="Choose or add a source" options={[...sources.filter((source) => !source.is_archived).map((source) => ({ value: source.id, label: source.name })), { value: NEW_SOURCE, label: '+ Add new source' }]} /></label>
             {form.source_id === NEW_SOURCE && <label className="block space-y-2"><span className="text-sm text-text-secondary">New source name</span><Input required value={newSource} onChange={(event) => setNewSource(event.target.value)} placeholder="e.g. Maybank debit card" /></label>}

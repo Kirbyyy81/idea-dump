@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { AppShell } from '@/components/organisms/AppShell';
 import { MonthPicker } from '@/components/atoms/MonthPicker';
+import { FinanceLoadingState } from './_components/FinanceLoadingState';
 import {
     AddDoodleIcon,
     ExpenseDoodleIcon,
@@ -26,15 +27,19 @@ export default function FinancePage() {
     const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
     const [summary, setSummary] = useState<FinanceDashboardSummary | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
     useEffect(() => {
         setError(null);
+        setSummary(null);
+        setIsLoading(true);
         fetch(`/api/finance/dashboard?month=${month}`)
             .then(async (response) => {
                 const payload = await response.json();
                 if (!response.ok) throw new Error(payload.error || 'Could not load finance overview');
                 setSummary(payload.data);
             })
-            .catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Could not load finance overview'));
+            .catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Could not load finance overview'))
+            .finally(() => setIsLoading(false));
     }, [month]);
 
     return (
@@ -53,6 +58,10 @@ export default function FinancePage() {
 
                 {error && <div className="mt-5 rounded-md border border-error bg-error-bg px-4 py-3 text-sm text-error">{error}</div>}
 
+                {isLoading ? (
+                    <FinanceLoadingState label="Loading finance overview..." />
+                ) : summary ? (
+                    <>
                 <section className="mt-5 grid grid-cols-3 divide-x divide-border-default border-y border-border-default py-4 text-center">
                     <div className="px-2"><p className="text-xs text-text-muted sm:text-sm">Income</p><p className="mt-1 text-sm font-bold text-success sm:text-lg">{formatCurrencyMYR(summary?.total_income || 0)}</p></div>
                     <div className="px-2"><p className="text-xs text-text-muted sm:text-sm">Spent</p><p className="mt-1 text-sm font-bold text-error sm:text-lg">{formatCurrencyMYR(summary?.total_expense || 0)}</p></div>
@@ -65,6 +74,8 @@ export default function FinancePage() {
                 </div>
 
                 <section className="mt-6"><div className="flex items-center justify-between"><h2 className="text-base font-bold">Recent transactions</h2><Link href="/finance/transactions" className="text-sm font-semibold text-accent-blue hover:underline">View all</Link></div><div className="mt-3 divide-y divide-border-default border-y border-border-default">{(summary?.recent_transactions || []).map((transaction) => { const isIncome = transaction.direction === 'income'; return <div key={transaction.id} className="flex items-center justify-between gap-4 py-4"><div className="flex min-w-0 items-center gap-3">{isIncome ? <IncomeDoodleIcon size={18} className="shrink-0 text-success" /> : <ExpenseDoodleIcon size={18} className="shrink-0 text-error" />}<div className="min-w-0"><p className="truncate font-semibold">{transaction.merchant || 'Untitled transaction'}</p><p className="truncate text-sm text-text-muted">{transaction.finance_source?.name || 'Unknown source'} · {transaction.transaction_date}</p></div></div><p className={isIncome ? 'font-bold text-success' : 'font-bold text-error'}>{isIncome ? '+' : '-'}{formatCurrencyMYR(transaction.amount)}</p></div>; })}{!summary?.recent_transactions.length && <p className="py-10 text-center text-sm text-text-muted">No transactions yet.</p>}</div></section>
+                    </>
+                ) : null}
             </div>
         </AppShell>
     );
