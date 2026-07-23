@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.11.1](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.11.0...idea-dump-v0.11.1) (2026-07-23)
+
+
+### Bug Fixes
+
+* enforce finance dates ([448ea41](https://github.com/Kirbyyy81/idea-dump/commit/448ea416d4ee0b5399c80ade345da32b908b0f7e))
+* protect finance integrity ([805295f](https://github.com/Kirbyyy81/idea-dump/commit/805295ff3815a1c20927cc17516cae5fe353efde))
+
 ## [0.11.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.10.1...idea-dump-v0.11.0) (2026-07-22)
 
 
