@@ -30,6 +30,19 @@ import {
     mergeFinanceCategory,
     persistVirtualDefaultCategory,
 } from '@/lib/finance/categoryOptions';
+import {
+    FINANCE_TIME_ZONE_HEADER,
+    getFinanceTransactionTextError,
+    getFinanceTimeZone,
+    getLocalFinanceDate,
+    isFutureFinanceDate,
+    MAX_FINANCE_AMOUNT,
+    MAX_FINANCE_MERCHANT_LENGTH,
+    MAX_FINANCE_NAME_LENGTH,
+    MAX_FINANCE_NOTES_LENGTH,
+    MAX_FINANCE_REFERENCE_LENGTH,
+    toPositiveFinanceAmount,
+} from '@/lib/finance/values';
 
 const NEW_SOURCE = '__new_source__';
 const NEW_CATEGORY = '__new_category__';
@@ -73,7 +86,7 @@ function formFromCandidate(candidate: FinanceCandidateTransaction): ReviewForm {
         amount: payload.amount?.toString() || '',
         merchant: payload.merchant || '',
         reference_number: payload.reference_number || payload.reference || '',
-        transaction_date: payload.transaction_date || new Date().toISOString().slice(0, 10),
+        transaction_date: payload.transaction_date || getLocalFinanceDate(),
         notes: '',
         allow_duplicate: false,
         duplicate_override_reason: '',
@@ -166,6 +179,23 @@ export default function FinanceReviewPage() {
     ) => {
         event?.preventDefault();
         if (!selected || !form) return;
+        let normalizedAmount: number | null = null;
+        if (action === 'confirm') {
+            normalizedAmount = toPositiveFinanceAmount(form.amount);
+            if (normalizedAmount === null) {
+                showError('Amount must be positive, within range, and use at most two decimals');
+                return;
+            }
+            const textError = getFinanceTransactionTextError(form);
+            if (textError) {
+                showError(textError);
+                return;
+            }
+            if (isFutureFinanceDate(form.transaction_date)) {
+                showError('Transaction date cannot be in the future');
+                return;
+            }
+        }
         setIsSaving(true);
         try {
             let sourceId = form.source_id;
@@ -204,11 +234,12 @@ export default function FinanceReviewPage() {
             }
             const response = await fetch('/api/finance/review', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', [FINANCE_TIME_ZONE_HEADER]: getFinanceTimeZone() },
                 body: JSON.stringify({
                     candidate_id: selected.id,
                     action,
                     ...form,
+                    amount: normalizedAmount ?? form.amount,
                     source_id: sourceId,
                     category_id: categoryId,
                     matched_transaction_id: selected.payload.duplicate_transaction_id,
@@ -319,14 +350,14 @@ export default function FinanceReviewPage() {
                                             </span>
                                         )}
                                     </label>
-                                    <label className="space-y-2"><span className="text-sm text-text-secondary">Amount</span><Input required type="number" min="0.01" step="0.01" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} /></label>
+                                    <label className="space-y-2"><span className="text-sm text-text-secondary">Amount</span><Input required type="number" min="0.01" max={MAX_FINANCE_AMOUNT} step="0.01" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} /></label>
                                     <label className="space-y-2"><span className="text-sm text-text-secondary">Currency</span><Input value="MYR" readOnly aria-readonly="true" /></label>
-                                    <label className="space-y-2"><span className="text-sm text-text-secondary">Reference number</span><Input value={form.reference_number} onChange={(event) => setForm({ ...form, reference_number: event.target.value })} /></label>
-                                    <div className="space-y-2"><label className="block space-y-2"><span className="text-sm text-text-secondary">Source</span><Select value={form.source_id} onChange={(source_id) => setForm({ ...form, source_id })} placeholder="Choose a source" options={[...sources.filter((source) => !source.is_archived).map((source) => ({ value: source.id, label: source.name })), { value: NEW_SOURCE, label: '+ Add new source' }]} /></label>{form.source_id === NEW_SOURCE && <Input required value={newSourceName} onChange={(event) => setNewSourceName(event.target.value)} placeholder="Source name, e.g. Maybank" />}</div>
-                                    <div className="space-y-2"><label className="block space-y-2"><span className="text-sm text-text-secondary">Category</span><Select value={form.category_id} onChange={(category_id) => setForm({ ...form, category_id })} placeholder="Uncategorised" options={[{ value: '', label: 'Uncategorised' }, ...availableCategories, { value: NEW_CATEGORY, label: '+ Add new category' }]} /></label>{form.category_id === NEW_CATEGORY && <Input required value={newCategoryName} onChange={(event) => setNewCategoryName(event.target.value)} placeholder={form.direction === 'income' ? 'e.g. Salary' : 'e.g. Groceries'} />}</div>
-                                    <label className="space-y-2"><span className="text-sm text-text-secondary">Merchant or payee</span><Input value={form.merchant} onChange={(event) => setForm({ ...form, merchant: event.target.value })} /></label>
-                                    <label className="space-y-2"><span className="text-sm text-text-secondary">Date</span><Input required type="date" value={form.transaction_date} onChange={(event) => { setForm({ ...form, transaction_date: event.target.value }); setIsDateProposalPending(false); }} />{isDateProposalPending && <span className="block text-xs text-warning">No date was detected. Today in UTC is proposed; confirm this date before continuing.</span>}{isDateProposalPending && <Button type="button" variant="ghost" onClick={() => setIsDateProposalPending(false)}>Use proposed date</Button>}</label>
-                                    <label className="space-y-2 md:col-span-2"><span className="text-sm text-text-secondary">Notes</span><Textarea value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></label>
+                                    <label className="space-y-2"><span className="text-sm text-text-secondary">Reference number</span><Input maxLength={MAX_FINANCE_REFERENCE_LENGTH} value={form.reference_number} onChange={(event) => setForm({ ...form, reference_number: event.target.value })} /></label>
+                                    <div className="space-y-2"><label className="block space-y-2"><span className="text-sm text-text-secondary">Source</span><Select value={form.source_id} onChange={(source_id) => setForm({ ...form, source_id })} placeholder="Choose a source" options={[...sources.filter((source) => !source.is_archived).map((source) => ({ value: source.id, label: source.name })), { value: NEW_SOURCE, label: '+ Add new source' }]} /></label>{form.source_id === NEW_SOURCE && <Input required maxLength={MAX_FINANCE_NAME_LENGTH} value={newSourceName} onChange={(event) => setNewSourceName(event.target.value)} placeholder="Source name, e.g. Maybank" />}</div>
+                                    <div className="space-y-2"><label className="block space-y-2"><span className="text-sm text-text-secondary">Category</span><Select value={form.category_id} onChange={(category_id) => setForm({ ...form, category_id })} placeholder="Uncategorised" options={[{ value: '', label: 'Uncategorised' }, ...availableCategories, { value: NEW_CATEGORY, label: '+ Add new category' }]} /></label>{form.category_id === NEW_CATEGORY && <Input required maxLength={MAX_FINANCE_NAME_LENGTH} value={newCategoryName} onChange={(event) => setNewCategoryName(event.target.value)} placeholder={form.direction === 'income' ? 'e.g. Salary' : 'e.g. Groceries'} />}</div>
+                                    <label className="space-y-2"><span className="text-sm text-text-secondary">Merchant or payee</span><Input maxLength={MAX_FINANCE_MERCHANT_LENGTH} value={form.merchant} onChange={(event) => setForm({ ...form, merchant: event.target.value })} /></label>
+                                    <label className="space-y-2"><span className="text-sm text-text-secondary">Date</span><Input required type="date" max={getLocalFinanceDate()} value={form.transaction_date} onChange={(event) => { setForm({ ...form, transaction_date: event.target.value }); setIsDateProposalPending(false); }} />{isDateProposalPending && <span className="block text-xs text-warning">No date was detected. Today is proposed; confirm this date before continuing.</span>}{isDateProposalPending && <Button type="button" variant="ghost" onClick={() => setIsDateProposalPending(false)}>Use proposed date</Button>}</label>
+                                    <label className="space-y-2 md:col-span-2"><span className="text-sm text-text-secondary">Notes</span><Textarea maxLength={MAX_FINANCE_NOTES_LENGTH} value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></label>
                                 </div>
 
                                 <details className="mt-5 border border-border-default bg-bg-subtle"><summary className="cursor-pointer px-4 py-3 text-sm font-semibold">Normalized OCR text</summary><pre className="max-h-64 overflow-auto whitespace-pre-wrap border-t border-border-default p-4 text-xs text-text-secondary">{selected.intake?.ocr_normalized_text || selected.intake?.ocr_text || 'No OCR text available.'}</pre></details>

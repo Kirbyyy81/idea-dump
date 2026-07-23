@@ -20,8 +20,14 @@ import {
 } from '@/lib/finance/api';
 import { FINANCE_V1_CURRENCY } from '@/lib/finance/constants';
 import { FinanceTransaction } from '@/lib/types';
+import {
+    FINANCE_TIME_ZONE_HEADER,
+    getFinanceDateInTimeZone,
+    isFutureFinanceDate,
+} from '@/lib/finance/values';
 
 export const dynamic = 'force-dynamic';
+const TRANSACTION_PAGE_SIZE = 500;
 
 function transactionRpcError(error: { code?: string; message?: string }) {
     const message = error.message || 'The transaction could not be updated';
@@ -37,6 +43,7 @@ function transactionRpcError(error: { code?: string; message?: string }) {
 function buildTransactionPayload(
     body: Record<string, unknown>,
     userId: string,
+    today: string,
     existing?: FinanceTransaction
 ) {
     const sourceId = toRequiredText(body.source_id);
@@ -50,6 +57,7 @@ function buildTransactionPayload(
     if (!amount) return { error: 'Amount must be positive, within range, and use at most two decimals' };
     if (!isFinanceTransactionDirection(body.direction)) return { error: 'Select a valid transaction direction' };
     if (!transactionDate) return { error: 'Transaction date is required' };
+    if (isFutureFinanceDate(transactionDate, today)) return { error: 'Transaction date cannot be in the future' };
     if (!isFinanceTextWithinLength(body.merchant, 500)) return { error: 'Merchant must be 500 characters or fewer' };
     if (!isFinanceTextWithinLength(body.notes, 2000)) return { error: 'Notes must be 2,000 characters or fewer' };
     if (!isFinanceTextWithinLength(body.reference_number, 200)) return { error: 'Reference number must be 200 characters or fewer' };
@@ -106,19 +114,27 @@ export async function GET(request: NextRequest) {
         if (sourceId && !isFinanceUuid(sourceId)) return jsonError('Source ID must be a valid UUID');
 
         const admin = createAdminClient();
-        let requestQuery = admin
-            .from('finance_transactions')
-            .select('*, finance_source:dim_finance_sources(*), category:dim_finance_categories(*)')
-            .eq('user_id', session.user.id)
-            .order('transaction_date', { ascending: false })
-            .order('created_at', { ascending: false });
-        requestQuery = requestQuery.eq('status', isFinanceTransactionStatus(status) ? status : 'confirmed');
-        if (sourceId) requestQuery = requestQuery.eq('source_id', sourceId);
-        if (query) requestQuery = requestQuery.or(`merchant.ilike.%${query}%,reference_number.ilike.%${query}%,notes.ilike.%${query}%`);
+        const transactions: FinanceTransaction[] = [];
+        for (let from = 0; ; from += TRANSACTION_PAGE_SIZE) {
+            let requestQuery = admin
+                .from('finance_transactions')
+                .select('*, finance_source:dim_finance_sources(*), category:dim_finance_categories(*)')
+                .eq('user_id', session.user.id)
+                .eq('status', isFinanceTransactionStatus(status) ? status : 'confirmed')
+                .order('transaction_date', { ascending: false })
+                .order('created_at', { ascending: false })
+                .order('id', { ascending: true })
+                .range(from, from + TRANSACTION_PAGE_SIZE - 1);
+            if (sourceId) requestQuery = requestQuery.eq('source_id', sourceId);
+            if (query) requestQuery = requestQuery.or(`merchant.ilike.%${query}%,reference_number.ilike.%${query}%,notes.ilike.%${query}%`);
 
-        const { data, error } = await requestQuery;
-        if (error) throw error;
-        return NextResponse.json({ data: (data || []).map(normalizeFinanceTransaction) });
+            const { data, error } = await requestQuery;
+            if (error) throw error;
+            const page = (data || []).map(normalizeFinanceTransaction);
+            transactions.push(...page);
+            if (page.length < TRANSACTION_PAGE_SIZE) break;
+        }
+        return NextResponse.json({ data: transactions });
     } catch (error) {
         console.error('Error fetching finance transactions:', error);
         return jsonError('Failed to fetch finance transactions', 500);
@@ -131,7 +147,8 @@ export async function POST(request: NextRequest) {
         if ('response' in session) return session.response;
         const body = await readFinanceJsonObject(request);
         if (!body) return jsonError('Request body must be a JSON object');
-        const payload = buildTransactionPayload(body, session.user.id);
+        const today = getFinanceDateInTimeZone(request.headers.get(FINANCE_TIME_ZONE_HEADER));
+        const payload = buildTransactionPayload(body, session.user.id, today);
         if ('error' in payload) return jsonError(payload.error ?? 'Invalid transaction');
 
         const referenceError = await validateOwnedReferences(
@@ -179,7 +196,8 @@ export async function PUT(request: NextRequest) {
 
         if (existing.status !== 'confirmed') return jsonError('Only confirmed ledger transactions can be edited', 409);
         const merged = { ...existing, ...body };
-        const payload = buildTransactionPayload(merged, session.user.id, existing as FinanceTransaction);
+        const today = getFinanceDateInTimeZone(request.headers.get(FINANCE_TIME_ZONE_HEADER));
+        const payload = buildTransactionPayload(merged, session.user.id, today, existing as FinanceTransaction);
         if ('error' in payload) return jsonError(payload.error ?? 'Invalid transaction');
         const referenceError = await validateOwnedReferences(
             session.user.id,

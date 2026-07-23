@@ -1,8 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authorizeFinance, jsonError, normalizeFinanceTransaction } from '@/lib/finance/api';
+import {
+    aggregateFinanceDashboard,
+    FinanceDashboardRow,
+} from '@/lib/finance/dashboard';
+import { getFinanceMonthRange, getLocalFinanceMonth } from '@/lib/finance/values';
 
 export const dynamic = 'force-dynamic';
+const DASHBOARD_PAGE_SIZE = 500;
+
+async function loadMonthTransactions(
+    admin: ReturnType<typeof createAdminClient>,
+    userId: string,
+    monthStart: string,
+    nextMonthStart: string
+) {
+    const rows: FinanceDashboardRow[] = [];
+    for (let from = 0; ; from += DASHBOARD_PAGE_SIZE) {
+        const { data, error } = await admin
+            .from('finance_transactions')
+            .select('id, amount, direction, transaction_date, category_id, category:dim_finance_categories(name)')
+            .eq('user_id', userId)
+            .eq('status', 'confirmed')
+            .gte('transaction_date', monthStart)
+            .lt('transaction_date', nextMonthStart)
+            .order('id', { ascending: true })
+            .range(from, from + DASHBOARD_PAGE_SIZE - 1);
+        if (error) throw error;
+        const page = (data || []) as unknown as FinanceDashboardRow[];
+        rows.push(...page);
+        if (page.length < DASHBOARD_PAGE_SIZE) break;
+    }
+    return rows;
+}
 
 export async function GET(request: NextRequest) {
     try {
@@ -10,24 +41,18 @@ export async function GET(request: NextRequest) {
         if ('response' in session) return session.response;
 
         const requestedMonth = request.nextUrl.searchParams.get('month');
-        if (requestedMonth && !/^\d{4}-(0[1-9]|1[0-2])$/.test(requestedMonth)) {
+        const monthRange = getFinanceMonthRange(requestedMonth || getLocalFinanceMonth());
+        if (!monthRange) {
             return jsonError('Month must use YYYY-MM format');
         }
-        const currentMonth = requestedMonth && /^\d{4}-(0[1-9]|1[0-2])$/.test(requestedMonth)
-            ? requestedMonth
-            : new Date().toISOString().slice(0, 7);
-        const monthStart = `${currentMonth}-01`;
-        const [year, month] = currentMonth.split('-').map(Number);
-        const nextMonthStart = new Date(Date.UTC(year, month, 1)).toISOString().slice(0, 10);
         const admin = createAdminClient();
         const [monthResult, recentResult, intakeResult] = await Promise.all([
-            admin
-                .from('finance_transactions')
-                .select('amount, direction, transaction_date, category_id, category:dim_finance_categories(name)')
-                .eq('user_id', session.user.id)
-                .eq('status', 'confirmed')
-                .gte('transaction_date', monthStart)
-                .lt('transaction_date', nextMonthStart),
+            loadMonthTransactions(
+                admin,
+                session.user.id,
+                monthRange.monthStart,
+                monthRange.nextMonthStart
+            ),
             admin
                 .from('finance_transactions')
                 .select('*, finance_source:dim_finance_sources(*), category:dim_finance_categories(*)')
@@ -42,48 +67,21 @@ export async function GET(request: NextRequest) {
                 .eq('user_id', session.user.id)
                 .eq('status', 'review'),
         ]);
-        if (monthResult.error) throw monthResult.error;
         if (recentResult.error) throw recentResult.error;
         if (intakeResult.error) throw intakeResult.error;
 
-        let totalExpense = 0;
-        let totalIncome = 0;
-        const expensesByCategory = new Map<string, { category_id: string | null; label: string; amount: number }>();
-        const dailyCashFlow = new Map<string, { date: string; label: string; income: number; expense: number }>();
-        for (const item of monthResult.data || []) {
-            const amount = Number(item.amount || 0);
-            const day = item.transaction_date;
-            const daily = dailyCashFlow.get(day) || {
-                date: day,
-                label: new Date(`${day}T00:00:00Z`).toLocaleDateString('en-MY', { day: 'numeric' }),
-                income: 0,
-                expense: 0,
-            };
-            if (item.direction === 'expense') {
-                totalExpense += amount;
-                daily.expense += amount;
-                const category = Array.isArray(item.category) ? item.category[0] : item.category;
-                const label = category?.name || 'Uncategorised';
-                const current = expensesByCategory.get(label) || { category_id: null, label, amount: 0 };
-                current.amount += amount;
-                expensesByCategory.set(label, current);
-            } else if (item.direction === 'income') {
-                totalIncome += amount;
-                daily.income += amount;
-            }
-            dailyCashFlow.set(day, daily);
-        }
+        const aggregate = aggregateFinanceDashboard(monthResult);
 
         return NextResponse.json({
             data: {
-                month: currentMonth,
-                total_expense: totalExpense,
-                total_income: totalIncome,
-                net_cash_flow: totalIncome - totalExpense,
+                month: monthRange.month,
+                total_expense: aggregate.total_expense,
+                total_income: aggregate.total_income,
+                net_cash_flow: aggregate.net_cash_flow,
                 review_count: intakeResult.count || 0,
                 recent_transactions: (recentResult.data || []).map(normalizeFinanceTransaction),
-                expense_by_category: Array.from(expensesByCategory.values()).sort((a, b) => b.amount - a.amount),
-                daily_cash_flow: Array.from(dailyCashFlow.values()).sort((a, b) => a.date.localeCompare(b.date)),
+                expense_by_category: aggregate.expense_by_category,
+                daily_cash_flow: aggregate.daily_cash_flow,
             },
         });
     } catch (error) {

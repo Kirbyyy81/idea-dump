@@ -11,6 +11,10 @@ import {
     FinanceTransactionStatus,
 } from '@/lib/types';
 import { FINANCE_V1_CURRENCY } from '@/lib/finance/constants';
+import {
+    normalizeFinanceDate,
+    toPositiveFinanceAmount,
+} from '@/lib/finance/values';
 
 const categoryTypes: FinanceCategoryType[] = ['expense', 'income'];
 const transactionDirections: FinanceTransactionDirection[] = ['expense', 'income'];
@@ -87,25 +91,11 @@ export function toNonNegativeNumber(value: unknown) {
 }
 
 export function toPositiveNumber(value: unknown) {
-    const parsed = typeof value === 'number' ? value : Number(value);
-    if (!Number.isFinite(parsed) || parsed <= 0 || parsed > 999_999_999_999.99) return null;
-    const rounded = Math.round((parsed + Number.EPSILON) * 100) / 100;
-    return Math.abs(parsed - rounded) < 1e-9 ? parsed : null;
+    return toPositiveFinanceAmount(value);
 }
 
 export function normalizeDate(value: unknown) {
-    const text = toRequiredText(value);
-    const match = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (!match) return null;
-    const year = Number(match[1]);
-    const month = Number(match[2]);
-    const day = Number(match[3]);
-    const date = new Date(Date.UTC(year, month - 1, day));
-    return date.getUTCFullYear() === year
-        && date.getUTCMonth() === month - 1
-        && date.getUTCDate() === day
-        ? text
-        : null;
+    return normalizeFinanceDate(value);
 }
 
 export function isFinanceCategoryType(value: unknown): value is FinanceCategoryType {

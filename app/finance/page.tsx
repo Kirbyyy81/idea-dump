@@ -14,32 +14,35 @@ import {
     PreviousDoodleIcon,
 } from '@/components/atoms/DoodleIcons';
 import { FinanceDashboardSummary } from '@/lib/types';
+import { getLocalFinanceMonth, shiftFinanceMonth } from '@/lib/finance/values';
 import { formatCurrencyMYR } from '@/lib/utils';
 
 const CHART_COLORS = ['#e76f51', '#2a9d8f', '#457b9d', '#e9c46a', '#8d6e63', '#6d597a'];
 
-function shiftMonth(value: string, offset: number) {
-    const [year, month] = value.split('-').map(Number);
-    return new Date(Date.UTC(year, month - 1 + offset, 1)).toISOString().slice(0, 7);
-}
-
 export default function FinancePage() {
-    const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
+    const [month, setMonth] = useState(getLocalFinanceMonth);
     const [summary, setSummary] = useState<FinanceDashboardSummary | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     useEffect(() => {
+        const controller = new AbortController();
         setError(null);
         setSummary(null);
         setIsLoading(true);
-        fetch(`/api/finance/dashboard?month=${month}`)
+        fetch(`/api/finance/dashboard?month=${month}`, { signal: controller.signal })
             .then(async (response) => {
                 const payload = await response.json();
                 if (!response.ok) throw new Error(payload.error || 'Could not load finance overview');
                 setSummary(payload.data);
             })
-            .catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Could not load finance overview'))
-            .finally(() => setIsLoading(false));
+            .catch((loadError) => {
+                if (loadError instanceof DOMException && loadError.name === 'AbortError') return;
+                setError(loadError instanceof Error ? loadError.message : 'Could not load finance overview');
+            })
+            .finally(() => {
+                if (!controller.signal.aborted) setIsLoading(false);
+            });
+        return () => controller.abort();
     }, [month]);
 
     return (
@@ -51,9 +54,9 @@ export default function FinancePage() {
                 </header>
 
                 <div className="mt-6 flex items-center justify-between border-y border-border-default py-3">
-                    <button type="button" title="Previous month" aria-label="Previous month" onClick={() => setMonth(shiftMonth(month, -1))} className="grid size-10 place-items-center text-text-secondary hover:text-text-primary"><PreviousDoodleIcon size={19} /></button>
+                    <button type="button" title="Previous month" aria-label="Previous month" onClick={() => setMonth(shiftFinanceMonth(month, -1) || month)} className="grid size-10 place-items-center text-text-secondary hover:text-text-primary"><PreviousDoodleIcon size={19} /></button>
                     <MonthPicker value={month} onChange={setMonth} />
-                    <button type="button" title="Next month" aria-label="Next month" onClick={() => setMonth(shiftMonth(month, 1))} className="grid size-10 place-items-center text-text-secondary hover:text-text-primary"><NextDoodleIcon size={19} /></button>
+                    <button type="button" title="Next month" aria-label="Next month" onClick={() => setMonth(shiftFinanceMonth(month, 1) || month)} className="grid size-10 place-items-center text-text-secondary hover:text-text-primary"><NextDoodleIcon size={19} /></button>
                 </div>
 
                 {error && <div className="mt-5 rounded-md border border-error bg-error-bg px-4 py-3 text-sm text-error">{error}</div>}
