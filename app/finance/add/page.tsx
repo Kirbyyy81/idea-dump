@@ -25,10 +25,19 @@ import {
 } from '@/lib/finance/ocrClient';
 import { OcrProgress } from './_components/OcrProgress';
 import { FinanceLoadingState } from '../_components/FinanceLoadingState';
+import {
+    getFinanceTransactionTextError,
+    getLocalFinanceDate,
+    MAX_FINANCE_AMOUNT,
+    MAX_FINANCE_MERCHANT_LENGTH,
+    MAX_FINANCE_NAME_LENGTH,
+    MAX_FINANCE_NOTES_LENGTH,
+    MAX_FINANCE_REFERENCE_LENGTH,
+    toPositiveFinanceAmount,
+} from '@/lib/finance/values';
 
 const NEW_SOURCE = '__new__';
-const MAX_TRANSACTION_AMOUNT = 999_999_999_999.99;
-const initialForm = { source_id: '', category_id: '', direction: 'expense' as FinanceTransactionDirection, amount: '', merchant: '', reference_number: '', transaction_date: new Date().toISOString().slice(0, 10), notes: '' };
+const initialForm = { source_id: '', category_id: '', direction: 'expense' as FinanceTransactionDirection, amount: '', merchant: '', reference_number: '', transaction_date: getLocalFinanceDate(), notes: '' };
 
 async function readJsonResponse(response: Response, fallbackMessage: string) {
     const responseText = await response.text();
@@ -90,9 +99,14 @@ export default function AddFinanceTransactionPage() {
 
     const submitManual = async (event: FormEvent) => {
         event.preventDefault();
-        const amount = Number(form.amount);
-        if (!Number.isFinite(amount) || amount <= 0 || amount > MAX_TRANSACTION_AMOUNT) {
+        const amount = toPositiveFinanceAmount(form.amount);
+        if (amount === null) {
             showError('Amount must be positive, within range, and use at most two decimals');
+            return;
+        }
+        const textError = getFinanceTransactionTextError(form);
+        if (textError) {
+            showError(textError);
             return;
         }
         setIsSaving(true);
@@ -113,11 +127,11 @@ export default function AddFinanceTransactionPage() {
                 categoryId = persistedCategory.id;
                 setCategories((current) => mergeFinanceCategory(current, persistedCategory));
             }
-            const response = await fetch('/api/finance/transactions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...form, source_id: sourceId, category_id: categoryId }) });
+            const response = await fetch('/api/finance/transactions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...form, amount, source_id: sourceId, category_id: categoryId }) });
             const payload = await readJsonResponse(response, 'Could not add transaction');
             if (!response.ok) throw new Error(payload.error || 'Could not add transaction');
             showSuccess('Transaction added');
-            setForm({ ...initialForm, transaction_date: new Date().toISOString().slice(0, 10) });
+            setForm({ ...initialForm, transaction_date: getLocalFinanceDate() });
             setNewSource('');
         } catch (error) { showError(error instanceof Error ? error.message : 'Could not add transaction'); }
         finally { setIsSaving(false); }
@@ -173,12 +187,12 @@ export default function AddFinanceTransactionPage() {
         ) : <form onSubmit={submitManual} className="mt-6 space-y-4">
             <label className="block space-y-2"><span className="text-sm text-text-secondary">Type</span><Select value={form.direction} onChange={(direction) => setForm({ ...form, direction: direction as FinanceTransactionDirection, category_id: '' })} options={[{ value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }]} /></label>
             <label className="block space-y-2"><span className="text-sm text-text-secondary">Source</span><Select value={form.source_id} onChange={(source_id) => setForm({ ...form, source_id })} placeholder="Choose or add a source" options={[...sources.filter((source) => !source.is_archived).map((source) => ({ value: source.id, label: source.name })), { value: NEW_SOURCE, label: '+ Add new source' }]} /></label>
-            {form.source_id === NEW_SOURCE && <label className="block space-y-2"><span className="text-sm text-text-secondary">New source name</span><Input required value={newSource} onChange={(event) => setNewSource(event.target.value)} placeholder="e.g. Maybank debit card" /></label>}
+            {form.source_id === NEW_SOURCE && <label className="block space-y-2"><span className="text-sm text-text-secondary">New source name</span><Input required maxLength={MAX_FINANCE_NAME_LENGTH} value={newSource} onChange={(event) => setNewSource(event.target.value)} placeholder="e.g. Maybank debit card" /></label>}
             <label className="block space-y-2"><span className="text-sm text-text-secondary">Category</span><Select value={form.category_id} onChange={(category_id) => setForm({ ...form, category_id })} placeholder="Uncategorised" options={[{ value: '', label: 'Uncategorised' }, ...availableCategories]} /></label>
-            <div className="grid gap-4 sm:grid-cols-2"><label className="block space-y-2"><span className="text-sm text-text-secondary">Amount</span><Input required type="number" inputMode="decimal" min="0.01" step="0.01" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} placeholder="0.00" /></label><label className="block space-y-2"><span className="text-sm text-text-secondary">Currency</span><Input value="MYR" readOnly aria-readonly="true" /></label></div>
-            <div className="grid gap-4 sm:grid-cols-2"><label className="block space-y-2"><span className="text-sm text-text-secondary">Date</span><Input required type="date" value={form.transaction_date} onChange={(event) => setForm({ ...form, transaction_date: event.target.value })} /></label><label className="block space-y-2"><span className="text-sm text-text-secondary">Reference number</span><Input value={form.reference_number} onChange={(event) => setForm({ ...form, reference_number: event.target.value })} /></label></div>
-            <label className="block space-y-2"><span className="text-sm text-text-secondary">Merchant or payee</span><Input value={form.merchant} onChange={(event) => setForm({ ...form, merchant: event.target.value })} /></label>
-            <label className="block space-y-2"><span className="text-sm text-text-secondary">Notes</span><Textarea value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></label>
+            <div className="grid gap-4 sm:grid-cols-2"><label className="block space-y-2"><span className="text-sm text-text-secondary">Amount</span><Input required type="number" inputMode="decimal" min="0.01" max={MAX_FINANCE_AMOUNT} step="0.01" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} placeholder="0.00" /></label><label className="block space-y-2"><span className="text-sm text-text-secondary">Currency</span><Input value="MYR" readOnly aria-readonly="true" /></label></div>
+            <div className="grid gap-4 sm:grid-cols-2"><label className="block space-y-2"><span className="text-sm text-text-secondary">Date</span><Input required type="date" value={form.transaction_date} onChange={(event) => setForm({ ...form, transaction_date: event.target.value })} /></label><label className="block space-y-2"><span className="text-sm text-text-secondary">Reference number</span><Input maxLength={MAX_FINANCE_REFERENCE_LENGTH} value={form.reference_number} onChange={(event) => setForm({ ...form, reference_number: event.target.value })} /></label></div>
+            <label className="block space-y-2"><span className="text-sm text-text-secondary">Merchant or payee</span><Input maxLength={MAX_FINANCE_MERCHANT_LENGTH} value={form.merchant} onChange={(event) => setForm({ ...form, merchant: event.target.value })} /></label>
+            <label className="block space-y-2"><span className="text-sm text-text-secondary">Notes</span><Textarea maxLength={MAX_FINANCE_NOTES_LENGTH} value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></label>
             <Button type="submit" className="w-full" isLoading={isSaving} disabled={!form.source_id || (form.source_id === NEW_SOURCE && !newSource.trim())}>Add transaction</Button>
         </form> : <form onSubmit={submitScreenshot} className="mt-6"><FileUpload label="Transaction screenshot" accept="image/png,image/jpeg,image/webp" value={file} onChange={setFile} disabled={isSaving} /><p className="mt-2 text-sm text-text-muted">PNG, JPEG, or WebP · Max 4 MB</p>{ocrPhase !== 'idle' && <OcrProgress phase={ocrPhase} uploadProgress={uploadProgress} />}<Button type="submit" className="mt-5 w-full" isLoading={isSaving} disabled={!file || isSaving}>Process screenshot</Button></form>}
     </div></AppShell>;

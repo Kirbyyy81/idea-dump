@@ -25,6 +25,15 @@ import {
     mergeFinanceCategory,
     persistVirtualDefaultCategory,
 } from '@/lib/finance/categoryOptions';
+import {
+    getFinanceTransactionTextError,
+    getLocalFinanceDate,
+    MAX_FINANCE_AMOUNT,
+    MAX_FINANCE_MERCHANT_LENGTH,
+    MAX_FINANCE_NOTES_LENGTH,
+    MAX_FINANCE_REFERENCE_LENGTH,
+    toPositiveFinanceAmount,
+} from '@/lib/finance/values';
 
 const initialForm = {
     source_id: '',
@@ -33,7 +42,7 @@ const initialForm = {
     amount: '',
     merchant: '',
     reference_number: '',
-    transaction_date: new Date().toISOString().slice(0, 10),
+    transaction_date: getLocalFinanceDate(),
     notes: '',
 };
 
@@ -113,6 +122,16 @@ export default function FinanceTransactionsPage() {
 
     const saveTransaction = async (event: FormEvent) => {
         event.preventDefault();
+        const amount = toPositiveFinanceAmount(form.amount);
+        if (amount === null) {
+            showError('Amount must be positive, within range, and use at most two decimals');
+            return;
+        }
+        const textError = getFinanceTransactionTextError(form);
+        if (textError) {
+            showError(textError);
+            return;
+        }
         setIsSaving(true);
         try {
             let categoryId = form.category_id;
@@ -125,15 +144,15 @@ export default function FinanceTransactionsPage() {
                 method: editingId ? 'PUT' : 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(editingId
-                    ? { ...form, category_id: categoryId, id: editingId }
-                    : { ...form, category_id: categoryId }),
+                    ? { ...form, amount, category_id: categoryId, id: editingId }
+                    : { ...form, amount, category_id: categoryId }),
             });
             const payload = await response.json();
             if (!response.ok) throw new Error(payload.error || 'Could not save transaction');
             setTransactions((current) => editingId
                 ? current.map((transaction) => transaction.id === editingId ? payload.data : transaction)
                 : [payload.data, ...current]);
-            setForm((current) => ({ ...initialForm, source_id: current.source_id, transaction_date: new Date().toISOString().slice(0, 10) }));
+            setForm((current) => ({ ...initialForm, source_id: current.source_id, transaction_date: getLocalFinanceDate() }));
             showSuccess(editingId ? 'Transaction updated' : 'Transaction added');
             setEditingId(null);
         } catch (error) {
@@ -160,7 +179,7 @@ export default function FinanceTransactionsPage() {
 
     const cancelEditing = () => {
         setEditingId(null);
-        setForm((current) => ({ ...initialForm, source_id: current.source_id, transaction_date: new Date().toISOString().slice(0, 10) }));
+        setForm((current) => ({ ...initialForm, source_id: current.source_id, transaction_date: getLocalFinanceDate() }));
     };
 
     const deleteTransaction = async () => {
@@ -194,11 +213,11 @@ export default function FinanceTransactionsPage() {
                                 <label className="block space-y-2"><span className="text-sm text-text-secondary">Direction</span><Select value={form.direction} onChange={(direction) => setForm({ ...form, direction: direction as FinanceTransactionDirection, category_id: '' })} options={[{ value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }]} /></label>
                                 <label className="block space-y-2"><span className="text-sm text-text-secondary">Source</span><Select value={form.source_id} onChange={(source_id) => setForm({ ...form, source_id })} placeholder="Choose a source" options={sourceOptions} /></label>
                                 <label className="block space-y-2"><span className="text-sm text-text-secondary">Category</span><Select value={form.category_id} onChange={(category_id) => setForm({ ...form, category_id })} placeholder="Uncategorised" options={[{ value: '', label: 'Uncategorised' }, ...categoryOptions]} /></label>
-                                <div className="grid gap-4 sm:grid-cols-2"><label className="block space-y-2"><span className="text-sm text-text-secondary">Amount</span><Input required inputMode="decimal" type="number" min="0.01" step="0.01" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} placeholder="0.00" /></label><label className="block space-y-2"><span className="text-sm text-text-secondary">Currency</span><Input value="MYR" readOnly aria-readonly="true" /></label></div>
-                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Merchant or payee</span><Input value={form.merchant} onChange={(event) => setForm({ ...form, merchant: event.target.value })} /></label>
-                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Reference number</span><Input value={form.reference_number} onChange={(event) => setForm({ ...form, reference_number: event.target.value })} /></label>
+                                <div className="grid gap-4 sm:grid-cols-2"><label className="block space-y-2"><span className="text-sm text-text-secondary">Amount</span><Input required inputMode="decimal" type="number" min="0.01" max={MAX_FINANCE_AMOUNT} step="0.01" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} placeholder="0.00" /></label><label className="block space-y-2"><span className="text-sm text-text-secondary">Currency</span><Input value="MYR" readOnly aria-readonly="true" /></label></div>
+                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Merchant or payee</span><Input maxLength={MAX_FINANCE_MERCHANT_LENGTH} value={form.merchant} onChange={(event) => setForm({ ...form, merchant: event.target.value })} /></label>
+                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Reference number</span><Input maxLength={MAX_FINANCE_REFERENCE_LENGTH} value={form.reference_number} onChange={(event) => setForm({ ...form, reference_number: event.target.value })} /></label>
                                 <label className="block space-y-2"><span className="text-sm text-text-secondary">Date</span><Input required type="date" value={form.transaction_date} onChange={(event) => setForm({ ...form, transaction_date: event.target.value })} /></label>
-                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Notes</span><Textarea value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></label>
+                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Notes</span><Textarea maxLength={MAX_FINANCE_NOTES_LENGTH} value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></label>
                             </div>
                             <Button type="submit" className="mt-5 w-full" isLoading={isSaving} disabled={!form.source_id}>Save changes</Button>
                         </Card>

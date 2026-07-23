@@ -22,6 +22,7 @@ import { FINANCE_V1_CURRENCY } from '@/lib/finance/constants';
 import { FinanceTransaction } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
+const TRANSACTION_PAGE_SIZE = 500;
 
 function transactionRpcError(error: { code?: string; message?: string }) {
     const message = error.message || 'The transaction could not be updated';
@@ -106,19 +107,27 @@ export async function GET(request: NextRequest) {
         if (sourceId && !isFinanceUuid(sourceId)) return jsonError('Source ID must be a valid UUID');
 
         const admin = createAdminClient();
-        let requestQuery = admin
-            .from('finance_transactions')
-            .select('*, finance_source:dim_finance_sources(*), category:dim_finance_categories(*)')
-            .eq('user_id', session.user.id)
-            .order('transaction_date', { ascending: false })
-            .order('created_at', { ascending: false });
-        requestQuery = requestQuery.eq('status', isFinanceTransactionStatus(status) ? status : 'confirmed');
-        if (sourceId) requestQuery = requestQuery.eq('source_id', sourceId);
-        if (query) requestQuery = requestQuery.or(`merchant.ilike.%${query}%,reference_number.ilike.%${query}%,notes.ilike.%${query}%`);
+        const transactions: FinanceTransaction[] = [];
+        for (let from = 0; ; from += TRANSACTION_PAGE_SIZE) {
+            let requestQuery = admin
+                .from('finance_transactions')
+                .select('*, finance_source:dim_finance_sources(*), category:dim_finance_categories(*)')
+                .eq('user_id', session.user.id)
+                .eq('status', isFinanceTransactionStatus(status) ? status : 'confirmed')
+                .order('transaction_date', { ascending: false })
+                .order('created_at', { ascending: false })
+                .order('id', { ascending: true })
+                .range(from, from + TRANSACTION_PAGE_SIZE - 1);
+            if (sourceId) requestQuery = requestQuery.eq('source_id', sourceId);
+            if (query) requestQuery = requestQuery.or(`merchant.ilike.%${query}%,reference_number.ilike.%${query}%,notes.ilike.%${query}%`);
 
-        const { data, error } = await requestQuery;
-        if (error) throw error;
-        return NextResponse.json({ data: (data || []).map(normalizeFinanceTransaction) });
+            const { data, error } = await requestQuery;
+            if (error) throw error;
+            const page = (data || []).map(normalizeFinanceTransaction);
+            transactions.push(...page);
+            if (page.length < TRANSACTION_PAGE_SIZE) break;
+        }
+        return NextResponse.json({ data: transactions });
     } catch (error) {
         console.error('Error fetching finance transactions:', error);
         return jsonError('Failed to fetch finance transactions', 500);
