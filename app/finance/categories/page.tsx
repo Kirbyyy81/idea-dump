@@ -14,6 +14,7 @@ import {
     getMissingDefaultExpenseCategories,
     mergeFinanceCategory,
 } from '@/lib/finance/categoryOptions';
+import { financeApiRequest } from '@/lib/finance/clientApi';
 
 const initialForm = {
     name: '',
@@ -35,34 +36,40 @@ export default function FinanceCategoriesPage() {
     const [isDeleting, setIsDeleting] = useState(false);
     const [addingSuggestedName, setAddingSuggestedName] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [pendingCategoryId, setPendingCategoryId] = useState<string | null>(null);
 
-    const loadCategories = useCallback(async () => {
+    const loadCategories = useCallback(async (signal?: AbortSignal) => {
         setIsLoading(true);
         try {
-            const response = await fetch('/api/finance/categories');
-            const payload = await response.json();
-            if (!response.ok) throw new Error(payload.error || 'Could not load categories');
+            const payload = await financeApiRequest<{ data: FinanceCategory[] }>(
+                '/api/finance/categories',
+                { signal },
+                { fallbackMessage: 'Could not load categories' }
+            );
             setCategories(payload.data || []);
         } catch (error) {
+            if (signal?.aborted) return;
             showError(error instanceof Error ? error.message : 'Could not load categories');
         } finally {
-            setIsLoading(false);
+            if (!signal?.aborted) setIsLoading(false);
         }
     }, [showError]);
 
-    useEffect(() => { void loadCategories(); }, [loadCategories]);
+    useEffect(() => {
+        const controller = new AbortController();
+        void loadCategories(controller.signal);
+        return () => controller.abort();
+    }, [loadCategories]);
 
     const addCategory = async (event: FormEvent) => {
         event.preventDefault();
         setIsSaving(true);
         try {
-            const response = await fetch('/api/finance/categories', {
+            const payload = await financeApiRequest<{ data: FinanceCategory; created?: boolean }>('/api/finance/categories', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(form),
-            });
-            const payload = await response.json();
-            if (!response.ok) throw new Error(payload.error || 'Could not add category');
+            }, { fallbackMessage: 'Could not add category' });
             setCategories((current) => mergeFinanceCategory(current, payload.data));
             setForm(initialForm);
             showSuccess(payload.created === false ? 'That category already exists' : 'Category added');
@@ -76,13 +83,11 @@ export default function FinanceCategoriesPage() {
     const addSuggestedCategory = async (name: string) => {
         setAddingSuggestedName(name);
         try {
-            const response = await fetch('/api/finance/categories', {
+            const payload = await financeApiRequest<{ data: FinanceCategory; created?: boolean }>('/api/finance/categories', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, type: 'expense' }),
-            });
-            const payload = await response.json();
-            if (!response.ok) throw new Error(payload.error || `Could not add ${name}`);
+            }, { fallbackMessage: `Could not add ${name}` });
             setCategories((current) => mergeFinanceCategory(current, payload.data));
             showSuccess(payload.created === false ? `${name} already exists` : `${name} category added`);
         } catch (error) {
@@ -96,14 +101,14 @@ export default function FinanceCategoriesPage() {
         category: FinanceCategory,
         updates: Partial<Pick<FinanceCategory, 'name' | 'type' | 'color' | 'icon' | 'is_archived'>>
     ) => {
+        if (pendingCategoryId) return;
+        setPendingCategoryId(category.id);
         try {
-            const response = await fetch('/api/finance/categories', {
-                method: 'PATCH',
+            const payload = await financeApiRequest<{ data: FinanceCategory }>('/api/finance/categories', {
+                method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: category.id, ...updates }),
-            });
-            const payload = await response.json();
-            if (!response.ok) throw new Error(payload.error || 'Could not update category');
+            }, { fallbackMessage: 'Could not update category' });
             setCategories((current) => current.map((item) => item.id === category.id ? payload.data : item));
             setEditingId(null);
             showSuccess(updates.is_archived === true
@@ -113,6 +118,8 @@ export default function FinanceCategoriesPage() {
                     : 'Category updated');
         } catch (error) {
             showError(error instanceof Error ? error.message : 'Could not update category');
+        } finally {
+            setPendingCategoryId(null);
         }
     };
 
@@ -120,11 +127,9 @@ export default function FinanceCategoriesPage() {
         if (!deleting) return;
         setIsDeleting(true);
         try {
-            const response = await fetch(`/api/finance/categories?id=${encodeURIComponent(deleting.id)}&confirm=true`, {
+            await financeApiRequest<{ success: true }>(`/api/finance/categories?id=${encodeURIComponent(deleting.id)}&confirm=true`, {
                 method: 'DELETE',
-            });
-            const payload = await response.json();
-            if (!response.ok) throw new Error(payload.error || 'Could not delete category');
+            }, { fallbackMessage: 'Could not delete category' });
             setCategories((current) => current.filter((category) => category.id !== deleting.id));
             setDeleting(null);
             showSuccess('Unused category permanently deleted');
@@ -220,8 +225,8 @@ export default function FinanceCategoriesPage() {
                                                     </div>
                                                     <p className="text-xs text-text-muted">Type changes are accepted only while the category is completely unreferenced.</p>
                                                     <div className="flex gap-2 sm:justify-end">
-                                                        <Button type="button" variant="ghost" onClick={() => setEditingId(null)}>Cancel</Button>
-                                                        <Button type="submit">Save changes</Button>
+                                                        <Button type="button" variant="ghost" disabled={pendingCategoryId !== null} onClick={() => setEditingId(null)}>Cancel</Button>
+                                                        <Button type="submit" isLoading={pendingCategoryId === category.id} disabled={pendingCategoryId !== null}>Save changes</Button>
                                                     </div>
                                                 </form>
                                             ) : (
@@ -231,9 +236,9 @@ export default function FinanceCategoriesPage() {
                                                         <div className="min-w-0"><p className="truncate font-semibold">{category.name}</p>{category.is_archived && <p className="text-sm text-text-muted">Archived — retained for history</p>}</div>
                                                     </div>
                                                     <div className="flex flex-wrap items-center justify-end gap-1">
-                                                        <Button type="button" variant="ghost" onClick={() => beginEditing(category)}>Edit</Button>
-                                                        <Button type="button" variant="ghost" onClick={() => void updateCategory(category, { is_archived: !category.is_archived })}>{category.is_archived ? 'Restore' : 'Archive'}</Button>
-                                                        <Button type="button" variant="ghost" className="text-error hover:text-error" onClick={() => setDeleting(category)}>Delete</Button>
+                                                        <Button type="button" variant="ghost" disabled={pendingCategoryId !== null} onClick={() => beginEditing(category)}>Edit</Button>
+                                                        <Button type="button" variant="ghost" isLoading={pendingCategoryId === category.id} disabled={pendingCategoryId !== null} onClick={() => void updateCategory(category, { is_archived: !category.is_archived })}>{category.is_archived ? 'Restore' : 'Archive'}</Button>
+                                                        <Button type="button" variant="ghost" disabled={pendingCategoryId !== null} className="text-error hover:text-error" onClick={() => setDeleting(category)}>Delete</Button>
                                                     </div>
                                                 </div>
                                             )}

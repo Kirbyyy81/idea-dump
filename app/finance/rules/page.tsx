@@ -23,8 +23,9 @@ import {
     getFinanceCategoryOptions,
     isVirtualDefaultCategoryValue,
     mergeFinanceCategory,
-    persistVirtualDefaultCategory,
 } from '@/lib/finance/categoryOptions';
+import { persistVirtualDefaultCategory } from '@/lib/finance/categoryPersistence';
+import { financeApiRequest } from '@/lib/finance/clientApi';
 
 type MatchType = FinanceRule['match_type'];
 type RuleWithRelations = FinanceRule & { finance_source?: FinanceSource | null; category?: FinanceCategory | null };
@@ -58,31 +59,33 @@ export default function FinanceRulesPage() {
     const [deleting, setDeleting] = useState<RuleWithRelations | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [pendingItemId, setPendingItemId] = useState<string | null>(null);
 
-    const loadData = useCallback(async () => {
+    const loadData = useCallback(async (signal?: AbortSignal) => {
         setIsLoading(true);
         try {
-            const [rulesResponse, sourcesResponse, categoriesResponse, suggestionsResponse] = await Promise.all([
-                fetch('/api/finance/rules'), fetch('/api/finance/sources'), fetch('/api/finance/categories'), fetch('/api/finance/rule-suggestions'),
-            ]);
             const [rulesPayload, sourcesPayload, categoriesPayload, suggestionsPayload] = await Promise.all([
-                rulesResponse.json(), sourcesResponse.json(), categoriesResponse.json(), suggestionsResponse.json(),
+                financeApiRequest<{ data: RuleWithRelations[] }>('/api/finance/rules', { signal }),
+                financeApiRequest<{ data: FinanceSource[] }>('/api/finance/sources', { signal }),
+                financeApiRequest<{ data: FinanceCategory[] }>('/api/finance/categories', { signal }),
+                financeApiRequest<{ data: FinanceRuleSuggestion[] }>('/api/finance/rule-suggestions', { signal }),
             ]);
-            if (!rulesResponse.ok) throw new Error(rulesPayload.error || 'Could not load rules');
-            if (!sourcesResponse.ok) throw new Error(sourcesPayload.error || 'Could not load sources');
-            if (!categoriesResponse.ok) throw new Error(categoriesPayload.error || 'Could not load categories');
-            if (!suggestionsResponse.ok) throw new Error(suggestionsPayload.error || 'Could not load rule suggestions');
             setRules(rulesPayload.data || []);
             setSources(sourcesPayload.data || []);
             setCategories(categoriesPayload.data || []);
             setSuggestions(suggestionsPayload.data || []);
         } catch (error) {
+            if (signal?.aborted) return;
             showError(error instanceof Error ? error.message : 'Could not load finance rules');
         } finally {
-            setIsLoading(false);
+            if (!signal?.aborted) setIsLoading(false);
         }
     }, [showError]);
-    useEffect(() => { void loadData(); }, [loadData]);
+    useEffect(() => {
+        const controller = new AbortController();
+        void loadData(controller.signal);
+        return () => controller.abort();
+    }, [loadData]);
 
     const addRule = async (event: FormEvent) => {
         event.preventDefault();
@@ -97,13 +100,11 @@ export default function FinanceRulesPage() {
                 categoryId = persistedCategory.id;
                 setCategories((current) => mergeFinanceCategory(current, persistedCategory));
             }
-            const response = await fetch('/api/finance/rules', {
+            const payload = await financeApiRequest<{ data: RuleWithRelations }>('/api/finance/rules', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ...form, category_id: categoryId }),
-            });
-            const payload = await response.json();
-            if (!response.ok) throw new Error(payload.error || 'Could not add rule');
+            }, { fallbackMessage: 'Could not add rule' });
             setRules((current) => [payload.data, ...current]);
             setForm(initialForm);
             showSuccess('Rule added');
@@ -115,17 +116,19 @@ export default function FinanceRulesPage() {
     };
 
     const toggleRule = async (rule: RuleWithRelations) => {
+        if (pendingItemId) return;
+        setPendingItemId(rule.id);
         try {
-            const response = await fetch('/api/finance/rules', {
+            const payload = await financeApiRequest<{ data: RuleWithRelations }>('/api/finance/rules', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: rule.id, is_active: !rule.is_active }),
-            });
-            const payload = await response.json();
-            if (!response.ok) throw new Error(payload.error || 'Could not update rule');
+            }, { fallbackMessage: 'Could not update rule' });
             setRules((current) => current.map((item) => item.id === rule.id ? payload.data : item));
         } catch (error) {
             showError(error instanceof Error ? error.message : 'Could not update rule');
+        } finally {
+            setPendingItemId(null);
         }
     };
 
@@ -133,9 +136,11 @@ export default function FinanceRulesPage() {
         if (!deleting) return;
         setIsDeleting(true);
         try {
-            const response = await fetch(`/api/finance/rules?id=${encodeURIComponent(deleting.id)}`, { method: 'DELETE' });
-            const payload = await response.json();
-            if (!response.ok) throw new Error(payload.error || 'Could not delete rule');
+            await financeApiRequest<{ success: true }>(
+                `/api/finance/rules?id=${encodeURIComponent(deleting.id)}`,
+                { method: 'DELETE' },
+                { fallbackMessage: 'Could not delete rule' }
+            );
             setRules((current) => current.filter((rule) => rule.id !== deleting.id));
             setDeleting(null);
             showSuccess('Rule deleted');
@@ -147,19 +152,21 @@ export default function FinanceRulesPage() {
     };
 
     const resolveSuggestion = async (suggestion: FinanceRuleSuggestion, action: 'accept' | 'reject') => {
+        if (pendingItemId) return;
+        setPendingItemId(suggestion.id);
         try {
-            const response = await fetch('/api/finance/rule-suggestions', {
+            await financeApiRequest<{ data?: FinanceRuleSuggestion }>('/api/finance/rule-suggestions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: suggestion.id, action }),
-            });
-            const payload = await response.json();
-            if (!response.ok) throw new Error(payload.error || 'Could not update suggestion');
+            }, { fallbackMessage: 'Could not update suggestion' });
             setSuggestions((current) => current.filter((item) => item.id !== suggestion.id));
             if (action === 'accept') await loadData();
             showSuccess(action === 'accept' ? 'Learning rule activated' : 'Suggestion dismissed');
         } catch (error) {
             showError(error instanceof Error ? error.message : 'Could not update suggestion');
+        } finally {
+            setPendingItemId(null);
         }
     };
 
@@ -174,13 +181,11 @@ export default function FinanceRulesPage() {
                 categoryId = persistedCategory.id;
                 setCategories((current) => mergeFinanceCategory(current, persistedCategory));
             }
-            const response = await fetch('/api/finance/rule-suggestions', {
+            const payload = await financeApiRequest<{ data: FinanceRuleSuggestion }>('/api/finance/rule-suggestions', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ...editingSuggestion, category_id: categoryId }),
-            });
-            const payload = await response.json();
-            if (!response.ok) throw new Error(payload.error || 'Could not edit suggestion');
+            }, { fallbackMessage: 'Could not edit suggestion' });
             setSuggestions((current) => current.map((item) => item.id === payload.data.id ? payload.data : item));
             setEditingSuggestion(null);
             showSuccess('Suggestion updated');
@@ -216,7 +221,7 @@ export default function FinanceRulesPage() {
                             ) : (
                                 <div key={suggestion.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
                                     <div><p className="font-semibold">{suggestion.name} to {suggestion.category?.name || 'category'}</p><p className="text-sm text-text-muted">Seen in {suggestion.evidence_count} corrections · {suggestion.finance_source?.name || 'Any source'} · {suggestion.match_type?.replace('_', ' ') || 'merchant alias'}</p></div>
-                                    <div className="flex flex-wrap gap-2"><Button variant="ghost" onClick={() => setEditingSuggestion({ ...suggestion, match_type: suggestion.match_type || 'merchant_alias', priority: suggestion.priority ?? 100 })}>Edit</Button><Button variant="ghost" icon={<CloseDoodleIcon size={15} />} onClick={() => void resolveSuggestion(suggestion, 'reject')}>Dismiss</Button><Button icon={<CheckDoodleIcon size={15} />} onClick={() => void resolveSuggestion(suggestion, 'accept')}>Activate</Button></div>
+                                    <div className="flex flex-wrap gap-2"><Button variant="ghost" disabled={pendingItemId !== null} onClick={() => setEditingSuggestion({ ...suggestion, match_type: suggestion.match_type || 'merchant_alias', priority: suggestion.priority ?? 100 })}>Edit</Button><Button variant="ghost" disabled={pendingItemId !== null} isLoading={pendingItemId === suggestion.id} icon={<CloseDoodleIcon size={15} />} onClick={() => void resolveSuggestion(suggestion, 'reject')}>Dismiss</Button><Button disabled={pendingItemId !== null} isLoading={pendingItemId === suggestion.id} icon={<CheckDoodleIcon size={15} />} onClick={() => void resolveSuggestion(suggestion, 'accept')}>Activate</Button></div>
                                 </div>
                             ))}
                         </div>
@@ -255,9 +260,9 @@ export default function FinanceRulesPage() {
                                         <p className="mt-2 text-sm text-text-secondary">{[rule.finance_source?.name, rule.category?.name, rule.direction].filter(Boolean).join(' - ')} - Priority {rule.priority}</p>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <Toggle checked={rule.is_active} onChange={() => void toggleRule(rule)} label={rule.is_active ? 'Active' : 'Paused'} />
+                                            <Toggle checked={rule.is_active} disabled={pendingItemId !== null} onChange={() => void toggleRule(rule)} label={rule.is_active ? 'Active' : 'Paused'} />
                                             {rule.source === 'manual'
-                                                ? <Button type="button" variant="ghost" className="text-error hover:text-error" icon={<DeleteDoodleIcon size={16} />} onClick={() => setDeleting(rule)}>Delete</Button>
+                                                ? <Button type="button" variant="ghost" disabled={pendingItemId !== null} className="text-error hover:text-error" icon={<DeleteDoodleIcon size={16} />} onClick={() => setDeleting(rule)}>Delete</Button>
                                                 : <span className="text-xs font-semibold text-text-muted">Pause only</span>}
                                         </div>
                                     </div>

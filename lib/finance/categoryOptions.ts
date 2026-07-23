@@ -85,20 +85,3 @@ export function mergeFinanceCategory(
     ));
     return [...withoutSameCategory, category];
 }
-
-export async function persistVirtualDefaultCategory(value: string) {
-    const name = getVirtualDefaultCategoryName(value);
-    if (!name) return null;
-
-    const response = await fetch('/api/finance/categories', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, type: 'expense' }),
-    });
-    const payload = await response.json();
-    if (!response.ok) {
-        throw new Error(payload.error || `Could not create the ${name} category`);
-    }
-
-    return payload.data as FinanceCategory;
-}

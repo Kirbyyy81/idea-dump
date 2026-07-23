@@ -9,6 +9,7 @@ import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
 import { FinanceLoadingState } from '../_components/FinanceLoadingState';
 import { FinanceSource } from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
+import { financeApiRequest } from '@/lib/finance/clientApi';
 
 export default function FinanceSourcesPage() {
     const { showError, showSuccess } = useAlert();
@@ -24,22 +25,30 @@ export default function FinanceSourcesPage() {
     const [isSaving, setIsSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [pendingSourceId, setPendingSourceId] = useState<string | null>(null);
 
-    const loadSources = useCallback(async () => {
+    const loadSources = useCallback(async (signal?: AbortSignal) => {
         setIsLoading(true);
         try {
-            const response = await fetch('/api/finance/sources');
-            const payload = await response.json();
-            if (!response.ok) throw new Error(payload.error || 'Could not load sources');
+            const payload = await financeApiRequest<{ data: FinanceSource[] }>(
+                '/api/finance/sources',
+                { signal },
+                { fallbackMessage: 'Could not load sources' }
+            );
             setSources(payload.data || []);
         } catch (error) {
+            if (signal?.aborted) return;
             showError(error instanceof Error ? error.message : 'Could not load sources');
         } finally {
-            setIsLoading(false);
+            if (!signal?.aborted) setIsLoading(false);
         }
     }, [showError]);
 
-    useEffect(() => { void loadSources(); }, [loadSources]);
+    useEffect(() => {
+        const controller = new AbortController();
+        void loadSources(controller.signal);
+        return () => controller.abort();
+    }, [loadSources]);
 
     const sortedSources = useMemo(
         () => [...sources].sort((a, b) => Number(a.is_archived) - Number(b.is_archived) || a.name.localeCompare(b.name)),
@@ -50,7 +59,7 @@ export default function FinanceSourcesPage() {
         event.preventDefault();
         setIsSaving(true);
         try {
-            const response = await fetch('/api/finance/sources', {
+            const payload = await financeApiRequest<{ data: FinanceSource }>('/api/finance/sources', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -58,9 +67,7 @@ export default function FinanceSourcesPage() {
                     ...(filenameAliases.trim() ? { filename_aliases: filenameAliases.split(',') } : {}),
                     ...(ocrAliases.trim() ? { ocr_aliases: ocrAliases.split(',') } : {}),
                 }),
-            });
-            const payload = await response.json();
-            if (!response.ok) throw new Error(payload.error || 'Could not create source');
+            }, { fallbackMessage: 'Could not create source' });
             setSources((current) => [...current, payload.data]);
             setName('');
             setFilenameAliases('');
@@ -77,14 +84,14 @@ export default function FinanceSourcesPage() {
         source: FinanceSource,
         updates: Partial<Pick<FinanceSource, 'name' | 'filename_aliases' | 'ocr_aliases' | 'is_archived'>>
     ) => {
+        if (pendingSourceId) return;
+        setPendingSourceId(source.id);
         try {
-            const response = await fetch('/api/finance/sources', {
+            const payload = await financeApiRequest<{ data: FinanceSource }>('/api/finance/sources', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: source.id, ...updates }),
-            });
-            const payload = await response.json();
-            if (!response.ok) throw new Error(payload.error || 'Could not update source');
+            }, { fallbackMessage: 'Could not update source' });
             setSources((current) => current.map((item) => item.id === source.id ? payload.data : item));
             setEditingId(null);
             showSuccess(updates.is_archived === true
@@ -94,6 +101,8 @@ export default function FinanceSourcesPage() {
                     : 'Source renamed');
         } catch (error) {
             showError(error instanceof Error ? error.message : 'Could not update source');
+        } finally {
+            setPendingSourceId(null);
         }
     };
 
@@ -101,11 +110,9 @@ export default function FinanceSourcesPage() {
         if (!deleting) return;
         setIsDeleting(true);
         try {
-            const response = await fetch(`/api/finance/sources?id=${encodeURIComponent(deleting.id)}&confirm=true`, {
+            await financeApiRequest<{ success: true }>(`/api/finance/sources?id=${encodeURIComponent(deleting.id)}&confirm=true`, {
                 method: 'DELETE',
-            });
-            const payload = await response.json();
-            if (!response.ok) throw new Error(payload.error || 'Could not delete source');
+            }, { fallbackMessage: 'Could not delete source' });
             setSources((current) => current.filter((source) => source.id !== deleting.id));
             setDeleting(null);
             showSuccess('Unused source permanently deleted');
@@ -173,8 +180,8 @@ export default function FinanceSourcesPage() {
                                             <Input aria-label="Filename aliases" value={editingFilenameAliases} onChange={(event) => setEditingFilenameAliases(event.target.value)} placeholder="Filename aliases, comma separated" />
                                             <Input aria-label="OCR aliases" value={editingOcrAliases} onChange={(event) => setEditingOcrAliases(event.target.value)} placeholder="OCR aliases, comma separated" />
                                             <div className="flex gap-2">
-                                                <Button type="submit">Save</Button>
-                                                <Button type="button" variant="ghost" onClick={() => setEditingId(null)}>Cancel</Button>
+                                                <Button type="submit" isLoading={pendingSourceId === source.id} disabled={pendingSourceId !== null}>Save</Button>
+                                                <Button type="button" variant="ghost" disabled={pendingSourceId !== null} onClick={() => setEditingId(null)}>Cancel</Button>
                                             </div>
                                         </form>
                                     ) : (
@@ -186,14 +193,14 @@ export default function FinanceSourcesPage() {
                                                 </div>
                                             </div>
                                             <div className="flex flex-wrap items-center justify-end gap-1">
-                                                <Button type="button" variant="ghost" onClick={() => {
+                                                <Button type="button" variant="ghost" disabled={pendingSourceId !== null} onClick={() => {
                                                     setEditingId(source.id);
                                                     setEditingName(source.name);
                                                     setEditingFilenameAliases(source.filename_aliases.join(', '));
                                                     setEditingOcrAliases(source.ocr_aliases.join(', '));
                                                 }}>Edit</Button>
-                                                <Button type="button" variant="ghost" onClick={() => void updateSource(source, { is_archived: !source.is_archived })}>{source.is_archived ? 'Restore' : 'Archive'}</Button>
-                                                <Button type="button" variant="ghost" className="text-error hover:text-error" onClick={() => setDeleting(source)}>Delete</Button>
+                                                <Button type="button" variant="ghost" isLoading={pendingSourceId === source.id} disabled={pendingSourceId !== null} onClick={() => void updateSource(source, { is_archived: !source.is_archived })}>{source.is_archived ? 'Restore' : 'Archive'}</Button>
+                                                <Button type="button" variant="ghost" disabled={pendingSourceId !== null} className="text-error hover:text-error" onClick={() => setDeleting(source)}>Delete</Button>
                                             </div>
                                         </div>
                                     )}

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { AppShell } from '@/components/organisms/AppShell';
 import { Button } from '@/components/atoms/Button';
 import { BackDoodleIcon, DocumentDoodleIcon, ScanDoodleIcon } from '@/components/atoms/DoodleIcons';
@@ -15,8 +15,8 @@ import { useAlert } from '@/lib/contexts/AlertContext';
 import {
     getFinanceCategoryOptions,
     mergeFinanceCategory,
-    persistVirtualDefaultCategory,
 } from '@/lib/finance/categoryOptions';
+import { persistVirtualDefaultCategory } from '@/lib/finance/categoryPersistence';
 import {
     FinanceOcrClientError,
     FinanceOcrPhase,
@@ -25,6 +25,7 @@ import {
 } from '@/lib/finance/ocrClient';
 import { OcrProgress } from './_components/OcrProgress';
 import { FinanceLoadingState } from '../_components/FinanceLoadingState';
+import { financeApiRequest } from '@/lib/finance/clientApi';
 import {
     getFinanceTransactionTextError,
     FINANCE_TIME_ZONE_HEADER,
@@ -40,22 +41,9 @@ import {
 } from '@/lib/finance/values';
 
 const NEW_SOURCE = '__new__';
+const MAX_FINANCE_UPLOAD_BYTES = 4 * 1024 * 1024;
+const FINANCE_UPLOAD_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
 const initialForm = { source_id: '', category_id: '', direction: 'expense' as FinanceTransactionDirection, amount: '', merchant: '', reference_number: '', transaction_date: getLocalFinanceDate(), notes: '' };
-
-async function readJsonResponse(response: Response, fallbackMessage: string) {
-    const responseText = await response.text();
-
-    try {
-        return JSON.parse(responseText) as Record<string, any>;
-    } catch {
-        const plainMessage = responseText.trim();
-        const isHtmlResponse = plainMessage.startsWith('<!DOCTYPE') || plainMessage.startsWith('<html');
-        const detail = plainMessage && !isHtmlResponse
-            ? `: ${plainMessage.slice(0, 200)}`
-            : '';
-        throw new Error(`${fallbackMessage} (${response.status})${detail}`);
-    }
-}
 
 function financeOcrErrorMessage(error: unknown) {
     if (!(error instanceof FinanceOcrClientError)) {
@@ -79,16 +67,26 @@ export default function AddFinanceTransactionPage() {
     const [ocrPhase, setOcrPhase] = useState<FinanceOcrPhase>('idle');
     const [uploadProgress, setUploadProgress] = useState(0);
     const [isOptionsLoading, setIsOptionsLoading] = useState(true);
+    const uploadControllerRef = useRef<AbortController | null>(null);
+
+    useEffect(() => () => uploadControllerRef.current?.abort(), []);
 
     useEffect(() => {
-        Promise.all([fetch('/api/finance/sources'), fetch('/api/finance/categories')]).then(async ([sourceResponse, categoryResponse]) => {
-            const [sourcePayload, categoryPayload] = await Promise.all([sourceResponse.json(), categoryResponse.json()]);
-            if (!sourceResponse.ok) throw new Error(sourcePayload.error || 'Could not load sources');
-            if (!categoryResponse.ok) throw new Error(categoryPayload.error || 'Could not load categories');
+        const controller = new AbortController();
+        Promise.all([
+            financeApiRequest<{ data: FinanceSource[] }>('/api/finance/sources', { signal: controller.signal }),
+            financeApiRequest<{ data: FinanceCategory[] }>('/api/finance/categories', { signal: controller.signal }),
+        ]).then(([sourcePayload, categoryPayload]) => {
             setSources(sourcePayload.data || []);
             setCategories(categoryPayload.data || []);
-        }).catch((error) => showError(error instanceof Error ? error.message : 'Could not load transaction options'))
-            .finally(() => setIsOptionsLoading(false));
+        }).catch((error) => {
+            if (error instanceof DOMException && error.name === 'AbortError') return;
+            showError(error instanceof Error ? error.message : 'Could not load transaction options');
+        })
+            .finally(() => {
+                if (!controller.signal.aborted) setIsOptionsLoading(false);
+            });
+        return () => controller.abort();
     }, [showError]);
 
     useEffect(() => {
@@ -121,9 +119,7 @@ export default function AddFinanceTransactionPage() {
             let sourceId = form.source_id;
             let categoryId = form.category_id;
             if (sourceId === NEW_SOURCE) {
-                const sourceResponse = await fetch('/api/finance/sources', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newSource }) });
-                const sourcePayload = await readJsonResponse(sourceResponse, 'Could not add source');
-                if (!sourceResponse.ok) throw new Error(sourcePayload.error || 'Could not create source');
+                const sourcePayload = await financeApiRequest<{ data: FinanceSource }>('/api/finance/sources', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newSource }) }, { fallbackMessage: 'Could not create source' });
                 sourceId = sourcePayload.data.id;
                 setSources((current) => [...current, sourcePayload.data]);
                 setForm((current) => ({ ...current, source_id: sourcePayload.data.id }));
@@ -134,9 +130,7 @@ export default function AddFinanceTransactionPage() {
                 categoryId = persistedCategory.id;
                 setCategories((current) => mergeFinanceCategory(current, persistedCategory));
             }
-            const response = await fetch('/api/finance/transactions', { method: 'POST', headers: { 'Content-Type': 'application/json', [FINANCE_TIME_ZONE_HEADER]: getFinanceTimeZone() }, body: JSON.stringify({ ...form, amount, source_id: sourceId, category_id: categoryId }) });
-            const payload = await readJsonResponse(response, 'Could not add transaction');
-            if (!response.ok) throw new Error(payload.error || 'Could not add transaction');
+            await financeApiRequest('/api/finance/transactions', { method: 'POST', headers: { 'Content-Type': 'application/json', [FINANCE_TIME_ZONE_HEADER]: getFinanceTimeZone() }, body: JSON.stringify({ ...form, amount, source_id: sourceId, category_id: categoryId }) }, { fallbackMessage: 'Could not add transaction' });
             showSuccess('Transaction added');
             setForm({ ...initialForm, transaction_date: getLocalFinanceDate() });
             setNewSource('');
@@ -150,8 +144,11 @@ export default function AddFinanceTransactionPage() {
         setIsSaving(true);
         setUploadProgress(0);
         setOcrPhase('uploading');
+        const controller = new AbortController();
+        uploadControllerRef.current = controller;
         try {
             const payload = await uploadFinanceScreenshot(file, {
+                signal: controller.signal,
                 onUploadProgress: (percentage) => {
                     setOcrPhase('uploading');
                     setUploadProgress(percentage);
@@ -177,12 +174,34 @@ export default function AddFinanceTransactionPage() {
             }
             router.push(`/finance/review?candidate=${encodeURIComponent(payload.data.candidate.id)}`);
         } catch (error) {
+            if (controller.signal.aborted) return;
             setOcrPhase('idle');
             setUploadProgress(0);
             showError(financeOcrErrorMessage(error));
         } finally {
+            if (uploadControllerRef.current === controller) {
+                uploadControllerRef.current = null;
+            }
             setIsSaving(false);
         }
+    };
+
+    const selectScreenshot = (nextFile: File | null) => {
+        if (!nextFile) {
+            setFile(null);
+            return;
+        }
+        if (!FINANCE_UPLOAD_TYPES.has(nextFile.type)) {
+            setFile(null);
+            showError('Choose a PNG, JPEG, or WebP image');
+            return;
+        }
+        if (nextFile.size > MAX_FINANCE_UPLOAD_BYTES) {
+            setFile(null);
+            showError('Screenshot must be 4 MB or smaller');
+            return;
+        }
+        setFile(nextFile);
     };
 
     return <AppShell contentClassName="p-5 md:p-8"><div className="mx-auto max-w-2xl">
@@ -201,6 +220,6 @@ export default function AddFinanceTransactionPage() {
             <label className="block space-y-2"><span className="text-sm text-text-secondary">Merchant or payee</span><Input maxLength={MAX_FINANCE_MERCHANT_LENGTH} value={form.merchant} onChange={(event) => setForm({ ...form, merchant: event.target.value })} /></label>
             <label className="block space-y-2"><span className="text-sm text-text-secondary">Notes</span><Textarea maxLength={MAX_FINANCE_NOTES_LENGTH} value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></label>
             <Button type="submit" className="w-full" isLoading={isSaving} disabled={!form.source_id || (form.source_id === NEW_SOURCE && !newSource.trim())}>Add transaction</Button>
-        </form> : <form onSubmit={submitScreenshot} className="mt-6"><FileUpload label="Transaction screenshot" accept="image/png,image/jpeg,image/webp" value={file} onChange={setFile} disabled={isSaving} /><p className="mt-2 text-sm text-text-muted">PNG, JPEG, or WebP · Max 4 MB</p>{ocrPhase !== 'idle' && <OcrProgress phase={ocrPhase} uploadProgress={uploadProgress} />}<Button type="submit" className="mt-5 w-full" isLoading={isSaving} disabled={!file || isSaving}>Process screenshot</Button></form>}
+        </form> : <form onSubmit={submitScreenshot} className="mt-6"><FileUpload label="Transaction screenshot" accept="image/png,image/jpeg,image/webp" value={file} onChange={selectScreenshot} disabled={isSaving} /><p className="mt-2 text-sm text-text-muted">PNG, JPEG, or WebP · Max 4 MB</p>{ocrPhase !== 'idle' && <OcrProgress phase={ocrPhase} uploadProgress={uploadProgress} />}<Button type="submit" className="mt-5 w-full" isLoading={isSaving} disabled={!file || isSaving}>Process screenshot</Button></form>}
     </div></AppShell>;
 }

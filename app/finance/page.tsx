@@ -14,6 +14,7 @@ import {
     PreviousDoodleIcon,
 } from '@/components/atoms/DoodleIcons';
 import { FinanceDashboardSummary } from '@/lib/types';
+import { financeApiRequest } from '@/lib/finance/clientApi';
 import { getLocalFinanceMonth, shiftFinanceMonth } from '@/lib/finance/values';
 import { formatCurrencyMYR } from '@/lib/utils';
 
@@ -29,10 +30,12 @@ export default function FinancePage() {
         setError(null);
         setSummary(null);
         setIsLoading(true);
-        fetch(`/api/finance/dashboard?month=${month}`, { signal: controller.signal })
-            .then(async (response) => {
-                const payload = await response.json();
-                if (!response.ok) throw new Error(payload.error || 'Could not load finance overview');
+        financeApiRequest<{ data: FinanceDashboardSummary }>(
+            `/api/finance/dashboard?month=${month}`,
+            { signal: controller.signal },
+            { fallbackMessage: 'Could not load finance overview' }
+        )
+            .then((payload) => {
                 setSummary(payload.data);
             })
             .catch((loadError) => {

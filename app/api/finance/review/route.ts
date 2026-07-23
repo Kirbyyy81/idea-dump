@@ -53,10 +53,10 @@ interface ConfirmCandidateResult {
 function rpcErrorResponse(error: { code?: string; message?: string }) {
     const message = error.message || 'The review action could not be completed';
     if (error.code === '40001') return jsonError('Finance data changed concurrently. Retry the action.', 409);
-    if (error.code === '23505' || /already|duplicate|conflict/i.test(message)) return jsonError(message, 409);
-    if (error.code === '23514') return jsonError(message, 409);
-    if (/not found/i.test(message)) return jsonError(message, 404);
-    if (error.code === 'P0001' || error.code === '22023' || error.code === '23503' || /invalid|required|archived|match/i.test(message)) return jsonError(message, 400);
+    if (error.code === '23505' || /already|duplicate|conflict/i.test(message)) return jsonError('Review item was already changed. Reload and retry.', 409);
+    if (error.code === '23514') return jsonError('Review action conflicts with current Finance data', 409);
+    if (/not found/i.test(message)) return jsonError('Review item not found', 404);
+    if (error.code === 'P0001' || error.code === '22023' || error.code === '23503' || /invalid|required|archived|match/i.test(message)) return jsonError('Review action is invalid or references unavailable Finance data', 400);
     return null;
 }
 
@@ -108,7 +108,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
     try {
-        const session = await authorizeFinance();
+        const session = await authorizeFinance(request, { requireJson: true });
         if ('response' in session) return session.response;
         const body = await readFinanceJsonObject(request);
         if (!body) return jsonError('Request body must be a JSON object');
