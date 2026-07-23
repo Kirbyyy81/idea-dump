@@ -10,6 +10,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
         return (
             <textarea
                 ref={ref}
+                aria-invalid={error || undefined}
                 className={cn(
                     'input', // Reusing input base styles as they usually share border/bg properties
                     'min-h-[100px] resize-y',

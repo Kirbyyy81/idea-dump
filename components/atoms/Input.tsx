@@ -10,6 +10,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         return (
             <input
                 ref={ref}
+                aria-invalid={error || undefined}
                 className={cn(
                     'input',
                     error && 'border-error focus:border-error',

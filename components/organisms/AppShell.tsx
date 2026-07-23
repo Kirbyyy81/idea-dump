@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, PropsWithChildren, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, PropsWithChildren, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -86,6 +86,7 @@ export function AppShell({
     const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
     const mobileNavRef = useRef<HTMLDivElement>(null);
     const mobileNavTriggerRef = useRef<HTMLButtonElement>(null);
+    const mobileNavId = `mobile-navigation-${useId()}`;
     const isPublicPath = PUBLIC_AUTH_PATH_PREFIXES.some((prefix) => matchesPath(pathname, prefix));
     const routeRule = MODULE_ROUTE_RULES.find((rule) => matchesPath(pathname, rule.prefix));
     const isAccessDenied = Boolean(
@@ -246,6 +247,8 @@ export function AppShell({
                         onClick={() => setIsMobileNavOpen(true)}
                         className="grid size-10 place-items-center rounded-sm border border-border-default text-text-primary transition-colors hover:bg-bg-hover"
                         aria-label="Open navigation"
+                        aria-expanded={isMobileNavOpen}
+                        aria-controls={mobileNavId}
                     >
                         <Menu size={20} />
                     </button>
@@ -271,6 +274,7 @@ export function AppShell({
                         />
                         <div
                             ref={mobileNavRef}
+                            id={mobileNavId}
                             role="dialog"
                             aria-modal="true"
                             aria-label="Mobile navigation"
@@ -279,7 +283,7 @@ export function AppShell({
                             <button
                                 type="button"
                                 onClick={closeMobileNav}
-                                className="absolute right-3 top-3 z-10 grid size-9 place-items-center rounded-sm text-nav-text-muted transition-colors hover:bg-nav-bg-hover hover:text-nav-text"
+                                className="absolute right-3 top-3 z-10 grid size-10 place-items-center rounded-sm text-nav-text-muted transition-colors hover:bg-nav-bg-hover hover:text-nav-text"
                                 aria-label="Close navigation"
                             >
                                 <X size={18} />

@@ -29,6 +29,7 @@ export function FileUpload({
     const inputId = id ?? generatedId;
     const inputRef = useRef<HTMLInputElement>(null);
     const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
+    const describedBy = props['aria-describedby'];
 
     useEffect(() => {
         if (!value || !value.type.startsWith('image/')) {
@@ -60,6 +61,9 @@ export function FileUpload({
                 type="file"
                 accept={accept}
                 disabled={disabled}
+                tabIndex={-1}
+                aria-hidden="true"
+                aria-invalid={error || undefined}
                 onChange={handleChange}
                 className="sr-only"
                 {...props}
@@ -102,7 +106,7 @@ export function FileUpload({
 
                 <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
                     <div className="flex gap-2">
-                        <Button type="button" variant="ghost" onClick={() => inputRef.current?.click()} disabled={disabled}>
+                        <Button type="button" variant="ghost" aria-describedby={describedBy} onClick={() => inputRef.current?.click()} disabled={disabled}>
                             {value ? 'Change file' : 'Choose file'}
                         </Button>
                         {value && (
