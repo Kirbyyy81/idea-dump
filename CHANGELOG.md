@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.11.2](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.11.1...idea-dump-v0.11.2) (2026-07-23)
+
+
+### Bug Fixes
+
+* clarify finance semantics ([c5ea4ef](https://github.com/Kirbyyy81/idea-dump/commit/c5ea4efb528ee3ba86f4edad3d7a0ea53da6561c))
+* improve keyboard interactions ([b498ab1](https://github.com/Kirbyyy81/idea-dump/commit/b498ab106494d49d8cf26e06919d5803a6fac2b3))
+
 ## [0.11.1](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.11.0...idea-dump-v0.11.1) (2026-07-23)
 
 
