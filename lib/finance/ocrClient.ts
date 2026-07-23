@@ -26,6 +26,7 @@ export interface FinanceOcrSuccess {
 export interface UploadFinanceScreenshotOptions {
     onUploadProgress?: (percentage: number) => void;
     onUploadComplete?: () => void;
+    signal?: AbortSignal;
 }
 
 interface OcrHttpResponse {
@@ -142,6 +143,8 @@ function sendScreenshot(
 ) {
     return new Promise<OcrHttpResponse>((resolve, reject) => {
         const request = new XMLHttpRequest();
+        const abortRequest = () => request.abort();
+        const cleanup = () => options.signal?.removeEventListener('abort', abortRequest);
         request.open('POST', renderOcrUrl('/v1/finance/ocr'));
         request.timeout = OCR_REQUEST_TIMEOUT_MS;
         request.setRequestHeader('Authorization', `Bearer ${accessToken}`);
@@ -158,6 +161,7 @@ function sendScreenshot(
         });
 
         request.addEventListener('load', () => {
+            cleanup();
             resolve({
                 status: request.status,
                 text: request.responseText,
@@ -165,6 +169,7 @@ function sendScreenshot(
             });
         });
         request.addEventListener('error', () => {
+            cleanup();
             reject(new FinanceOcrClientError({
                 code: 'NETWORK_ERROR',
                 message: 'The screenshot upload was interrupted. The file is still selected so you can try again.',
@@ -172,6 +177,7 @@ function sendScreenshot(
             }));
         });
         request.addEventListener('timeout', () => {
+            cleanup();
             reject(new FinanceOcrClientError({
                 code: 'REQUEST_TIMEOUT',
                 message: 'Screenshot processing took too long. The file is still selected so you can try again.',
@@ -179,6 +185,7 @@ function sendScreenshot(
             }));
         });
         request.addEventListener('abort', () => {
+            cleanup();
             reject(new FinanceOcrClientError({
                 code: 'REQUEST_ABORTED',
                 message: 'Screenshot processing was cancelled.',
@@ -188,6 +195,16 @@ function sendScreenshot(
 
         const formData = new FormData();
         formData.set('screenshot', file, file.name);
+        if (options.signal?.aborted) {
+            cleanup();
+            reject(new FinanceOcrClientError({
+                code: 'REQUEST_ABORTED',
+                message: 'Screenshot processing was cancelled.',
+                retryable: true,
+            }));
+            return;
+        }
+        options.signal?.addEventListener('abort', abortRequest, { once: true });
         request.send(formData);
     });
 }

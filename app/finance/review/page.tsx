@@ -28,8 +28,8 @@ import { cn, formatCurrency } from '@/lib/utils';
 import {
     getFinanceCategoryOptions,
     mergeFinanceCategory,
-    persistVirtualDefaultCategory,
 } from '@/lib/finance/categoryOptions';
+import { persistVirtualDefaultCategory } from '@/lib/finance/categoryPersistence';
 import {
     FINANCE_TIME_ZONE_HEADER,
     getFinanceTransactionTextError,
@@ -43,6 +43,7 @@ import {
     MAX_FINANCE_REFERENCE_LENGTH,
     toPositiveFinanceAmount,
 } from '@/lib/finance/values';
+import { FinanceApiError, financeApiRequest } from '@/lib/finance/clientApi';
 
 const NEW_SOURCE = '__new_source__';
 const NEW_CATEGORY = '__new_category__';
@@ -114,22 +115,14 @@ export default function FinanceReviewPage() {
     const pendingDraftRef = useRef<PendingReviewDraft | null>(null);
     const selected = candidates.find((candidate) => candidate.id === selectedId) || null;
 
-    const loadQueue = useCallback(async () => {
+    const loadQueue = useCallback(async (signal?: AbortSignal) => {
         setIsLoading(true);
         try {
-            const [reviewResponse, sourcesResponse, categoriesResponse] = await Promise.all([
-                fetch('/api/finance/review'),
-                fetch('/api/finance/sources'),
-                fetch('/api/finance/categories'),
-            ]);
             const [reviewPayload, sourcesPayload, categoriesPayload] = await Promise.all([
-                reviewResponse.json(),
-                sourcesResponse.json(),
-                categoriesResponse.json(),
+                financeApiRequest<{ data: FinanceCandidateTransaction[] }>('/api/finance/review', { signal }),
+                financeApiRequest<{ data: FinanceSource[] }>('/api/finance/sources', { signal }),
+                financeApiRequest<{ data: FinanceCategory[] }>('/api/finance/categories', { signal }),
             ]);
-            if (!reviewResponse.ok) throw new Error(reviewPayload.error || 'Could not load review queue');
-            if (!sourcesResponse.ok) throw new Error(sourcesPayload.error || 'Could not load sources');
-            if (!categoriesResponse.ok) throw new Error(categoriesPayload.error || 'Could not load categories');
             const nextCandidates = (reviewPayload.data || []) as FinanceCandidateTransaction[];
             const requestedCandidateId = typeof window === 'undefined'
                 ? null
@@ -144,14 +137,19 @@ export default function FinanceReviewPage() {
                     : nextCandidates[0]?.id || '');
             return true;
         } catch (error) {
+            if (signal?.aborted) return false;
             showError(error instanceof Error ? error.message : 'Could not load review queue');
             return false;
         } finally {
-            setIsLoading(false);
+            if (!signal?.aborted) setIsLoading(false);
         }
     }, [showError]);
 
-    useEffect(() => { void loadQueue(); }, [loadQueue]);
+    useEffect(() => {
+        const controller = new AbortController();
+        void loadQueue(controller.signal);
+        return () => controller.abort();
+    }, [loadQueue]);
     useEffect(() => {
         const pendingDraft = pendingDraftRef.current;
         pendingDraftRef.current = null;
@@ -197,31 +195,28 @@ export default function FinanceReviewPage() {
             }
         }
         setIsSaving(true);
+        let attemptedForm = form;
         try {
             let sourceId = form.source_id;
             let categoryId = form.category_id;
             if (action === 'confirm' && sourceId === NEW_SOURCE) {
-                const sourceResponse = await fetch('/api/finance/sources', {
+                const sourcePayload = await financeApiRequest<{ data: FinanceSource }>('/api/finance/sources', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name: newSourceName }),
-                });
-                const sourcePayload = await sourceResponse.json();
-                if (!sourceResponse.ok) throw new Error(sourcePayload.error || 'Could not create source');
+                }, { fallbackMessage: 'Could not create source' });
                 sourceId = sourcePayload.data.id;
                 setSources((current) => [...current, sourcePayload.data]);
             }
             if (action === 'confirm' && categoryId === NEW_CATEGORY) {
-                const categoryResponse = await fetch('/api/finance/categories', {
+                const categoryPayload = await financeApiRequest<{ data: FinanceCategory }>('/api/finance/categories', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         name: newCategoryName,
                         type: form.direction === 'income' ? 'income' : 'expense',
                     }),
-                });
-                const categoryPayload = await categoryResponse.json();
-                if (!categoryResponse.ok) throw new Error(categoryPayload.error || 'Could not create category');
+                }, { fallbackMessage: 'Could not create category' });
                 categoryId = categoryPayload.data.id;
                 setCategories((current) => mergeFinanceCategory(current, categoryPayload.data));
             }
@@ -232,7 +227,12 @@ export default function FinanceReviewPage() {
                     setCategories((current) => mergeFinanceCategory(current, persistedCategory));
                 }
             }
-            const response = await fetch('/api/finance/review', {
+            attemptedForm = {
+                ...form,
+                source_id: sourceId,
+                category_id: categoryId,
+            };
+            const payload = await financeApiRequest<{ data?: FinanceCandidateTransaction }>('/api/finance/review', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', [FINANCE_TIME_ZONE_HEADER]: getFinanceTimeZone() },
                 body: JSON.stringify({
@@ -244,27 +244,10 @@ export default function FinanceReviewPage() {
                     category_id: categoryId,
                     matched_transaction_id: selected.payload.duplicate_transaction_id,
                 }),
-            });
-            const payload = await response.json();
-            if (!response.ok) {
-                if (response.status === 409) {
-                    pendingDraftRef.current = {
-                        candidateId: selected.id,
-                        form: {
-                            ...form,
-                            source_id: sourceId,
-                            category_id: categoryId,
-                        },
-                        isDirectionProposalPending,
-                        isDateProposalPending,
-                    };
-                    const reloaded = await loadQueue();
-                    if (!reloaded) pendingDraftRef.current = null;
-                }
-                throw new Error(payload.error || 'Could not update review item');
-            }
+            }, { fallbackMessage: 'Could not update review item' });
             if (action === 'retry' && payload.data) {
-                setCandidates((current) => current.map((item) => item.id === selected.id ? payload.data : item));
+                const retriedCandidate = payload.data;
+                setCandidates((current) => current.map((item) => item.id === selected.id ? retriedCandidate : item));
                 showSuccess('Rules and duplicate checks applied again');
             } else {
                 setCandidates((current) => current.filter((item) => item.id !== selected.id));
@@ -275,6 +258,16 @@ export default function FinanceReviewPage() {
                         : 'Review item rejected');
             }
         } catch (error) {
+            if (error instanceof FinanceApiError && error.status === 409) {
+                pendingDraftRef.current = {
+                    candidateId: selected.id,
+                    form: attemptedForm,
+                    isDirectionProposalPending,
+                    isDateProposalPending,
+                };
+                const reloaded = await loadQueue();
+                if (!reloaded) pendingDraftRef.current = null;
+            }
             showError(error instanceof Error ? error.message : 'Could not update review item');
         } finally {
             setIsSaving(false);

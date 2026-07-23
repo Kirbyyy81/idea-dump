@@ -23,8 +23,8 @@ import { formatCurrency } from '@/lib/utils';
 import {
     getFinanceCategoryOptions,
     mergeFinanceCategory,
-    persistVirtualDefaultCategory,
 } from '@/lib/finance/categoryOptions';
+import { persistVirtualDefaultCategory } from '@/lib/finance/categoryPersistence';
 import {
     FINANCE_TIME_ZONE_HEADER,
     getFinanceTransactionTextError,
@@ -37,6 +37,7 @@ import {
     MAX_FINANCE_REFERENCE_LENGTH,
     toPositiveFinanceAmount,
 } from '@/lib/finance/values';
+import { financeApiRequest } from '@/lib/finance/clientApi';
 
 const initialForm = {
     source_id: '',
@@ -62,32 +63,31 @@ export default function FinanceTransactionsPage() {
     const [deleting, setDeleting] = useState<FinanceTransaction | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
-    const loadData = useCallback(async () => {
+    const loadData = useCallback(async (signal?: AbortSignal) => {
         try {
-            const [sourcesResponse, categoriesResponse, transactionsResponse] = await Promise.all([
-                fetch('/api/finance/sources'),
-                fetch('/api/finance/categories'),
-                fetch('/api/finance/transactions'),
-            ]);
             const [sourcesPayload, categoriesPayload, transactionsPayload] = await Promise.all([
-                sourcesResponse.json(), categoriesResponse.json(), transactionsResponse.json(),
+                financeApiRequest<{ data: FinanceSource[] }>('/api/finance/sources', { signal }),
+                financeApiRequest<{ data: FinanceCategory[] }>('/api/finance/categories', { signal }),
+                financeApiRequest<{ data: FinanceTransaction[] }>('/api/finance/transactions', { signal }),
             ]);
-            if (!sourcesResponse.ok) throw new Error(sourcesPayload.error);
-            if (!categoriesResponse.ok) throw new Error(categoriesPayload.error);
-            if (!transactionsResponse.ok) throw new Error(transactionsPayload.error);
             const nextSources = (sourcesPayload.data || []) as FinanceSource[];
             setSources(nextSources);
             setCategories(categoriesPayload.data || []);
             setTransactions(transactionsPayload.data || []);
             setForm((current) => current.source_id || !nextSources.length ? current : { ...current, source_id: nextSources[0].id });
         } catch (error) {
+            if (signal?.aborted) return;
             showError(error instanceof Error ? error.message : 'Could not load finance records');
         } finally {
-            setIsLoading(false);
+            if (!signal?.aborted) setIsLoading(false);
         }
     }, [showError]);
 
-    useEffect(() => { void loadData(); }, [loadData]);
+    useEffect(() => {
+        const controller = new AbortController();
+        void loadData(controller.signal);
+        return () => controller.abort();
+    }, [loadData]);
 
     const sourceOptions = useMemo(() => sources.flatMap((source) => (
         !source.is_archived || source.id === form.source_id
@@ -147,15 +147,13 @@ export default function FinanceTransactionsPage() {
                 categoryId = persistedCategory.id;
                 setCategories((current) => mergeFinanceCategory(current, persistedCategory));
             }
-            const response = await fetch('/api/finance/transactions', {
+            const payload = await financeApiRequest<{ data: FinanceTransaction }>('/api/finance/transactions', {
                 method: editingId ? 'PUT' : 'POST',
                 headers: { 'Content-Type': 'application/json', [FINANCE_TIME_ZONE_HEADER]: getFinanceTimeZone() },
                 body: JSON.stringify(editingId
                     ? { ...form, amount, category_id: categoryId, id: editingId }
                     : { ...form, amount, category_id: categoryId }),
-            });
-            const payload = await response.json();
-            if (!response.ok) throw new Error(payload.error || 'Could not save transaction');
+            }, { fallbackMessage: 'Could not save transaction' });
             setTransactions((current) => editingId
                 ? current.map((transaction) => transaction.id === editingId ? payload.data : transaction)
                 : [payload.data, ...current]);
@@ -193,9 +191,11 @@ export default function FinanceTransactionsPage() {
         if (!deleting) return;
         setIsDeleting(true);
         try {
-            const response = await fetch(`/api/finance/transactions?id=${encodeURIComponent(deleting.id)}`, { method: 'DELETE' });
-            const payload = await response.json();
-            if (!response.ok) throw new Error(payload.error || 'Could not delete transaction');
+            await financeApiRequest<{ success: true }>(
+                `/api/finance/transactions?id=${encodeURIComponent(deleting.id)}`,
+                { method: 'DELETE' },
+                { fallbackMessage: 'Could not delete transaction' }
+            );
             setTransactions((current) => current.filter((transaction) => transaction.id !== deleting.id));
             if (editingId === deleting.id) cancelEditing();
             setDeleting(null);
