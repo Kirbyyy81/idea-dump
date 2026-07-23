@@ -282,15 +282,16 @@ export default function FinanceReviewPage() {
                 <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
                     <section className="border border-border-default bg-bg-surface">
                         <div className="border-b border-border-default px-5 py-4"><h2 className="text-base font-bold">Awaiting review <span className="text-text-muted">({isLoading ? '…' : candidates.length})</span></h2></div>
-                        <div className="divide-y divide-border-default">
+                        <div className="divide-y divide-border-default" aria-live="polite" aria-busy={isLoading}>
                             {isLoading ? (
                                 <FinanceLoadingState label="Loading review queue..." />
                             ) : <>
                             {candidates.map((candidate) => {
                                 const outcome = duplicateOutcome(candidate);
                                 return (
-                                    <button key={candidate.id} type="button" onClick={() => setSelectedId(candidate.id)} className={cn('w-full px-5 py-4 text-left transition-colors hover:bg-bg-hover', candidate.id === selectedId && 'bg-bg-hover')}>
-                                        <div className="flex items-center justify-between gap-3"><p className="truncate font-semibold">{candidate.payload.merchant || 'Unknown merchant'}</p><span className="shrink-0 text-sm font-bold">{candidate.payload.amount ? formatCurrency(candidate.payload.amount, candidate.payload.currency || 'MYR') : 'No amount'}</span></div>
+                                    <button key={candidate.id} type="button" aria-pressed={candidate.id === selectedId} onClick={() => setSelectedId(candidate.id)} className={cn('w-full border-l-4 border-l-transparent px-5 py-4 text-left transition-colors hover:bg-bg-hover', candidate.id === selectedId && 'border-l-accent-blue bg-bg-hover')}>
+                                        <div className="flex items-center justify-between gap-3"><p className="break-words font-semibold">{candidate.payload.merchant || 'Unknown merchant'}</p><span className="shrink-0 text-sm font-bold">{candidate.payload.amount ? formatCurrency(candidate.payload.amount, candidate.payload.currency || 'MYR') : 'No amount'}</span></div>
+                                        {candidate.id === selectedId && <span className="mt-1 block text-xs font-semibold text-accent-blue">Selected</span>}
                                         <div className="mt-1 flex items-center justify-between gap-3 text-sm text-text-muted"><span>{candidate.payload.transaction_date || 'No date'}</span><span>{Math.round((candidate.confidence || 0) * 100)}%</span></div>
                                         {outcome !== 'none' && <p className="mt-2 flex items-center gap-1 text-xs font-semibold text-warning"><WarningDoodleIcon size={13} />{outcome === 'strong' ? 'Strong duplicate match' : 'Possible duplicate'}</p>}
                                     </button>
@@ -327,6 +328,8 @@ export default function FinanceReviewPage() {
                                     <label className="space-y-2">
                                         <span className="text-sm text-text-secondary">Direction</span>
                                         <Select
+                                            ariaLabel="Transaction direction"
+                                            ariaDescribedBy={isDirectionProposalPending ? 'direction-proposal-help' : undefined}
                                             value={form.direction}
                                             onChange={(direction) => {
                                                 setForm({ ...form, direction: direction as FinanceTransactionDirection, category_id: '' });
@@ -338,7 +341,7 @@ export default function FinanceReviewPage() {
                                             ]}
                                         />
                                         {isDirectionProposalPending && (
-                                            <span className="block text-xs text-warning">
+                                            <span id="direction-proposal-help" className="block text-xs text-warning">
                                                 No direction was detected. Expense is proposed; verify it before confirming.
                                             </span>
                                         )}
@@ -346,10 +349,10 @@ export default function FinanceReviewPage() {
                                     <label className="space-y-2"><span className="text-sm text-text-secondary">Amount</span><Input required type="number" min="0.01" max={MAX_FINANCE_AMOUNT} step="0.01" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} /></label>
                                     <label className="space-y-2"><span className="text-sm text-text-secondary">Currency</span><Input value="MYR" readOnly aria-readonly="true" /></label>
                                     <label className="space-y-2"><span className="text-sm text-text-secondary">Reference number</span><Input maxLength={MAX_FINANCE_REFERENCE_LENGTH} value={form.reference_number} onChange={(event) => setForm({ ...form, reference_number: event.target.value })} /></label>
-                                    <div className="space-y-2"><label className="block space-y-2"><span className="text-sm text-text-secondary">Source</span><Select value={form.source_id} onChange={(source_id) => setForm({ ...form, source_id })} placeholder="Choose a source" options={[...sources.filter((source) => !source.is_archived).map((source) => ({ value: source.id, label: source.name })), { value: NEW_SOURCE, label: '+ Add new source' }]} /></label>{form.source_id === NEW_SOURCE && <Input required maxLength={MAX_FINANCE_NAME_LENGTH} value={newSourceName} onChange={(event) => setNewSourceName(event.target.value)} placeholder="Source name, e.g. Maybank" />}</div>
-                                    <div className="space-y-2"><label className="block space-y-2"><span className="text-sm text-text-secondary">Category</span><Select value={form.category_id} onChange={(category_id) => setForm({ ...form, category_id })} placeholder="Uncategorised" options={[{ value: '', label: 'Uncategorised' }, ...availableCategories, { value: NEW_CATEGORY, label: '+ Add new category' }]} /></label>{form.category_id === NEW_CATEGORY && <Input required maxLength={MAX_FINANCE_NAME_LENGTH} value={newCategoryName} onChange={(event) => setNewCategoryName(event.target.value)} placeholder={form.direction === 'income' ? 'e.g. Salary' : 'e.g. Groceries'} />}</div>
+                                    <div className="space-y-2"><label className="block space-y-2"><span className="text-sm text-text-secondary">Source</span><Select ariaLabel="Transaction source" value={form.source_id} onChange={(source_id) => setForm({ ...form, source_id })} placeholder="Choose a source" options={[...sources.filter((source) => !source.is_archived).map((source) => ({ value: source.id, label: source.name })), { value: NEW_SOURCE, label: '+ Add new source' }]} /></label>{form.source_id === NEW_SOURCE && <label className="block space-y-2"><span className="text-sm text-text-secondary">New source name</span><Input required maxLength={MAX_FINANCE_NAME_LENGTH} value={newSourceName} onChange={(event) => setNewSourceName(event.target.value)} placeholder="e.g. Maybank" /></label>}</div>
+                                    <div className="space-y-2"><label className="block space-y-2"><span className="text-sm text-text-secondary">Category</span><Select ariaLabel="Transaction category" value={form.category_id} onChange={(category_id) => setForm({ ...form, category_id })} placeholder="Uncategorised" options={[{ value: '', label: 'Uncategorised' }, ...availableCategories, { value: NEW_CATEGORY, label: '+ Add new category' }]} /></label>{form.category_id === NEW_CATEGORY && <label className="block space-y-2"><span className="text-sm text-text-secondary">New category name</span><Input required maxLength={MAX_FINANCE_NAME_LENGTH} value={newCategoryName} onChange={(event) => setNewCategoryName(event.target.value)} placeholder={form.direction === 'income' ? 'e.g. Salary' : 'e.g. Groceries'} /></label>}</div>
                                     <label className="space-y-2"><span className="text-sm text-text-secondary">Merchant or payee</span><Input maxLength={MAX_FINANCE_MERCHANT_LENGTH} value={form.merchant} onChange={(event) => setForm({ ...form, merchant: event.target.value })} /></label>
-                                    <label className="space-y-2"><span className="text-sm text-text-secondary">Date</span><Input required type="date" max={getLocalFinanceDate()} value={form.transaction_date} onChange={(event) => { setForm({ ...form, transaction_date: event.target.value }); setIsDateProposalPending(false); }} />{isDateProposalPending && <span className="block text-xs text-warning">No date was detected. Today is proposed; confirm this date before continuing.</span>}{isDateProposalPending && <Button type="button" variant="ghost" onClick={() => setIsDateProposalPending(false)}>Use proposed date</Button>}</label>
+                                    <label className="space-y-2"><span className="text-sm text-text-secondary">Date</span><Input required type="date" max={getLocalFinanceDate()} aria-describedby={isDateProposalPending ? 'date-proposal-help' : undefined} value={form.transaction_date} onChange={(event) => { setForm({ ...form, transaction_date: event.target.value }); setIsDateProposalPending(false); }} />{isDateProposalPending && <span id="date-proposal-help" className="block text-xs text-warning">No date was detected. Today is proposed; confirm this date before continuing.</span>}{isDateProposalPending && <Button type="button" variant="ghost" onClick={() => setIsDateProposalPending(false)}>Use proposed date</Button>}</label>
                                     <label className="space-y-2 md:col-span-2"><span className="text-sm text-text-secondary">Notes</span><Textarea maxLength={MAX_FINANCE_NOTES_LENGTH} value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></label>
                                 </div>
 

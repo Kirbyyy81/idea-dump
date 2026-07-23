@@ -179,7 +179,10 @@ export default function FinanceTransactionsPage() {
             transaction_date: transaction.transaction_date,
             notes: transaction.notes || '',
         });
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        window.scrollTo({
+            top: 0,
+            behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+        });
     };
 
     const cancelEditing = () => {
@@ -217,9 +220,9 @@ export default function FinanceTransactionsPage() {
                         <Card className="p-5">
                             <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2">{editingId ? <EditDoodleIcon size={18} className="text-accent-blue" /> : <AddDoodleIcon size={18} className="text-accent-blue" />}<h2 className="text-base font-bold">{editingId ? 'Edit transaction' : 'New transaction'}</h2></div>{editingId && <button type="button" title="Cancel editing" aria-label="Cancel editing" onClick={cancelEditing} className="grid size-10 place-items-center text-text-muted hover:text-text-primary"><CloseDoodleIcon size={16} /></button>}</div>
                             <div className="mt-5 space-y-4">
-                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Direction</span><Select value={form.direction} onChange={(direction) => setForm({ ...form, direction: direction as FinanceTransactionDirection, category_id: '' })} options={[{ value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }]} /></label>
-                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Source</span><Select value={form.source_id} onChange={(source_id) => setForm({ ...form, source_id })} placeholder="Choose a source" options={sourceOptions} /></label>
-                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Category</span><Select value={form.category_id} onChange={(category_id) => setForm({ ...form, category_id })} placeholder="Uncategorised" options={[{ value: '', label: 'Uncategorised' }, ...categoryOptions]} /></label>
+                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Direction</span><Select ariaLabel="Transaction direction" value={form.direction} onChange={(direction) => setForm({ ...form, direction: direction as FinanceTransactionDirection, category_id: '' })} options={[{ value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }]} /></label>
+                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Source</span><Select ariaLabel="Transaction source" value={form.source_id} onChange={(source_id) => setForm({ ...form, source_id })} placeholder="Choose a source" options={sourceOptions} /></label>
+                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Category</span><Select ariaLabel="Transaction category" value={form.category_id} onChange={(category_id) => setForm({ ...form, category_id })} placeholder="Uncategorised" options={[{ value: '', label: 'Uncategorised' }, ...categoryOptions]} /></label>
                                 <div className="grid gap-4 sm:grid-cols-2"><label className="block space-y-2"><span className="text-sm text-text-secondary">Amount</span><Input required inputMode="decimal" type="number" min="0.01" max={MAX_FINANCE_AMOUNT} step="0.01" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} placeholder="0.00" /></label><label className="block space-y-2"><span className="text-sm text-text-secondary">Currency</span><Input value="MYR" readOnly aria-readonly="true" /></label></div>
                                 <label className="block space-y-2"><span className="text-sm text-text-secondary">Merchant or payee</span><Input maxLength={MAX_FINANCE_MERCHANT_LENGTH} value={form.merchant} onChange={(event) => setForm({ ...form, merchant: event.target.value })} /></label>
                                 <label className="block space-y-2"><span className="text-sm text-text-secondary">Reference number</span><Input maxLength={MAX_FINANCE_REFERENCE_LENGTH} value={form.reference_number} onChange={(event) => setForm({ ...form, reference_number: event.target.value })} /></label>
@@ -231,8 +234,8 @@ export default function FinanceTransactionsPage() {
                     </form>}
 
                     <section className="border border-border-default bg-bg-surface">
-                        <div className="flex flex-col gap-3 border-b border-border-default px-5 py-4 sm:flex-row sm:items-center sm:justify-between"><h2 className="text-base font-bold">Ledger</h2><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search transactions" className="sm:w-64" /></div>
-                        <div className="divide-y divide-border-default">
+                        <div className="flex flex-col gap-3 border-b border-border-default px-5 py-4 sm:flex-row sm:items-center sm:justify-between"><h2 className="text-base font-bold">Ledger</h2><label className="sm:w-64"><span className="sr-only">Search transactions</span><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search transactions" /></label></div>
+                        <div className="divide-y divide-border-default" aria-live="polite" aria-busy={isLoading}>
                             {filteredTransactions.map((transaction) => {
                                 const isIncome = transaction.direction === 'income';
                                 return (
@@ -248,14 +251,14 @@ export default function FinanceTransactionsPage() {
                                         </div>
                                         <div className="flex flex-wrap items-center justify-end gap-2">
                                             <p className={isIncome ? 'mr-1 font-bold text-success' : 'mr-1 font-bold text-error'}>{isIncome ? '+' : '-'}{formatCurrency(transaction.amount, transaction.currency || 'MYR')}</p>
-                                            <Button type="button" variant="ghost" icon={<EditDoodleIcon size={15} />} onClick={() => editTransaction(transaction)}>Edit</Button>
-                                            <Button type="button" variant="ghost" className="text-error hover:text-error" icon={<DeleteDoodleIcon size={15} />} onClick={() => setDeleting(transaction)}>Delete</Button>
+                                            <Button type="button" variant="ghost" aria-label={`Edit transaction ${transaction.merchant || 'Untitled transaction'}`} icon={<EditDoodleIcon size={15} />} onClick={() => editTransaction(transaction)}>Edit</Button>
+                                            <Button type="button" variant="ghost" aria-label={`Delete transaction ${transaction.merchant || 'Untitled transaction'}`} className="text-error hover:text-error" icon={<DeleteDoodleIcon size={15} />} onClick={() => setDeleting(transaction)}>Delete</Button>
                                         </div>
                                     </div>
                                 );
                             })}
                             {!isLoading && !filteredTransactions.length && <p className="px-5 py-12 text-center text-sm text-text-muted">No transactions found.</p>}
-                            {isLoading && <p className="px-5 py-12 text-center text-sm text-text-muted">Loading ledger...</p>}
+                            {isLoading && <p role="status" className="px-5 py-12 text-center text-sm text-text-muted">Loading ledger...</p>}
                         </div>
                     </section>
                 </div>

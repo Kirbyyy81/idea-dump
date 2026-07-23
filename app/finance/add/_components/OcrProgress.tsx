@@ -76,7 +76,7 @@ export function OcrProgress({ phase, uploadProgress }: OcrProgressProps) {
                             >
                                 {isComplete ? <CheckDoodleIcon size={12} /> : index + 1}
                             </span>
-                            <span className="truncate">{step.label.replace(' screenshot', '')}</span>
+                            <span className="truncate">{step.label.replace(' screenshot', '')}<span className="sr-only">{isComplete ? ', complete' : isActive ? ', current step' : ', not started'}</span></span>
                         </li>
                     );
                 })}
