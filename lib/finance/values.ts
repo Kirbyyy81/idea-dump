@@ -7,6 +7,7 @@ export const MAX_FINANCE_NAME_LENGTH = 120;
 export const MAX_FINANCE_MERCHANT_LENGTH = 500;
 export const MAX_FINANCE_REFERENCE_LENGTH = 200;
 export const MAX_FINANCE_NOTES_LENGTH = 2000;
+export const FINANCE_TIME_ZONE_HEADER = 'X-Finance-Time-Zone';
 
 const MAX_FINANCE_AMOUNT_MINOR_UNITS = BigInt('99999999999999');
 const ONE_HUNDRED = BigInt(100);
@@ -99,6 +100,35 @@ export function getLocalFinanceDate(date = new Date()) {
 
 export function getLocalFinanceMonth(date = new Date()) {
     return getLocalFinanceDate(date).slice(0, 7);
+}
+
+export function getFinanceTimeZone() {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+}
+
+export function getFinanceDateInTimeZone(timeZone: unknown, date = new Date()) {
+    const requestedTimeZone = typeof timeZone === 'string' ? timeZone.trim() : '';
+    try {
+        const parts = new Intl.DateTimeFormat('en-CA', {
+            timeZone: requestedTimeZone || 'UTC',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+        }).formatToParts(date);
+        const year = parts.find((part) => part.type === 'year')?.value;
+        const month = parts.find((part) => part.type === 'month')?.value;
+        const day = parts.find((part) => part.type === 'day')?.value;
+        const normalized = normalizeFinanceDate(`${year}-${month}-${day}`);
+        return normalized || getLocalFinanceDate(date);
+    } catch {
+        return getLocalFinanceDate(date);
+    }
+}
+
+export function isFutureFinanceDate(value: unknown, today = getLocalFinanceDate()) {
+    const date = normalizeFinanceDate(value);
+    const currentDate = normalizeFinanceDate(today);
+    return Boolean(date && currentDate && date > currentDate);
 }
 
 export function getFinanceTransactionTextError(fields: {

@@ -31,8 +31,11 @@ import {
     persistVirtualDefaultCategory,
 } from '@/lib/finance/categoryOptions';
 import {
+    FINANCE_TIME_ZONE_HEADER,
     getFinanceTransactionTextError,
+    getFinanceTimeZone,
     getLocalFinanceDate,
+    isFutureFinanceDate,
     MAX_FINANCE_AMOUNT,
     MAX_FINANCE_MERCHANT_LENGTH,
     MAX_FINANCE_NAME_LENGTH,
@@ -188,6 +191,10 @@ export default function FinanceReviewPage() {
                 showError(textError);
                 return;
             }
+            if (isFutureFinanceDate(form.transaction_date)) {
+                showError('Transaction date cannot be in the future');
+                return;
+            }
         }
         setIsSaving(true);
         try {
@@ -227,7 +234,7 @@ export default function FinanceReviewPage() {
             }
             const response = await fetch('/api/finance/review', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', [FINANCE_TIME_ZONE_HEADER]: getFinanceTimeZone() },
                 body: JSON.stringify({
                     candidate_id: selected.id,
                     action,
@@ -349,7 +356,7 @@ export default function FinanceReviewPage() {
                                     <div className="space-y-2"><label className="block space-y-2"><span className="text-sm text-text-secondary">Source</span><Select value={form.source_id} onChange={(source_id) => setForm({ ...form, source_id })} placeholder="Choose a source" options={[...sources.filter((source) => !source.is_archived).map((source) => ({ value: source.id, label: source.name })), { value: NEW_SOURCE, label: '+ Add new source' }]} /></label>{form.source_id === NEW_SOURCE && <Input required maxLength={MAX_FINANCE_NAME_LENGTH} value={newSourceName} onChange={(event) => setNewSourceName(event.target.value)} placeholder="Source name, e.g. Maybank" />}</div>
                                     <div className="space-y-2"><label className="block space-y-2"><span className="text-sm text-text-secondary">Category</span><Select value={form.category_id} onChange={(category_id) => setForm({ ...form, category_id })} placeholder="Uncategorised" options={[{ value: '', label: 'Uncategorised' }, ...availableCategories, { value: NEW_CATEGORY, label: '+ Add new category' }]} /></label>{form.category_id === NEW_CATEGORY && <Input required maxLength={MAX_FINANCE_NAME_LENGTH} value={newCategoryName} onChange={(event) => setNewCategoryName(event.target.value)} placeholder={form.direction === 'income' ? 'e.g. Salary' : 'e.g. Groceries'} />}</div>
                                     <label className="space-y-2"><span className="text-sm text-text-secondary">Merchant or payee</span><Input maxLength={MAX_FINANCE_MERCHANT_LENGTH} value={form.merchant} onChange={(event) => setForm({ ...form, merchant: event.target.value })} /></label>
-                                    <label className="space-y-2"><span className="text-sm text-text-secondary">Date</span><Input required type="date" value={form.transaction_date} onChange={(event) => { setForm({ ...form, transaction_date: event.target.value }); setIsDateProposalPending(false); }} />{isDateProposalPending && <span className="block text-xs text-warning">No date was detected. Today is proposed; confirm this date before continuing.</span>}{isDateProposalPending && <Button type="button" variant="ghost" onClick={() => setIsDateProposalPending(false)}>Use proposed date</Button>}</label>
+                                    <label className="space-y-2"><span className="text-sm text-text-secondary">Date</span><Input required type="date" max={getLocalFinanceDate()} value={form.transaction_date} onChange={(event) => { setForm({ ...form, transaction_date: event.target.value }); setIsDateProposalPending(false); }} />{isDateProposalPending && <span className="block text-xs text-warning">No date was detected. Today is proposed; confirm this date before continuing.</span>}{isDateProposalPending && <Button type="button" variant="ghost" onClick={() => setIsDateProposalPending(false)}>Use proposed date</Button>}</label>
                                     <label className="space-y-2 md:col-span-2"><span className="text-sm text-text-secondary">Notes</span><Textarea maxLength={MAX_FINANCE_NOTES_LENGTH} value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></label>
                                 </div>
 

@@ -20,6 +20,11 @@ import {
 } from '@/lib/finance/api';
 import { FINANCE_V1_CURRENCY } from '@/lib/finance/constants';
 import { FinanceTransaction } from '@/lib/types';
+import {
+    FINANCE_TIME_ZONE_HEADER,
+    getFinanceDateInTimeZone,
+    isFutureFinanceDate,
+} from '@/lib/finance/values';
 
 export const dynamic = 'force-dynamic';
 const TRANSACTION_PAGE_SIZE = 500;
@@ -38,6 +43,7 @@ function transactionRpcError(error: { code?: string; message?: string }) {
 function buildTransactionPayload(
     body: Record<string, unknown>,
     userId: string,
+    today: string,
     existing?: FinanceTransaction
 ) {
     const sourceId = toRequiredText(body.source_id);
@@ -51,6 +57,7 @@ function buildTransactionPayload(
     if (!amount) return { error: 'Amount must be positive, within range, and use at most two decimals' };
     if (!isFinanceTransactionDirection(body.direction)) return { error: 'Select a valid transaction direction' };
     if (!transactionDate) return { error: 'Transaction date is required' };
+    if (isFutureFinanceDate(transactionDate, today)) return { error: 'Transaction date cannot be in the future' };
     if (!isFinanceTextWithinLength(body.merchant, 500)) return { error: 'Merchant must be 500 characters or fewer' };
     if (!isFinanceTextWithinLength(body.notes, 2000)) return { error: 'Notes must be 2,000 characters or fewer' };
     if (!isFinanceTextWithinLength(body.reference_number, 200)) return { error: 'Reference number must be 200 characters or fewer' };
@@ -140,7 +147,8 @@ export async function POST(request: NextRequest) {
         if ('response' in session) return session.response;
         const body = await readFinanceJsonObject(request);
         if (!body) return jsonError('Request body must be a JSON object');
-        const payload = buildTransactionPayload(body, session.user.id);
+        const today = getFinanceDateInTimeZone(request.headers.get(FINANCE_TIME_ZONE_HEADER));
+        const payload = buildTransactionPayload(body, session.user.id, today);
         if ('error' in payload) return jsonError(payload.error ?? 'Invalid transaction');
 
         const referenceError = await validateOwnedReferences(
@@ -188,7 +196,8 @@ export async function PUT(request: NextRequest) {
 
         if (existing.status !== 'confirmed') return jsonError('Only confirmed ledger transactions can be edited', 409);
         const merged = { ...existing, ...body };
-        const payload = buildTransactionPayload(merged, session.user.id, existing as FinanceTransaction);
+        const today = getFinanceDateInTimeZone(request.headers.get(FINANCE_TIME_ZONE_HEADER));
+        const payload = buildTransactionPayload(merged, session.user.id, today, existing as FinanceTransaction);
         if ('error' in payload) return jsonError(payload.error ?? 'Invalid transaction');
         const referenceError = await validateOwnedReferences(
             session.user.id,

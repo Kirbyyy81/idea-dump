@@ -26,8 +26,11 @@ import {
     persistVirtualDefaultCategory,
 } from '@/lib/finance/categoryOptions';
 import {
+    FINANCE_TIME_ZONE_HEADER,
     getFinanceTransactionTextError,
+    getFinanceTimeZone,
     getLocalFinanceDate,
+    isFutureFinanceDate,
     MAX_FINANCE_AMOUNT,
     MAX_FINANCE_MERCHANT_LENGTH,
     MAX_FINANCE_NOTES_LENGTH,
@@ -132,6 +135,10 @@ export default function FinanceTransactionsPage() {
             showError(textError);
             return;
         }
+        if (isFutureFinanceDate(form.transaction_date)) {
+            showError('Transaction date cannot be in the future');
+            return;
+        }
         setIsSaving(true);
         try {
             let categoryId = form.category_id;
@@ -142,7 +149,7 @@ export default function FinanceTransactionsPage() {
             }
             const response = await fetch('/api/finance/transactions', {
                 method: editingId ? 'PUT' : 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', [FINANCE_TIME_ZONE_HEADER]: getFinanceTimeZone() },
                 body: JSON.stringify(editingId
                     ? { ...form, amount, category_id: categoryId, id: editingId }
                     : { ...form, amount, category_id: categoryId }),
@@ -216,7 +223,7 @@ export default function FinanceTransactionsPage() {
                                 <div className="grid gap-4 sm:grid-cols-2"><label className="block space-y-2"><span className="text-sm text-text-secondary">Amount</span><Input required inputMode="decimal" type="number" min="0.01" max={MAX_FINANCE_AMOUNT} step="0.01" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} placeholder="0.00" /></label><label className="block space-y-2"><span className="text-sm text-text-secondary">Currency</span><Input value="MYR" readOnly aria-readonly="true" /></label></div>
                                 <label className="block space-y-2"><span className="text-sm text-text-secondary">Merchant or payee</span><Input maxLength={MAX_FINANCE_MERCHANT_LENGTH} value={form.merchant} onChange={(event) => setForm({ ...form, merchant: event.target.value })} /></label>
                                 <label className="block space-y-2"><span className="text-sm text-text-secondary">Reference number</span><Input maxLength={MAX_FINANCE_REFERENCE_LENGTH} value={form.reference_number} onChange={(event) => setForm({ ...form, reference_number: event.target.value })} /></label>
-                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Date</span><Input required type="date" value={form.transaction_date} onChange={(event) => setForm({ ...form, transaction_date: event.target.value })} /></label>
+                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Date</span><Input required type="date" max={getLocalFinanceDate()} value={form.transaction_date} onChange={(event) => setForm({ ...form, transaction_date: event.target.value })} /></label>
                                 <label className="block space-y-2"><span className="text-sm text-text-secondary">Notes</span><Textarea maxLength={MAX_FINANCE_NOTES_LENGTH} value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></label>
                             </div>
                             <Button type="submit" className="mt-5 w-full" isLoading={isSaving} disabled={!form.source_id}>Save changes</Button>

@@ -21,6 +21,11 @@ import {
 } from '@/lib/finance/api';
 import { FINANCE_V1_CURRENCY } from '@/lib/finance/constants';
 import {
+    FINANCE_TIME_ZONE_HEADER,
+    getFinanceDateInTimeZone,
+    isFutureFinanceDate,
+} from '@/lib/finance/values';
+import {
     assessFinanceDuplicate,
     financeDuplicateColumns,
 } from '@/lib/finance/duplicates';
@@ -218,6 +223,10 @@ export async function POST(request: NextRequest) {
         if (categoryId && !isFinanceUuid(categoryId)) return jsonError('Category ID must be a valid UUID');
         if (!amount) return jsonError('Amount must be positive, within range, and use at most two decimals');
         if (!transactionDate) return jsonError('Transaction date is required');
+        const today = getFinanceDateInTimeZone(request.headers.get(FINANCE_TIME_ZONE_HEADER));
+        if (isFutureFinanceDate(transactionDate, today)) {
+            return jsonError('Transaction date cannot be in the future');
+        }
         if (!isFinanceTransactionDirection(body.direction)) return jsonError('Select a valid transaction direction');
         if (!isFinanceTextWithinLength(body.merchant, 500)) return jsonError('Merchant must be 500 characters or fewer');
         if (!isFinanceTextWithinLength(body.notes, 2000)) return jsonError('Notes must be 2,000 characters or fewer');

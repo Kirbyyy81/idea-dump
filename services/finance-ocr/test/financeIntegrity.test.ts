@@ -3,8 +3,10 @@ import { aggregateFinanceDashboard, FinanceDashboardRow } from '../../../lib/fin
 import {
     getFinanceMonthRange,
     getFinanceTransactionTextError,
+    getFinanceDateInTimeZone,
     getLocalFinanceDate,
     getLocalFinanceMonth,
+    isFutureFinanceDate,
     normalizeFinanceDate,
     shiftFinanceMonth,
     toPositiveFinanceAmount,
@@ -90,6 +92,18 @@ describe('Finance calendar integrity', () => {
         const localDate = new Date(2026, 7, 1, 0, 30);
         expect(getLocalFinanceDate(localDate)).toBe('2026-08-01');
         expect(getLocalFinanceMonth(localDate)).toBe('2026-08');
+    });
+
+    it('allows past and current dates while rejecting future dates', () => {
+        expect(isFutureFinanceDate('2020-01-01', '2026-07-23')).toBe(false);
+        expect(isFutureFinanceDate('2026-07-23', '2026-07-23')).toBe(false);
+        expect(isFutureFinanceDate('2026-07-24', '2026-07-23')).toBe(true);
+    });
+
+    it('resolves today using the user time zone', () => {
+        const boundary = new Date('2026-07-22T16:30:00.000Z');
+        expect(getFinanceDateInTimeZone('Asia/Kuala_Lumpur', boundary)).toBe('2026-07-23');
+        expect(getFinanceDateInTimeZone('UTC', boundary)).toBe('2026-07-22');
     });
 });
 
