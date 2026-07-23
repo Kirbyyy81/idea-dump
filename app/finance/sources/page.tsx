@@ -176,7 +176,7 @@ export default function FinanceSourcesPage() {
                                                 });
                                             }}
                                         >
-                                            <Input required value={editingName} onChange={(event) => setEditingName(event.target.value)} />
+                                            <Input required aria-label={`Source name for ${source.name}`} value={editingName} onChange={(event) => setEditingName(event.target.value)} />
                                             <Input aria-label="Filename aliases" value={editingFilenameAliases} onChange={(event) => setEditingFilenameAliases(event.target.value)} placeholder="Filename aliases, comma separated" />
                                             <Input aria-label="OCR aliases" value={editingOcrAliases} onChange={(event) => setEditingOcrAliases(event.target.value)} placeholder="OCR aliases, comma separated" />
                                             <div className="flex gap-2">
@@ -193,14 +193,14 @@ export default function FinanceSourcesPage() {
                                                 </div>
                                             </div>
                                             <div className="flex flex-wrap items-center justify-end gap-1">
-                                                <Button type="button" variant="ghost" disabled={pendingSourceId !== null} onClick={() => {
+                                                <Button type="button" variant="ghost" aria-label={`Edit source ${source.name}`} disabled={pendingSourceId !== null} onClick={() => {
                                                     setEditingId(source.id);
                                                     setEditingName(source.name);
                                                     setEditingFilenameAliases(source.filename_aliases.join(', '));
                                                     setEditingOcrAliases(source.ocr_aliases.join(', '));
                                                 }}>Edit</Button>
-                                                <Button type="button" variant="ghost" isLoading={pendingSourceId === source.id} disabled={pendingSourceId !== null} onClick={() => void updateSource(source, { is_archived: !source.is_archived })}>{source.is_archived ? 'Restore' : 'Archive'}</Button>
-                                                <Button type="button" variant="ghost" disabled={pendingSourceId !== null} className="text-error hover:text-error" onClick={() => setDeleting(source)}>Delete</Button>
+                                                <Button type="button" variant="ghost" aria-label={`${source.is_archived ? 'Restore' : 'Archive'} source ${source.name}`} isLoading={pendingSourceId === source.id} disabled={pendingSourceId !== null} onClick={() => void updateSource(source, { is_archived: !source.is_archived })}>{source.is_archived ? 'Restore' : 'Archive'}</Button>
+                                                <Button type="button" variant="ghost" aria-label={`Delete source ${source.name}`} disabled={pendingSourceId !== null} className="text-error hover:text-error" onClick={() => setDeleting(source)}>Delete</Button>
                                             </div>
                                         </div>
                                     )}

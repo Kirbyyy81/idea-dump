@@ -66,7 +66,7 @@ const MODULE_ICONS: Record<string, JSX.Element> = {
 const NAV_ITEM_CLASS =
     'flex min-h-10 w-full items-center gap-2 rounded-sm border border-transparent px-3 py-2 text-left text-[12px] font-semibold leading-normal transition-colors';
 const NAV_SUBITEM_CLASS =
-    'flex min-h-8 w-full items-center gap-2 rounded-sm border border-transparent px-3 py-1.5 text-left text-[12px] font-medium leading-normal transition-colors';
+    'flex min-h-10 w-full items-center gap-2 rounded-sm border border-transparent px-3 py-1.5 text-left text-[12px] font-medium leading-normal transition-colors';
 const GROUP_ACTIVE_CLASS = 'bg-nav-bg-hover text-nav-text hover:bg-nav-bg-hover hover:text-nav-text';
 const GROUP_INACTIVE_CLASS = 'text-nav-text-muted hover:bg-nav-bg-hover hover:text-nav-text';
 const SUBITEM_ACTIVE_CLASS =
@@ -175,6 +175,7 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
         label: string;
     }) => {
         const isOpen = Boolean(openGroups[group] || active);
+        const submenuId = `sidebar-${group}-submenu`;
 
         if (collapsed) {
             return renderModuleLink({ active, href, icon, label });
@@ -193,6 +194,7 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
                         active ? GROUP_ACTIVE_CLASS : GROUP_INACTIVE_CLASS
                     )}
                     aria-expanded={isOpen}
+                    aria-controls={submenuId}
                     onClick={() => setOpenGroups((current) => ({ ...current, [group]: !isOpen }))}
                 >
                     <span className="grid size-5 shrink-0 place-items-center">{icon}</span>
@@ -203,14 +205,11 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
                     />
                 </Link>
 
-                <div
-                    className={cn(
-                        'transition-all duration-200 ease-in-out overflow-hidden',
-                        isOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
-                    )}
-                >
-                    <div className="space-y-0.5 pl-4 pt-0.5">{children}</div>
-                </div>
+                {isOpen && (
+                    <div id={submenuId}>
+                        <div className="space-y-0.5 pl-4 pt-0.5">{children}</div>
+                    </div>
+                )}
             </div>
         );
     };
@@ -218,7 +217,7 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
     return (
         <aside
             className={cn(
-                'sticky top-3 flex h-[calc(100dvh-24px)] max-h-[calc(100dvh-24px)] flex-col overflow-hidden rounded-lg bg-nav-bg text-nav-text',
+                'nav-shell sticky top-3 flex h-[calc(100dvh-24px)] max-h-[calc(100dvh-24px)] flex-col overflow-hidden rounded-lg bg-nav-bg text-nav-text',
                 collapsed ? 'px-2 py-3' : 'px-[14px] py-[18px]',
                 className
             )}

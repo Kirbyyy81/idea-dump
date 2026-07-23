@@ -1,6 +1,6 @@
 'use client';
 
-import { KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { KeyboardEvent, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -21,6 +21,7 @@ export interface SelectProps {
     menuClassName?: string;
     disabled?: boolean;
     ariaLabel?: string;
+    ariaDescribedBy?: string;
 }
 
 export function Select({
@@ -33,11 +34,15 @@ export function Select({
     menuClassName,
     disabled,
     ariaLabel,
+    ariaDescribedBy,
 }: SelectProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
     const menuRef = useRef<HTMLDivElement>(null);
     const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
+    const selectId = useId();
+    const triggerId = `select-trigger-${selectId}`;
+    const listboxId = `select-listbox-${selectId}`;
     const [isOpen, setIsOpen] = useState(false);
     const [menuPosition, setMenuPosition] = useState({ left: 0, maxHeight: 256, top: 0, width: 0 });
     const selectedIndex = options.findIndex((option) => option.value === value);
@@ -154,6 +159,15 @@ export function Select({
         } else if (event.key === 'End') {
             event.preventDefault();
             optionRefs.current[enabledOptions[enabledOptions.length - 1]?.index]?.focus();
+        } else if (event.key === 'Tab') {
+            event.preventDefault();
+            setIsOpen(false);
+            const focusableSelector = 'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+            const focusable = Array.from(document.querySelectorAll<HTMLElement>(focusableSelector))
+                .filter((element) => element.offsetParent !== null && !menuRef.current?.contains(element));
+            const triggerIndex = focusable.indexOf(buttonRef.current as HTMLElement);
+            const nextIndex = event.shiftKey ? triggerIndex - 1 : triggerIndex + 1;
+            requestAnimationFrame(() => focusable[nextIndex]?.focus());
         }
     };
 
@@ -161,11 +175,14 @@ export function Select({
         <div ref={containerRef} className={cn('relative', className)}>
             <button
                 ref={buttonRef}
+                id={triggerId}
                 type="button"
                 disabled={disabled}
                 aria-haspopup="listbox"
                 aria-expanded={isOpen}
+                aria-controls={listboxId}
                 aria-label={ariaLabel}
+                aria-describedby={ariaDescribedBy}
                 onClick={() => setIsOpen((current) => !current)}
                 onKeyDown={handleButtonKeyDown}
                 className={cn(
@@ -189,7 +206,9 @@ export function Select({
             {isOpen && createPortal(
                 <div
                     ref={menuRef}
+                    id={listboxId}
                     role="listbox"
+                    aria-labelledby={triggerId}
                     style={{
                         left: menuPosition.left,
                         maxHeight: menuPosition.maxHeight,
@@ -212,12 +231,13 @@ export function Select({
                                 }}
                                 type="button"
                                 role="option"
+                                tabIndex={-1}
                                 aria-selected={isSelected}
                                 disabled={option.disabled}
                                 onClick={() => chooseOption(option)}
                                 onKeyDown={(event) => handleOptionKeyDown(event, option, index)}
                                 className={cn(
-                                    'flex w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors',
+                                    'flex min-h-10 w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors',
                                     isSelected ? 'bg-bg-hover text-text-primary' : 'text-text-secondary hover:bg-bg-subtle hover:text-text-primary',
                                     option.disabled && 'cursor-not-allowed opacity-50 hover:bg-transparent hover:text-text-secondary'
                                 )}

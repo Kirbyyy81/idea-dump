@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import { useAlert } from '@/lib/contexts/AlertContext';
 import { Button } from '@/components/atoms/Button';
 import { cn } from '@/lib/utils';
@@ -47,24 +47,69 @@ const STYLES = {
 export function AlertDialog() {
     const { alert, hideAlert } = useAlert();
     const dialogRef = useRef<HTMLDivElement>(null);
+    const dismissButtonRef = useRef<HTMLButtonElement>(null);
+    const previousFocusRef = useRef<HTMLElement | null>(null);
+    const lastFocusedElementRef = useRef<HTMLElement | null>(null);
+    const titleId = `alert-title-${useId()}`;
+    const messageId = `alert-message-${useId()}`;
 
-    // Close on Escape key
     useEffect(() => {
-        const handleEscape = (e: KeyboardEvent) => {
-            if (e.key === 'Escape' && alert.isOpen) {
-                hideAlert();
+        const rememberFocus = (event: FocusEvent) => {
+            if (!alert.isOpen && event.target instanceof HTMLElement && event.target !== document.body) {
+                lastFocusedElementRef.current = event.target;
             }
         };
-        document.addEventListener('keydown', handleEscape);
-        return () => document.removeEventListener('keydown', handleEscape);
-    }, [alert.isOpen, hideAlert]);
-
-    // Focus trap
-    useEffect(() => {
-        if (alert.isOpen && dialogRef.current) {
-            dialogRef.current.focus();
-        }
+        document.addEventListener('focusin', rememberFocus);
+        return () => document.removeEventListener('focusin', rememberFocus);
     }, [alert.isOpen]);
+
+    useEffect(() => {
+        if (!alert.isOpen) return;
+
+        const activeElement = document.activeElement as HTMLElement | null;
+        previousFocusRef.current = activeElement && activeElement !== document.body
+            ? activeElement
+            : lastFocusedElementRef.current;
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        requestAnimationFrame(() => dismissButtonRef.current?.focus());
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                hideAlert();
+                return;
+            }
+            if (e.key !== 'Tab' || !dialogRef.current) return;
+
+            const focusable = Array.from(dialogRef.current.querySelectorAll<HTMLElement>(
+                'button:not([disabled]), a[href], input:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+            ));
+            if (focusable.length === 0) {
+                e.preventDefault();
+                dialogRef.current.focus();
+                return;
+            }
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+            if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault();
+                last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault();
+                first.focus();
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown);
+            document.body.style.overflow = previousOverflow;
+            requestAnimationFrame(() => {
+                if (previousFocusRef.current?.isConnected) previousFocusRef.current.focus();
+            });
+        };
+    }, [alert.isOpen, hideAlert]);
 
     if (!alert.isOpen) return null;
 
@@ -84,8 +129,8 @@ export function AlertDialog() {
                 ref={dialogRef}
                 role="alertdialog"
                 aria-modal="true"
-                aria-labelledby="alert-title"
-                aria-describedby="alert-message"
+                aria-labelledby={titleId}
+                aria-describedby={messageId}
                 tabIndex={-1}
                 className={cn(
                     "relative z-10 w-full max-w-md mx-4 p-6 rounded-lg shadow-subtle",
@@ -96,8 +141,9 @@ export function AlertDialog() {
             >
                 {/* Close button */}
                 <button
+                    type="button"
                     onClick={hideAlert}
-                    className="absolute top-4 right-4 text-text-muted hover:text-text-primary transition-colors"
+                    className="absolute right-3 top-3 grid size-10 place-items-center rounded-sm text-text-muted transition-colors hover:bg-bg-hover hover:text-text-primary"
                     aria-label="Close"
                 >
                     <X size={20} />
@@ -108,19 +154,19 @@ export function AlertDialog() {
                     <div className={cn("p-2 rounded-full", styles.bg)}>
                         <Icon size={24} className={styles.icon} />
                     </div>
-                    <h2 id="alert-title" className={cn("text-lg font-bold", styles.title)}>
+                    <h2 id={titleId} className={cn("text-lg font-bold", styles.title)}>
                         {alert.title}
                     </h2>
                 </div>
 
                 {/* Message */}
-                <p id="alert-message" className="text-text-secondary mb-6">
+                <p id={messageId} className="text-text-secondary mb-6">
                     {alert.message}
                 </p>
 
                 {/* Action */}
                 <div className="flex justify-end">
-                    <Button variant="secondary" onClick={hideAlert}>
+                    <Button ref={dismissButtonRef} variant="secondary" onClick={hideAlert}>
                         Dismiss
                     </Button>
                 </div>

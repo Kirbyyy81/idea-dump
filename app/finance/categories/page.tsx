@@ -172,7 +172,7 @@ export default function FinanceCategoriesPage() {
                             <h2 className="text-base font-bold">New category</h2>
                             <div className="mt-5 space-y-4">
                                 <label className="block space-y-2"><span className="text-sm text-text-secondary">Name</span><Input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Groceries" /></label>
-                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Type</span><Select value={form.type} onChange={(type) => setForm({ ...form, type: type as FinanceCategoryType })} options={[{ value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }]} /></label>
+                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Type</span><Select ariaLabel="Category type" value={form.type} onChange={(type) => setForm({ ...form, type: type as FinanceCategoryType })} options={[{ value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }]} /></label>
                                 <label className="block space-y-2"><span className="text-sm text-text-secondary">Colour label (optional)</span><Input value={form.color} onChange={(event) => setForm({ ...form, color: event.target.value })} placeholder="#e76f51" /></label>
                                 <label className="block space-y-2"><span className="text-sm text-text-secondary">Icon label (optional)</span><Input value={form.icon} onChange={(event) => setForm({ ...form, icon: event.target.value })} placeholder="utensils" /></label>
                             </div>
@@ -236,9 +236,9 @@ export default function FinanceCategoriesPage() {
                                                         <div className="min-w-0"><p className="truncate font-semibold">{category.name}</p>{category.is_archived && <p className="text-sm text-text-muted">Archived — retained for history</p>}</div>
                                                     </div>
                                                     <div className="flex flex-wrap items-center justify-end gap-1">
-                                                        <Button type="button" variant="ghost" disabled={pendingCategoryId !== null} onClick={() => beginEditing(category)}>Edit</Button>
-                                                        <Button type="button" variant="ghost" isLoading={pendingCategoryId === category.id} disabled={pendingCategoryId !== null} onClick={() => void updateCategory(category, { is_archived: !category.is_archived })}>{category.is_archived ? 'Restore' : 'Archive'}</Button>
-                                                        <Button type="button" variant="ghost" disabled={pendingCategoryId !== null} className="text-error hover:text-error" onClick={() => setDeleting(category)}>Delete</Button>
+                                                        <Button type="button" variant="ghost" aria-label={`Edit category ${category.name}`} disabled={pendingCategoryId !== null} onClick={() => beginEditing(category)}>Edit</Button>
+                                                        <Button type="button" variant="ghost" aria-label={`${category.is_archived ? 'Restore' : 'Archive'} category ${category.name}`} isLoading={pendingCategoryId === category.id} disabled={pendingCategoryId !== null} onClick={() => void updateCategory(category, { is_archived: !category.is_archived })}>{category.is_archived ? 'Restore' : 'Archive'}</Button>
+                                                        <Button type="button" variant="ghost" aria-label={`Delete category ${category.name}`} disabled={pendingCategoryId !== null} className="text-error hover:text-error" onClick={() => setDeleting(category)}>Delete</Button>
                                                     </div>
                                                 </div>
                                             )}
