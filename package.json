@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "next lint",
     "test:log-viewer": "node scripts/test-log-viewer.js",
-    "test:finance-security": "node scripts/test-finance-security.js"
+    "test:finance-security": "node scripts/test-finance-security.js",
+    "test:finance-ordering": "node scripts/test-finance-ordering.js"
   },
   "dependencies": {
     "@supabase/ssr": "^0.1.0",

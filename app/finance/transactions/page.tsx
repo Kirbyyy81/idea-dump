@@ -25,6 +25,7 @@ import {
     mergeFinanceCategory,
 } from '@/lib/finance/categoryOptions';
 import { persistVirtualDefaultCategory } from '@/lib/finance/categoryPersistence';
+import { sortFinanceTransactions } from '@/lib/finance/transactionOrdering';
 import {
     FINANCE_TIME_ZONE_HEADER,
     getFinanceTransactionTextError,
@@ -154,9 +155,9 @@ export default function FinanceTransactionsPage() {
                     ? { ...form, amount, category_id: categoryId, id: editingId }
                     : { ...form, amount, category_id: categoryId }),
             }, { fallbackMessage: 'Could not save transaction' });
-            setTransactions((current) => editingId
+            setTransactions((current) => sortFinanceTransactions(editingId
                 ? current.map((transaction) => transaction.id === editingId ? payload.data : transaction)
-                : [payload.data, ...current]);
+                : [payload.data, ...current]));
             setForm((current) => ({ ...initialForm, source_id: current.source_id, transaction_date: getLocalFinanceDate() }));
             showSuccess(editingId ? 'Transaction updated' : 'Transaction added');
             setEditingId(null);
