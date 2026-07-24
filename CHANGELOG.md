@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.11.3](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.11.2...idea-dump-v0.11.3) (2026-07-24)
+
+
+### Bug Fixes
+
+* deduplicate transaction retries ([640419d](https://github.com/Kirbyyy81/idea-dump/commit/640419d468f1f51fce8f175bd8ddbf440b55aed8))
+* preserve finance ordering ([47e66c2](https://github.com/Kirbyyy81/idea-dump/commit/47e66c2bcf83ad1b5825f0a748707791723bb33d))
+
 ## [0.11.2](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.11.1...idea-dump-v0.11.2) (2026-07-23)
 
 
