@@ -21,6 +21,10 @@ import {
 import { FINANCE_V1_CURRENCY } from '@/lib/finance/constants';
 import { FinanceTransaction } from '@/lib/types';
 import {
+    isFinanceIdempotencyKey,
+    isManualTransactionReplay,
+} from '@/lib/finance/manualTransactionIdempotency';
+import {
     FINANCE_TIME_ZONE_HEADER,
     getFinanceDateInTimeZone,
     isFutureFinanceDate,
@@ -103,6 +107,18 @@ async function validateOwnedReferences(
     return null;
 }
 
+async function getManualTransactionByIdempotencyKey(userId: string, idempotencyKey: string) {
+    const admin = createAdminClient();
+    const { data, error } = await admin
+        .from('finance_transactions')
+        .select('*, finance_source:dim_finance_sources(*), category:dim_finance_categories(*)')
+        .eq('user_id', userId)
+        .eq('manual_idempotency_key', idempotencyKey)
+        .maybeSingle();
+    if (error) throw error;
+    return data ? normalizeFinanceTransaction(data as FinanceTransaction) : null;
+}
+
 export async function GET(request: NextRequest) {
     try {
         const session = await authorizeFinance();
@@ -147,9 +163,22 @@ export async function POST(request: NextRequest) {
         if ('response' in session) return session.response;
         const body = await readFinanceJsonObject(request);
         if (!body) return jsonError('Request body must be a JSON object');
+        const idempotencyKey = toRequiredText(body.idempotency_key);
+        if (!idempotencyKey) return jsonError('Transaction request ID is required');
+        if (!isFinanceIdempotencyKey(idempotencyKey)) {
+            return jsonError('Transaction request ID must be a valid UUID');
+        }
         const today = getFinanceDateInTimeZone(request.headers.get(FINANCE_TIME_ZONE_HEADER));
         const payload = buildTransactionPayload(body, session.user.id, today);
         if ('error' in payload) return jsonError(payload.error ?? 'Invalid transaction');
+
+        const replay = await getManualTransactionByIdempotencyKey(session.user.id, idempotencyKey);
+        if (replay) {
+            if (!isManualTransactionReplay(replay, payload.data)) {
+                return jsonError('Transaction request ID was already used for different details', 409);
+            }
+            return NextResponse.json({ data: replay, recovered: true });
+        }
 
         const referenceError = await validateOwnedReferences(
             session.user.id,
@@ -162,10 +191,24 @@ export async function POST(request: NextRequest) {
         const admin = createAdminClient();
         const { data, error } = await admin
             .from('finance_transactions')
-            .insert(payload.data)
+            .insert({ ...payload.data, manual_idempotency_key: idempotencyKey })
             .select('*, finance_source:dim_finance_sources(*), category:dim_finance_categories(*)')
             .single();
-        if (error) throw error;
+        if (error) {
+            if (error.code === '23505') {
+                const concurrentReplay = await getManualTransactionByIdempotencyKey(
+                    session.user.id,
+                    idempotencyKey
+                );
+                if (concurrentReplay && isManualTransactionReplay(concurrentReplay, payload.data)) {
+                    return NextResponse.json({ data: concurrentReplay, recovered: true });
+                }
+                if (concurrentReplay) {
+                    return jsonError('Transaction request ID was already used for different details', 409);
+                }
+            }
+            throw error;
+        }
         return NextResponse.json({ data: normalizeFinanceTransaction(data) }, { status: 201 });
     } catch (error) {
         console.error('Error creating finance transaction:', error);

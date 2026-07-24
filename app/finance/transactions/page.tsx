@@ -25,6 +25,7 @@ import {
     mergeFinanceCategory,
 } from '@/lib/finance/categoryOptions';
 import { persistVirtualDefaultCategory } from '@/lib/finance/categoryPersistence';
+import { sortFinanceTransactions } from '@/lib/finance/transactionOrdering';
 import {
     FINANCE_TIME_ZONE_HEADER,
     getFinanceTransactionTextError,
@@ -154,9 +155,9 @@ export default function FinanceTransactionsPage() {
                     ? { ...form, amount, category_id: categoryId, id: editingId }
                     : { ...form, amount, category_id: categoryId }),
             }, { fallbackMessage: 'Could not save transaction' });
-            setTransactions((current) => editingId
+            setTransactions((current) => sortFinanceTransactions(editingId
                 ? current.map((transaction) => transaction.id === editingId ? payload.data : transaction)
-                : [payload.data, ...current]);
+                : [payload.data, ...current]));
             setForm((current) => ({ ...initialForm, source_id: current.source_id, transaction_date: getLocalFinanceDate() }));
             showSuccess(editingId ? 'Transaction updated' : 'Transaction added');
             setEditingId(null);
@@ -213,7 +214,7 @@ export default function FinanceTransactionsPage() {
     return (
         <AppShell contentClassName="p-5 md:p-8">
             <div className="mx-auto max-w-7xl">
-                <header className="flex flex-col gap-4 pb-5 sm:flex-row sm:items-end sm:justify-between"><div><Link href="/finance" className="text-sm font-semibold text-text-secondary hover:text-text-primary">Finance</Link><h1 className="mt-2">Transactions</h1><p className="mt-1 text-sm text-text-muted">Search and manage confirmed entries.</p></div><Link href="/finance/add" className="btn-primary"><AddDoodleIcon size={16} className="mr-2" />Add transaction</Link></header>
+                <header className="flex flex-col gap-4 pb-5 sm:flex-row sm:items-end sm:justify-between"><div><Link href="/finance" className="text-sm font-semibold text-text-secondary hover:text-text-primary">Finance</Link><h1 className="mt-2">Transactions</h1></div><Link href="/finance/add" className="btn-primary"><AddDoodleIcon size={16} className="mr-2" />Add transaction</Link></header>
 
                 <div className="mt-5 space-y-5">
                     {editingId && <form onSubmit={saveTransaction} className="max-w-xl">

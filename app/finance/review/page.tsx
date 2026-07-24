@@ -277,7 +277,7 @@ export default function FinanceReviewPage() {
     return (
         <AppShell contentClassName="p-5 md:p-8">
             <div className="mx-auto max-w-7xl">
-                <header className="pb-5"><h1>Review queue</h1><p className="mt-1 text-sm text-text-muted">Confirm, reject, or mark duplicate transactions that need human judgment.</p></header>
+                <header className="pb-5"><h1>Review queue</h1></header>
 
                 <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
                     <section className="border border-border-default bg-bg-surface">

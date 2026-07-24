@@ -26,6 +26,7 @@ import {
 } from '@/lib/finance/categoryOptions';
 import { persistVirtualDefaultCategory } from '@/lib/finance/categoryPersistence';
 import { financeApiRequest } from '@/lib/finance/clientApi';
+import { sortFinanceRules } from '@/lib/finance/ruleOrdering';
 
 type MatchType = FinanceRule['match_type'];
 type RuleWithRelations = FinanceRule & { finance_source?: FinanceSource | null; category?: FinanceCategory | null };
@@ -70,7 +71,7 @@ export default function FinanceRulesPage() {
                 financeApiRequest<{ data: FinanceCategory[] }>('/api/finance/categories', { signal }),
                 financeApiRequest<{ data: FinanceRuleSuggestion[] }>('/api/finance/rule-suggestions', { signal }),
             ]);
-            setRules(rulesPayload.data || []);
+            setRules(sortFinanceRules(rulesPayload.data || []));
             setSources(sourcesPayload.data || []);
             setCategories(categoriesPayload.data || []);
             setSuggestions(suggestionsPayload.data || []);
@@ -105,7 +106,7 @@ export default function FinanceRulesPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ...form, category_id: categoryId }),
             }, { fallbackMessage: 'Could not add rule' });
-            setRules((current) => [payload.data, ...current]);
+            setRules((current) => sortFinanceRules([payload.data, ...current]));
             setForm(initialForm);
             showSuccess('Rule added');
         } catch (error) {
@@ -124,7 +125,9 @@ export default function FinanceRulesPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: rule.id, is_active: !rule.is_active }),
             }, { fallbackMessage: 'Could not update rule' });
-            setRules((current) => current.map((item) => item.id === rule.id ? payload.data : item));
+            setRules((current) => sortFinanceRules(
+                current.map((item) => item.id === rule.id ? payload.data : item)
+            ));
         } catch (error) {
             showError(error instanceof Error ? error.message : 'Could not update rule');
         } finally {
