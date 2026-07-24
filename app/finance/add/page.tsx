@@ -26,6 +26,7 @@ import {
 import { OcrProgress } from './_components/OcrProgress';
 import { FinanceLoadingState } from '../_components/FinanceLoadingState';
 import { financeApiRequest } from '@/lib/finance/clientApi';
+import { getManualTransactionAttempt } from '@/lib/finance/manualTransactionIdempotency';
 import {
     getFinanceTransactionTextError,
     FINANCE_TIME_ZONE_HEADER,
@@ -68,6 +69,7 @@ export default function AddFinanceTransactionPage() {
     const [uploadProgress, setUploadProgress] = useState(0);
     const [isOptionsLoading, setIsOptionsLoading] = useState(true);
     const uploadControllerRef = useRef<AbortController | null>(null);
+    const manualAttemptRef = useRef<{ fingerprint: string; key: string } | null>(null);
 
     useEffect(() => () => uploadControllerRef.current?.abort(), []);
 
@@ -130,7 +132,23 @@ export default function AddFinanceTransactionPage() {
                 categoryId = persistedCategory.id;
                 setCategories((current) => mergeFinanceCategory(current, persistedCategory));
             }
-            await financeApiRequest('/api/finance/transactions', { method: 'POST', headers: { 'Content-Type': 'application/json', [FINANCE_TIME_ZONE_HEADER]: getFinanceTimeZone() }, body: JSON.stringify({ ...form, amount, source_id: sourceId, category_id: categoryId }) }, { fallbackMessage: 'Could not add transaction' });
+            const requestBody = { ...form, amount, source_id: sourceId, category_id: categoryId };
+            const requestFingerprint = JSON.stringify(requestBody);
+            const attempt = getManualTransactionAttempt(
+                manualAttemptRef.current,
+                requestFingerprint,
+                () => window.crypto.randomUUID()
+            );
+            manualAttemptRef.current = attempt;
+            await financeApiRequest('/api/finance/transactions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    [FINANCE_TIME_ZONE_HEADER]: getFinanceTimeZone(),
+                },
+                body: JSON.stringify({ ...requestBody, idempotency_key: attempt.key }),
+            }, { fallbackMessage: 'Could not add transaction' });
+            manualAttemptRef.current = null;
             showSuccess('Transaction added');
             setForm({ ...initialForm, transaction_date: getLocalFinanceDate() });
             setNewSource('');
@@ -205,7 +223,7 @@ export default function AddFinanceTransactionPage() {
     };
 
     return <AppShell contentClassName="p-5 md:p-8"><div className="mx-auto max-w-2xl">
-        <header><Link href="/finance" className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-text-secondary hover:text-text-primary"><BackDoodleIcon size={16} />Finance</Link><h1>Add transaction</h1><p className="mt-1 text-sm text-text-muted">Enter the details or import a payment screenshot.</p></header>
+        <header><Link href="/finance" className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-text-secondary hover:text-text-primary"><BackDoodleIcon size={16} />Finance</Link><h1>Add transaction</h1></header>
         <div className="mt-6 grid grid-cols-2 border border-border-default p-1" role="group" aria-label="Transaction entry method"><button type="button" aria-pressed={mode === 'manual'} disabled={isSaving} onClick={() => setMode('manual')} className={`flex h-10 items-center justify-center gap-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${mode === 'manual' ? 'bg-action-primary text-action-primary-text' : 'text-text-secondary hover:bg-bg-hover'}`}><DocumentDoodleIcon size={16} />Manual</button><button type="button" aria-pressed={mode === 'screenshot'} disabled={isSaving} onClick={() => setMode('screenshot')} className={`flex h-10 items-center justify-center gap-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${mode === 'screenshot' ? 'bg-action-primary text-action-primary-text' : 'text-text-secondary hover:bg-bg-hover'}`}><ScanDoodleIcon size={16} />Screenshot</button></div>
 
         {mode === 'manual' ? isOptionsLoading ? (

@@ -439,6 +439,7 @@ export interface FinanceTransaction {
     source_id: string;
     category_id: string | null;
     intake_item_id: string | null;
+    manual_idempotency_key: string | null;
     direction: FinanceTransactionDirection;
     amount: number;
     currency: FinanceCurrency;

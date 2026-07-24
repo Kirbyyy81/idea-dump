@@ -52,7 +52,7 @@ export default function FinancePage() {
         <AppShell contentClassName="p-5 md:p-8">
             <div className="mx-auto max-w-7xl">
                 <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                    <div><h1>Finance</h1><p className="mt-1 text-sm text-text-muted">Confirmed income and spending at a glance.</p></div>
+                    <div><h1>Finance</h1></div>
                     <Link href="/finance/add" className="btn-primary"><AddDoodleIcon size={16} className="mr-2" />Add transaction</Link>
                 </header>
 

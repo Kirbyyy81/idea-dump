@@ -161,9 +161,6 @@ export default function FinanceCategoriesPage() {
             <div className="mx-auto max-w-7xl">
                 <header className="pb-5">
                     <h1>Categories</h1>
-                    <p className="mt-1 text-sm text-text-muted">
-                        Food, Drinks, Transport, and Gifts are suggested expense categories. They are saved only when you add or select one.
-                    </p>
                 </header>
 
                 <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[360px_minmax(0,1fr)]">
