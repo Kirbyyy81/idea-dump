@@ -26,6 +26,7 @@ import {
 import { OcrProgress } from './_components/OcrProgress';
 import { FinanceLoadingState } from '../_components/FinanceLoadingState';
 import { financeApiRequest } from '@/lib/finance/clientApi';
+import { getManualTransactionAttempt } from '@/lib/finance/manualTransactionIdempotency';
 import {
     getFinanceTransactionTextError,
     FINANCE_TIME_ZONE_HEADER,
@@ -68,6 +69,7 @@ export default function AddFinanceTransactionPage() {
     const [uploadProgress, setUploadProgress] = useState(0);
     const [isOptionsLoading, setIsOptionsLoading] = useState(true);
     const uploadControllerRef = useRef<AbortController | null>(null);
+    const manualAttemptRef = useRef<{ fingerprint: string; key: string } | null>(null);
 
     useEffect(() => () => uploadControllerRef.current?.abort(), []);
 
@@ -130,7 +132,23 @@ export default function AddFinanceTransactionPage() {
                 categoryId = persistedCategory.id;
                 setCategories((current) => mergeFinanceCategory(current, persistedCategory));
             }
-            await financeApiRequest('/api/finance/transactions', { method: 'POST', headers: { 'Content-Type': 'application/json', [FINANCE_TIME_ZONE_HEADER]: getFinanceTimeZone() }, body: JSON.stringify({ ...form, amount, source_id: sourceId, category_id: categoryId }) }, { fallbackMessage: 'Could not add transaction' });
+            const requestBody = { ...form, amount, source_id: sourceId, category_id: categoryId };
+            const requestFingerprint = JSON.stringify(requestBody);
+            const attempt = getManualTransactionAttempt(
+                manualAttemptRef.current,
+                requestFingerprint,
+                () => window.crypto.randomUUID()
+            );
+            manualAttemptRef.current = attempt;
+            await financeApiRequest('/api/finance/transactions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    [FINANCE_TIME_ZONE_HEADER]: getFinanceTimeZone(),
+                },
+                body: JSON.stringify({ ...requestBody, idempotency_key: attempt.key }),
+            }, { fallbackMessage: 'Could not add transaction' });
+            manualAttemptRef.current = null;
             showSuccess('Transaction added');
             setForm({ ...initialForm, transaction_date: getLocalFinanceDate() });
             setNewSource('');
