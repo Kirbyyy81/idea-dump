@@ -19,6 +19,7 @@ import {
     FinanceCandidateTransaction,
     FinanceCategory,
     FinanceDuplicateSignal,
+    FinanceIntakeItem,
     FinanceSource,
     FinanceTransactionDirection,
 } from '@/lib/types';
@@ -78,6 +79,23 @@ interface PendingReviewDraft {
     isDateProposalPending: boolean;
 }
 
+type FailedFinanceIntake = Pick<
+    FinanceIntakeItem,
+    | 'id'
+    | 'source'
+    | 'status'
+    | 'original_filename'
+    | 'ocr_confidence'
+    | 'processing_attempt_count'
+    | 'failure_code'
+    | 'failure_stage'
+    | 'error_message'
+    | 'received_at'
+    | 'processed_at'
+    | 'created_at'
+    | 'updated_at'
+>;
+
 function formFromCandidate(candidate: FinanceCandidateTransaction): ReviewForm {
     const payload = candidate.payload;
     return {
@@ -102,6 +120,7 @@ function duplicateOutcome(candidate: FinanceCandidateTransaction) {
 export default function FinanceReviewPage() {
     const { showError, showSuccess } = useAlert();
     const [candidates, setCandidates] = useState<FinanceCandidateTransaction[]>([]);
+    const [failedIntakes, setFailedIntakes] = useState<FailedFinanceIntake[]>([]);
     const [sources, setSources] = useState<FinanceSource[]>([]);
     const [categories, setCategories] = useState<FinanceCategory[]>([]);
     const [selectedId, setSelectedId] = useState('');
@@ -119,7 +138,10 @@ export default function FinanceReviewPage() {
         setIsLoading(true);
         try {
             const [reviewPayload, sourcesPayload, categoriesPayload] = await Promise.all([
-                financeApiRequest<{ data: FinanceCandidateTransaction[] }>('/api/finance/review', { signal }),
+                financeApiRequest<{
+                    data: FinanceCandidateTransaction[];
+                    failed_intakes?: FailedFinanceIntake[];
+                }>('/api/finance/review', { signal }),
                 financeApiRequest<{ data: FinanceSource[] }>('/api/finance/sources', { signal }),
                 financeApiRequest<{ data: FinanceCategory[] }>('/api/finance/categories', { signal }),
             ]);
@@ -128,6 +150,7 @@ export default function FinanceReviewPage() {
                 ? null
                 : new URLSearchParams(window.location.search).get('candidate');
             setCandidates(nextCandidates);
+            setFailedIntakes(reviewPayload.failed_intakes || []);
             setSources(sourcesPayload.data || []);
             setCategories(categoriesPayload.data || []);
             setSelectedId((current) => nextCandidates.some((item) => item.id === current)
@@ -368,6 +391,40 @@ export default function FinanceReviewPage() {
                         </form>
                     ) : <div className="grid min-h-72 place-items-center border border-dashed border-border-default text-sm text-text-muted">Select a review item.</div>}
                 </div>
+
+                {!isLoading && failedIntakes.length > 0 && (
+                    <section className="mt-5 border border-error bg-error-bg" aria-labelledby="failed-intakes-heading">
+                        <div className="border-b border-error/40 px-5 py-4">
+                            <h2 id="failed-intakes-heading" className="text-base font-bold text-error">
+                                Could not process <span className="text-text-secondary">({failedIntakes.length})</span>
+                            </h2>
+                        </div>
+                        <ul className="divide-y divide-error/30">
+                            {failedIntakes.map((intake) => (
+                                <li key={intake.id} className="px-5 py-4">
+                                    <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                                        <div className="min-w-0">
+                                            <p className="break-words font-semibold text-text-primary">
+                                                {intake.original_filename || 'Transaction screenshot'}
+                                            </p>
+                                            <p className="mt-1 text-sm text-error">
+                                                {intake.error_message || 'The screenshot could not be processed.'}
+                                            </p>
+                                        </div>
+                                        <span className="shrink-0 text-xs font-semibold text-text-secondary">
+                                            {intake.processing_attempt_count} attempt{intake.processing_attempt_count === 1 ? '' : 's'}
+                                        </span>
+                                    </div>
+                                    {(intake.failure_stage || intake.failure_code) && (
+                                        <p className="mt-2 text-xs text-text-secondary">
+                                            {[intake.failure_stage, intake.failure_code].filter(Boolean).join(' · ')}
+                                        </p>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
+                    </section>
+                )}
             </div>
         </AppShell>
     );

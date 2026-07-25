@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
 import cors from '@fastify/cors';
 import multipart from '@fastify/multipart';
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
@@ -9,14 +9,26 @@ import { safeError, ServiceError } from './errors.js';
 import { validateImage } from './image.js';
 import { processScreenshot } from './processor.js';
 import { FixedWindowRateLimiter } from './rateLimit.js';
+import { FinanceQueueConsumer } from './queueConsumer.js';
+import type { ShareQueueRepository } from './queueContracts.js';
 import { RepositoryError } from './repository.js';
 import type { OcrResult } from './worker.js';
 
 export interface AppDependencies {
     repository: FinanceRepository;
+    queueRepository?: ShareQueueRepository;
     ensureWorkerReady(): Promise<unknown>;
     recognize(image: Buffer): Promise<OcrResult>;
     terminateWorker(): Promise<void>;
+}
+
+function validWakeSecret(request: FastifyRequest, expected: string) {
+    const authorization = request.headers.authorization;
+    const match = authorization?.match(/^Bearer ([^\s]+)$/);
+    if (!match || match[1].length > 8_192) return false;
+    const actualDigest = createHash('sha256').update(match[1]).digest();
+    const expectedDigest = createHash('sha256').update(expected).digest();
+    return timingSafeEqual(actualDigest, expectedDigest);
 }
 
 function bearerToken(request: FastifyRequest) {
@@ -126,7 +138,7 @@ async function readScreenshot(request: FastifyRequest, config: ServiceConfig) {
 export async function buildApp(
     config: ServiceConfig,
     dependencies: AppDependencies,
-    options: { logger?: boolean } = {},
+    options: { logger?: boolean; startQueueConsumer?: boolean } = {},
 ): Promise<FastifyInstance> {
     const app = Fastify({
         bodyLimit: config.maxRequestBytes,
@@ -141,6 +153,14 @@ export async function buildApp(
         },
     });
     const capacity = new SingleSlotCapacity();
+    const queueConsumer = dependencies.queueRepository
+        ? new FinanceQueueConsumer(config, {
+            repository: Object.assign(dependencies.repository, dependencies.queueRepository),
+            recognize: dependencies.recognize,
+            capacity,
+            logger: app.log,
+        })
+        : null;
     const ocrRateLimiter = new FixedWindowRateLimiter(
         config.ocrRateLimitMaxRequests,
         config.rateLimitWindowSeconds,
@@ -206,6 +226,35 @@ export async function buildApp(
             );
         }
         return reply.send({ data: { ready: true } });
+    });
+
+    app.post('/v1/finance/queue/wake', async (request, reply) => {
+        if (!validWakeSecret(request, config.financeQueueWakeSecret)) {
+            throw safeError(
+                401,
+                'invalid_wake_secret',
+                'Queue wake authentication failed.',
+                false,
+                'authorization',
+            );
+        }
+        if (!queueConsumer) {
+            throw safeError(
+                503,
+                'queue_consumer_unavailable',
+                'Queue processing is temporarily unavailable.',
+                true,
+                'capacity',
+                config.busyRetryAfterSeconds,
+            );
+        }
+        const result = queueConsumer.wake();
+        return reply.code(202).send({
+            data: {
+                accepted: result.accepted,
+                already_running: result.alreadyRunning,
+            },
+        });
     });
 
     app.post('/v1/finance/ocr', async (request, reply) => {
@@ -283,7 +332,11 @@ export async function buildApp(
     });
 
     app.addHook('onClose', async () => {
+        await queueConsumer?.stop();
         await dependencies.terminateWorker();
+    });
+    app.addHook('onReady', async () => {
+        if (options.startQueueConsumer) queueConsumer?.wake();
     });
     return app;
 }

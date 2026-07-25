@@ -16,6 +16,10 @@ export interface ServiceConfig {
     ocrRateLimitMaxRequests: number;
     warmRateLimitMaxRequests: number;
     busyRetryAfterSeconds: number;
+    financeShareBucket: string;
+    financeShareQueue: string;
+    financeQueueVisibilitySeconds: number;
+    financeQueueWakeSecret: string;
 }
 
 function required(env: NodeJS.ProcessEnv, name: string) {
@@ -50,11 +54,48 @@ function origins(env: NodeJS.ProcessEnv) {
     return new Set(values);
 }
 
+function identifier(env: NodeJS.ProcessEnv, name: string, fallback: string) {
+    const value = env[name]?.trim() || fallback;
+    if (!/^[a-z0-9][a-z0-9_-]{0,62}$/.test(value)) {
+        throw new Error(`${name} must be a lowercase Storage or Queue identifier`);
+    }
+    return value;
+}
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServiceConfig {
     const maxImageBytes = integer(env, 'MAX_IMAGE_BYTES', 4 * 1024 * 1024);
     const maxRequestBytes = integer(env, 'MAX_REQUEST_BYTES', maxImageBytes + 256 * 1024);
     if (maxRequestBytes <= maxImageBytes) {
         throw new Error('MAX_REQUEST_BYTES must be greater than MAX_IMAGE_BYTES');
+    }
+
+    const intakeLeaseSeconds = integer(env, 'INTAKE_LEASE_SECONDS', 300, 30);
+    const financeQueueVisibilitySeconds = integer(
+        env,
+        'FINANCE_QUEUE_VISIBILITY_SECONDS',
+        intakeLeaseSeconds + 120,
+        60,
+    );
+    if (financeQueueVisibilitySeconds < intakeLeaseSeconds + 30) {
+        throw new Error(
+            'FINANCE_QUEUE_VISIBILITY_SECONDS must be at least 30 seconds longer than INTAKE_LEASE_SECONDS',
+        );
+    }
+    const financeQueueWakeSecret = required(env, 'FINANCE_QUEUE_WAKE_SECRET');
+    if (Buffer.byteLength(financeQueueWakeSecret, 'utf8') < 32) {
+        throw new Error('FINANCE_QUEUE_WAKE_SECRET must contain at least 32 bytes');
+    }
+    const financeShareBucket = identifier(
+        env,
+        'FINANCE_SHARE_BUCKET',
+        'finance-share-batches',
+    );
+    const financeShareQueue = identifier(env, 'FINANCE_SHARE_QUEUE', 'finance_share_ocr');
+    if (financeShareBucket !== 'finance-share-batches') {
+        throw new Error('FINANCE_SHARE_BUCKET must match the deployed finance-share-batches contract');
+    }
+    if (financeShareQueue !== 'finance_share_ocr') {
+        throw new Error('FINANCE_SHARE_QUEUE must match the deployed finance_share_ocr contract');
     }
 
     return {
@@ -70,10 +111,14 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServiceConfig 
         maxImageDimension: integer(env, 'MAX_IMAGE_DIMENSION', 12_000),
         maxImagePixels: integer(env, 'MAX_IMAGE_PIXELS', 25_000_000),
         processingVersion: integer(env, 'PROCESSING_VERSION', 2),
-        intakeLeaseSeconds: integer(env, 'INTAKE_LEASE_SECONDS', 300, 30),
+        intakeLeaseSeconds,
         rateLimitWindowSeconds: integer(env, 'OCR_RATE_LIMIT_WINDOW_SECONDS', 60),
         ocrRateLimitMaxRequests: integer(env, 'OCR_RATE_LIMIT_MAX_REQUESTS', 4),
         warmRateLimitMaxRequests: integer(env, 'WARM_RATE_LIMIT_MAX_REQUESTS', 6),
         busyRetryAfterSeconds: integer(env, 'OCR_BUSY_RETRY_AFTER_SECONDS', 5),
+        financeShareBucket,
+        financeShareQueue,
+        financeQueueVisibilitySeconds,
+        financeQueueWakeSecret,
     };
 }

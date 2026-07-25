@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { ServiceConfig } from '../src/config.js';
 import type { FinanceRepository } from '../src/contracts.js';
 import { buildApp } from '../src/app.js';
+import type { ShareQueueRepository } from '../src/queueContracts.js';
 
 const config: ServiceConfig = {
     host: '127.0.0.1',
@@ -21,6 +22,10 @@ const config: ServiceConfig = {
     ocrRateLimitMaxRequests: 4,
     warmRateLimitMaxRequests: 6,
     busyRetryAfterSeconds: 5,
+    financeShareBucket: 'finance-share-batches',
+    financeShareQueue: 'finance_share_ocr',
+    financeQueueVisibilitySeconds: 420,
+    financeQueueWakeSecret: 'test-wake-secret-that-is-at-least-32-bytes',
 };
 
 function dependencies() {
@@ -34,6 +39,20 @@ function dependencies() {
         recognize: vi.fn(),
         terminateWorker: vi.fn().mockResolvedValue(undefined),
     };
+}
+
+function queueRepository() {
+    return {
+        claimShareQueueItem: vi.fn().mockResolvedValue({ kind: 'empty' }),
+        downloadShareObject: vi.fn(),
+        findShareImageDuplicate: vi.fn(),
+        bindShareQueueIntake: vi.fn(),
+        retryShareQueueItem: vi.fn(),
+        autoConfirmShareCandidate: vi.fn(),
+        completeShareQueueItem: vi.fn(),
+        deleteShareObjects: vi.fn(),
+        finishShareBatchCleanup: vi.fn(),
+    } as unknown as ShareQueueRepository;
 }
 
 describe('service HTTP boundary', () => {
@@ -81,5 +100,41 @@ describe('service HTTP boundary', () => {
         expect(response.json()).toMatchObject({ code: 'origin_not_allowed', retryable: false });
         expect(deps.repository.authenticate).not.toHaveBeenCalled();
         await app.close();
+    });
+
+    it('requires the server-only wake secret', async () => {
+        const deps = dependencies();
+        const queue = queueRepository();
+        const app = await buildApp(config, { ...deps, queueRepository: queue }, { logger: false });
+
+        const response = await app.inject({
+            method: 'POST',
+            url: '/v1/finance/queue/wake',
+            headers: { authorization: 'Bearer wrong-secret' },
+        });
+
+        expect(response.statusCode).toBe(401);
+        expect(response.json()).toMatchObject({ code: 'invalid_wake_secret' });
+        expect(queue.claimShareQueueItem).not.toHaveBeenCalled();
+        await app.close();
+    });
+
+    it('accepts an authenticated queue wake without treating it as completion', async () => {
+        const deps = dependencies();
+        const queue = queueRepository();
+        const app = await buildApp(config, { ...deps, queueRepository: queue }, { logger: false });
+
+        const response = await app.inject({
+            method: 'POST',
+            url: '/v1/finance/queue/wake',
+            headers: { authorization: `Bearer ${config.financeQueueWakeSecret}` },
+        });
+
+        expect(response.statusCode).toBe(202);
+        expect(response.json()).toEqual({
+            data: { accepted: true, already_running: false },
+        });
+        await app.close();
+        expect(queue.claimShareQueueItem).toHaveBeenCalledTimes(1);
     });
 });

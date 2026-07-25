@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { normalizeFinanceMerchantKey } from '@/lib/finance/normalizer';
 import type {
+    FinanceCandidateTransaction,
     FinanceDuplicateOutcome,
     FinanceDuplicateSignal,
     FinanceIntakeItem,
@@ -15,6 +16,14 @@ import type {
     OcrSuccessData,
 } from './contracts.js';
 import type { ServiceConfig } from './config.js';
+import { safeError } from './errors.js';
+import type {
+    ShareBatchCleanupPlan,
+    ShareQueueClaim,
+    ShareQueueCompletion,
+    ShareQueueJob,
+    ShareQueueRepository,
+} from './queueContracts.js';
 
 export class RepositoryError extends Error {
     constructor(public readonly operation: string, cause?: unknown) {
@@ -40,6 +49,81 @@ function rpcObject(value: unknown): Record<string, unknown> {
 
 function numeric(value: unknown, fallback = 0) {
     return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
+
+function stringValue(value: unknown) {
+    return typeof value === 'string' ? value : '';
+}
+
+function nullableUuid(value: unknown) {
+    return typeof value === 'string' && UUID_PATTERN.test(value) ? value : null;
+}
+
+const UUID_PATTERN =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function decodeCleanup(value: unknown): ShareBatchCleanupPlan | null {
+    const cleanup = rpcObject(value);
+    const batchId = nullableUuid(cleanup.batch_id);
+    const cleanupAttemptId = nullableUuid(cleanup.cleanup_attempt_id);
+    const paths = Array.isArray(cleanup.storage_paths)
+        ? cleanup.storage_paths.filter((path): path is string => typeof path === 'string')
+        : [];
+    if (!batchId || !cleanupAttemptId || paths.length > 10 || paths.some((path) => !path)) {
+        return null;
+    }
+    return { batchId, cleanupAttemptId, storagePaths: paths };
+}
+
+function decodeQueueJob(value: unknown, messageIdValue?: unknown): ShareQueueJob {
+    const item = rpcObject(value);
+    const batchItemId = nullableUuid(item.id);
+    const batchId = nullableUuid(item.batch_id);
+    const userId = nullableUuid(item.user_id);
+    const processingAttemptId = nullableUuid(item.processing_attempt_id);
+    const storagePath = stringValue(item.storage_path);
+    const originalFilename = stringValue(item.original_filename);
+    const mimeType = stringValue(item.mime_type);
+    const fileSize = numeric(item.file_size, -1);
+    const attemptNumber = numeric(item.attempt_count, -1);
+    const processingVersion = numeric(item.processing_version, -1);
+    const messageId = String(messageIdValue ?? item.message_id ?? '');
+    if (
+        !batchItemId
+        || !batchId
+        || !userId
+        || !processingAttemptId
+        || !/^\d+$/.test(messageId)
+        || !storagePath
+        || !originalFilename
+        || !mimeType
+        || !Number.isSafeInteger(fileSize)
+        || fileSize < 1
+        || ![1, 2].includes(attemptNumber)
+        || !Number.isSafeInteger(processingVersion)
+        || processingVersion < 1
+    ) {
+        throw new RepositoryError('decode_share_queue_item');
+    }
+    const expectedPrefix = `${userId}/finance-share-batches/${batchId}/${batchItemId}/`;
+    if (!storagePath.startsWith(expectedPrefix) || storagePath.length > 1024) {
+        throw new RepositoryError('decode_share_storage_path');
+    }
+    return {
+        messageId,
+        batchId,
+        batchItemId,
+        userId,
+        storagePath,
+        originalFilename,
+        mimeType,
+        fileSize,
+        attemptNumber: attemptNumber as 1 | 2,
+        processingVersion,
+        processingAttemptId,
+        intakeItemId: nullableUuid(item.intake_item_id),
+        exactImageDuplicate: item.exact_image_duplicate === true,
+    };
 }
 
 function normalizeBeginResult(value: unknown, requestedAttemptId: string): BeginIntakeResult {
@@ -166,13 +250,24 @@ function scoreDuplicate(
     };
 }
 
-export class SupabaseFinanceRepository implements FinanceRepository {
+export class SupabaseFinanceRepository implements FinanceRepository, ShareQueueRepository {
     private readonly authClient: SupabaseClient;
     private readonly secretClient: SupabaseClient;
+    private readonly financeShareBucket: string;
+    private readonly financeQueueVisibilitySeconds: number;
 
-    constructor(config: Pick<ServiceConfig, 'supabaseUrl' | 'supabasePublishableKey' | 'supabaseSecretKey'>) {
+    constructor(config: Pick<
+        ServiceConfig,
+        | 'supabaseUrl'
+        | 'supabasePublishableKey'
+        | 'supabaseSecretKey'
+        | 'financeShareBucket'
+        | 'financeQueueVisibilitySeconds'
+    >) {
         this.authClient = createClient(config.supabaseUrl, config.supabasePublishableKey, clientOptions());
         this.secretClient = createClient(config.supabaseUrl, config.supabaseSecretKey, clientOptions());
+        this.financeShareBucket = config.financeShareBucket;
+        this.financeQueueVisibilitySeconds = config.financeQueueVisibilitySeconds;
     }
 
     async authenticate(accessToken: string) {
@@ -325,5 +420,239 @@ export class SupabaseFinanceRepository implements FinanceRepository {
             p_error_message: input.errorMessage,
         });
         if (error) throw new RepositoryError('fail_intake', error);
+    }
+
+    async claimShareQueueItem(input: {
+        processingVersion: number;
+        leaseSeconds: number;
+    }): Promise<ShareQueueClaim> {
+        // A claim can dispose of one stale, unauthorized, exhausted, or
+        // unsupported message before reaching the next processable item.
+        // Bound the loop so corrupted queue state cannot spin in memory.
+        for (let skipped = 0; skipped < 20; skipped += 1) {
+            const { data, error } = await this.secretClient.rpc('finance_claim_share_queue_item_v1', {
+                p_processing_version: input.processingVersion,
+                p_lease_seconds: input.leaseSeconds,
+            });
+            if (error) throw new RepositoryError('claim_share_queue_item', error);
+            const result = rpcObject(data);
+            const state = stringValue(result.state);
+            if (state === 'empty') return { kind: 'empty' };
+            if (state === 'cleanup' || state === 'reservation_cleanup') {
+                const cleanup = decodeCleanup(result.cleanup);
+                if (!cleanup) throw new RepositoryError('decode_share_cleanup_claim');
+                return { kind: 'cleanup', cleanup };
+            }
+            if (state === 'claimed') {
+                return {
+                    kind: 'item',
+                    job: decodeQueueJob(result.item, result.message_id),
+                };
+            }
+            if (['discarded', 'version_mismatch', 'authorization_revoked', 'exhausted'].includes(state)) {
+                continue;
+            }
+            throw new RepositoryError('decode_share_queue_claim');
+        }
+        return { kind: 'empty' };
+    }
+
+    async downloadShareObject(job: ShareQueueJob, maxBytes: number) {
+        if (job.fileSize > maxBytes) {
+            throw safeError(
+                422,
+                'stored_image_too_large',
+                'The stored screenshot is larger than the supported limit.',
+                false,
+                'validation',
+            );
+        }
+        const { data, error } = await this.secretClient.storage
+            .from(this.financeShareBucket)
+            .download(job.storagePath, {}, { cache: 'no-store' });
+        if (error || !data) {
+            throw safeError(
+                503,
+                'storage_download_unavailable',
+                'The temporary screenshot could not be downloaded. Please retry.',
+                true,
+                'persistence',
+                5,
+            );
+        }
+        if (data.size !== job.fileSize || data.size > maxBytes) {
+            throw safeError(
+                422,
+                'stored_image_size_mismatch',
+                'The stored screenshot no longer matches its queued metadata.',
+                false,
+                'validation',
+            );
+        }
+        return Buffer.from(await data.arrayBuffer());
+    }
+
+    async findShareImageDuplicate(job: ShareQueueJob, imageHash: string) {
+        const { data, error } = await this.secretClient
+            .from('finance_intake_items')
+            .select('*')
+            .eq('user_id', job.userId)
+            .eq('image_hash', imageHash)
+            .maybeSingle();
+        if (error) throw new RepositoryError('find_share_image_duplicate', error);
+        if (!data || data.id === job.intakeItemId) return null;
+        return data as FinanceIntakeItem;
+    }
+
+    async bindShareQueueIntake(job: ShareQueueJob, begin: BeginIntakeResult, imageHash: string) {
+        const { data, error } = await this.secretClient.rpc('finance_complete_share_queue_item_v1', {
+            p_batch_item_id: job.batchItemId,
+            p_processing_attempt_id: job.processingAttemptId,
+            p_outcome: 'processing',
+            p_intake_item_id: begin.intake.id,
+            p_intake_processing_attempt_id: begin.attemptId,
+            p_image_hash: imageHash,
+            p_exact_image_duplicate: false,
+            p_failure_code: null,
+            p_failure_stage: null,
+            p_error_message: null,
+        });
+        if (error) throw new RepositoryError('bind_share_queue_intake', error);
+        if (stringValue(rpcObject(data).state) !== 'bound') {
+            throw new RepositoryError('bind_share_queue_intake_stale');
+        }
+    }
+
+    async retryShareQueueItem(job: ShareQueueJob) {
+        const { data, error } = await this.secretClient.rpc('finance_retry_share_queue_item_v1', {
+            p_batch_item_id: job.batchItemId,
+            p_processing_attempt_id: job.processingAttemptId,
+            p_lease_seconds: this.financeQueueVisibilitySeconds,
+        });
+        if (error) throw new RepositoryError('retry_share_queue_item', error);
+        const result = rpcObject(data);
+        if (result.state === 'exhausted') return null;
+        if (result.state !== 'retried') throw new RepositoryError('decode_share_queue_retry');
+        return decodeQueueJob(result.item, result.message_id ?? job.messageId);
+    }
+
+    async autoConfirmShareCandidate(input: {
+        userId: string;
+        candidate: FinanceCandidateTransaction;
+    }) {
+        const candidate = input.candidate;
+        const payload = candidate.payload;
+        if (
+            candidate.status !== 'pending'
+            || (candidate.confidence ?? 0) < 0.9
+            || !candidate.matched_rule_id
+            || candidate.duplicate_outcome !== 'none'
+            || !payload.source_id
+            || !payload.category_id
+            || !payload.direction
+            || !payload.amount
+            || !payload.transaction_date
+        ) {
+            return null;
+        }
+        const { data, error } = await this.secretClient.rpc('finance_confirm_candidate', {
+            p_user_id: input.userId,
+            p_candidate_id: candidate.id,
+            p_source_id: payload.source_id,
+            p_category_id: payload.category_id,
+            p_direction: payload.direction,
+            p_amount: payload.amount,
+            p_merchant: payload.merchant,
+            p_transaction_date: payload.transaction_date,
+            p_notes: null,
+            p_currency: payload.currency,
+            p_reference_number: payload.reference_number ?? payload.reference ?? null,
+            p_allow_duplicate: false,
+            p_duplicate_override_reason: null,
+            p_confirmation_mode: 'automatic',
+        });
+        if (error) {
+            if (['22023', '23503', '23514', 'P0002'].includes(error.code ?? '')) return null;
+            throw new RepositoryError('auto_confirm_share_candidate', error);
+        }
+        const result = rpcObject(data);
+        return result.confirmed === true && result.transaction && typeof result.transaction === 'object'
+            ? result.transaction as FinanceTransaction
+            : null;
+    }
+
+    async completeShareQueueItem(
+        input: Parameters<ShareQueueRepository['completeShareQueueItem']>[0],
+    ): Promise<ShareQueueCompletion> {
+        const exactImageDuplicate = input.status === 'duplicate'
+            || input.job.exactImageDuplicate
+            || Boolean(
+                input.recovered
+                && input.intake
+                && input.job.intakeItemId !== input.intake.id,
+            );
+        const outcome = exactImageDuplicate ? 'duplicate' : input.status;
+        const { data, error } = await this.secretClient.rpc('finance_complete_share_queue_item_v1', {
+            p_batch_item_id: input.job.batchItemId,
+            p_processing_attempt_id: input.job.processingAttemptId,
+            p_outcome: outcome,
+            p_intake_item_id: input.intake?.id ?? input.failure?.intakeId ?? null,
+            p_intake_processing_attempt_id:
+                input.intake?.processing_attempt_id
+                ?? input.failure?.intakeProcessingAttemptId
+                ?? null,
+            p_image_hash: input.imageHash,
+            p_exact_image_duplicate: exactImageDuplicate,
+            p_failure_code: input.failure?.code ?? null,
+            p_failure_stage: input.failure?.stage ?? null,
+            p_error_message: input.failure?.message ?? null,
+        });
+        if (error) throw new RepositoryError('complete_share_queue_item', error);
+        const result = rpcObject(data);
+        if (!['completed', 'terminal'].includes(stringValue(result.state))) {
+            throw new RepositoryError('decode_share_queue_completion');
+        }
+        const itemStatus = stringValue(rpcObject(result.item).status);
+        const terminalStatus = ['auto_confirmed', 'review_required', 'duplicate', 'failed']
+            .includes(itemStatus)
+            ? itemStatus as ShareQueueCompletion['terminalStatus']
+            : outcome as ShareQueueCompletion['terminalStatus'];
+        return {
+            terminalStatus,
+            cleanup: result.cleanup ? decodeCleanup(result.cleanup) : null,
+        };
+    }
+
+    async deleteShareObjects(paths: string[]) {
+        if (!paths.length) return;
+        const { error } = await this.secretClient.storage
+            .from(this.financeShareBucket)
+            .remove(paths);
+        if (error) throw new RepositoryError('delete_share_objects', error);
+        const verification = await Promise.all(paths.map(async (path) => {
+            const segments = path.split('/');
+            const filename = segments.pop() ?? '';
+            const folder = segments.join('/');
+            const result = await this.secretClient.storage
+                .from(this.financeShareBucket)
+                .list(folder, { limit: 100, search: filename });
+            return { ...result, filename };
+        }));
+        for (const result of verification) {
+            if (result.error) throw new RepositoryError('verify_share_object_deletion', result.error);
+            if ((result.data ?? []).some((file) => file.name === result.filename)) {
+                throw new RepositoryError('verify_share_object_deletion');
+            }
+        }
+    }
+
+    async finishShareBatchCleanup(cleanup: ShareBatchCleanupPlan) {
+        const { data, error } = await this.secretClient.rpc('finance_cleanup_share_batch_v1', {
+            p_batch_id: cleanup.batchId,
+            p_cleanup_attempt_id: cleanup.cleanupAttemptId,
+        });
+        if (error) throw new RepositoryError('cleanup_share_batch', error);
+        const result = rpcObject(data);
+        return ['cleaned', 'reservation_cleaned', 'stale', 'missing'].includes(stringValue(result.state));
     }
 }
