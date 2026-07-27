@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.12.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.11.3...idea-dump-v0.12.0) (2026-07-27)
+
+
+### Features
+
+* add finance share batches ([bd01d0b](https://github.com/Kirbyyy81/idea-dump/commit/bd01d0bd5e2dba74b843ae6e11122cdce3392a61))
+
+
+### Bug Fixes
+
+* index share foreign keys ([6a87b99](https://github.com/Kirbyyy81/idea-dump/commit/6a87b99b4d4a16f7a2802991a9f8060100914b42))
+
 ## [0.11.3](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.11.2...idea-dump-v0.11.3) (2026-07-24)
 
 
