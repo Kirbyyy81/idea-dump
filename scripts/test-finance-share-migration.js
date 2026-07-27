@@ -10,6 +10,14 @@ const migrationPath = path.resolve(
     '20260725081908_add_finance_share_batches.sql'
 );
 const sql = fs.readFileSync(migrationPath, 'utf8');
+const replacementMigrationPath = path.resolve(
+    __dirname,
+    '..',
+    'supabase',
+    'migrations',
+    '20260727030628_replace_active_finance_share_batch.sql'
+);
+const replacementSql = fs.readFileSync(replacementMigrationPath, 'utf8');
 
 function functionBody(name) {
     const start = sql.indexOf(`create function ${name}(`);
@@ -17,6 +25,18 @@ function functionBody(name) {
     const end = sql.indexOf('\n$function$;', start);
     assert.notEqual(end, -1, `Unterminated function ${name}`);
     return sql.slice(start, end);
+}
+
+function replacementFunctionBody(name) {
+    const functionPattern = new RegExp(
+        `create or replace function ${name.replaceAll('.', '\\.')}\\(`
+    );
+    const match = functionPattern.exec(replacementSql);
+    assert.ok(match, `Missing replacement function ${name}`);
+    const start = match.index;
+    const end = replacementSql.indexOf('\n$function$;', start);
+    assert.notEqual(end, -1, `Unterminated replacement function ${name}`);
+    return replacementSql.slice(start, end);
 }
 
 assert.match(sql, /create extension if not exists pgmq;/);
@@ -115,6 +135,50 @@ assert.ok(serviceRoleGrants.length >= 8, 'Every public share RPC must grant serv
 assert.doesNotMatch(
     sql,
     /grant execute on function public\.finance_(?:prepare|commit|get_active|claim|retry|complete|cleanup)_share[\s\S]*?to (?:anon|authenticated)/
+);
+
+const replacement = replacementFunctionBody(
+    'finance_private.finance_replace_share_work_v1'
+);
+const replacementPrepare = replacementFunctionBody(
+    'public.finance_prepare_share_batch_v1'
+);
+const replacementActive = replacementFunctionBody(
+    'finance_private.finance_share_active_batch_exists_v1'
+);
+const replacementGetActive = replacementFunctionBody(
+    'public.finance_get_active_share_batch_v1'
+);
+
+assert.match(replacement, /pgmq\.delete\('finance_share_ocr'/);
+assert.match(replacement, /'share_batch_replaced'/);
+assert.match(replacement, /status = 'cleaning_up'/);
+assert.match(replacement, /processing_lease_expires_at = null/);
+assert.match(replacement, /candidate_row\.status = 'accepted'/);
+assert.match(replacement, /candidate_row\.status = 'pending'/);
+assert.match(replacement, /cleanup_lease_expires_at = replacement_now - interval '1 second'/);
+assert.match(
+    replacementPrepare,
+    /perform finance_private\.finance_replace_share_work_v1\(p_user_id\)/
+);
+assert.doesNotMatch(
+    replacementPrepare,
+    /FINANCE_SHARE_(?:ACTIVE_BATCH_EXISTS|UPLOAD_IN_PROGRESS)/
+);
+assert.match(
+    replacementActive,
+    /batches\.status in \('queued', 'processing'\)/
+);
+assert.match(
+    replacementGetActive,
+    /batches\.status in \('queued', 'processing'\)/
+);
+assert.doesNotMatch(
+    fs.readFileSync(
+        path.resolve(__dirname, '..', 'lib', 'finance', 'shareBatchServer.ts'),
+        'utf8'
+    ),
+    /requires a product decision/
 );
 
 console.log('Finance share migration contract tests passed');
