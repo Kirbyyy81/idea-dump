@@ -223,6 +223,7 @@ function testServerHandoffContract() {
     assert.match(prepare, /finance_prepare_share_batch_v1/);
     assert.match(prepare, /createSignedUploadUrl\(item\.storage_path,\s*\{\s*upsert:\s*true\s*\}\)/);
     assert.match(commit, /\.info\(item\.storage_path\)/);
+    assert.match(commit, /record\.contentType/);
     assert.match(commit, /finance_commit_share_batch_v1/);
     assert.match(commit, /safe_to_close:\s*true/);
     assert.match(active, /getOwnedActiveFinanceShareBatch/);
