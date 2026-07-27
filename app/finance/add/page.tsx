@@ -24,6 +24,7 @@ import {
     warmFinanceOcr,
 } from '@/lib/finance/ocrClient';
 import { OcrProgress } from './_components/OcrProgress';
+import { FinanceShareExperience } from './_components/FinanceShareExperience';
 import { FinanceLoadingState } from '../_components/FinanceLoadingState';
 import { financeApiRequest } from '@/lib/finance/clientApi';
 import { getManualTransactionAttempt } from '@/lib/finance/manualTransactionIdempotency';
@@ -40,6 +41,7 @@ import {
     MAX_FINANCE_REFERENCE_LENGTH,
     toPositiveFinanceAmount,
 } from '@/lib/finance/values';
+import { useFinanceShareTarget } from '@/app/finance/_components/FinanceShareTargetProvider';
 
 const NEW_SOURCE = '__new__';
 const MAX_FINANCE_UPLOAD_BYTES = 4 * 1024 * 1024;
@@ -57,6 +59,7 @@ function financeOcrErrorMessage(error: unknown) {
 
 export default function AddFinanceTransactionPage() {
     const router = useRouter();
+    const { files: sharedFiles } = useFinanceShareTarget();
     const { showAlert, showError, showSuccess } = useAlert();
     const [mode, setMode] = useState<'manual' | 'screenshot'>('screenshot');
     const [sources, setSources] = useState<FinanceSource[]>([]);
@@ -224,6 +227,8 @@ export default function AddFinanceTransactionPage() {
 
     return <AppShell contentClassName="p-5 md:p-8"><div className="mx-auto max-w-2xl">
         <header><Link href="/finance" className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-text-secondary hover:text-text-primary"><BackDoodleIcon size={16} />Finance</Link><h1>Add transaction</h1></header>
+        <FinanceShareExperience />
+        {sharedFiles.length === 0 && <>
         <div className="mt-6 grid grid-cols-2 border border-border-default p-1" role="group" aria-label="Transaction entry method"><button type="button" aria-pressed={mode === 'manual'} disabled={isSaving} onClick={() => setMode('manual')} className={`flex h-10 items-center justify-center gap-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${mode === 'manual' ? 'bg-action-primary text-action-primary-text' : 'text-text-secondary hover:bg-bg-hover'}`}><DocumentDoodleIcon size={16} />Manual</button><button type="button" aria-pressed={mode === 'screenshot'} disabled={isSaving} onClick={() => setMode('screenshot')} className={`flex h-10 items-center justify-center gap-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${mode === 'screenshot' ? 'bg-action-primary text-action-primary-text' : 'text-text-secondary hover:bg-bg-hover'}`}><ScanDoodleIcon size={16} />Screenshot</button></div>
 
         {mode === 'manual' ? isOptionsLoading ? (
@@ -239,5 +244,6 @@ export default function AddFinanceTransactionPage() {
             <label className="block space-y-2"><span className="text-sm text-text-secondary">Notes</span><Textarea maxLength={MAX_FINANCE_NOTES_LENGTH} value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></label>
             <Button type="submit" className="w-full" isLoading={isSaving} disabled={!form.source_id || (form.source_id === NEW_SOURCE && !newSource.trim())}>Add transaction</Button>
         </form> : <form onSubmit={submitScreenshot} className="mt-6"><FileUpload label="Transaction screenshot" aria-describedby="finance-upload-help" accept="image/png,image/jpeg,image/webp" value={file} onChange={selectScreenshot} disabled={isSaving} /><p id="finance-upload-help" className="mt-2 text-sm text-text-muted">PNG, JPEG, or WebP · Max 4 MB</p>{ocrPhase !== 'idle' && <OcrProgress phase={ocrPhase} uploadProgress={uploadProgress} />}<Button type="submit" className="mt-5 w-full" isLoading={isSaving} disabled={!file || isSaving}>Process screenshot</Button></form>}
+        </>}
     </div></AppShell>;
 }

@@ -1,6 +1,20 @@
 import type { MetadataRoute } from 'next';
 
-export default function manifest(): MetadataRoute.Manifest {
+type IdeaDumpManifest = Omit<MetadataRoute.Manifest, 'share_target'> & {
+    share_target: {
+        action: string;
+        method: 'POST';
+        enctype: 'multipart/form-data';
+        params: {
+            files: Array<{
+                name: string;
+                accept: string[];
+            }>;
+        };
+    };
+};
+
+export default function manifest(): IdeaDumpManifest {
     return {
         name: 'IdeaDump',
         short_name: 'IdeaDump',
@@ -24,5 +38,26 @@ export default function manifest(): MetadataRoute.Manifest {
                 purpose: 'any',
             },
         ],
+        share_target: {
+            action: '/share-target/finance',
+            method: 'POST',
+            enctype: 'multipart/form-data',
+            params: {
+                files: [
+                    {
+                        name: 'finance_images',
+                        accept: [
+                            'image/png',
+                            '.png',
+                            'image/jpeg',
+                            '.jpg',
+                            '.jpeg',
+                            'image/webp',
+                            '.webp',
+                        ],
+                    },
+                ],
+            },
+        },
     };
 }

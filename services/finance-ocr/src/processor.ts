@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { hashNormalizedFinanceText, normalizeFinanceOcrText } from '@/lib/finance/normalizer';
 import { parseFinanceText } from '@/lib/finance/parser';
 import type { ServiceConfig } from './config.js';
-import type { FinanceRepository, OcrSuccessData } from './contracts.js';
+import type { BeginIntakeResult, FinanceRepository, OcrSuccessData } from './contracts.js';
 import { RepositoryError } from './repository.js';
 import { safeError, ServiceError, type FailureStage } from './errors.js';
 import type { ValidatedImage } from './image.js';
@@ -11,6 +11,7 @@ import type { OcrResult } from './worker.js';
 export interface ProcessingDependencies {
     repository: FinanceRepository;
     recognize(image: Buffer): Promise<OcrResult>;
+    onIntakeBegan?(begin: BeginIntakeResult): Promise<void>;
 }
 
 function persistenceError(error: RepositoryError) {
@@ -72,6 +73,9 @@ export async function processScreenshot(
     }
 
     const intakeId = begin.intake.id;
+    if (begin.state === 'started' || begin.state === 'recovered') {
+        await dependencies.onIntakeBegan?.(begin);
+    }
     if (begin.state === 'busy' || !begin.shouldProcess && begin.state !== 'terminal') {
         const retryAfter = begin.retryAfterSeconds ?? config.busyRetryAfterSeconds;
         throw safeError(

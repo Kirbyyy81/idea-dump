@@ -8,12 +8,14 @@ import {
 } from './worker.js';
 
 const config = loadConfig();
+const repository = new SupabaseFinanceRepository(config);
 const app = await buildApp(config, {
-    repository: new SupabaseFinanceRepository(config),
+    repository,
+    queueRepository: repository,
     ensureWorkerReady,
     recognize: recognizeScreenshot,
     terminateWorker,
-});
+}, { startQueueConsumer: true });
 
 let closing = false;
 async function shutdown(signal: string) {

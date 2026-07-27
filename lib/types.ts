@@ -591,3 +591,40 @@ export interface FinanceSourceDetectionSignal {
     alias: string;
     score: number;
 }
+
+export type FinanceShareBatchStatus = 'QUEUED' | 'PROCESSING' | 'CLEANING_UP';
+
+export type FinanceShareBatchItemStatus =
+    | 'QUEUED'
+    | 'PROCESSING'
+    | 'AUTO_CONFIRMED'
+    | 'REVIEW_REQUIRED'
+    | 'DUPLICATE'
+    | 'FAILED';
+
+export interface FinanceShareBatchItem {
+    id: string;
+    original_filename: string | null;
+    status: FinanceShareBatchItemStatus;
+    attempt_count: number;
+    failure_code: string | null;
+    failure_stage: string | null;
+    intake_item_id: string | null;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface FinanceShareBatch {
+    id: string;
+    status: FinanceShareBatchStatus;
+    total_files: number;
+    queued_files: number;
+    processing_files: number;
+    completed_files: number;
+    review_files: number;
+    duplicate_files: number;
+    failed_files: number;
+    created_at: string;
+    updated_at: string;
+    items: FinanceShareBatchItem[];
+}

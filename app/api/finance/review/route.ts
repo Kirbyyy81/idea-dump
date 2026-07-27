@@ -88,18 +88,30 @@ export async function GET() {
         const session = await authorizeFinance();
         if ('response' in session) return session.response;
         const admin = createAdminClient();
-        const { data, error } = await admin
-            .from('finance_candidate_transactions')
-            .select('*, intake:finance_intake_items(*)')
-            .eq('user_id', session.user.id)
-            .eq('status', 'pending')
-            .order('created_at', { ascending: false });
-        if (error) throw error;
+        const [candidateResult, failedResult] = await Promise.all([
+            admin
+                .from('finance_candidate_transactions')
+                .select('*, intake:finance_intake_items(*)')
+                .eq('user_id', session.user.id)
+                .eq('status', 'pending')
+                .order('created_at', { ascending: false }),
+            admin
+                .from('finance_intake_items')
+                .select('id, source, status, original_filename, ocr_confidence, processing_attempt_count, failure_code, failure_stage, error_message, received_at, processed_at, created_at, updated_at')
+                .eq('user_id', session.user.id)
+                .eq('status', 'failed')
+                .order('updated_at', { ascending: false }),
+        ]);
+        if (candidateResult.error) throw candidateResult.error;
+        if (failedResult.error) throw failedResult.error;
         const candidates = await attachDuplicateTransactions(
             session.user.id,
-            (data || []) as FinanceCandidateTransaction[]
+            (candidateResult.data || []) as FinanceCandidateTransaction[]
         );
-        return NextResponse.json({ data: candidates });
+        return NextResponse.json({
+            data: candidates,
+            failed_intakes: failedResult.data || [],
+        });
     } catch (error) {
         console.error('Error fetching finance review queue:', error);
         return jsonError('Failed to fetch review queue', 500);

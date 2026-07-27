@@ -12,6 +12,19 @@ describe('bounded in-memory admission', () => {
         expect(capacity.tryAcquire()).toBeTypeOf('function');
     });
 
+    it('hands the shared slot to one internal queue waiter after a direct request', async () => {
+        const capacity = new SingleSlotCapacity();
+        const directRelease = capacity.tryAcquire();
+        const queuedReleasePromise = capacity.acquire();
+        expect(capacity.tryAcquire()).toBeNull();
+
+        directRelease?.();
+        const queuedRelease = await queuedReleasePromise;
+        expect(capacity.tryAcquire()).toBeNull();
+        queuedRelease();
+        expect(capacity.tryAcquire()).toBeTypeOf('function');
+    });
+
     it('returns a retry interval after the per-user limit', () => {
         const limiter = new FixedWindowRateLimiter(2, 60);
         expect(limiter.consume('user-1', 1_000).allowed).toBe(true);

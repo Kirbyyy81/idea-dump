@@ -11,7 +11,8 @@
     "test:log-viewer": "node scripts/test-log-viewer.js",
     "test:finance-security": "node scripts/test-finance-security.js",
     "test:finance-idempotency": "node scripts/test-finance-idempotency.js",
-    "test:finance-ordering": "node scripts/test-finance-ordering.js"
+    "test:finance-ordering": "node scripts/test-finance-ordering.js",
+    "test:finance-share": "node scripts/test-finance-share.js"
   },
   "dependencies": {
     "@supabase/ssr": "^0.1.0",

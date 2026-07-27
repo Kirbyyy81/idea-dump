@@ -37,6 +37,14 @@ services:
         value: "6"
       - key: OCR_BUSY_RETRY_AFTER_SECONDS
         value: "5"
+      - key: FINANCE_SHARE_BUCKET
+        value: finance-share-batches
+      - key: FINANCE_SHARE_QUEUE
+        value: finance_share_ocr
+      - key: FINANCE_QUEUE_VISIBILITY_SECONDS
+        value: "420"
+      - key: FINANCE_QUEUE_WAKE_SECRET
+        sync: false
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_PUBLISHABLE_KEY
