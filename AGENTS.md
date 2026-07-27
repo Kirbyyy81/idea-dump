@@ -44,6 +44,7 @@
 ## Editing Rules
 
 - Do not use em dashes in user-facing copy, code comments, documentation, or agent responses. Use a comma, colon, semicolon, parentheses, or a short hyphen instead.
+- Do not add generic `Description` labels or decorative, repetitive, or self-evident description text to any component. Keep explanatory copy only when it is required to complete an action, communicate validation, error, progress, status, or safety information, or meet accessibility requirements.
 - Do not expose raw/default browser UI for user-facing form controls. Reuse shared app components, or create a reusable styled component that follows the app design system before using native inputs directly.
 - Follow `document/DESIGN_SYSTEM.md` and `components/AGENTS.md` for UI work.
 - Keep domain types in `lib/types.ts` unless a nearer scoped guide documents an exception.
