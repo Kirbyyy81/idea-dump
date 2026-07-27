@@ -61,7 +61,7 @@ export function MinuteReaderCard() {
                         Reading time
                     </p>
                     <p className="mt-2 text-2xl font-extrabold text-text-primary">
-                        {readingTime.label || '—'}
+                        {readingTime.label || '-'}
                     </p>
                 </div>
             </div>

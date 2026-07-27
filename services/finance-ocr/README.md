@@ -79,7 +79,7 @@ The Render build runs from the repository root because the bundle imports the sh
 - Direct and queued work share one OCR slot. A second simultaneous direct request receives `503` and `Retry-After`; the queue consumer claims one item only after the slot is available.
 - Per-user request limits return `429` and `Retry-After`.
 - Worker failures terminate and clear the cached worker so a later warm/request can initialize a fresh worker.
-- Logs contain request IDs, safe stage/code data, intake and transient identifiers, durations, and recovery state—not screenshots, Storage paths, tokens, API keys, signed URLs, or OCR text.
+- Logs contain request IDs, safe stage/code data, intake and transient identifiers, durations, and recovery state-not screenshots, Storage paths, tokens, API keys, signed URLs, or OCR text.
 - Queued items are downloaded only from the authoritative private path returned by the claim RPC and are revalidated before OCR.
 - A recoverable first queue attempt retries immediately. Database leases and fencing enforce the two-attempt maximum and safe redelivery.
 - Exact-image duplicates skip OCR. Terminal completion removes a queue message only after the durable Finance result and transient item status are committed.

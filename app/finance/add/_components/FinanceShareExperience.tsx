@@ -262,7 +262,7 @@ export function FinanceShareExperience() {
                 <section className="mt-6 rounded-card border border-success bg-bg-elevated p-5" role="status">
                     <div className="flex items-start gap-3">
                         <CheckDoodleIcon className="mt-0.5 shrink-0 text-success" size={21} />
-                        <h2 className="text-lg font-bold">Ready — you may close the app</h2>
+                        <h2 className="text-lg font-bold">Ready - you may close the app</h2>
                     </div>
                 </section>
             )}

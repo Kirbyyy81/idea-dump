@@ -209,7 +209,7 @@ function testPrepareIdempotencyContract() {
         experience,
         /showSuccess\('You may leave the app\.',\s*'Images queued'\)/
     );
-    assert.match(experience, /Ready — you may close the app/);
+    assert.match(experience, /Ready - you may close the app/);
     assert.doesNotMatch(experience, /The batch disappears after processing/);
     assert.doesNotMatch(experience, /Every selected image is stored privately/);
     assert.doesNotMatch(experience, /Processing has not started/);

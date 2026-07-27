@@ -759,7 +759,7 @@ Film processing, scanning, and shipping costs reject negative values, while `fil
 
 **Suggested action:** add nonnegative checks if negative purchase and maintenance amounts are not legitimate adjustments.
 
-### Quoted uppercase RBAC identifiers increase operational risk — remediated in the pending migration
+### Quoted uppercase RBAC identifiers increase operational risk - remediated in the pending migration
 
 The live database uses quoted mixed-case names such as `"DIM_roles"` and `"BRIDGE_user_roles"`. These names must be quoted exactly in SQL and are easier to reference incorrectly in migrations and tooling.
 

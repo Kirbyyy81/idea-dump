@@ -189,7 +189,7 @@ export default function FinanceSourcesPage() {
                                             <div className="flex min-w-0 items-center gap-3">
                                                 <div className="min-w-0">
                                                     <p className="truncate font-semibold">{source.name}</p>
-                                                    {source.is_archived && <p className="text-sm text-text-muted">Archived — retained for history</p>}
+                                                    {source.is_archived && <p className="text-sm text-text-muted">Archived - retained for history</p>}
                                                 </div>
                                             </div>
                                             <div className="flex flex-wrap items-center justify-end gap-1">

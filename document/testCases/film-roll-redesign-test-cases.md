@@ -1,4 +1,4 @@
-# Film Roll Redesign — Test Cases
+# Film Roll Redesign - Test Cases
 
 > Comprehensive test cases for the film cupboard badge removal and roll detail stepper redesign.
 > These are written for future conversion to a test framework (vitest, bun test, playwright test).
@@ -89,7 +89,7 @@
 ### Test: ?step=photobook on base page falls back to default step
 - **Given**: The user is on the base roll page (`/film/rolls/{rollId}`)
 - **When**: The user navigates to `/film/rolls/{rollId}?step=photobook`
-- **Then**: The `?step=photobook` value is NOT in the valid list `['film', 'processing', 'drive']`, so `activeStep` falls back to `defaultStep`; the page renders the default step's content (does NOT show photobook content on the base page — photobook is a separate route)
+- **Then**: The `?step=photobook` value is NOT in the valid list `['film', 'processing', 'drive']`, so `activeStep` falls back to `defaultStep`; the page renders the default step's content (does NOT show photobook content on the base page - photobook is a separate route)
 - **Priority**: medium
 
 ---
@@ -188,7 +188,7 @@
 
 ### Test: Both cookies deleted after callback regardless of success or failure
 - **Given**: Both `film_google_oauth_state` and `film_google_oauth_roll_id` cookies are set
-- **When**: The OAuth callback is invoked (with any params — valid, invalid, or error-inducing)
+- **When**: The OAuth callback is invoked (with any params - valid, invalid, or error-inducing)
 - **Then**: The response `Set-Cookie` headers include deletion directives for BOTH `film_google_oauth_state` and `film_google_oauth_roll_id` (both set to empty/expired)
 - **Priority**: high
 
@@ -199,13 +199,13 @@
 ### Test: Roll not found on base page shows not-found state
 - **Given**: The user navigates to `/film/rolls/{nonExistentRollId}` where the API returns a 404 or error
 - **When**: The `loadRoll` fetch fails (`rollRes.ok` is false) or returns null data
-- **Then**: The page shows a not-found state with a "Back to Film Journal" link and a Card with text "Film roll not found." — no crash, no blank screen
+- **Then**: The page shows a not-found state with a "Back to Film Journal" link and a Card with text "Film roll not found." - no crash, no blank screen
 - **Priority**: medium
 
 ### Test: Roll not found on photobook page shows not-found state
 - **Given**: The user navigates to `/film/rolls/{nonExistentRollId}/photobook` where the API returns a 404 or error
 - **When**: The `loadRoll` fetch fails (`res.ok` is false) or returns null data
-- **Then**: The page shows a not-found state with a "Back to Film Journal" link and a Card with text "Film roll not found." — no crash, no blank screen
+- **Then**: The page shows a not-found state with a "Back to Film Journal" link and a Card with text "Film roll not found." - no crash, no blank screen
 - **Priority**: medium
 
 ### Test: Mobile stepper layout uses single column on mobile, 4 columns on desktop

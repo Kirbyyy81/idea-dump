@@ -191,7 +191,7 @@ export default function FinanceCategoriesPage() {
                                         <div key={`suggested-${name}`} className="flex items-center justify-between gap-4 bg-bg-subtle px-5 py-4">
                                             <div className="min-w-0">
                                                 <p className="truncate font-semibold">{name}</p>
-                                                <p className="text-sm text-text-muted">Suggested default — not saved yet</p>
+                                                <p className="text-sm text-text-muted">Suggested default - not saved yet</p>
                                             </div>
                                             <Button
                                                 type="button"
@@ -230,7 +230,7 @@ export default function FinanceCategoriesPage() {
                                                 <div className="flex items-center justify-between gap-4">
                                                     <div className="flex min-w-0 items-center gap-3">
                                                         <span className="size-3 shrink-0 rounded-full border border-border-default bg-bg-subtle" style={category.color ? { backgroundColor: category.color } : undefined} aria-hidden="true" />
-                                                        <div className="min-w-0"><p className="truncate font-semibold">{category.name}</p>{category.is_archived && <p className="text-sm text-text-muted">Archived — retained for history</p>}</div>
+                                                        <div className="min-w-0"><p className="truncate font-semibold">{category.name}</p>{category.is_archived && <p className="text-sm text-text-muted">Archived - retained for history</p>}</div>
                                                     </div>
                                                     <div className="flex flex-wrap items-center justify-end gap-1">
                                                         <Button type="button" variant="ghost" aria-label={`Edit category ${category.name}`} disabled={pendingCategoryId !== null} onClick={() => beginEditing(category)}>Edit</Button>
