@@ -230,7 +230,7 @@ function testServerHandoffContract() {
 
 function testDatabaseQueueContract() {
     const migration = fs.readFileSync(
-        path.join(root, 'supabase', 'migrations', '20260724075727_add_finance_share_batches.sql'),
+        path.join(root, 'supabase', 'migrations', '20260725081908_add_finance_share_batches.sql'),
         'utf8'
     );
     assert.match(migration, /create extension if not exists pgmq/i);

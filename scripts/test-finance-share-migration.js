@@ -7,7 +7,7 @@ const migrationPath = path.resolve(
     '..',
     'supabase',
     'migrations',
-    '20260724075727_add_finance_share_batches.sql'
+    '20260725081908_add_finance_share_batches.sql'
 );
 const sql = fs.readFileSync(migrationPath, 'utf8');
 
