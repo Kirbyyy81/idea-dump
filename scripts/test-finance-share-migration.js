@@ -18,6 +18,14 @@ const replacementMigrationPath = path.resolve(
     '20260727030628_replace_active_finance_share_batch.sql'
 );
 const replacementSql = fs.readFileSync(replacementMigrationPath, 'utf8');
+const queuePermissionsMigrationPath = path.resolve(
+    __dirname,
+    '..',
+    'supabase',
+    'migrations',
+    '20260727040355_grant_finance_share_queue_permissions.sql'
+);
+const queuePermissionsSql = fs.readFileSync(queuePermissionsMigrationPath, 'utf8');
 
 function functionBody(name) {
     const start = sql.indexOf(`create function ${name}(`);
@@ -179,6 +187,18 @@ assert.doesNotMatch(
         'utf8'
     ),
     /requires a product decision/
+);
+assert.match(
+    queuePermissionsSql,
+    /grant select, insert, update, delete\s+on table pgmq\.q_finance_share_ocr\s+to service_role;/s
+);
+assert.match(
+    queuePermissionsSql,
+    /grant usage, select\s+on sequence pgmq\.q_finance_share_ocr_msg_id_seq\s+to service_role;/s
+);
+assert.doesNotMatch(
+    queuePermissionsSql,
+    /grant[\s\S]*\s+to (?:public|anon|authenticated);/
 );
 
 console.log('Finance share migration contract tests passed');

@@ -220,6 +220,10 @@ function testServerHandoffContract() {
         path.join(root, 'app', 'api', 'finance', 'share-batches', 'active', 'route.ts'),
         'utf8'
     );
+    const server = fs.readFileSync(
+        path.join(root, 'lib', 'finance', 'shareBatchServer.ts'),
+        'utf8'
+    );
     assert.match(prepare, /finance_prepare_share_batch_v1/);
     assert.match(prepare, /createSignedUploadUrl\(item\.storage_path,\s*\{\s*upsert:\s*true\s*\}\)/);
     assert.match(commit, /\.info\(item\.storage_path\)/);
@@ -227,6 +231,8 @@ function testServerHandoffContract() {
     assert.match(commit, /finance_commit_share_batch_v1/);
     assert.match(commit, /safe_to_close:\s*true/);
     assert.match(active, /getOwnedActiveFinanceShareBatch/);
+    assert.match(server, /message\.includes\('FINANCE_SHARE_ACCESS_DENIED'\)/);
+    assert.doesNotMatch(server, /error\.code === '42501'/);
 }
 
 function testDatabaseQueueContract() {
