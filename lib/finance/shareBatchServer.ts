@@ -39,7 +39,7 @@ export function financeShareRpcError(
     ) {
         return {
             status: 409,
-            message: 'Another shared batch is active. How a second Android share should be handled still requires a product decision.',
+            message: 'The previous shared batch could not be replaced. Please try sharing again.',
         };
     }
     if (
