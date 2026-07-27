@@ -26,10 +26,19 @@ function storedObjectDetails(value: unknown) {
         ? record.metadata as Record<string, unknown>
         : {};
     const size = Number(record.size ?? metadata.size);
-    const mime = record.mimetype ?? record.mime_type ?? metadata.mimetype ?? metadata.mime_type;
+    const mime = record.contentType
+        ?? record.content_type
+        ?? record.mimetype
+        ?? record.mime_type
+        ?? metadata.contentType
+        ?? metadata.content_type
+        ?? metadata.mimetype
+        ?? metadata.mime_type;
     return {
         size: Number.isSafeInteger(size) ? size : null,
-        mimeType: typeof mime === 'string' ? mime.toLowerCase() : null,
+        mimeType: typeof mime === 'string'
+            ? mime.split(';', 1)[0].trim().toLowerCase()
+            : null,
     };
 }
 
