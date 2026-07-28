@@ -193,8 +193,8 @@ Temporary share images and batch records are removed after terminal processing a
 - `lib/`  
   Shared types, auth helpers, RBAC logic, Supabase clients, logging helpers, utility functions, and article-creation utilities.
 
-- `document/`  
-  Product docs, design notes, and database migration files.
+- `document/`
+  Product docs, design notes, and database migration files. Start new product requirements with [`document/PRD_TEMPLATE.md`](./document/PRD_TEMPLATE.md).
 
 - `public/`  
   Static assets.
