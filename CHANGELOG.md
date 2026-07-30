@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.13.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.12.0...idea-dump-v0.13.0) (2026-07-30)
+
+
+### Features
+
+* confirm share handoff ([2a863c5](https://github.com/Kirbyyy81/idea-dump/commit/2a863c53f7fef3d13123f5793bde565d13a01ee4))
+
+
+### Bug Fixes
+
+* grant finance queue access ([d6cb459](https://github.com/Kirbyyy81/idea-dump/commit/d6cb459cd1c7937dd8cd763f13212f08b303d31c))
+* replace active finance shares ([daeeb1c](https://github.com/Kirbyyy81/idea-dump/commit/daeeb1cfd767364e5f42520732a4e230c3317fe7))
+
 ## [0.12.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.11.3...idea-dump-v0.12.0) (2026-07-27)
 
 
