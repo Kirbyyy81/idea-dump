@@ -27,6 +27,7 @@ import {
     IncomingFinanceShareFile,
     useFinanceShareTarget,
 } from '@/app/finance/_components/FinanceShareTargetProvider';
+import { useAlert } from '@/lib/contexts/AlertContext';
 
 type HandoffPhase = 'idle' | 'preparing' | 'uploading' | 'committing' | 'ready';
 
@@ -67,9 +68,6 @@ function ActiveBatchPanel({ batch }: { batch: FinanceShareBatch }) {
                 </span>
                 <div className="min-w-0">
                     <h2 id="active-share-batch-title" className="text-lg font-bold">Shared images in progress</h2>
-                    <p className="mt-1 text-sm text-text-muted">
-                        This continues in the background. The batch disappears after processing and image cleanup.
-                    </p>
                 </div>
             </div>
 
@@ -106,6 +104,7 @@ function ActiveBatchPanel({ batch }: { batch: FinanceShareBatch }) {
 
 export function FinanceShareExperience() {
     const { files, clearFiles, removeFile } = useFinanceShareTarget();
+    const { showSuccess } = useAlert();
     const [validations, setValidations] = useState<Record<string, FinanceSharedFileValidation>>({});
     const [phase, setPhase] = useState<HandoffPhase>('idle');
     const [uploadedCount, setUploadedCount] = useState(0);
@@ -242,6 +241,7 @@ export function FinanceShareExperience() {
             setPhase('ready');
             prepareAttemptRef.current = null;
             clearFiles();
+            showSuccess('You may leave the app.', 'Images queued');
             await loadActiveBatch().catch(() => null);
         } catch (error) {
             setPhase('idle');
@@ -262,12 +262,7 @@ export function FinanceShareExperience() {
                 <section className="mt-6 rounded-card border border-success bg-bg-elevated p-5" role="status">
                     <div className="flex items-start gap-3">
                         <CheckDoodleIcon className="mt-0.5 shrink-0 text-success" size={21} />
-                        <div>
-                            <h2 className="text-lg font-bold">Ready — you may close the app</h2>
-                            <p className="mt-1 text-sm text-text-secondary">
-                                Every selected image is stored privately and queued for background processing.
-                            </p>
-                        </div>
+                        <h2 className="text-lg font-bold">Ready - you may close the app</h2>
                     </div>
                 </section>
             )}
@@ -280,9 +275,6 @@ export function FinanceShareExperience() {
                         </span>
                         <div>
                             <h2 id="shared-images-title" className="text-lg font-bold">Review shared images</h2>
-                            <p className="mt-1 text-sm text-text-muted">
-                                Processing has not started. Remove unwanted or invalid files, then confirm once.
-                            </p>
                         </div>
                     </div>
 

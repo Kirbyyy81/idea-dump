@@ -51,7 +51,7 @@ export function financeShareRpcError(
     if (message.includes('FINANCE_SHARE_RESERVATION_NOT_FOUND') || error.code === 'P0002') {
         return { status: 404, message: 'Shared upload not found' };
     }
-    if (error.code === '42501' || message.includes('FINANCE_SHARE_ACCESS_DENIED')) {
+    if (message.includes('FINANCE_SHARE_ACCESS_DENIED')) {
         return { status: 403, message: 'Finance access is required' };
     }
     if (

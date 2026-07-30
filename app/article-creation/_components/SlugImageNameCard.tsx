@@ -88,7 +88,7 @@ export function SlugImageNameCard() {
                     <div>
                         <p className="text-xs uppercase tracking-wide text-text-muted">Slug</p>
                         <p className="mt-2 break-words font-mono text-sm text-text-primary">
-                            {slug || '—'}
+                            {slug || '-'}
                         </p>
                     </div>
                     <Button
@@ -107,7 +107,7 @@ export function SlugImageNameCard() {
                             Full image name
                         </p>
                         <p className="mt-2 break-words font-mono text-sm text-text-primary">
-                            {imageName || '—'}
+                            {imageName || '-'}
                         </p>
                     </div>
                     <Button
