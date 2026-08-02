@@ -45,7 +45,6 @@ const MODULE_ROUTE_RULES: ModuleRouteRule[] = [
     { prefix: '/film', module: 'film_journal' },
     { prefix: '/finance', module: 'finance' },
     { prefix: '/settings', module: 'settings' },
-    { prefix: '/docs', module: 'settings' },
 ];
 
 function matchesPath(pathname: string, prefix: string) {

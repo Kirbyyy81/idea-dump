@@ -16,8 +16,6 @@ export const AUTH_PATHS = {
 
 export const PUBLIC_AUTH_PATH_PREFIXES = [
     '/login',
-    '/signup',
-    '/reset-password',
     '/auth',
 ] as const;
 
