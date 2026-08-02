@@ -8,7 +8,6 @@ import { Project } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { AppModuleSlug } from '@/lib/rbac/constants';
 import { matchesModuleRoute } from '@/lib/rbac/routes';
-import { AppModuleMetadata } from '@/lib/rbac/types';
 import { useAccess } from '@/lib/contexts/AccessContext';
 import { CategoryDoodleIcon, SourceDoodleIcon } from '@/components/atoms/DoodleIcons';
 import {
@@ -285,23 +284,17 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
                     icon: <FolderKanban size={18} />,
                     label: getModuleLabel('projects', 'Projects'),
                     children: (
-                        <>
-                            <div className="custom-scrollbar-nav max-h-[260px] space-y-1 overflow-y-auto">
-                                {projects.length === 0 ? (
-                                    <p className="px-3 py-2 text-[12px] italic leading-none text-nav-text-muted">
-                                        No projects
-                                    </p>
-                                ) : (
-                                    projects.map((project) => renderSubItem({
-                                        href: `/projects/${project.id}`,
-                                        isActive:
-                                            pathname === `/projects/${project.id}` ||
-                                            pathname === `/projects/${project.id}/edit`,
-                                        label: project.title,
-                                    }))
-                                )}
-                            </div>
-                        </>
+                        <div className="custom-scrollbar-nav max-h-[260px] space-y-1 overflow-y-auto">
+                            {projects.map((project) =>
+                                renderSubItem({
+                                    href: `/projects/${project.id}`,
+                                    isActive:
+                                        pathname === `/projects/${project.id}` ||
+                                        pathname === `/projects/${project.id}/edit`,
+                                    label: project.title,
+                                })
+                            )}
+                        </div>
                     ),
                 })}
 
@@ -312,7 +305,7 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
                     icon: <Ticket size={18} />,
                     label: 'Tickets',
                     children: (
-                        <div className="space-y-0.5">
+                        <div>
                             {renderSubItem({
                                 href: '/tickets',
                                 icon: <Ticket size={14} />,
@@ -342,7 +335,7 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
                     icon: <Film size={18} />,
                     label: getModuleLabel('film_journal', 'Film Journal'),
                     children: (
-                        <div className="space-y-0.5">
+                        <div>
                             {renderSubItem({
                                 href: '/film/new-roll',
                                 icon: <Plus size={14} />,
@@ -372,7 +365,7 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
                     icon: <Landmark size={18} />,
                     label: getModuleLabel('finance', 'Finance'),
                     children: (
-                        <div className="space-y-0.5">
+                        <div>
                             {renderSubItem({
                                 href: '/finance/transactions',
                                 icon: <ReceiptText size={14} />,
