@@ -3,7 +3,6 @@
   "version": "0.11.3",
   "private": true,
   "scripts": {
-    "predev": "npm install",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
