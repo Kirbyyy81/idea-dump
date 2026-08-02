@@ -1,7 +1,7 @@
 -- Records the reviewed live-schema baseline without replaying that schema against
 -- the production database. The restorable schema-only export is stored at:
 --
---   document/supabase/schema.sql
+--   supabase/schema.sql
 --
 -- SHA-256:
 --   AB822079B6BDDE9E8A0995C7D75FBA9089BB592EE46F67A1DD0DC929C2E35F57

@@ -91,11 +91,10 @@ BUILD_TIME=2026-03-16T00:00:00.000Z
 
 ### 3. Prepare Supabase
 
-The canonical Supabase configuration and forward migrations live in [`supabase`](./supabase). The reviewed live schema baseline is [`document/supabase/schema.sql`](./document/supabase/schema.sql); its SHA-256 is recorded by the first canonical migration.
+The canonical Supabase configuration and forward migrations live in [`supabase`](./supabase). The reviewed live schema baseline is [`supabase/schema.sql`](supabase/schema.sql); the first canonical migration records the reviewed source export hash.
 
 - For the existing production project, apply only unapplied forward migrations. The baseline marker is intentionally a no-op and must not replay the exported schema over production.
 - For a fresh project, restore the schema-only baseline first, then apply the later canonical migrations in timestamp order. Do not run the remediation migrations against an empty database.
-- Treat the older files in [`document/migrations`](./document/migrations) as historical records rather than the current migration ledger.
 
 You should also configure your Supabase auth redirect URLs, including:
 
@@ -200,7 +199,7 @@ Temporary share images and batch records are removed after terminal processing a
   Shared types, auth helpers, RBAC logic, Supabase clients, logging helpers, utility functions, and article-creation utilities.
 
 - `document/`
-  Product docs, design notes, and database migration files. Start new product requirements with [`document/prd/PRD_TEMPLATE.md`](document/prd/PRD_TEMPLATE.md).
+  Product docs and design notes. Start new product requirements with [`document/prd/PRD_TEMPLATE.md`](document/prd/PRD_TEMPLATE.md).
 
 - `public/`  
   Static assets.
@@ -212,7 +211,7 @@ Temporary share images and batch records are removed after terminal processing a
   Render service for direct Finance OCR and durable share-batch processing.
 
 - `supabase/`
-  Supabase configuration and canonical forward migrations.
+  Supabase configuration, adopted schema baseline, supporting snapshot, and canonical forward migrations.
 
 ## Stack
 

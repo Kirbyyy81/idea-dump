@@ -13,7 +13,7 @@ Their versions must not be renamed or repaired in production.
 
 ## Baseline
 
-The schema-only production export is stored at `document/supabase/schema.sql`. The no-op baseline migration records its reviewed SHA-256:
+The schema-only production export is stored at `supabase/schema.sql`. The no-op baseline migration records the reviewed source export SHA-256 from before the stored dump's `CREATE SCHEMA` normalization:
 
 ```text
 AB822079B6BDDE9E8A0995C7D75FBA9089BB592EE46F67A1DD0DC929C2E35F57
@@ -27,7 +27,7 @@ Supabase project without dropping platform-managed objects from the existing
 `public` schema.
 
 This is an adopted-baseline workflow, so `supabase db reset` is not standalone:
-an empty database must receive `document/supabase/schema.sql` before the baseline
+an empty database must receive `supabase/schema.sql` before the baseline
 and forward migrations are applied. The baseline deliberately fails to replace
 the production schema with a second copy.
 

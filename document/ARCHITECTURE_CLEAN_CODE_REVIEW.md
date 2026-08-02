@@ -102,7 +102,7 @@ The repository already has several good foundations:
 - UI primitives and composite components have documented design rules.
 - Page-private components use the `app/<route>/_components/` convention.
 - Supabase client creation and RBAC enforcement have dedicated helpers.
-- Canonical forward migrations are separated from historical migration records.
+- Canonical forward migrations and adopted baseline artifacts are grouped under `supabase/`.
 - Finance contains a reusable client API abstraction.
 - Projects and logs demonstrate repository or data-access abstractions.
 - The OCR service has a dedicated package, build process, and Vitest test suite.
