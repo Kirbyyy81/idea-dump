@@ -205,11 +205,25 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
                     />
                 </Link>
 
-                {isOpen && (
-                    <div id={submenuId}>
+                <div
+                    id={submenuId}
+                    aria-hidden={!isOpen}
+                    className={cn(
+                        'grid transition-[grid-template-rows] duration-200 ease-out',
+                        isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+                    )}
+                >
+                    <div
+                        className={cn(
+                            'min-h-0 overflow-hidden transition-[opacity,visibility] duration-150 ease-out',
+                            isOpen
+                                ? 'visible opacity-100'
+                                : 'invisible pointer-events-none opacity-0'
+                        )}
+                    >
                         <div className="space-y-0.5 pl-4 pt-0.5">{children}</div>
                     </div>
-                )}
+                </div>
             </div>
         );
     };
