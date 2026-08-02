@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { AppShell } from '@/components/organisms/AppShell';
+import { PageHeader } from '@/components/molecules/PageHeader';
 import { ProjectForm } from '../_components/ProjectForm';
 import { CreateProjectInput } from '@/lib/types';
 
@@ -40,15 +41,18 @@ export default function NewProjectPage() {
     return (
         <AppShell contentClassName="p-5 md:p-8">
             <div className="max-w-3xl">
-                <div className="flex items-center gap-4 mb-8">
-                    <Link
-                        href="/projects"
-                        className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors"
-                    >
-                        <ArrowLeft size={20} />
-                    </Link>
-                    <h1 className="text-text-primary">New Project</h1>
-                </div>
+                <PageHeader
+                    title="New Project"
+                    action={
+                        <Link
+                            href="/projects"
+                            aria-label="Back to projects"
+                            className="flex items-center gap-2 text-text-secondary transition-colors hover:text-text-primary"
+                        >
+                            <ArrowLeft size={20} />
+                        </Link>
+                    }
+                />
 
                 {error && (
                     <div className="p-3 rounded-lg bg-error-bg border border-error mb-6">

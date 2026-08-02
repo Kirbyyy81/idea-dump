@@ -17,6 +17,7 @@ import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
+import { PageHeader } from '@/components/molecules/PageHeader';
 import { FinanceCategory, FinanceSource, FinanceTransaction, FinanceTransactionDirection } from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
 import { formatCurrency } from '@/lib/utils';
@@ -214,9 +215,12 @@ export default function FinanceTransactionsPage() {
     return (
         <AppShell contentClassName="p-5 md:p-8">
             <div className="mx-auto max-w-7xl">
-                <header className="flex flex-col gap-4 pb-5 sm:flex-row sm:items-end sm:justify-between"><div><Link href="/finance" className="text-sm font-semibold text-text-secondary hover:text-text-primary">Finance</Link><h1 className="mt-2">Transactions</h1></div><Link href="/finance/add" className="btn-primary"><AddDoodleIcon size={16} className="mr-2" />Add transaction</Link></header>
+                <PageHeader
+                    title="Transactions"
+                    action={<Link href="/finance/add" className="btn-primary"><AddDoodleIcon size={16} className="mr-2" />Add transaction</Link>}
+                />
 
-                <div className="mt-5 space-y-5">
+                <div className="space-y-5">
                     {editingId && <form onSubmit={saveTransaction} className="max-w-xl">
                         <Card className="p-5">
                             <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2">{editingId ? <EditDoodleIcon size={18} className="text-accent-blue" /> : <AddDoodleIcon size={18} className="text-accent-blue" />}<h2 className="text-base font-bold">{editingId ? 'Edit transaction' : 'New transaction'}</h2></div>{editingId && <button type="button" title="Cancel editing" aria-label="Cancel editing" onClick={cancelEditing} className="grid size-10 place-items-center text-text-muted hover:text-text-primary"><CloseDoodleIcon size={16} /></button>}</div>

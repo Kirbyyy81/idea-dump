@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { AppShell } from '@/components/organisms/AppShell';
 import { MonthPicker } from '@/components/atoms/MonthPicker';
+import { PageHeader } from '@/components/molecules/PageHeader';
 import { FinanceLoadingState } from './_components/FinanceLoadingState';
 import {
     AddDoodleIcon,
@@ -51,12 +52,12 @@ export default function FinancePage() {
     return (
         <AppShell contentClassName="p-5 md:p-8">
             <div className="mx-auto max-w-7xl">
-                <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                    <div><h1>Finance</h1></div>
-                    <Link href="/finance/add" className="btn-primary"><AddDoodleIcon size={16} className="mr-2" />Add transaction</Link>
-                </header>
+                <PageHeader
+                    title="Finance"
+                    action={<Link href="/finance/add" className="btn-primary"><AddDoodleIcon size={16} className="mr-2" />Add transaction</Link>}
+                />
 
-                <div className="mt-6 flex items-center justify-between border-y border-border-default py-3">
+                <div className="flex items-center justify-between border-y border-border-default py-3">
                     <button type="button" title="Previous month" aria-label="Previous month" onClick={() => setMonth(shiftFinanceMonth(month, -1) || month)} className="grid size-10 place-items-center text-text-secondary hover:text-text-primary"><PreviousDoodleIcon size={19} /></button>
                     <MonthPicker value={month} onChange={setMonth} />
                     <button type="button" title="Next month" aria-label="Next month" onClick={() => setMonth(shiftFinanceMonth(month, 1) || month)} className="grid size-10 place-items-center text-text-secondary hover:text-text-primary"><NextDoodleIcon size={19} /></button>

@@ -6,6 +6,7 @@ import { AppShell } from '@/components/organisms/AppShell';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
+import { PageHeader } from '@/components/molecules/PageHeader';
 import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
 import { FilmCamera, FilmMaintenanceRecord } from '@/lib/types';
@@ -180,11 +181,7 @@ export default function FilmCamerasPage() {
     return (
         <AppShell contentClassName="film-module p-5 md:p-8">
             <div className="mx-auto max-w-7xl space-y-7">
-                <header className="space-y-5">
-                    <div>
-                        <h1>Cameras & Maintenance</h1>
-                    </div>
-                </header>
+                <PageHeader title="Cameras & Maintenance" />
 
                 {error && (
                     <div className="rounded-lg border border-error bg-error-bg px-4 py-3 text-sm text-error">

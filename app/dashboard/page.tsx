@@ -20,6 +20,7 @@ import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { AppModuleSlug } from '@/lib/rbac/constants';
 import { PageLoader } from '@/components/atoms/Loader';
+import { PageHeader } from '@/components/molecules/PageHeader';
 import { AppModuleMetadata } from '@/lib/rbac/types';
 import { useAccess } from '@/lib/contexts/AccessContext';
 import { Project } from '@/lib/types';
@@ -101,9 +102,7 @@ export default function DashboardPage() {
     return (
         <AppShell projects={projects} isLoading={isLoading} loadingMessage="Loading dashboard...">
             <div className="max-w-5xl space-y-8">
-                <header>
-                    <h1 className="text-2xl font-extrabold">Dashboard</h1>
-                </header>
+                <PageHeader title="Dashboard" />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                     {quickLinks.map((item) => {

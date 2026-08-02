@@ -7,6 +7,7 @@ import { ProjectCard } from './_components/ProjectCard';
 import { Project, Status, statusConfig, inferStatus } from '@/lib/types';
 import { Check, ChevronDown, Plus, Search, X } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
+import { PageHeader } from '@/components/molecules/PageHeader';
 import { Input } from '@/components/atoms/Input';
 import { cn } from '@/lib/utils';
 import { iconMap } from '@/lib/icons';
@@ -106,14 +107,16 @@ export default function ProjectsPage() {
     return (
         <AppShell projects={projects} isLoading={isLoading} loadingMessage="Loading projects...">
             <div>
-                <header className="mb-6 flex items-center justify-between gap-3">
-                    <h1 className="text-2xl font-extrabold">Projects</h1>
-                    <Link href="/projects/new" className="shrink-0">
-                        <Button icon={<Plus size={18} />} className="h-10 px-4">
-                            New Project
-                        </Button>
-                    </Link>
-                </header>
+                <PageHeader
+                    title="Projects"
+                    action={
+                        <Link href="/projects/new" className="shrink-0">
+                            <Button icon={<Plus size={18} />} className="h-10 px-4">
+                                New Project
+                            </Button>
+                        </Link>
+                    }
+                />
 
                 <div className="mb-6 grid gap-3 sm:grid-cols-[minmax(0,1fr)_260px]">
                     <div className="relative min-w-0">

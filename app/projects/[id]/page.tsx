@@ -12,6 +12,7 @@ import { TicketCard } from '@/components/organisms/TicketCard';
 import { TicketForm } from '@/components/organisms/TicketForm';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
+import { PageHeader } from '@/components/molecules/PageHeader';
 import { CreateTicketInput, Note, Project, Ticket, inferStatus, priorityConfig } from '@/lib/types';
 import {
     ArrowLeft,
@@ -282,10 +283,10 @@ export default function ProjectPage() {
             </div>
 
             <div className="mb-8">
-                <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-                    <h1 className="text-text-primary text-2xl font-extrabold">{project.title}</h1>
-                    <StatusBadge status={inferStatus(project)} className="px-3 py-1 text-sm" />
-                </div>
+                <PageHeader
+                    title={project.title}
+                    action={<StatusBadge status={inferStatus(project)} className="px-3 py-1 text-sm" />}
+                />
 
                 {project.description && (
                     <p className="text-lg mb-6 text-text-secondary">{project.description}</p>

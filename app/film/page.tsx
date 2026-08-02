@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { Film, Search, X } from 'lucide-react';
 import { AppShell } from '@/components/organisms/AppShell';
 import { Input } from '@/components/atoms/Input';
+import { PageHeader } from '@/components/molecules/PageHeader';
 import { Select } from '@/components/atoms/Select';
 import {
     FilmCamera,
@@ -281,11 +282,7 @@ export default function FilmJournalPage() {
     return (
         <AppShell contentClassName={getFilmShellClassName()}>
             <div className="mx-auto max-w-7xl space-y-5">
-                <header>
-                    <div>
-                        <h1>The Film Cupboard</h1>
-                    </div>
-                </header>
+                <PageHeader title="The Film Cupboard" />
 
                 {error && (
                     <div className="rounded-lg border border-error bg-error-bg px-4 py-3 text-sm text-error">

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/organisms/AppShell';
 import { TicketForm } from '@/components/organisms/TicketForm';
 import { PageLoader } from '@/components/atoms/Loader';
+import { PageHeader } from '@/components/molecules/PageHeader';
 import { CreateTicketInput, Project } from '@/lib/types';
 
 export default function NewTicketPage() {
@@ -63,7 +64,7 @@ export default function NewTicketPage() {
     return (
         <AppShell contentClassName="p-5 md:p-8">
             <div className="max-w-3xl space-y-6">
-                <h1 className="text-2xl font-extrabold">Raise Ticket</h1>
+                <PageHeader title="Raise Ticket" />
 
                 {error && (
                     <div className="rounded-lg border border-error bg-error-bg px-4 py-3 text-sm text-error">

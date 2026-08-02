@@ -9,6 +9,7 @@ import { Badge } from '@/components/atoms/Badge';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
+import { PageHeader } from '@/components/molecules/PageHeader';
 import { Select } from '@/components/atoms/Select';
 import { useAlert } from '@/lib/contexts/AlertContext';
 import {
@@ -337,28 +338,30 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
 
     return (
         <div className="mx-auto min-h-screen max-w-7xl space-y-5 p-4 md:p-6">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                <div className="flex items-center gap-4">
-                    <Link
-                        href="/settings"
-                        className="flex items-center gap-2 text-text-secondary transition-colors hover:text-text-primary"
-                    >
-                        <ArrowLeft size={20} />
-                    </Link>
-                    <h1 className="text-text-primary">Access Control</h1>
-                </div>
-
-                <div className="relative w-full md:max-w-sm">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
-                    <Input
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Search users or modules"
-                        aria-label="Search users or modules"
-                        className="pl-9"
-                    />
-                </div>
-            </div>
+            <PageHeader
+                title="Access Control"
+                action={
+                    <>
+                        <Link
+                            href="/settings"
+                            aria-label="Back to settings"
+                            className="flex items-center gap-2 text-text-secondary transition-colors hover:text-text-primary"
+                        >
+                            <ArrowLeft size={20} />
+                        </Link>
+                        <div className="relative w-full md:w-80">
+                            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+                            <Input
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                placeholder="Search users or modules"
+                                aria-label="Search users or modules"
+                                className="pl-9"
+                            />
+                        </div>
+                    </>
+                }
+            />
 
             {error && (
                 <div className="rounded-xl border border-error bg-error-bg px-4 py-3">

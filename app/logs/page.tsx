@@ -14,6 +14,7 @@ import { useAlert } from '@/lib/contexts/AlertContext';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
+import { PageHeader } from '@/components/molecules/PageHeader';
 
 export default function LogsPage() {
     const [logs, setLogs] = useState<DailyLogEntry[]>([]);
@@ -253,11 +254,10 @@ export default function LogsPage() {
 
     return (
         <AppShell projects={projects} isLoading={isLoading}>
-                {/* Header */}
-                <header className="mb-8 flex flex-wrap items-center justify-between gap-3">
-                    <h1 className="text-2xl font-extrabold">Weekly Productivity Log</h1>
-
-                    <div className="flex flex-wrap items-center gap-2">
+                <PageHeader
+                    title="Weekly Productivity Log"
+                    action={
+                        <div className="flex flex-wrap items-center gap-2">
                         <Link href="/logs/api-tools">
                             <Button variant="ghost" icon={<BookOpen size={18} />} className="h-10 px-3">
                                 API Tools
@@ -269,8 +269,9 @@ export default function LogsPage() {
                         <Button variant="primary" onClick={() => setShowNewForm(true)} icon={<Plus size={18} />} className="h-10 px-4">
                             New Entry
                         </Button>
-                    </div>
-                </header>
+                        </div>
+                    }
+                />
 
                 {error && (
                     <div className="mb-6 p-4 bg-error-bg border border-error rounded-lg text-error">

@@ -12,6 +12,7 @@
 - Use `molecules/` for small reusable compositions with one focused interaction.
 - Use `organisms/` for cross-feature layout or workflow compositions. Do not place a feature-owned component here only because it is large.
 - Reuse existing components before introducing a new primitive or a parallel variant.
+- Use `PageHeader` for authenticated page titles. Supply the current page name and only pass an action when the page has a relevant primary control. Do not add breadcrumbs.
 
 ## UI Rules
 

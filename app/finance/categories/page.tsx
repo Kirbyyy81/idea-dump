@@ -7,6 +7,7 @@ import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
+import { PageHeader } from '@/components/molecules/PageHeader';
 import { FinanceLoadingState } from '../_components/FinanceLoadingState';
 import { FinanceCategory, FinanceCategoryType } from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
@@ -159,11 +160,9 @@ export default function FinanceCategoriesPage() {
     return (
         <AppShell contentClassName="p-5 md:p-8">
             <div className="mx-auto max-w-7xl">
-                <header className="pb-5">
-                    <h1>Categories</h1>
-                </header>
+                <PageHeader title="Categories" />
 
-                <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[360px_minmax(0,1fr)]">
+                <div className="grid grid-cols-1 gap-5 lg:grid-cols-[360px_minmax(0,1fr)]">
                     <form onSubmit={addCategory}>
                         <Card className="p-5">
                             <h2 className="text-base font-bold">New category</h2>

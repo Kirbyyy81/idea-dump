@@ -7,6 +7,7 @@ import { AppShell } from '@/components/organisms/AppShell';
 import { TicketCard } from '@/components/organisms/TicketCard';
 import { TicketForm } from '@/components/organisms/TicketForm';
 import { Button } from '@/components/atoms/Button';
+import { PageHeader } from '@/components/molecules/PageHeader';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
@@ -121,12 +122,14 @@ export default function TicketsPage() {
             contentClassName="p-5 md:p-8"
         >
             <div className="max-w-5xl space-y-6">
-                <header className="flex items-center justify-between gap-3">
-                    <h1 className="text-2xl font-extrabold">My Tickets</h1>
-                    <Link href="/tickets/new" className="shrink-0">
-                        <Button icon={<Plus size={18} />} className="h-10 px-4">Raise Ticket</Button>
-                    </Link>
-                </header>
+                <PageHeader
+                    title="My Tickets"
+                    action={
+                        <Link href="/tickets/new" className="shrink-0">
+                            <Button icon={<Plus size={18} />} className="h-10 px-4">Raise Ticket</Button>
+                        </Link>
+                    }
+                />
 
                 {error && (
                     <div className="rounded-lg border border-error bg-error-bg px-4 py-3 text-sm text-error">

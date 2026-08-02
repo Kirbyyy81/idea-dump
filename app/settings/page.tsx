@@ -19,6 +19,7 @@ import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
 import { AppShell } from '@/components/organisms/AppShell';
+import { PageHeader } from '@/components/molecules/PageHeader';
 import { Project } from '@/lib/types';
 
 const DISPLAY_NAME_MAX_LENGTH = 80;
@@ -192,7 +193,7 @@ export default function SettingsPage() {
     return (
         <AppShell contentClassName="p-5 md:p-8" projects={projects} isLoading={isLoading}>
             <div className="max-w-3xl space-y-6">
-                <h1 className="text-text-primary text-2xl font-extrabold">Settings</h1>
+                <PageHeader title="Settings" />
 
                 <Card className="p-6">
                     <div className="flex items-start justify-between gap-4">

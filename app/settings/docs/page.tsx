@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { BookOpen } from 'lucide-react';
 import { AppShell } from '@/components/organisms/AppShell';
 import { Card } from '@/components/atoms/Card';
+import { PageHeader } from '@/components/molecules/PageHeader';
 
 interface SwaggerBundle {
     (options: {
@@ -102,9 +103,7 @@ export default function SettingsApiDocsPage() {
     return (
         <AppShell contentClassName="p-5 md:p-8">
             <div className="max-w-6xl space-y-8">
-                <header>
-                    <h1 className="text-2xl font-extrabold">API Docs</h1>
-                </header>
+                <PageHeader title="API Docs" />
 
                 <Card className="p-0 overflow-hidden">
                     <div className="p-6 pb-0">
