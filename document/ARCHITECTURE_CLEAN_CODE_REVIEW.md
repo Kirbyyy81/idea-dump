@@ -371,7 +371,7 @@ Direct `createAdminClient()` calls should be concentrated in repositories. This 
 
 The atomic design structure is documented clearly, but atoms, molecules, and organisms categorize components by abstraction level rather than feature ownership. Classification becomes subjective as the application grows.
 
-For example, `Sidebar`, tickets, and the log viewer live together under shared organisms even though they have different ownership and reuse characteristics.
+For example, `Sidebar` and ticket workflows live under shared organisms because they are reused across feature routes, while the Log Viewer now lives in `app/log-viewer/_components/` because it is route-owned.
 
 #### Recommendation
 
@@ -630,7 +630,7 @@ Summary as of 2026-08-02:
 | AC-015 | Large page and client-component responsibilities | **Partial** | Some Film sections are extracted, but Film roll detail, Access Control, and Finance review remain large stateful files. Done when state, mutations, dialogs, and sections have focused ownership and regression coverage. | 2026-08-02 |
 | AC-016 | Overloaded application shell | **Not started** | `AppShell` still owns access routing, project loading, navigation, responsive behavior, spacing, and loading UI. Done when protected layout, page container, loading state, and mobile navigation responsibilities are explicit. | 2026-08-02 |
 | AC-017 | Client-heavy initial data loading | **Not started** | 26 of 33 remaining pages are client components and 24 pages use `useEffect()`. Done when practical initial reads move to server components and interactive client islands retain only browser state. | 2026-08-02 |
-| AC-018 | Component ownership ambiguity | **Partial** | Shared primitives and route-private `_components` exist, but feature-specific organisms remain mixed with layout components. Done when shared UI, layout, cross-feature, and feature-private ownership rules are consistently applied. | 2026-08-02 |
+| AC-018 | Component ownership ambiguity | **Partial** | The Log Viewer was moved into `app/log-viewer/_components/`, and route-private feature sections already exist. Shared Sidebar and Ticket workflows remain under `components/` because they are reused across feature routes, but ownership rules are not yet applied consistently everywhere. Done when shared UI, layout, cross-feature, and feature-private ownership rules are consistently applied. | 2026-08-02 |
 | AC-019 | Inconsistent non-route naming | **Not started** | `articleCreation`, `logViewer`, and top-level `dailyLogs.ts` remain naming and ownership outliers. Done when one convention is documented and applied without compatibility regressions. | 2026-08-02 |
 | AC-020 | Global Finance share-target provider | **Not started** | `FinanceShareTargetProvider` wraps every route through `AuthenticatedAppShell`. Done when the Finance workflow is scoped appropriately and authenticated, unauthorized, expired, and successful share flows are verified. | 2026-08-02 |
 | AC-021 | OCR service source coupling | **Not started** | The OCR TypeScript and bundler aliases point to the application root. Done when both runtimes depend on an explicit shared package and OCR builds without application-source aliases. | 2026-08-02 |

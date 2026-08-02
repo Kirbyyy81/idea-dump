@@ -1,7 +1,7 @@
 'use client';
 
 import { AppShell } from '@/components/organisms/AppShell';
-import { LogViewer } from '@/components/organisms/LogViewer';
+import { LogViewer } from '@/app/log-viewer/_components';
 
 export default function LogViewerPage() {
   return (
