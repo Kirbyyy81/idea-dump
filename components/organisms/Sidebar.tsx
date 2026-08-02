@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation';
 import { Project } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { AppModuleSlug } from '@/lib/rbac/constants';
+import { matchesModuleRoute } from '@/lib/rbac/routes';
 import { AppModuleMetadata } from '@/lib/rbac/types';
 import { useAccess } from '@/lib/contexts/AccessContext';
 import { CategoryDoodleIcon, SourceDoodleIcon } from '@/components/atoms/DoodleIcons';
@@ -77,18 +78,6 @@ function isExactPath(pathname: string, href: string) {
     return pathname === href;
 }
 
-function isProjectRoute(pathname: string) {
-    return pathname === '/projects' || pathname.startsWith('/projects/');
-}
-
-function isFilmRoute(pathname: string) {
-    return pathname === '/film' || pathname.startsWith('/film/');
-}
-
-function isFinanceRoute(pathname: string) {
-    return pathname === '/finance' || pathname.startsWith('/finance/');
-}
-
 export function Sidebar({ projects, collapsed = false, className, onToggleCollapsed }: SidebarProps) {
     const pathname = usePathname();
     const [openGroups, setOpenGroups] = useState<Partial<Record<'projects' | 'tickets' | 'film' | 'finance', boolean>>>({});
@@ -98,12 +87,7 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
     const canManageAccess = access?.canManageAccess ?? false;
 
     const canAccessModule = (moduleSlug: AppModuleSlug) => allowedModules.includes(moduleSlug);
-    const isDashboardActive = pathname === '/' || pathname.startsWith('/dashboard');
-    const isProjectsActive = isProjectRoute(pathname);
-    const isTicketsActive = pathname === '/tickets' || pathname.startsWith('/tickets/');
-    const isFilmActive = isFilmRoute(pathname);
-    const isFinanceActive = isFinanceRoute(pathname);
-    const isAccessControlActive = pathname.startsWith('/settings/access');
+    const isModuleActive = (moduleSlug: AppModuleSlug) => matchesModuleRoute(pathname, moduleSlug);
     const moduleBySlug = new Map(modules.map((moduleRow) => [moduleRow.slug, moduleRow]));
     const getModuleLabel = (moduleSlug: AppModuleSlug, fallback: string = moduleSlug) =>
         moduleBySlug.get(moduleSlug)?.label ?? fallback;
@@ -287,7 +271,7 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
             <nav className={cn('custom-scrollbar-nav flex-1 space-y-1 overflow-y-auto py-4', collapsed && 'py-3')}>
                 {canAccessModule('dashboard') && (
                     renderModuleLink({
-                        active: isDashboardActive,
+                        active: isModuleActive('dashboard'),
                         href: '/dashboard',
                         icon: <LayoutDashboard size={18} />,
                         label: SHELL_MODULES.dashboard.label,
@@ -295,7 +279,7 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
                 )}
 
                 {canAccessModule('projects') && renderModuleGroup({
-                    active: isProjectsActive,
+                    active: isModuleActive('projects'),
                     group: 'projects',
                     href: getModulePath('projects', '/projects'),
                     icon: <FolderKanban size={18} />,
@@ -322,7 +306,7 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
                 })}
 
                 {canAccessModule('tickets') && renderModuleGroup({
-                    active: isTicketsActive,
+                    active: isModuleActive('tickets'),
                     group: 'tickets',
                     href: getModulePath('tickets', '/tickets'),
                     icon: <Ticket size={18} />,
@@ -352,7 +336,7 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
                 })}
 
                 {canAccessModule('film_journal') && renderModuleGroup({
-                    active: isFilmActive,
+                    active: isModuleActive('film_journal'),
                     group: 'film',
                     href: getModulePath('film_journal', '/film'),
                     icon: <Film size={18} />,
@@ -382,7 +366,7 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
                 })}
 
                 {canAccessModule('finance') && renderModuleGroup({
-                    active: isFinanceActive,
+                    active: isModuleActive('finance'),
                     group: 'finance',
                     href: getModulePath('finance', '/finance'),
                     icon: <Landmark size={18} />,
@@ -428,7 +412,7 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
                     return (
                     <div key={item.slug}>
                         {renderModuleLink({
-                            active: item.slug === 'access_control' ? isAccessControlActive : pathname === itemPath,
+                            active: isModuleActive(item.slug) || pathname === itemPath,
                             href: itemPath,
                             icon: item.icon && MODULE_ICONS[item.icon]
                                 ? MODULE_ICONS[item.icon]

@@ -9,7 +9,7 @@ import { Sidebar } from '@/components/organisms/Sidebar';
 import { LoaderOne } from '@/components/atoms/Loader';
 import { Project } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { AppModuleSlug } from '@/lib/rbac/constants';
+import { findModuleRouteRule } from '@/lib/rbac/routes';
 import { useAccess } from '@/lib/contexts/AccessContext';
 import { PUBLIC_AUTH_PATH_PREFIXES } from '@/lib/auth/routes';
 
@@ -25,27 +25,7 @@ interface ShellContextValue {
     setProjects: (projects: Project[]) => void;
 }
 
-interface ModuleRouteRule {
-    module: AppModuleSlug;
-    prefix: string;
-    requiresManager?: boolean;
-}
-
 const ShellContext = createContext<ShellContextValue | null>(null);
-const MODULE_ROUTE_RULES: ModuleRouteRule[] = [
-    { prefix: '/settings/access', module: 'access_control', requiresManager: true },
-    { prefix: '/dashboard', module: 'dashboard' },
-    { prefix: '/projects', module: 'projects' },
-    { prefix: '/tickets/manage', module: 'tickets', requiresManager: true },
-    { prefix: '/tickets', module: 'tickets' },
-    { prefix: '/logs', module: 'logs' },
-    { prefix: '/api-tools', module: 'logs' },
-    { prefix: '/log-viewer', module: 'log_viewer' },
-    { prefix: '/article-creation', module: 'article_creation' },
-    { prefix: '/film', module: 'film_journal' },
-    { prefix: '/finance', module: 'finance' },
-    { prefix: '/settings', module: 'settings' },
-];
 
 function matchesPath(pathname: string, prefix: string) {
     return pathname === prefix || pathname.startsWith(`${prefix}/`);
@@ -87,7 +67,7 @@ export function AppShell({
     const mobileNavTriggerRef = useRef<HTMLButtonElement>(null);
     const mobileNavId = `mobile-navigation-${useId()}`;
     const isPublicPath = PUBLIC_AUTH_PATH_PREFIXES.some((prefix) => matchesPath(pathname, prefix));
-    const routeRule = MODULE_ROUTE_RULES.find((rule) => matchesPath(pathname, rule.prefix));
+    const routeRule = findModuleRouteRule(pathname);
     const isAccessDenied = Boolean(
         persistent &&
         access &&

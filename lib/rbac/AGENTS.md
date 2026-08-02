@@ -11,6 +11,7 @@
 - Keep RBAC data structures in `types.ts`.
 - Keep session lookup, role resolution, module metadata, overrides, and access calculation in `access.ts`.
 - Keep route-facing authorization helpers and standard unauthorized or forbidden responses in `guards.ts`.
+- Keep canonical module route mapping and client-safe path matching in `routes.ts`. Reuse it for shell authorization and navigation activity instead of duplicating route prefixes.
 - Add a new application module only with its database metadata, route-access mapping, and authorization coverage reviewed together.
 
 ## Security Invariants

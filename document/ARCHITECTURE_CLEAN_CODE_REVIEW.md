@@ -607,8 +607,8 @@ Summary as of 2026-08-02:
 
 - Done: 4
 - In progress: 0
-- Partial: 7
-- Not started: 11
+- Partial: 8
+- Not started: 10
 - Blocked: 0
 
 | ID | Issue | Status | Current evidence and completion gate | Last updated |
@@ -628,7 +628,7 @@ Summary as of 2026-08-02:
 | AC-013 | Inconsistent business-service layer | **Partial** | Some helpers and OCR services exist, but multi-step Film, Finance, and Ticket orchestration remains in routes. Done when business operations have explicit services with focused tests. | 2026-08-02 |
 | AC-014 | Monolithic OpenAPI definition | **Not started** | `lib/openapi.ts` is about 637 lines. Done when domain definitions are independently owned, composed into one specification, and contract checks pass. | 2026-08-02 |
 | AC-015 | Large page and client-component responsibilities | **Partial** | Some Film sections are extracted, but Film roll detail, Access Control, and Finance review remain large stateful files. Done when state, mutations, dialogs, and sections have focused ownership and regression coverage. | 2026-08-02 |
-| AC-016 | Overloaded application shell | **Not started** | `AppShell` still owns access routing, project loading, navigation, responsive behavior, spacing, and loading UI. Done when protected layout, page container, loading state, and mobile navigation responsibilities are explicit. | 2026-08-02 |
+| AC-016 | Overloaded application shell | **Partial** | Extracted canonical module route mapping and matching into client-safe `lib/rbac/routes.ts`, used by `AppShell` authorization and Sidebar navigation activity. `AppShell` still owns project loading, navigation, responsive behavior, spacing, and loading UI. Done when protected layout, page container, loading state, and mobile navigation responsibilities are explicit. | 2026-08-02 |
 | AC-017 | Client-heavy initial data loading | **Not started** | 26 of 33 remaining pages are client components and 24 pages use `useEffect()`. Done when practical initial reads move to server components and interactive client islands retain only browser state. | 2026-08-02 |
 | AC-018 | Component ownership ambiguity | **Partial** | The Log Viewer was moved into `app/log-viewer/_components/`, and route-private feature sections already exist. Shared Sidebar and Ticket workflows remain under `components/` because they are reused across feature routes, but ownership rules are not yet applied consistently everywhere. Done when shared UI, layout, cross-feature, and feature-private ownership rules are consistently applied. | 2026-08-02 |
 | AC-019 | Inconsistent non-route naming | **Not started** | `articleCreation`, `logViewer`, and top-level `dailyLogs.ts` remain naming and ownership outliers. Done when one convention is documented and applied without compatibility regressions. | 2026-08-02 |
