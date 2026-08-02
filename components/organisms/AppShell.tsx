@@ -253,7 +253,7 @@ export function AppShell({
                     </button>
                 </header>
 
-                <div aria-hidden={isMobileNavOpen || undefined} className="hidden md:block">
+                <div aria-hidden={isMobileNavOpen || undefined} className="hidden self-stretch md:block">
                     <Sidebar
                         projects={projects}
                         collapsed={isSidebarCollapsed}
