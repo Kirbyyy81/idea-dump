@@ -1,11 +1,28 @@
-function getFinanceMutationRequestError({
+export interface FinanceMutationRequest {
+    method: string;
+    requestOrigin: string;
+    origin?: string | null;
+    fetchSite?: string | null;
+    contentType?: string | null;
+    requireJson?: boolean;
+}
+
+export interface FinanceMutationRequestError {
+    message:
+        | 'Cross-origin Finance requests are not allowed'
+        | 'Invalid request origin'
+        | 'Content-Type must be application/json';
+    status: 403 | 415;
+}
+
+export function getFinanceMutationRequestError({
     method,
     requestOrigin,
     origin,
     fetchSite,
     contentType,
     requireJson = false,
-}) {
+}: FinanceMutationRequest): FinanceMutationRequestError | null {
     const normalizedMethod = method.toUpperCase();
     if (normalizedMethod === 'GET' || normalizedMethod === 'HEAD' || normalizedMethod === 'OPTIONS') {
         return null;
@@ -31,5 +48,3 @@ function getFinanceMutationRequestError({
 
     return null;
 }
-
-module.exports = { getFinanceMutationRequestError };

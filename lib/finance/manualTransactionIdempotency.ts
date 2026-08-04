@@ -1,11 +1,35 @@
+import type { FinanceTransaction } from '@/lib/types';
+
 const FINANCE_IDEMPOTENCY_KEY_PATTERN =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function isFinanceIdempotencyKey(value) {
+interface ManualTransactionAttempt {
+    fingerprint: string;
+    key: string;
+}
+
+type ManualTransactionReplayRequest = Pick<
+    FinanceTransaction,
+    | 'source_id'
+    | 'category_id'
+    | 'direction'
+    | 'amount'
+    | 'currency'
+    | 'merchant'
+    | 'reference_number'
+    | 'transaction_date'
+    | 'notes'
+>;
+
+export function isFinanceIdempotencyKey(value: unknown) {
     return typeof value === 'string' && FINANCE_IDEMPOTENCY_KEY_PATTERN.test(value.trim());
 }
 
-function getManualTransactionAttempt(previous, fingerprint, createKey) {
+export function getManualTransactionAttempt(
+    previous: ManualTransactionAttempt | null | undefined,
+    fingerprint: string,
+    createKey: () => string
+): ManualTransactionAttempt {
     if (previous?.fingerprint === fingerprint && isFinanceIdempotencyKey(previous.key)) {
         return previous;
     }
@@ -18,7 +42,10 @@ function getManualTransactionAttempt(previous, fingerprint, createKey) {
     return { fingerprint, key };
 }
 
-function isManualTransactionReplay(existing, requested) {
+export function isManualTransactionReplay(
+    existing: FinanceTransaction,
+    requested: ManualTransactionReplayRequest
+) {
     return existing.source_id === requested.source_id
         && (existing.category_id || null) === (requested.category_id || null)
         && existing.direction === requested.direction
@@ -31,9 +58,3 @@ function isManualTransactionReplay(existing, requested) {
         && existing.source === 'manual'
         && existing.status === 'confirmed';
 }
-
-module.exports = {
-    getManualTransactionAttempt,
-    isFinanceIdempotencyKey,
-    isManualTransactionReplay,
-};

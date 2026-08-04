@@ -8,9 +8,9 @@
     "start": "next start",
     "lint": "next lint",
     "test:log-viewer": "node scripts/test-log-viewer.js",
-    "test:finance-security": "node scripts/test-finance-security.js",
-    "test:finance-idempotency": "node scripts/test-finance-idempotency.js",
-    "test:finance-ordering": "node scripts/test-finance-ordering.js",
+    "test:finance-security": "node --experimental-strip-types scripts/test-finance-security.js",
+    "test:finance-idempotency": "node --experimental-strip-types scripts/test-finance-idempotency.js",
+    "test:finance-ordering": "node --experimental-strip-types scripts/test-finance-ordering.js",
     "test:finance-share": "node scripts/test-finance-share.js"
   },
   "dependencies": {

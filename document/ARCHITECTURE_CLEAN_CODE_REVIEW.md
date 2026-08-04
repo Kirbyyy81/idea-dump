@@ -454,8 +454,7 @@ The Finance share-target flow depends on a message contract shared informally be
 
 - The OCR service has a normal Vitest suite.
 - The main application uses several custom Node.js test scripts.
-- Four Finance source modules remain JavaScript files.
-- `allowJs` is enabled in the main TypeScript configuration.
+- All Finance source modules are strict TypeScript, while `allowJs` remains enabled in the main TypeScript configuration.
 - The GitHub workflows create pull requests and releases, but do not run application validation.
 - Phase 1 removed the automatic `predev: npm install`; dependency installation remains an explicit setup step.
 
@@ -467,9 +466,8 @@ The Finance share-target flow depends on a message contract shared informally be
 4. Add route authorization and validation tests.
 5. Add repository tests around ownership filtering.
 6. Add focused UI tests for critical forms and state transitions.
-7. Convert the remaining Finance JavaScript modules to TypeScript.
-8. Disable `allowJs` after the conversion.
-9. Add a CI validation workflow.
+7. Disable `allowJs` after reviewing the remaining JavaScript configuration and test files.
+8. Add a CI validation workflow.
 
 The CI workflow should run:
 
@@ -603,12 +601,12 @@ idea-dump/
 
 ## Architecture Issue Progress Tracker
 
-Summary as of 2026-08-02:
+Summary as of 2026-08-05:
 
 - Done: 4
 - In progress: 0
-- Partial: 8
-- Not started: 10
+- Partial: 9
+- Not started: 9
 - Blocked: 0
 
 | ID | Issue | Status | Current evidence and completion gate | Last updated |
@@ -619,7 +617,7 @@ Summary as of 2026-08-02:
 | AC-004 | No-op route layouts | **Done** | Removed all eleven layouts that only returned `children`. The root layout and Finance authorization layout remain. | 2026-08-02 |
 | AC-005 | Legacy redirect route noise | **Done** | Removed five unused legacy routes after verifying PWA, Auth, and Film navigation use canonical paths. Retained and documented `/api-tools` because Supabase module metadata actively supplies it to runtime navigation. | 2026-08-02 |
 | AC-006 | Main-app test organization | **Partial** | OCR has Vitest, while the main app uses custom Node.js scripts. Done when the main app has a standard test runner, consistent test placement, and CI execution. | 2026-08-02 |
-| AC-007 | Remaining Finance JavaScript and `allowJs` | **Not started** | Four Finance source modules remain JavaScript and root TypeScript enables `allowJs`. Done when they are typed, their tests pass, and `allowJs` is disabled. | 2026-08-02 |
+| AC-007 | Remaining Finance JavaScript and `allowJs` | **Partial** | Converted all four Finance source modules to strict TypeScript and updated their focused test runners. Root TypeScript still enables `allowJs`. Done when `allowJs` is disabled without breaking the build or tests. | 2026-08-05 |
 | AC-008 | Domain type monolith | **Not started** | `lib/types.ts` is about 630 lines and has 71 importers. Done when domain types and runtime configuration have clear owners and cross-domain imports no longer depend on a monolith. | 2026-08-02 |
 | AC-009 | Untyped Supabase schema boundary | **Not started** | Supabase clients have no generated `Database` generic. Done when one reviewed generated type parameterizes browser, server, and admin clients and is refreshed with schema changes. | 2026-08-02 |
 | AC-010 | Inconsistent API errors and validation | **Partial** | Finance and Film have helpers, while other routes define local parsing and response shapes. Done when transport errors, validation failures, and query parsing follow one documented contract with tests. | 2026-08-02 |

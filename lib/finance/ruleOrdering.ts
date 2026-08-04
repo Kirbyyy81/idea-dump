@@ -1,12 +1,14 @@
+type FinanceRuleOrderable = {
+    is_active: boolean;
+    priority: number;
+    created_at: string;
+};
+
 /**
  * Matches the Rule library order enforced by the Finance rules API:
  * active rules first, lower priorities first, then newest creation time.
- *
- * @template {{ is_active: boolean, priority: number, created_at: string }} T
- * @param {T} left
- * @param {T} right
  */
-function compareFinanceRules(left, right) {
+export function compareFinanceRules<T extends FinanceRuleOrderable>(left: T, right: T) {
     return Number(right.is_active) - Number(left.is_active)
         || left.priority - right.priority
         || right.created_at.localeCompare(left.created_at);
@@ -14,16 +16,7 @@ function compareFinanceRules(left, right) {
 
 /**
  * Returns a sorted copy so React state is never mutated in place.
- *
- * @template {{ is_active: boolean, priority: number, created_at: string }} T
- * @param {readonly T[]} rules
- * @returns {T[]}
  */
-function sortFinanceRules(rules) {
+export function sortFinanceRules<T extends FinanceRuleOrderable>(rules: readonly T[]): T[] {
     return [...rules].sort(compareFinanceRules);
 }
-
-module.exports = {
-    compareFinanceRules,
-    sortFinanceRules,
-};
