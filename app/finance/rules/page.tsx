@@ -16,7 +16,6 @@ import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { Toggle } from '@/components/atoms/Toggle';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
-import { PageHeader } from '@/components/molecules/PageHeader';
 import { FinanceLoadingState } from '../_components/FinanceLoadingState';
 import { FinanceCategory, FinanceRule, FinanceRuleSuggestion, FinanceSource, FinanceTransactionDirection } from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
@@ -201,9 +200,12 @@ export default function FinanceRulesPage() {
     };
 
     return (
-        <AppShell contentClassName="p-5 md:p-8">
+        <AppShell
+            contentClassName="p-5 md:p-8"
+            pageTitle="Finance rules"
+            headerClassName="mb-3"
+        >
             <div className="mx-auto max-w-7xl">
-                <PageHeader title="Finance rules" className="mb-3" />
                 <p className="text-sm text-text-muted">Active rules are applied by priority during screenshot processing.</p>
 
                 {!isLoading && suggestions.length > 0 && (

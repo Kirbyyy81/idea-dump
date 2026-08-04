@@ -14,7 +14,6 @@ import {
     Workflow,
 } from 'lucide-react';
 import { AppShell } from '@/components/organisms/AppShell';
-import { PageHeader } from '@/components/molecules/PageHeader';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
@@ -232,21 +231,20 @@ export default function LogApiToolsPage() {
     };
 
     return (
-        <AppShell contentClassName="p-5 md:p-8">
+        <AppShell
+            contentClassName="p-5 md:p-8"
+            pageTitle="Weekly Logs API Tools"
+            headerAction={
+                <Link
+                    href="/logs"
+                    aria-label="Back to weekly productivity log"
+                    className="flex items-center gap-2 text-text-secondary transition-colors hover:text-text-primary"
+                >
+                    <ArrowLeft size={20} />
+                </Link>
+            }
+        >
             <div className="max-w-5xl space-y-8">
-                <PageHeader
-                    title="Weekly Logs API Tools"
-                    action={
-                        <Link
-                            href="/logs"
-                            aria-label="Back to weekly productivity log"
-                            className="flex items-center gap-2 text-text-secondary transition-colors hover:text-text-primary"
-                        >
-                            <ArrowLeft size={20} />
-                        </Link>
-                    }
-                />
-
                     <Card className="p-6">
                         <div className="flex items-center gap-2 mb-3">
                             <Workflow size={20} className="text-accent-rose" />

@@ -12,7 +12,6 @@ import { TicketCard } from '@/components/organisms/TicketCard';
 import { TicketForm } from '@/components/organisms/TicketForm';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
-import { PageHeader } from '@/components/molecules/PageHeader';
 import { CreateTicketInput, Note, Project, Ticket, inferStatus, priorityConfig } from '@/lib/types';
 import {
     ArrowLeft,
@@ -246,7 +245,14 @@ export default function ProjectPage() {
     const priority = priorityConfig[project.priority];
 
     return (
-        <AppShell projects={projects} isLoading={isLoading} loadingMessage="Loading project..." contentClassName="p-5 md:p-8">
+        <AppShell
+            projects={projects}
+            isLoading={isLoading}
+            loadingMessage="Loading project..."
+            contentClassName="p-5 md:p-8"
+            pageTitle={project.title}
+            headerAction={<StatusBadge status={inferStatus(project)} className="px-3 py-1 text-sm" />}
+        >
             <div className="max-w-5xl mx-auto">
                 <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <Link
@@ -283,11 +289,6 @@ export default function ProjectPage() {
             </div>
 
             <div className="mb-8">
-                <PageHeader
-                    title={project.title}
-                    action={<StatusBadge status={inferStatus(project)} className="px-3 py-1 text-sm" />}
-                />
-
                 {project.description && (
                     <p className="text-lg mb-6 text-text-secondary">{project.description}</p>
                 )}

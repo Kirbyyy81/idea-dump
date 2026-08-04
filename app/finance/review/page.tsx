@@ -15,7 +15,6 @@ import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
 import { Toggle } from '@/components/atoms/Toggle';
-import { PageHeader } from '@/components/molecules/PageHeader';
 import {
     FinanceCandidateTransaction,
     FinanceCategory,
@@ -299,10 +298,8 @@ export default function FinanceReviewPage() {
     };
 
     return (
-        <AppShell contentClassName="p-5 md:p-8">
+        <AppShell contentClassName="p-5 md:p-8" pageTitle="Review queue">
             <div className="mx-auto max-w-7xl">
-                <PageHeader title="Review queue" />
-
                 <div className="grid grid-cols-1 gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
                     <section className="border border-border-default bg-bg-surface">
                         <div className="border-b border-border-default px-5 py-4"><h2 className="text-base font-bold">Awaiting review <span className="text-text-muted">({isLoading ? '…' : candidates.length})</span></h2></div>

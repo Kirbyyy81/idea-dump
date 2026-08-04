@@ -6,7 +6,6 @@ import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
-import { PageHeader } from '@/components/molecules/PageHeader';
 import { FinanceLoadingState } from '../_components/FinanceLoadingState';
 import { FinanceSource } from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
@@ -125,9 +124,12 @@ export default function FinanceSourcesPage() {
     };
 
     return (
-        <AppShell contentClassName="p-5 md:p-8">
+        <AppShell
+            contentClassName="p-5 md:p-8"
+            pageTitle="Sources"
+            headerClassName="mb-3"
+        >
             <div className="mx-auto max-w-5xl">
-                <PageHeader title="Sources" className="mb-3" />
                 <p className="text-sm text-text-muted">
                     Sources identify where money was paid from or received into. V1 does not calculate source balances.
                 </p>

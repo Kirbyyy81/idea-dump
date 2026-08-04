@@ -25,7 +25,6 @@ import {
 } from 'recharts';
 import { AppShell } from '@/components/organisms/AppShell';
 import { Card } from '@/components/atoms/Card';
-import { PageHeader } from '@/components/molecules/PageHeader';
 import { FilmDashboardSummary, FilmRollStatus, filmRollStatusConfig } from '@/lib/types';
 import { formatCurrencyMYR } from '@/lib/utils';
 
@@ -310,10 +309,8 @@ export default function FilmDashboardPage() {
     }
 
     return (
-        <AppShell contentClassName="film-module p-5 md:p-8">
+        <AppShell pageTitle="Film Dashboard" contentClassName="film-module p-5 md:p-8">
             <div className="mx-auto max-w-7xl space-y-7">
-                <PageHeader title="Film Dashboard" />
-
                 {error ? (
                     <div className="rounded-lg border border-error bg-error-bg p-4 text-error">{error}</div>
                 ) : summary && (

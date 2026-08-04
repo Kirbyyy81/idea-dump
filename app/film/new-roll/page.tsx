@@ -10,7 +10,6 @@ import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
 import { FileUpload } from '@/components/molecules/FileUpload';
-import { PageHeader } from '@/components/molecules/PageHeader';
 import { useAlert } from '@/lib/contexts/AlertContext';
 import {
     FilmCamera,
@@ -131,9 +130,8 @@ export default function NewFilmRollPage() {
     }
 
     return (
-        <AppShell contentClassName="film-module p-5 md:p-8">
+        <AppShell pageTitle="Register a Film Roll" contentClassName="film-module p-5 md:p-8">
             <div className="mx-auto max-w-5xl space-y-7">
-                <PageHeader title="Register a Film Roll" />
                 {error && <div className="rounded-lg border border-error bg-error-bg px-4 py-3 text-sm text-error">{error}</div>}
                 <form onSubmit={handleSubmit}>
                     <Card className="overflow-hidden p-0">

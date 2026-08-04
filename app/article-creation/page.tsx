@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { PageHeader } from '@/components/molecules/PageHeader';
 import { Project } from '@/lib/types';
 import { AppShell } from '@/components/organisms/AppShell';
 import { MinuteReaderCard } from './_components/MinuteReaderCard';
@@ -41,10 +40,13 @@ export default function ArticleCreationPage() {
     }, []);
 
     return (
-        <AppShell projects={projects} isLoading={isLoading} loadingMessage="Loading article creation tools...">
+        <AppShell
+            projects={projects}
+            isLoading={isLoading}
+            loadingMessage="Loading article creation tools..."
+            pageTitle="Article Creation"
+        >
             <div className="max-w-5xl space-y-8">
-                <PageHeader title="Article Creation" />
-
                 <MinuteReaderCard />
                 <SlugImageNameCard />
                 <TocAnchorGeneratorCard />

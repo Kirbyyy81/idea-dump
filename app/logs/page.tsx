@@ -14,7 +14,6 @@ import { useAlert } from '@/lib/contexts/AlertContext';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
-import { PageHeader } from '@/components/molecules/PageHeader';
 
 export default function LogsPage() {
     const [logs, setLogs] = useState<DailyLogEntry[]>([]);
@@ -253,11 +252,12 @@ export default function LogsPage() {
     const sortedDates = Object.keys(groupedLogs).sort((a, b) => b.localeCompare(a));
 
     return (
-        <AppShell projects={projects} isLoading={isLoading}>
-                <PageHeader
-                    title="Weekly Productivity Log"
-                    action={
-                        <div className="flex flex-wrap items-center gap-2">
+        <AppShell
+            projects={projects}
+            isLoading={isLoading}
+            pageTitle="Weekly Productivity Log"
+            headerAction={
+                <div className="flex flex-wrap items-center gap-2">
                         <Link href="/logs/api-tools">
                             <Button variant="ghost" icon={<BookOpen size={18} />} className="h-10 px-3">
                                 API Tools
@@ -269,9 +269,9 @@ export default function LogsPage() {
                         <Button variant="primary" onClick={() => setShowNewForm(true)} icon={<Plus size={18} />} className="h-10 px-4">
                             New Entry
                         </Button>
-                        </div>
-                    }
-                />
+                </div>
+            }
+        >
 
                 {error && (
                     <div className="mb-6 p-4 bg-error-bg border border-error rounded-lg text-error">

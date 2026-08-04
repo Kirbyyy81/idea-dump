@@ -7,7 +7,6 @@ import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
-import { PageHeader } from '@/components/molecules/PageHeader';
 import { FinanceLoadingState } from '../_components/FinanceLoadingState';
 import { FinanceCategory, FinanceCategoryType } from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
@@ -158,10 +157,8 @@ export default function FinanceCategoriesPage() {
     const missingDefaultExpenseCategories = getMissingDefaultExpenseCategories(categories);
 
     return (
-        <AppShell contentClassName="p-5 md:p-8">
+        <AppShell contentClassName="p-5 md:p-8" pageTitle="Categories">
             <div className="mx-auto max-w-7xl">
-                <PageHeader title="Categories" />
-
                 <div className="grid grid-cols-1 gap-5 lg:grid-cols-[360px_minmax(0,1fr)]">
                     <form onSubmit={addCategory}>
                         <Card className="p-5">

@@ -5,7 +5,7 @@
 import { ReactNode, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, ExternalLink, FolderSync, Heart, ImageIcon, Save, Star, X } from 'lucide-react';
+import { ExternalLink, FolderSync, Heart, ImageIcon, Save, Star, X } from 'lucide-react';
 import { AppShell } from '@/components/organisms/AppShell';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
@@ -24,6 +24,7 @@ import {
     filmFormats,
     filmProcessTypeConfig,
     filmProcessTypes,
+    filmRollStatusConfig,
     filmTypeConfig,
     filmTypes,
 } from '@/lib/types';
@@ -35,7 +36,6 @@ import {
     getStatusAfterSavingFilmRollStep,
     isFilmRollStep,
 } from '@/lib/film/workflow';
-import { RollHeader } from './_components/RollHeader';
 import { StepStepper } from './_components/StepStepper';
 import { StatsCards } from './_components/StatsCards';
 
@@ -288,13 +288,9 @@ function RollDetailContent() {
 
     if (!roll || !rollForm) {
         return (
-            <AppShell contentClassName="film-module p-5 md:p-8">
+            <AppShell contentClassName="film-module p-5 md:p-8" pageTitle="Film Roll">
                 <div className="max-w-4xl">
-                    <Link href="/film" className="action-link inline-flex items-center gap-2 text-text-secondary hover:text-text-primary">
-                        <ArrowLeft size={18} />
-                        Back to Film Journal
-                    </Link>
-                    <Card className="mt-6 p-10 text-center text-text-muted">
+                    <Card className="p-10 text-center text-text-muted">
                         Film roll not found.
                     </Card>
                 </div>
@@ -303,21 +299,27 @@ function RollDetailContent() {
     }
 
     return (
-        <AppShell contentClassName="film-module p-5 md:p-8">
-            <div className="max-w-7xl space-y-8">
-                <RollHeader
-                    roll={roll}
-                    isSaving={isSaving}
-                    onSave={handleSaveRoll}
-                    showSave={activeStep === 'film'}
-                    saveLabel="Save & Continue"
-                    alternateAction={activeStep === 'photobook' ? (
+        <AppShell
+            contentClassName="film-module p-5 md:p-8"
+            pageTitle={roll.film_name}
+            headerAction={(
+                <>
+                    <span className={cn('rounded-full border px-3 py-1 text-xs', filmRollStatusConfig[roll.status].colorClass)}>
+                        {filmRollStatusConfig[roll.status].label}
+                    </span>
+                    {activeStep === 'photobook' ? (
                         <Link href={`/film/rolls/${roll.id}?step=film`} className="btn-secondary min-h-8 self-start px-3 py-1.5 text-xs">
                             Roll Details
                         </Link>
-                    ) : undefined}
-                />
-
+                    ) : activeStep === 'film' ? (
+                        <Button icon={<Save size={16} />} onClick={handleSaveRoll} isLoading={isSaving} className="w-full sm:w-auto">
+                            Save & Continue
+                        </Button>
+                    ) : null}
+                </>
+            )}
+        >
+            <div className="max-w-7xl space-y-8">
                 {error && (
                     <div className="rounded-lg border border-error bg-error-bg px-4 py-3 text-sm text-error">
                         {error}

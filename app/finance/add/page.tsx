@@ -9,7 +9,6 @@ import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
 import { FileUpload } from '@/components/molecules/FileUpload';
-import { PageHeader } from '@/components/molecules/PageHeader';
 import { FinanceCategory, FinanceSource, FinanceTransactionDirection } from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
 import {
@@ -225,8 +224,7 @@ export default function AddFinanceTransactionPage() {
         setFile(nextFile);
     };
 
-    return <AppShell contentClassName="p-5 md:p-8"><div className="mx-auto max-w-2xl">
-        <PageHeader title="Add transaction" />
+    return <AppShell contentClassName="p-5 md:p-8" pageTitle="Add transaction"><div className="mx-auto max-w-2xl">
         <FinanceShareExperience />
         {sharedFiles.length === 0 && <>
         <div className="grid grid-cols-2 border border-border-default p-1" role="group" aria-label="Transaction entry method"><button type="button" aria-pressed={mode === 'manual'} disabled={isSaving} onClick={() => setMode('manual')} className={`flex h-10 items-center justify-center gap-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${mode === 'manual' ? 'bg-action-primary text-action-primary-text' : 'text-text-secondary hover:bg-bg-hover'}`}><DocumentDoodleIcon size={16} />Manual</button><button type="button" aria-pressed={mode === 'screenshot'} disabled={isSaving} onClick={() => setMode('screenshot')} className={`flex h-10 items-center justify-center gap-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${mode === 'screenshot' ? 'bg-action-primary text-action-primary-text' : 'text-text-secondary hover:bg-bg-hover'}`}><ScanDoodleIcon size={16} />Screenshot</button></div>

@@ -5,7 +5,6 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { AppShell } from '@/components/organisms/AppShell';
-import { PageHeader } from '@/components/molecules/PageHeader';
 import { ProjectForm } from '../../_components/ProjectForm';
 import { CreateProjectInput } from '@/lib/types';
 import { PageLoader } from '@/components/atoms/Loader';
@@ -78,21 +77,20 @@ export default function EditProjectPage() {
     }
 
     return (
-        <AppShell contentClassName="p-5 md:p-8">
+        <AppShell
+            contentClassName="p-5 md:p-8"
+            pageTitle="Edit Project"
+            headerAction={
+                <Link
+                    href={`/projects/${projectId}`}
+                    aria-label="Back to project"
+                    className="flex items-center gap-2 text-text-secondary transition-colors hover:text-text-primary"
+                >
+                    <ArrowLeft size={20} />
+                </Link>
+            }
+        >
             <div className="max-w-3xl">
-                <PageHeader
-                    title="Edit Project"
-                    action={
-                        <Link
-                            href={`/projects/${projectId}`}
-                            aria-label="Back to project"
-                            className="flex items-center gap-2 text-text-secondary transition-colors hover:text-text-primary"
-                        >
-                            <ArrowLeft size={20} />
-                        </Link>
-                    }
-                />
-
                 {error && (
                     <div className="p-3 rounded-lg bg-error-bg border border-error mb-6">
                         <p className="text-sm text-error">{error}</p>

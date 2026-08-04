@@ -1,12 +1,13 @@
 'use client';
 
-import { createContext, PropsWithChildren, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { createContext, PropsWithChildren, ReactNode, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
 import { Sidebar } from '@/components/organisms/Sidebar';
 import { LoaderOne } from '@/components/atoms/Loader';
+import { PageHeader } from '@/components/molecules/PageHeader';
 import { Project } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { findModuleRouteRule } from '@/lib/rbac/routes';
@@ -15,9 +16,12 @@ import { PUBLIC_AUTH_PATH_PREFIXES } from '@/lib/auth/routes';
 
 interface AppShellProps extends PropsWithChildren {
     contentClassName?: string;
+    headerAction?: ReactNode;
+    headerClassName?: string;
     projects?: Project[];
     isLoading?: boolean;
     loadingMessage?: string;
+    pageTitle?: string;
     persistent?: boolean;
 }
 
@@ -33,10 +37,20 @@ function matchesPath(pathname: string, prefix: string) {
 
 function ShellContent({
     children,
+    headerAction,
+    headerClassName,
     isLoading,
     loadingMessage,
-}: PropsWithChildren<Pick<AppShellProps, 'isLoading' | 'loadingMessage'>>) {
-    if (!isLoading) return children;
+    pageTitle,
+}: PropsWithChildren<Pick<AppShellProps, 'headerAction' | 'headerClassName' | 'isLoading' | 'loadingMessage' | 'pageTitle'>>) {
+    if (!isLoading) {
+        return (
+            <>
+                {pageTitle && <PageHeader title={pageTitle} action={headerAction} className={headerClassName} />}
+                {children}
+            </>
+        );
+    }
 
     return (
         <div className="flex flex-col items-center justify-center gap-4 py-16">
@@ -51,9 +65,12 @@ function ShellContent({
 export function AppShell({
     children,
     contentClassName = 'p-5 md:p-6',
+    headerAction,
+    headerClassName,
     projects: externalProjects,
     isLoading,
     loadingMessage,
+    pageTitle,
     persistent = false,
 }: AppShellProps) {
     const pathname = usePathname();
@@ -189,7 +206,13 @@ export function AppShell({
     if (!persistent && parentShell) {
         return (
             <div className={cn('min-w-0', contentClassName)}>
-                <ShellContent isLoading={isLoading} loadingMessage={loadingMessage}>
+                <ShellContent
+                    headerAction={headerAction}
+                    headerClassName={headerClassName}
+                    isLoading={isLoading}
+                    loadingMessage={loadingMessage}
+                    pageTitle={pageTitle}
+                >
                     {children}
                 </ShellContent>
             </div>
@@ -282,7 +305,13 @@ export function AppShell({
                     {persistent ? (
                         children
                     ) : (
-                        <ShellContent isLoading={isLoading} loadingMessage={loadingMessage}>
+                        <ShellContent
+                            headerAction={headerAction}
+                            headerClassName={headerClassName}
+                            isLoading={isLoading}
+                            loadingMessage={loadingMessage}
+                            pageTitle={pageTitle}
+                        >
                             {children}
                         </ShellContent>
                     )}

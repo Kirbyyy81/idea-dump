@@ -17,7 +17,6 @@ import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
-import { PageHeader } from '@/components/molecules/PageHeader';
 import { FinanceCategory, FinanceSource, FinanceTransaction, FinanceTransactionDirection } from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
 import { formatCurrency } from '@/lib/utils';
@@ -213,13 +212,12 @@ export default function FinanceTransactionsPage() {
     };
 
     return (
-        <AppShell contentClassName="p-5 md:p-8">
+        <AppShell
+            contentClassName="p-5 md:p-8"
+            pageTitle="Transactions"
+            headerAction={<Link href="/finance/add" className="btn-primary"><AddDoodleIcon size={16} className="mr-2" />Add transaction</Link>}
+        >
             <div className="mx-auto max-w-7xl">
-                <PageHeader
-                    title="Transactions"
-                    action={<Link href="/finance/add" className="btn-primary"><AddDoodleIcon size={16} className="mr-2" />Add transaction</Link>}
-                />
-
                 <div className="space-y-5">
                     {editingId && <form onSubmit={saveTransaction} className="max-w-xl">
                         <Card className="p-5">
