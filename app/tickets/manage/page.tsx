@@ -10,6 +10,7 @@ import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
+import { deleteTicket, listTickets, TicketClientError, updateTicket } from '@/lib/tickets/client';
 import { Project, Ticket, UpdateTicketInput, ticketSourceConfig, ticketStatusConfig } from '@/lib/types';
 
 export default function ManageTicketsPage() {
@@ -29,18 +30,19 @@ export default function ManageTicketsPage() {
         async function fetchData() {
             try {
                 const [ticketsRes, projectsRes] = await Promise.all([
-                    fetch('/api/tickets?scope=manage'),
+                    listTickets({ scope: 'manage' })
+                        .then((data) => ({ data }))
+                        .catch((error: unknown) => ({ error })),
                     fetch('/api/projects'),
                 ]);
 
-                if (ticketsRes.status === 403) {
+                if ('error' in ticketsRes && ticketsRes.error instanceof TicketClientError && ticketsRes.error.status === 403) {
                     setError('You do not have access to manage tickets.');
                     setTickets([]);
-                } else if (!ticketsRes.ok) {
-                    throw new Error('Failed to fetch tickets');
+                } else if ('error' in ticketsRes) {
+                    throw ticketsRes.error;
                 } else {
-                    const ticketsPayload = await ticketsRes.json();
-                    setTickets(ticketsPayload.data || []);
+                    setTickets(ticketsRes.data);
                 }
 
                 if (!projectsRes.ok) throw new Error('Failed to fetch projects');
@@ -83,16 +85,10 @@ export default function ManageTicketsPage() {
 
         setIsSaving(true);
         try {
-            const res = await fetch(`/api/tickets/${editingTicket.id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
-            });
-
-            if (!res.ok) throw new Error('Failed to update ticket');
-
-            const payload = await res.json();
-            setTickets((current) => current.map((ticket) => (ticket.id === editingTicket.id ? payload.data : ticket)));
+            const updatedTicket = await updateTicket(editingTicket.id, data);
+            setTickets((current) => current.map((ticket) => (
+                ticket.id === editingTicket.id ? updatedTicket : ticket
+            )));
             setEditingTicket(null);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to update ticket');
@@ -105,8 +101,7 @@ export default function ManageTicketsPage() {
         if (!confirm('Are you sure you want to delete this ticket?')) return;
 
         try {
-            const res = await fetch(`/api/tickets/${id}`, { method: 'DELETE' });
-            if (!res.ok) throw new Error('Failed to delete ticket');
+            await deleteTicket(id);
             setTickets((current) => current.filter((ticket) => ticket.id !== id));
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to delete ticket');

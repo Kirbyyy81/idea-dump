@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/organisms/AppShell';
 import { TicketForm } from '@/components/organisms/TicketForm';
 import { PageLoader } from '@/components/atoms/Loader';
+import { createTicket } from '@/lib/tickets/client';
 import { CreateTicketInput, Project } from '@/lib/types';
 
 export default function NewTicketPage() {
@@ -36,16 +37,7 @@ export default function NewTicketPage() {
         setError(null);
 
         try {
-            const res = await fetch('/api/tickets', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
-            });
-
-            if (!res.ok) {
-                const payload = await res.json();
-                throw new Error(payload.error || 'Failed to create ticket');
-            }
+            await createTicket(data);
 
             router.push('/tickets');
             router.refresh();

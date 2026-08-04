@@ -13,6 +13,7 @@ import { TicketForm } from '@/components/organisms/TicketForm';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { CreateTicketInput, Note, Project, Ticket, inferStatus, priorityConfig } from '@/lib/types';
+import { createTicket, deleteTicket, listTickets, updateTicket } from '@/lib/tickets/client';
 import {
     ArrowLeft,
     ExternalLink,
@@ -83,11 +84,8 @@ export default function ProjectPage() {
 
                 if (canAccessTickets) {
                     const scope = canManageTickets ? 'manage' : 'mine';
-                    const ticketsRes = await fetch(`/api/tickets?project_id=${projectId}&scope=${scope}`);
-                    if (ticketsRes.ok) {
-                        const ticketsData = await ticketsRes.json();
-                        setTickets(ticketsData.data || []);
-                    }
+                    const tickets = await listTickets({ projectId, scope }).catch(() => null);
+                    if (tickets) setTickets(tickets);
                 }
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'An error occurred');
@@ -165,15 +163,8 @@ export default function ProjectPage() {
     const handleCreateTicket = async (data: CreateTicketInput) => {
         setIsSavingTicket(true);
         try {
-            const res = await fetch('/api/tickets', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
-            });
-
-            if (!res.ok) throw new Error('Failed to create ticket');
-            const payload = await res.json();
-            setTickets((current) => [payload.data, ...current]);
+            const ticket = await createTicket(data);
+            setTickets((current) => [ticket, ...current]);
             setShowTicketForm(false);
             showSuccess('Ticket created.', 'Saved');
         } catch (err) {
@@ -188,15 +179,10 @@ export default function ProjectPage() {
 
         setIsSavingTicket(true);
         try {
-            const res = await fetch(`/api/tickets/${editingTicket.id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
-            });
-
-            if (!res.ok) throw new Error('Failed to update ticket');
-            const payload = await res.json();
-            setTickets((current) => current.map((ticket) => (ticket.id === editingTicket.id ? payload.data : ticket)));
+            const updatedTicket = await updateTicket(editingTicket.id, data);
+            setTickets((current) => current.map((ticket) => (
+                ticket.id === editingTicket.id ? updatedTicket : ticket
+            )));
             setEditingTicket(null);
             showSuccess('Ticket updated.', 'Saved');
         } catch (err) {
@@ -210,8 +196,7 @@ export default function ProjectPage() {
         if (!confirm('Are you sure you want to delete this ticket?')) return;
 
         try {
-            const res = await fetch(`/api/tickets/${id}`, { method: 'DELETE' });
-            if (!res.ok) throw new Error('Failed to delete ticket');
+            await deleteTicket(id);
             setTickets((current) => current.filter((ticket) => ticket.id !== id));
             showSuccess('Ticket deleted.', 'Deleted');
         } catch (err) {

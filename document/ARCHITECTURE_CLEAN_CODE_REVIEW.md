@@ -2,7 +2,7 @@
 
 Original review date: 2026-07-31
 
-Progress tracker last verified: 2026-08-02
+Progress tracker last verified: 2026-08-05
 
 ## Purpose
 
@@ -620,10 +620,10 @@ Summary as of 2026-08-05:
 | AC-007 | Remaining Finance JavaScript and `allowJs` | **Partial** | Converted all four Finance source modules to strict TypeScript and updated their focused test runners. Root TypeScript still enables `allowJs`. Done when `allowJs` is disabled without breaking the build or tests. | 2026-08-05 |
 | AC-008 | Domain type monolith | **Not started** | `lib/types.ts` is about 630 lines and has 71 importers. Done when domain types and runtime configuration have clear owners and cross-domain imports no longer depend on a monolith. | 2026-08-02 |
 | AC-009 | Untyped Supabase schema boundary | **Not started** | Supabase clients have no generated `Database` generic. Done when one reviewed generated type parameterizes browser, server, and admin clients and is refreshed with schema changes. | 2026-08-02 |
-| AC-010 | Inconsistent API errors and validation | **Partial** | Finance and Film have helpers, while other routes define local parsing and response shapes. Done when transport errors, validation failures, and query parsing follow one documented contract with tests. | 2026-08-02 |
-| AC-011 | Missing typed feature clients | **Partial** | Finance has reusable client APIs, while Film, Projects, Tickets, and Logs still use widespread raw `fetch()`. Done when browser requests use domain-owned typed clients or direct server services. | 2026-08-02 |
-| AC-012 | Direct data access in route handlers | **Partial** | Projects and Logs have data-access modules, but 24 of 32 API route files directly create the admin client. Done when service-role queries are concentrated in owned repositories and routes remain HTTP adapters. | 2026-08-02 |
-| AC-013 | Inconsistent business-service layer | **Partial** | Some helpers and OCR services exist, but multi-step Film, Finance, and Ticket orchestration remains in routes. Done when business operations have explicit services with focused tests. | 2026-08-02 |
+| AC-010 | Inconsistent API errors and validation | **Partial** | Finance, Film, and Tickets have domain validation helpers. Projects and Logs still parse request-specific inputs locally, and error contracts vary by feature. Done when transport errors, validation failures, and query parsing follow one documented contract with tests. | 2026-08-05 |
+| AC-011 | Missing typed feature clients | **Partial** | Finance and Tickets have reusable client APIs. Film, Projects, and Logs still use widespread raw `fetch()`. Done when browser requests use domain-owned typed clients or direct server services. | 2026-08-05 |
+| AC-012 | Direct data access in route handlers | **Partial** | Projects, Logs, and Tickets have data-access modules. 22 of 32 API route files still directly create the admin client. Done when service-role queries are concentrated in owned repositories and routes remain HTTP adapters. | 2026-08-05 |
+| AC-013 | Inconsistent business-service layer | **Partial** | Tickets now has a service layer for its authorization-aware business operations. Film and Finance orchestration remains in routes. Done when business operations have explicit services with focused tests. | 2026-08-05 |
 | AC-014 | Monolithic OpenAPI definition | **Not started** | `lib/openapi.ts` is about 637 lines. Done when domain definitions are independently owned, composed into one specification, and contract checks pass. | 2026-08-02 |
 | AC-015 | Large page and client-component responsibilities | **Partial** | Some Film sections are extracted, but Film roll detail, Access Control, and Finance review remain large stateful files. Done when state, mutations, dialogs, and sections have focused ownership and regression coverage. | 2026-08-02 |
 | AC-016 | Overloaded application shell | **Partial** | Extracted canonical module route mapping and matching into client-safe `lib/rbac/routes.ts`, used by `AppShell` authorization and Sidebar navigation activity. `AppShell` still owns project loading, navigation, responsive behavior, spacing, and loading UI. Done when protected layout, page container, loading state, and mobile navigation responsibilities are explicit. | 2026-08-02 |

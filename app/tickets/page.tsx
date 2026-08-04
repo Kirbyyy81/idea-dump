@@ -10,6 +10,7 @@ import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
+import { deleteTicket, listTickets, updateTicket } from '@/lib/tickets/client';
 import { Project, Ticket, UpdateTicketInput, ticketSourceConfig, ticketStatusConfig } from '@/lib/types';
 
 export default function TicketsPage() {
@@ -29,17 +30,15 @@ export default function TicketsPage() {
         async function fetchData() {
             try {
                 const [ticketsRes, projectsRes] = await Promise.all([
-                    fetch('/api/tickets?scope=mine'),
+                    listTickets({ scope: 'mine' }),
                     fetch('/api/projects'),
                 ]);
 
-                if (!ticketsRes.ok) throw new Error('Failed to fetch tickets');
                 if (!projectsRes.ok) throw new Error('Failed to fetch projects');
 
-                const ticketsPayload = await ticketsRes.json();
                 const projectsPayload = await projectsRes.json();
 
-                setTickets(ticketsPayload.data || []);
+                setTickets(ticketsRes);
                 setProjects(projectsPayload.data || []);
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'Failed to load tickets');
@@ -78,16 +77,10 @@ export default function TicketsPage() {
 
         setIsSaving(true);
         try {
-            const res = await fetch(`/api/tickets/${editingTicket.id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
-            });
-
-            if (!res.ok) throw new Error('Failed to update ticket');
-
-            const payload = await res.json();
-            setTickets((current) => current.map((ticket) => (ticket.id === editingTicket.id ? payload.data : ticket)));
+            const updatedTicket = await updateTicket(editingTicket.id, data);
+            setTickets((current) => current.map((ticket) => (
+                ticket.id === editingTicket.id ? updatedTicket : ticket
+            )));
             setEditingTicket(null);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to update ticket');
@@ -100,8 +93,7 @@ export default function TicketsPage() {
         if (!confirm('Are you sure you want to delete this ticket?')) return;
 
         try {
-            const res = await fetch(`/api/tickets/${id}`, { method: 'DELETE' });
-            if (!res.ok) throw new Error('Failed to delete ticket');
+            await deleteTicket(id);
             setTickets((current) => current.filter((ticket) => ticket.id !== id));
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to delete ticket');
