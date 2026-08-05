@@ -1,8 +1,8 @@
 'use client';
 
 import { FinanceCategory } from '@/lib/types';
-import { financeApiRequest } from '@/lib/finance/clientApi';
-import { getVirtualDefaultCategoryName } from '@/lib/finance/categoryOptions';
+import { financeApiRequest } from '@/lib/finance/client';
+import { getVirtualDefaultCategoryName } from '@/lib/finance/catalog';
 
 export async function persistVirtualDefaultCategory(value: string) {
     const name = getVirtualDefaultCategoryName(value);

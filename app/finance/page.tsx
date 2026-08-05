@@ -14,7 +14,7 @@ import {
     PreviousDoodleIcon,
 } from '@/components/atoms/DoodleIcons';
 import { FinanceDashboardSummary } from '@/lib/types';
-import { financeApiRequest } from '@/lib/finance/clientApi';
+import { financeApiRequest } from '@/lib/finance/client';
 import { getLocalFinanceMonth, shiftFinanceMonth } from '@/lib/finance/values';
 import { formatCurrencyMYR } from '@/lib/utils';
 

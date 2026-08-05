@@ -9,7 +9,7 @@ import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
 import { FinanceLoadingState } from '../_components/FinanceLoadingState';
 import { FinanceSource } from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
-import { financeApiRequest } from '@/lib/finance/clientApi';
+import { financeApiRequest } from '@/lib/finance/client';
 
 export default function FinanceSourcesPage() {
     const { showError, showSuccess } = useAlert();

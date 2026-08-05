@@ -13,8 +13,8 @@ import { useAlert } from '@/lib/contexts/AlertContext';
 import {
     getMissingDefaultExpenseCategories,
     mergeFinanceCategory,
-} from '@/lib/finance/categoryOptions';
-import { financeApiRequest } from '@/lib/finance/clientApi';
+} from '@/lib/finance/catalog';
+import { financeApiRequest } from '@/lib/finance/client';
 
 const initialForm = {
     name: '',

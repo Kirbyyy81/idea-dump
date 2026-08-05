@@ -234,7 +234,7 @@ Prefer:
 - Typed API clients for browser requests
 - Server-side feature services when an API round trip is unnecessary
 
-Finance already has [`lib/finance/clientApi.ts`](../lib/finance/clientApi.ts). Film, projects, tickets, and logs should follow a similar pattern rather than using raw `fetch()` calls throughout their pages.
+Finance already has [`lib/finance/client.ts`](../lib/finance/client.ts). Film, projects, tickets, and logs should follow a similar pattern rather than using raw `fetch()` calls throughout their pages.
 
 ### 5. The application shell has overlapping responsibilities
 
@@ -300,8 +300,8 @@ The OCR service is separately packaged and deployed, but it imports application 
 Examples include imports from:
 
 - `lib/types.ts`
-- `lib/finance/parser.ts`
-- `lib/finance/normalizer.ts`
+- `lib/finance/ocr/parser.ts`
+- `lib/finance/ocr/normalizer.ts`
 - `lib/finance/dashboard.ts`
 - `lib/finance/values.ts`
 

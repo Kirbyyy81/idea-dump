@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { sortFinanceRules } = require('../lib/finance/ruleOrdering.ts');
-const { sortFinanceTransactions } = require('../lib/finance/transactionOrdering.ts');
+const { sortFinanceRules } = require('../lib/finance/rules.ts');
+const { sortFinanceTransactions } = require('../lib/finance/transactions/ordering.ts');
 
 function transaction(id, transactionDate, createdAt) {
     return {

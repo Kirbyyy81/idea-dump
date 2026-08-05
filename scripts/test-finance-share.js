@@ -9,7 +9,7 @@ const ts = require('typescript');
 const root = path.resolve(__dirname, '..');
 
 function loadShareFileModule() {
-    const filename = path.join(root, 'lib', 'finance', 'shareFiles.ts');
+    const filename = path.join(root, 'lib', 'finance', 'share', 'files.ts');
     const source = fs.readFileSync(filename, 'utf8');
     const output = ts.transpileModule(source, {
         compilerOptions: {
@@ -195,7 +195,7 @@ function testManifestContract() {
 
 function testPrepareIdempotencyContract() {
     const source = fs.readFileSync(
-        path.join(root, 'lib', 'finance', 'shareBatchClient.ts'),
+        path.join(root, 'lib', 'finance', 'share', 'client.ts'),
         'utf8'
     );
     assert.match(source, /request_id:\s*requestId/);
@@ -229,7 +229,7 @@ function testServerHandoffContract() {
         'utf8'
     );
     const server = fs.readFileSync(
-        path.join(root, 'lib', 'finance', 'shareBatchServer.ts'),
+        path.join(root, 'lib', 'finance', 'share', 'server.ts'),
         'utf8'
     );
     const service = fs.readFileSync(

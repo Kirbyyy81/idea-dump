@@ -4,15 +4,15 @@ import {
     FinanceTransactionStatus,
 } from '@/lib/types';
 import { FINANCE_V1_CURRENCY } from '@/lib/finance/constants';
-import { isFinanceIdempotencyKey } from '@/lib/finance/manualTransactionIdempotency';
-import { getFinanceSourcePreset, normalizeFinanceSourceAliases } from '@/lib/finance/sourceDetection';
+import { isFinanceIdempotencyKey } from '@/lib/finance/transactions/idempotency';
+import { getFinanceSourcePreset, normalizeFinanceSourceAliases } from '@/lib/finance/ocr/sourceDetection';
 import { isFutureFinanceDate, normalizeFinanceDate, toPositiveFinanceAmount } from '@/lib/finance/values';
 import {
     FINANCE_SHARE_MIME_TYPES,
     MAX_FINANCE_SHARE_BATCH_BYTES,
     MAX_FINANCE_SHARE_FILE_BYTES,
     MAX_FINANCE_SHARE_FILES,
-} from '@/lib/finance/shareBatchServer';
+} from '@/lib/finance/share/server';
 
 const CATEGORY_TYPES: FinanceCategoryType[] = ['expense', 'income'];
 const TRANSACTION_DIRECTIONS: FinanceTransactionDirection[] = ['expense', 'income'];

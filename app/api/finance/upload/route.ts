@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
-import { authorizeFinance, jsonError } from '@/lib/finance/api';
+import { authorizeFinance, jsonError } from '@/lib/finance/auth';
 import { getFinanceIntakeHistory } from '@/lib/finance/service';
 
 export const dynamic = 'force-dynamic';

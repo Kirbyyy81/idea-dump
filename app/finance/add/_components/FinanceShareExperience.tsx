@@ -9,19 +9,19 @@ import {
     ScanDoodleIcon,
     WarningDoodleIcon,
 } from '@/components/atoms/DoodleIcons';
-import { FinanceApiError } from '@/lib/finance/clientApi';
+import { FinanceApiError } from '@/lib/finance/client';
 import {
     commitFinanceShareBatch,
     getActiveFinanceShareBatch,
     prepareFinanceShareBatch,
     uploadPreparedFinanceShareFiles,
-} from '@/lib/finance/shareBatchClient';
+} from '@/lib/finance/share/client';
 import {
     FinanceSharedFileValidation,
     formatFinanceShareFileSize,
     MAX_FINANCE_SHARE_FILES,
     validateFinanceSharedFile,
-} from '@/lib/finance/shareFiles';
+} from '@/lib/finance/share/files';
 import { FinanceShareBatch } from '@/lib/types';
 import {
     IncomingFinanceShareFile,

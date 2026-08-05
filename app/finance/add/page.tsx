@@ -14,19 +14,19 @@ import { useAlert } from '@/lib/contexts/AlertContext';
 import {
     getFinanceCategoryOptions,
     mergeFinanceCategory,
-} from '@/lib/finance/categoryOptions';
-import { persistVirtualDefaultCategory } from '@/lib/finance/categoryPersistence';
+} from '@/lib/finance/catalog';
+import { persistVirtualDefaultCategory } from '@/lib/finance/catalogClient';
 import {
     FinanceOcrClientError,
     FinanceOcrPhase,
     uploadFinanceScreenshot,
     warmFinanceOcr,
-} from '@/lib/finance/ocrClient';
+} from '@/lib/finance/ocr/client';
 import { OcrProgress } from './_components/OcrProgress';
 import { FinanceShareExperience } from './_components/FinanceShareExperience';
 import { FinanceLoadingState } from '../_components/FinanceLoadingState';
-import { financeApiRequest } from '@/lib/finance/clientApi';
-import { getManualTransactionAttempt } from '@/lib/finance/manualTransactionIdempotency';
+import { financeApiRequest } from '@/lib/finance/client';
+import { getManualTransactionAttempt } from '@/lib/finance/transactions/idempotency';
 import {
     getFinanceTransactionTextError,
     FINANCE_TIME_ZONE_HEADER,

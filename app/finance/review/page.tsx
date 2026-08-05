@@ -29,8 +29,8 @@ import { cn, formatCurrency } from '@/lib/utils';
 import {
     getFinanceCategoryOptions,
     mergeFinanceCategory,
-} from '@/lib/finance/categoryOptions';
-import { persistVirtualDefaultCategory } from '@/lib/finance/categoryPersistence';
+} from '@/lib/finance/catalog';
+import { persistVirtualDefaultCategory } from '@/lib/finance/catalogClient';
 import {
     FINANCE_TIME_ZONE_HEADER,
     getFinanceTransactionTextError,
@@ -44,7 +44,7 @@ import {
     MAX_FINANCE_REFERENCE_LENGTH,
     toPositiveFinanceAmount,
 } from '@/lib/finance/values';
-import { FinanceApiError, financeApiRequest } from '@/lib/finance/clientApi';
+import { FinanceApiError, financeApiRequest } from '@/lib/finance/client';
 
 const NEW_SOURCE = '__new_source__';
 const NEW_CATEGORY = '__new_category__';

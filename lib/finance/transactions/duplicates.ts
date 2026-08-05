@@ -3,10 +3,10 @@ import {
     FinanceDuplicateOutcome,
     FinanceDuplicateSignal,
 } from '@/lib/types';
-import { normalizeFinanceMerchantKey } from '@/lib/finance/normalizer';
+import { normalizeFinanceMerchantKey } from '@/lib/finance/ocr/normalizer';
 import { listFinanceDuplicateCandidates } from '@/lib/finance/repository';
 
-export { normalizeFinanceMerchantKey } from '@/lib/finance/normalizer';
+export { normalizeFinanceMerchantKey } from '@/lib/finance/ocr/normalizer';
 
 export interface FinanceDuplicateAssessment {
     outcome: FinanceDuplicateOutcome;

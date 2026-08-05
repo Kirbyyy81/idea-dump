@@ -1,10 +1,10 @@
 import { PostgrestError } from '@supabase/supabase-js';
-import { canonicalFinanceCategoryName } from '@/lib/finance/categoryOptions';
+import { canonicalFinanceCategoryName } from '@/lib/finance/catalog';
 import { aggregateFinanceDashboard, FinanceDashboardRow } from '@/lib/finance/dashboard';
-import { assessFinanceDuplicate, financeDuplicateColumns } from '@/lib/finance/duplicates';
+import { assessFinanceDuplicate, financeDuplicateColumns } from '@/lib/finance/transactions/duplicates';
 import {
     isManualTransactionReplay,
-} from '@/lib/finance/manualTransactionIdempotency';
+} from '@/lib/finance/transactions/idempotency';
 import {
     acceptFinanceRuleSuggestion,
     createFinanceCategory,
@@ -73,17 +73,17 @@ import {
     isFinanceUuid,
     parseFinanceTransaction,
 } from '@/lib/finance/schemas';
-import { normalizeFinanceTransaction } from '@/lib/finance/api';
+import { normalizeFinanceTransaction } from '@/lib/finance/auth';
 import { getFinanceMonthRange, getLocalFinanceMonth } from '@/lib/finance/values';
-import { parseFinanceText } from '@/lib/finance/parser';
+import { parseFinanceText } from '@/lib/finance/ocr/parser';
 import { FINANCE_V1_CURRENCY } from '@/lib/finance/constants';
-import { getFinanceCandidateReference } from '@/lib/finance/api';
+import { getFinanceCandidateReference } from '@/lib/finance/auth';
 import {
     FINANCE_SHARE_PROCESSING_VERSION,
     financeShareRpcError,
     normalizeShareReservation,
     wakeFinanceShareQueue,
-} from '@/lib/finance/shareBatchServer';
+} from '@/lib/finance/share/server';
 import {
     FinanceCandidatePayload,
     FinanceCandidateTransaction,

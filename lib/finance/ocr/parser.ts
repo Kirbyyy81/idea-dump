@@ -5,8 +5,8 @@ import {
     FinanceTransactionDirection,
 } from '@/lib/types';
 import { FINANCE_V1_CURRENCY } from '@/lib/finance/constants';
-import { normalizeFinanceMerchantKey } from '@/lib/finance/normalizer';
-import { detectFinanceSource } from '@/lib/finance/sourceDetection';
+import { normalizeFinanceMerchantKey } from '@/lib/finance/ocr/normalizer';
+import { detectFinanceSource } from '@/lib/finance/ocr/sourceDetection';
 
 interface ParsedCandidate {
     confidence: number;

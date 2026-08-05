@@ -4,7 +4,7 @@ import {
     isFinanceSerializationError,
     jsonError,
     readFinanceJsonObject,
-} from '@/lib/finance/api';
+} from '@/lib/finance/auth';
 import { parseFinanceReviewAction } from '@/lib/finance/schemas';
 import {
     getFinanceReviewQueueForUser,

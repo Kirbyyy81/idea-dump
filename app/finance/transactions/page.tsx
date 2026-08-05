@@ -23,9 +23,9 @@ import { formatCurrency } from '@/lib/utils';
 import {
     getFinanceCategoryOptions,
     mergeFinanceCategory,
-} from '@/lib/finance/categoryOptions';
-import { persistVirtualDefaultCategory } from '@/lib/finance/categoryPersistence';
-import { sortFinanceTransactions } from '@/lib/finance/transactionOrdering';
+} from '@/lib/finance/catalog';
+import { persistVirtualDefaultCategory } from '@/lib/finance/catalogClient';
+import { sortFinanceTransactions } from '@/lib/finance/transactions/ordering';
 import {
     FINANCE_TIME_ZONE_HEADER,
     getFinanceTransactionTextError,
@@ -38,7 +38,7 @@ import {
     MAX_FINANCE_REFERENCE_LENGTH,
     toPositiveFinanceAmount,
 } from '@/lib/finance/values';
-import { financeApiRequest } from '@/lib/finance/clientApi';
+import { financeApiRequest } from '@/lib/finance/client';
 
 const initialForm = {
     source_id: '',

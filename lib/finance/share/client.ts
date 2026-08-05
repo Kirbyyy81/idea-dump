@@ -1,7 +1,7 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
-import { financeApiRequest } from '@/lib/finance/clientApi';
+import { financeApiRequest } from '@/lib/finance/client';
 import { FinanceShareBatch } from '@/lib/types';
 
 const FINANCE_SHARE_BUCKET = 'finance-share-batches';

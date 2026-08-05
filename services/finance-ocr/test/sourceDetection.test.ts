@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { parseFinanceText } from '@/lib/finance/parser';
-import { detectFinanceSource } from '@/lib/finance/sourceDetection';
+import { parseFinanceText } from '@/lib/finance/ocr/parser';
+import { detectFinanceSource } from '@/lib/finance/ocr/sourceDetection';
 import type { FinanceRule, FinanceSource } from '@/lib/types';
 
 const ryt: FinanceSource = {

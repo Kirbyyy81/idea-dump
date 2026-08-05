@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authorizeFinance, jsonError, readFinanceJsonObject } from '@/lib/finance/api';
+import { authorizeFinance, jsonError, readFinanceJsonObject } from '@/lib/finance/auth';
 import { parseFinanceSharePrepare } from '@/lib/finance/schemas';
 import { isFinanceServiceError, prepareFinanceShareBatchForUser } from '@/lib/finance/service';
 

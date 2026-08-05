@@ -23,10 +23,10 @@ import {
     getFinanceCategoryOptions,
     isVirtualDefaultCategoryValue,
     mergeFinanceCategory,
-} from '@/lib/finance/categoryOptions';
-import { persistVirtualDefaultCategory } from '@/lib/finance/categoryPersistence';
-import { financeApiRequest } from '@/lib/finance/clientApi';
-import { sortFinanceRules } from '@/lib/finance/ruleOrdering';
+} from '@/lib/finance/catalog';
+import { persistVirtualDefaultCategory } from '@/lib/finance/catalogClient';
+import { financeApiRequest } from '@/lib/finance/client';
+import { sortFinanceRules } from '@/lib/finance/rules';
 
 type MatchType = FinanceRule['match_type'];
 type RuleWithRelations = FinanceRule & { finance_source?: FinanceSource | null; category?: FinanceCategory | null };
