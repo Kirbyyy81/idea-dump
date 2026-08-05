@@ -4,12 +4,12 @@ import {
     parseCreateTicket,
     parseTicketListQuery,
     readTicketRequestBody,
-} from '@/lib/tickets/schemas';
+} from '@/lib/tickets/core/schemas';
 import {
     createTicketForActor,
     isTicketServiceError,
     listTicketsForActor,
-} from '@/lib/tickets/service';
+} from '@/lib/tickets/core/service';
 
 function serviceErrorResponse(error: unknown) {
     if (!isTicketServiceError(error)) return null;

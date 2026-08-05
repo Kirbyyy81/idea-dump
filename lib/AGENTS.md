@@ -8,6 +8,7 @@
 ## Ownership
 
 - Keep domain behavior in its owning directory, such as `film/`, `finance/`, `logs/`, or `projects/`.
+- Group a domain's common client, validation, persistence, service, and shared-value layers in its `core/` directory. Reserve the domain root for named capabilities and subfeatures.
 - Keep domain types in `lib/types.ts` until the reviewed domain-type migration is implemented as a focused change.
 - Keep genuinely shared infrastructure in `auth/`, `rbac/`, `supabase/`, `contexts/`, or another clearly named cross-domain directory.
 - Avoid adding new domain-owned helpers at the top level of `lib/`.

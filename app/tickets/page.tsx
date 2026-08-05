@@ -10,7 +10,7 @@ import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
-import { deleteTicket, listTickets, updateTicket } from '@/lib/tickets/client';
+import { deleteTicket, listTickets, updateTicket } from '@/lib/tickets/core/client';
 import { listProjects } from '@/lib/projects/client';
 import { Project, Ticket, UpdateTicketInput, ticketSourceConfig, ticketStatusConfig } from '@/lib/types';
 

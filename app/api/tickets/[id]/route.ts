@@ -4,12 +4,12 @@ import {
     parseTicketId,
     parseUpdateTicket,
     readTicketRequestBody,
-} from '@/lib/tickets/schemas';
+} from '@/lib/tickets/core/schemas';
 import {
     deleteTicketForActor,
     isTicketServiceError,
     updateTicketForActor,
-} from '@/lib/tickets/service';
+} from '@/lib/tickets/core/service';
 
 interface RouteParams {
     params: Promise<{ id: string }>;

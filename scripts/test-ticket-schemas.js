@@ -5,7 +5,7 @@ const {
     parseTicketId,
     parseTicketListQuery,
     parseUpdateTicket,
-} = require('../lib/tickets/schemas.ts');
+} = require('../lib/tickets/core/schemas.ts');
 
 const projectId = '570e7f56-e8a8-4e7d-9f4b-6ab5e5481635';
 const ticketId = '2d1e1cba-bc3e-4a40-b06a-46b5c1982481';

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/organisms/AppShell';
 import { TicketForm } from '@/components/organisms/TicketForm';
 import { PageLoader } from '@/components/atoms/Loader';
-import { createTicket } from '@/lib/tickets/client';
+import { createTicket } from '@/lib/tickets/core/client';
 import { CreateTicketInput, Project } from '@/lib/types';
 import { listProjects } from '@/lib/projects/client';
 
