@@ -8,7 +8,7 @@ import { AppShell } from '@/components/organisms/AppShell';
 import { ProjectForm } from '../../_components/ProjectForm';
 import { CreateProjectInput } from '@/lib/types';
 import { PageLoader } from '@/components/atoms/Loader';
-import { getProject, updateProject } from '@/lib/projects/client';
+import { getProject, updateProject } from '@/lib/projects/core/client';
 
 export default function EditProjectPage() {
     const router = useRouter();

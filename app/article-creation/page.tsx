@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Project } from '@/lib/types';
-import { listProjects } from '@/lib/projects/client';
+import { listProjects } from '@/lib/projects/core/client';
 import { AppShell } from '@/components/organisms/AppShell';
 import { MinuteReaderCard } from './_components/MinuteReaderCard';
 import { SlugImageNameCard } from './_components/SlugImageNameCard';

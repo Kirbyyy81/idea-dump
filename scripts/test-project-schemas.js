@@ -4,7 +4,7 @@ const {
     parseCreateProject,
     parseProjectIngest,
     parseUpdateProject,
-} = require('../lib/projects/schemas.ts');
+} = require('../lib/projects/core/schemas.ts');
 
 test('normalizes a project creation request', () => {
     assert.deepEqual(parseCreateProject({

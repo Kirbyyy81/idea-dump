@@ -1,4 +1,4 @@
-import { getOwnedProject, updateOwnedProject } from '@/lib/projects/repository';
+import { getOwnedProject, updateOwnedProject } from '@/lib/projects/core/repository';
 import type { Note } from '@/lib/types';
 import { createNote, deleteNote, findNote, listNotesForProject } from './repository';
 import type { NoteCreateCommand } from './schemas';

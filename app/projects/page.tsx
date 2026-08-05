@@ -10,7 +10,7 @@ import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
 import { cn } from '@/lib/utils';
 import { iconMap } from '@/lib/projects/icons';
-import { listProjects } from '@/lib/projects/client';
+import { listProjects } from '@/lib/projects/core/client';
 
 export default function ProjectsPage() {
     const [projects, setProjects] = useState<Project[]>([]);

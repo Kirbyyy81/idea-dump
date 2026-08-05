@@ -7,7 +7,7 @@ import { TicketForm } from '@/components/organisms/TicketForm';
 import { PageLoader } from '@/components/atoms/Loader';
 import { createTicket } from '@/lib/tickets/core/client';
 import { CreateTicketInput, Project } from '@/lib/types';
-import { listProjects } from '@/lib/projects/client';
+import { listProjects } from '@/lib/projects/core/client';
 
 export default function NewTicketPage() {
     const router = useRouter();

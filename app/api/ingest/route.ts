@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { consumeActiveApiKey } from '@/lib/auth/apiKeys';
 import { canAccessModule, getUserAppAccess } from '@/lib/rbac/access';
 import { authorizeSessionModule, createForbiddenModuleResponse } from '@/lib/rbac/guards';
-import { createIngestedProject } from '@/lib/projects/repository';
-import { parseProjectIngest, readProjectRequestBody } from '@/lib/projects/schemas';
+import { createIngestedProject } from '@/lib/projects/core/repository';
+import { parseProjectIngest, readProjectRequestBody } from '@/lib/projects/core/schemas';
 
 // POST /api/ingest - External API for ingesting projects
 // Headers: { "x-api-key": "your-api-key" }

@@ -7,7 +7,7 @@ import { ArrowLeft } from 'lucide-react';
 import { AppShell } from '@/components/organisms/AppShell';
 import { ProjectForm } from '../_components/ProjectForm';
 import { CreateProjectInput } from '@/lib/types';
-import { createProject } from '@/lib/projects/client';
+import { createProject } from '@/lib/projects/core/client';
 
 export default function NewProjectPage() {
     const router = useRouter();

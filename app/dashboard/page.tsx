@@ -24,7 +24,7 @@ import { AppModuleMetadata } from '@/lib/rbac/types';
 import { useAccess } from '@/lib/contexts/AccessContext';
 import { Project } from '@/lib/types';
 import { AppShell } from '@/components/organisms/AppShell';
-import { listProjects, ProjectClientError } from '@/lib/projects/client';
+import { listProjects, ProjectClientError } from '@/lib/projects/core/client';
 
 const MODULE_ICONS: Record<string, LucideIcon> = {
     BookOpen,

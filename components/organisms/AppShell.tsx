@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 import { findModuleRouteRule } from '@/lib/rbac/routes';
 import { useAccess } from '@/lib/contexts/AccessContext';
 import { PUBLIC_AUTH_PATH_PREFIXES } from '@/lib/auth/routes';
-import { listProjects } from '@/lib/projects/client';
+import { listProjects } from '@/lib/projects/core/client';
 
 interface AppShellProps extends PropsWithChildren {
     contentClassName?: string;

@@ -5,7 +5,7 @@ import {
     getOwnedProject,
     listOwnedProjects,
     updateOwnedProject,
-} from '@/lib/projects/repository';
+} from '@/lib/projects/core/repository';
 import { canAccessModule, getSessionUserAppAccess } from '@/lib/rbac/access';
 import {
     authorizeSessionModule,
@@ -18,7 +18,7 @@ import {
     parseProjectLookupQuery,
     parseUpdateProject,
     readProjectRequestBody,
-} from '@/lib/projects/schemas';
+} from '@/lib/projects/core/schemas';
 
 // GET /api/projects - List owned projects or fetch one owned project.
 // Ticket users may read their own project metadata for ticket forms.

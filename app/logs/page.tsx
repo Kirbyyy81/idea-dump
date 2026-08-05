@@ -21,7 +21,7 @@ import {
     listLogs,
     updateLog,
 } from '@/lib/logs/client';
-import { listProjects } from '@/lib/projects/client';
+import { listProjects } from '@/lib/projects/core/client';
 
 export default function LogsPage() {
     const [logs, setLogs] = useState<DailyLogEntry[]>([]);

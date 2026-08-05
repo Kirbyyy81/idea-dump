@@ -19,7 +19,7 @@ import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
 import { AppShell } from '@/components/organisms/AppShell';
-import { listProjects } from '@/lib/projects/client';
+import { listProjects } from '@/lib/projects/core/client';
 import { Project } from '@/lib/types';
 
 const DISPLAY_NAME_MAX_LENGTH = 80;
