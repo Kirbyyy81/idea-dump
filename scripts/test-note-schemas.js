@@ -4,7 +4,7 @@ const {
     parseCreateNote,
     parseNoteId,
     parseNoteProjectId,
-} = require('../lib/notes/schemas.ts');
+} = require('../lib/notes/core/schemas.ts');
 
 test('normalizes note creation input', () => {
     assert.deepEqual(parseCreateNote({

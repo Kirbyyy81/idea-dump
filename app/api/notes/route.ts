@@ -5,13 +5,13 @@ import {
     parseNoteId,
     parseNoteProjectId,
     readNoteRequestBody,
-} from '@/lib/notes/schemas';
+} from '@/lib/notes/core/schemas';
 import {
     createNoteForUser,
     deleteNoteForUser,
     isNoteServiceError,
     listNotesForUser,
-} from '@/lib/notes/service';
+} from '@/lib/notes/core/service';
 
 function serviceErrorResponse(error: unknown) {
     if (!isNoteServiceError(error)) return null;

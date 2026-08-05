@@ -13,7 +13,7 @@ import { TicketForm } from '@/components/organisms/TicketForm';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { CreateTicketInput, Note, Project, Ticket, UpdateProjectInput, inferStatus, priorityConfig } from '@/lib/types';
-import { createNote, listNotes } from '@/lib/notes/client';
+import { createNote, listNotes } from '@/lib/notes/core/client';
 import { createTicket, deleteTicket, listTickets, updateTicket } from '@/lib/tickets/core/client';
 import { deleteProject, getProject, listProjects, updateProject } from '@/lib/projects/core/client';
 import {
