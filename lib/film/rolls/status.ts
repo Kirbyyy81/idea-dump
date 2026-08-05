@@ -1,5 +1,5 @@
 import { FilmRollStatus } from '@/lib/types';
-import { getFilmCoverProxyUrl } from '@/lib/film/constants';
+import { getFilmCoverProxyUrl } from '@/lib/film/core/constants';
 
 const LEGACY_STATUS_MAP: Record<string, FilmRollStatus> = {
     LOADED: 'SHOOTING',

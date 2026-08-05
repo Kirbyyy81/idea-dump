@@ -4,7 +4,7 @@ import {
     FILM_COVER_BUCKET,
     FILM_COVER_MAX_BYTES,
     FILM_COVER_MIME_TYPES,
-} from '@/lib/film/constants';
+} from '@/lib/film/core/constants';
 
 export type FilmCoverMimeType = (typeof FILM_COVER_MIME_TYPES)[number];
 

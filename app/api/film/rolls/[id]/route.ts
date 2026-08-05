@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { authorizeFilmJournal, filmServiceErrorResponse, jsonError } from '@/lib/film/api';
-import { getFilmRollForUser } from '@/lib/film/service';
+import { authorizeFilmJournal, filmServiceErrorResponse, jsonError } from '@/lib/film/core/api';
+import { getFilmRollForUser } from '@/lib/film/core/service';
 
 export const dynamic = 'force-dynamic';
 

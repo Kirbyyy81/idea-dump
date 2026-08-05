@@ -7,7 +7,7 @@ import {
     removeFilmCoverObjects,
     uploadFilmCover,
     type FilmCoverMimeType,
-} from './covers';
+} from '../covers';
 import { FILM_COVER_MIME_TYPES, FILM_FORMATS, FILM_ROLL_STATUSES, getFilmCoverProxyUrl } from './constants';
 import {
     exchangeCodeForTokens,
@@ -15,7 +15,7 @@ import {
     getValidDriveAccessToken,
     listDriveImages,
     storeDriveTokens,
-} from './integrations/google';
+} from '../integrations/google';
 import {
     createFilmCamera,
     createFilmMaintenanceRecord,

@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { DRIVE_IMAGE_MIME_TYPES, GOOGLE_DRIVE_READONLY_SCOPE } from '../constants';
+import { DRIVE_IMAGE_MIME_TYPES, GOOGLE_DRIVE_READONLY_SCOPE } from '../core/constants';
 
 interface GoogleTokenResponse {
     access_token: string;

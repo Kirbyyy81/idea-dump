@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authorizeFilmJournal, filmServiceErrorResponse, jsonError } from '@/lib/film/api';
-import { parseFilmDriveSync, readFilmRequestBody } from '@/lib/film/schemas';
-import { syncFilmDriveForUser } from '@/lib/film/service';
+import { authorizeFilmJournal, filmServiceErrorResponse, jsonError } from '@/lib/film/core/api';
+import { parseFilmDriveSync, readFilmRequestBody } from '@/lib/film/core/schemas';
+import { syncFilmDriveForUser } from '@/lib/film/core/service';
 
 export const dynamic = 'force-dynamic';
 

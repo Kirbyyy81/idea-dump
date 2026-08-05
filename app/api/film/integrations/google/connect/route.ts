@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
-import { authorizeFilmJournal, jsonError } from '@/lib/film/api';
-import { getFilmGoogleAuthorizationUrl } from '@/lib/film/service';
+import { authorizeFilmJournal, jsonError } from '@/lib/film/core/api';
+import { getFilmGoogleAuthorizationUrl } from '@/lib/film/core/service';
 
 export const dynamic = 'force-dynamic';
 

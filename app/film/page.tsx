@@ -13,7 +13,7 @@ import {
     FilmRollStatus,
     filmRollStatusConfig,
 } from '@/lib/types';
-import { listFilmCameras, listFilmRolls } from '@/lib/film/client';
+import { listFilmCameras, listFilmRolls } from '@/lib/film/core/client';
 import { formatCurrencyMYR } from '@/lib/utils';
 
 function getFilmShellClassName(className = 'p-5 md:p-8') {

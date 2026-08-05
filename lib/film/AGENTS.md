@@ -6,7 +6,8 @@
 
 ## Ownership
 
-- Keep the feature-wide browser client, request schemas, repository, service, API helpers, cover handling, and Film constants at this level.
+- Keep the Film-wide browser client, request schemas, repository, service, API helpers, constants, and validation in `core/`.
+- Keep the cover capability at this level until it needs more than its focused module.
 - Keep Film Roll lifecycle helpers in `rolls/`.
 - Keep external provider integrations in `integrations/`. Provider modules are server-only in practice and must not expose access tokens, refresh tokens, Storage paths, or raw provider errors.
 - Keep Film domain types in `lib/types.ts` until the reviewed domain-type migration changes that repository-wide rule.

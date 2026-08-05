@@ -38,7 +38,7 @@ import {
     updateFilmPhoto,
     updateFilmRoll,
     uploadFilmCover,
-} from '@/lib/film/client';
+} from '@/lib/film/core/client';
 import { cn } from '@/lib/utils';
 import {
     getNextFilmRollStep,

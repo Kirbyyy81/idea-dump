@@ -1,18 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authorizeFilmJournal, filmServiceErrorResponse, jsonError } from '@/lib/film/api';
+import { authorizeFilmJournal, filmServiceErrorResponse, jsonError } from '@/lib/film/core/api';
 import {
     parseFilmQueryId,
     parseFilmRollCreate,
     parseFilmRollListQuery,
     parseFilmRollUpdate,
     readFilmRequestBody,
-} from '@/lib/film/schemas';
+} from '@/lib/film/core/schemas';
 import {
     createFilmRollForUser,
     deleteFilmRollForUser,
     listFilmRollsForUser,
     updateFilmRollForUser,
-} from '@/lib/film/service';
+} from '@/lib/film/core/service';
 
 export const dynamic = 'force-dynamic';
 

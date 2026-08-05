@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authorizeFilmJournal } from '@/lib/film/api';
-import { completeFilmGoogleConnection } from '@/lib/film/service';
+import { authorizeFilmJournal } from '@/lib/film/core/api';
+import { completeFilmGoogleConnection } from '@/lib/film/core/service';
 
 export const dynamic = 'force-dynamic';
 

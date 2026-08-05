@@ -22,7 +22,7 @@ import {
     filmTypeConfig,
     filmTypes,
 } from '@/lib/types';
-import { createFilmRoll, listFilmCameras, uploadFilmCover } from '@/lib/film/client';
+import { createFilmRoll, listFilmCameras, uploadFilmCover } from '@/lib/film/core/client';
 import { cn } from '@/lib/utils';
 
 const initialForm = {

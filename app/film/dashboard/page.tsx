@@ -24,7 +24,7 @@ import {
     YAxis,
 } from 'recharts';
 import { AppShell } from '@/components/organisms/AppShell';
-import { getFilmDashboard } from '@/lib/film/client';
+import { getFilmDashboard } from '@/lib/film/core/client';
 import { Card } from '@/components/atoms/Card';
 import { FilmDashboardSummary, FilmRollStatus, filmRollStatusConfig } from '@/lib/types';
 import { formatCurrencyMYR } from '@/lib/utils';

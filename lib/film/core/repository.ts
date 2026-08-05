@@ -16,7 +16,7 @@ import type {
     FilmRollListQuery,
     FilmRollUpdateCommand,
 } from './schemas';
-import { getStoredFilmRollStatuses, normalizeFilmRoll } from './rolls/status';
+import { getStoredFilmRollStatuses, normalizeFilmRoll } from '../rolls/status';
 
 const FILM_ROLL_RELATIONS = '*, camera:dim_film_cameras(*), cover_photo:film_photos!film_rolls_cover_photo_id_fkey(*)';
 

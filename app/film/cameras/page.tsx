@@ -18,7 +18,7 @@ import {
     listFilmCameras,
     listFilmMaintenance,
     updateFilmCamera,
-} from '@/lib/film/client';
+} from '@/lib/film/core/client';
 import { cn, formatCurrencyMYR } from '@/lib/utils';
 
 const blankCamera = {
