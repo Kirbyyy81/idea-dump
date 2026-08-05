@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase/admin';
-import { authorizeFilmJournal, getOwnedFilmRoll, jsonError } from '@/lib/film/api';
-import { normalizeFilmRoll } from '@/lib/film/status';
-import { toRequiredText } from '@/lib/film/validation';
+import { authorizeFilmJournal, filmServiceErrorResponse, jsonError } from '@/lib/film/api';
+import {
+    parseFilmPhotoUpdate,
+    parseFilmQueryId,
+    readFilmRequestBody,
+} from '@/lib/film/schemas';
+import { listFilmPhotosForUser, updateFilmPhotoForUser } from '@/lib/film/service';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,24 +13,12 @@ export async function GET(request: NextRequest) {
     try {
         const session = await authorizeFilmJournal();
         if ('response' in session) return session.response;
-
-        const filmRollId = new URL(request.url).searchParams.get('film_roll_id');
-        if (!filmRollId) return jsonError('Film roll ID is required');
-
-        const roll = await getOwnedFilmRoll(session.user.id, filmRollId);
-        if (!roll) return jsonError('Film roll not found', 404);
-
-        const admin = createAdminClient();
-        const { data, error } = await admin
-            .from('film_photos')
-            .select('*')
-            .eq('film_roll_id', filmRollId)
-            .eq('user_id', session.user.id)
-            .order('name', { ascending: true });
-
-        if (error) throw error;
-        return NextResponse.json({ data: data || [] });
+        const rollId = parseFilmQueryId(new URL(request.url).searchParams.get('film_roll_id'), 'Film roll ID');
+        if ('error' in rollId) return jsonError(rollId.error);
+        return NextResponse.json({ data: await listFilmPhotosForUser(session.user.id, rollId.data) });
     } catch (error) {
+        const serviceError = filmServiceErrorResponse(error);
+        if (serviceError) return serviceError;
         console.error('Error fetching film photos:', error);
         return jsonError('Failed to fetch film photos', 500);
     }
@@ -37,58 +28,15 @@ export async function PUT(request: NextRequest) {
     try {
         const session = await authorizeFilmJournal();
         if ('response' in session) return session.response;
-
-        const body = await request.json();
-        const id = toRequiredText(body.id);
-        if (!id) return jsonError('Photo ID is required');
-
-        const admin = createAdminClient();
-        const { data: photo, error: findError } = await admin
-            .from('film_photos')
-            .select('*')
-            .eq('id', id)
-            .eq('user_id', session.user.id)
-            .maybeSingle();
-
-        if (findError) throw findError;
-        if (!photo) return jsonError('Photo not found', 404);
-        if (body.film_roll_id !== undefined && body.film_roll_id !== photo.film_roll_id) {
-            return jsonError('Photo does not belong to the requested roll', 400);
-        }
-
-        const updates = {
-            ...(body.is_favorite !== undefined ? { is_favorite: Boolean(body.is_favorite) } : {}),
-            updated_at: new Date().toISOString(),
-        };
-
-        const { data, error } = await admin
-            .from('film_photos')
-            .update(updates)
-            .eq('id', id)
-            .eq('user_id', session.user.id)
-            .select('*')
-            .single();
-
-        if (error) throw error;
-
-        if (body.set_as_cover) {
-            const { data: updatedRoll, error: rollError } = await admin
-                .from('film_rolls')
-                .update({
-                    cover_photo_id: id,
-                    updated_at: new Date().toISOString(),
-                })
-                .eq('id', photo.film_roll_id)
-                .eq('user_id', session.user.id)
-                .select('*, camera:dim_film_cameras(*)')
-                .single();
-
-            if (rollError) throw rollError;
-            return NextResponse.json({ data, roll: normalizeFilmRoll(updatedRoll) });
-        }
-
-        return NextResponse.json({ data });
+        const body = await readFilmRequestBody(request);
+        if ('error' in body) return jsonError(body.error);
+        const input = parseFilmPhotoUpdate(body.data);
+        if ('error' in input) return jsonError(input.error);
+        const result = await updateFilmPhotoForUser(session.user.id, input.data);
+        return NextResponse.json(result.roll ? { data: result.photo, roll: result.roll } : { data: result.photo });
     } catch (error) {
+        const serviceError = filmServiceErrorResponse(error);
+        if (serviceError) return serviceError;
         console.error('Error updating film photo:', error);
         return jsonError('Failed to update film photo', 500);
     }

@@ -24,6 +24,7 @@ import {
     YAxis,
 } from 'recharts';
 import { AppShell } from '@/components/organisms/AppShell';
+import { getFilmDashboard } from '@/lib/film/client';
 import { Card } from '@/components/atoms/Card';
 import { FilmDashboardSummary, FilmRollStatus, filmRollStatusConfig } from '@/lib/types';
 import { formatCurrencyMYR } from '@/lib/utils';
@@ -284,12 +285,8 @@ export default function FilmDashboardPage() {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        fetch('/api/film/dashboard')
-            .then(async (response) => {
-                const payload = await response.json();
-                if (!response.ok) throw new Error(payload.error);
-                setSummary(payload.data);
-            })
+        getFilmDashboard()
+            .then(setSummary)
             .catch((loadError) => setError(loadError.message || 'Failed to load dashboard'));
     }, []);
 

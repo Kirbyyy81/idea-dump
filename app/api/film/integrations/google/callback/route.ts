@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authorizeFilmJournal } from '@/lib/film/api';
-import { exchangeCodeForTokens, storeDriveTokens } from '@/lib/film/googleDrive';
+import { completeFilmGoogleConnection } from '@/lib/film/service';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,8 +28,7 @@ export async function GET(request: NextRequest) {
             return googleRedirect(request, rollId, 'error');
         }
 
-        const tokens = await exchangeCodeForTokens(code);
-        await storeDriveTokens(session.user.id, tokens);
+        await completeFilmGoogleConnection(session.user.id, code);
 
         return googleRedirect(request, rollId, 'connected');
     } catch (error) {

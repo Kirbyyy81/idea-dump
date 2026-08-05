@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase/admin';
 import { authorizeSessionModule } from '@/lib/rbac/guards';
 import { FilmCamera, FilmMaintenanceRecord, FilmRoll } from '@/lib/types';
-import { normalizeFilmRoll } from '@/lib/film/status';
+import { findFilmCameraForUser, findFilmRollForUser } from './repository';
+import { isFilmServiceError } from './service';
 
 export async function authorizeFilmJournal() {
     const access = await authorizeSessionModule('film_journal');
@@ -17,30 +17,16 @@ export function jsonError(message: string, status = 400) {
     return NextResponse.json({ error: message }, { status });
 }
 
-export async function getOwnedFilmRoll(userId: string, rollId: string) {
-    const admin = createAdminClient();
-    const { data, error } = await admin
-        .from('film_rolls')
-        .select('*')
-        .eq('id', rollId)
-        .eq('user_id', userId)
-        .maybeSingle();
+export function filmServiceErrorResponse(error: unknown) {
+    return isFilmServiceError(error) ? jsonError(error.message, error.status) : null;
+}
 
-    if (error) throw error;
-    return data ? normalizeFilmRoll(data) as FilmRoll : null;
+export async function getOwnedFilmRoll(userId: string, rollId: string) {
+    return findFilmRollForUser(userId, rollId) as Promise<FilmRoll | null>;
 }
 
 export async function getOwnedFilmCamera(userId: string, cameraId: string) {
-    const admin = createAdminClient();
-    const { data, error } = await admin
-        .from('dim_film_cameras')
-        .select('*')
-        .eq('id', cameraId)
-        .eq('user_id', userId)
-        .maybeSingle();
-
-    if (error) throw error;
-    return data as FilmCamera | null;
+    return findFilmCameraForUser(userId, cameraId) as Promise<FilmCamera | null>;
 }
 
 export function getRollCost(

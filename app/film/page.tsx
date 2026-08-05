@@ -13,6 +13,7 @@ import {
     FilmRollStatus,
     filmRollStatusConfig,
 } from '@/lib/types';
+import { listFilmCameras, listFilmRolls } from '@/lib/film/client';
 import { formatCurrencyMYR } from '@/lib/utils';
 
 function getFilmShellClassName(className = 'p-5 md:p-8') {
@@ -236,17 +237,12 @@ export default function FilmJournalPage() {
     useEffect(() => {
         async function loadShelf() {
             try {
-                const [rollsResponse, camerasResponse] = await Promise.all([
-                    fetch('/api/film/rolls'),
-                    fetch('/api/film/cameras'),
+                const [loadedRolls, loadedCameras] = await Promise.all([
+                    listFilmRolls(),
+                    listFilmCameras(),
                 ]);
-                if (!rollsResponse.ok || !camerasResponse.ok) throw new Error('Failed to load film shelf');
-                const [rollPayload, cameraPayload] = await Promise.all([
-                    rollsResponse.json(),
-                    camerasResponse.json(),
-                ]);
-                setRolls(rollPayload.data || []);
-                setCameras(cameraPayload.data || []);
+                setRolls(loadedRolls);
+                setCameras(loadedCameras);
             } catch (loadError) {
                 setError(loadError instanceof Error ? loadError.message : 'Failed to load film shelf');
             } finally {

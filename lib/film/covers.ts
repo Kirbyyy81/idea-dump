@@ -67,6 +67,21 @@ export async function removeFilmCover(path: string) {
     if (error) throw error;
 }
 
+export async function downloadFilmCover(path: string) {
+    const admin = createAdminClient();
+    const { data, error } = await admin.storage.from(FILM_COVER_BUCKET).download(path);
+    if (error || !data) return null;
+    return data;
+}
+
+export async function uploadFilmCover(path: string, bytes: Uint8Array, mimeType: FilmCoverMimeType) {
+    const admin = createAdminClient();
+    const { error } = await admin.storage
+        .from(FILM_COVER_BUCKET)
+        .upload(path, bytes, { contentType: mimeType, upsert: false });
+    if (error) throw error;
+}
+
 export async function removeFilmCoverObjects(
     userId: string,
     rollId: string,

@@ -22,6 +22,7 @@ import {
     filmTypeConfig,
     filmTypes,
 } from '@/lib/types';
+import { createFilmRoll, listFilmCameras, uploadFilmCover } from '@/lib/film/client';
 import { cn } from '@/lib/utils';
 
 const initialForm = {
@@ -74,26 +75,20 @@ export default function NewFilmRollPage() {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        fetch('/api/film/cameras')
-            .then((response) => response.json())
-            .then((payload) => setCameras(payload.data || []))
+        listFilmCameras()
+            .then(setCameras)
             .catch(() => setCameras([]));
     }, []);
 
     async function uploadCover(rollId: string) {
         if (!coverFile) return;
-
-        const coverData = new FormData();
-        coverData.append('cover', coverFile);
-        const coverResponse = await fetch(`/api/film/rolls/${rollId}/cover`, {
-            method: 'POST',
-            body: coverData,
+        await uploadFilmCover(rollId, coverFile).catch((uploadError) => {
+            throw new Error(
+                uploadError instanceof Error
+                    ? uploadError.message
+                    : 'Film roll was created, but cover upload failed'
+            );
         });
-
-        if (!coverResponse.ok) {
-            const coverPayload = await coverResponse.json().catch(() => ({}));
-            throw new Error(coverPayload.error || 'Film roll was created, but cover upload failed');
-        }
     }
 
     async function handleSubmit(event: FormEvent) {
@@ -102,26 +97,20 @@ export default function NewFilmRollPage() {
         setError(null);
 
         try {
-            const response = await fetch('/api/film/rolls', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ...form,
-                    status: form.camera_id ? 'SHOOTING' : 'UNUSED',
-                    iso: Number(form.iso),
-                    film_type: form.film_type,
-                    process_type: form.process_type || null,
-                    frames_taken: Number(form.frames_taken || 0),
-                    purchase_price: Number(form.purchase_price || 0),
-                    camera_id: form.camera_id || null,
-                }),
+            const roll = await createFilmRoll({
+                ...form,
+                status: form.camera_id ? 'SHOOTING' : 'UNUSED',
+                iso: Number(form.iso),
+                film_type: form.film_type,
+                process_type: form.process_type || null,
+                frames_taken: Number(form.frames_taken || 0),
+                purchase_price: Number(form.purchase_price || 0),
+                camera_id: form.camera_id || null,
             });
-            const payload = await response.json();
-            if (!response.ok) throw new Error(payload.error || 'Failed to register film roll');
 
-            await uploadCover(payload.data.id);
+            await uploadCover(roll.id);
             showSuccess('Film roll registered.', 'Saved');
-            router.push(`/film/rolls/${payload.data.id}`);
+            router.push(`/film/rolls/${roll.id}`);
         } catch (submitError) {
             setError(submitError instanceof Error ? submitError.message : 'Failed to register film roll');
         } finally {

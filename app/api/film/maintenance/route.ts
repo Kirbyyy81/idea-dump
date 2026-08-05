@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase/admin';
-import { authorizeFilmJournal, getOwnedFilmCamera, jsonError } from '@/lib/film/api';
+import { authorizeFilmJournal, filmServiceErrorResponse, jsonError } from '@/lib/film/api';
 import {
-    normalizeDate,
-    toNonNegativeNumber,
-    toNullableText,
-    toRequiredText,
-} from '@/lib/film/validation';
+    parseFilmMaintenanceCreate,
+    parseFilmMaintenanceUpdate,
+    parseFilmQueryId,
+    readFilmRequestBody,
+} from '@/lib/film/schemas';
+import {
+    createFilmMaintenanceForUser,
+    deleteFilmMaintenanceForUser,
+    listFilmMaintenanceForUser,
+    updateFilmMaintenanceForUser,
+} from '@/lib/film/service';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,24 +19,12 @@ export async function GET(request: NextRequest) {
     try {
         const session = await authorizeFilmJournal();
         if ('response' in session) return session.response;
-
-        const cameraId = new URL(request.url).searchParams.get('camera_id');
-        if (!cameraId) return jsonError('Camera ID is required');
-
-        const camera = await getOwnedFilmCamera(session.user.id, cameraId);
-        if (!camera) return jsonError('Camera not found', 404);
-
-        const admin = createAdminClient();
-        const { data, error } = await admin
-            .from('film_maintenance_records')
-            .select('*')
-            .eq('camera_id', cameraId)
-            .eq('user_id', session.user.id)
-            .order('service_date', { ascending: false });
-
-        if (error) throw error;
-        return NextResponse.json({ data: data || [] });
+        const cameraId = parseFilmQueryId(new URL(request.url).searchParams.get('camera_id'), 'Camera ID');
+        if ('error' in cameraId) return jsonError(cameraId.error);
+        return NextResponse.json({ data: await listFilmMaintenanceForUser(session.user.id, cameraId.data) });
     } catch (error) {
+        const serviceError = filmServiceErrorResponse(error);
+        if (serviceError) return serviceError;
         console.error('Error fetching maintenance records:', error);
         return jsonError('Failed to fetch maintenance records', 500);
     }
@@ -41,32 +34,17 @@ export async function POST(request: NextRequest) {
     try {
         const session = await authorizeFilmJournal();
         if ('response' in session) return session.response;
-
-        const body = await request.json();
-        const cameraId = toRequiredText(body.camera_id);
-        if (!cameraId) return jsonError('Camera ID is required');
-
-        const camera = await getOwnedFilmCamera(session.user.id, cameraId);
-        if (!camera) return jsonError('Camera not found', 404);
-
-        const admin = createAdminClient();
-        const { data, error } = await admin
-            .from('film_maintenance_records')
-            .insert({
-                user_id: session.user.id,
-                camera_id: cameraId,
-                service_date: normalizeDate(body.service_date),
-                service_type: toNullableText(body.service_type),
-                provider_name: toNullableText(body.provider_name),
-                maintenance_cost: toNonNegativeNumber(body.maintenance_cost),
-                notes: toNullableText(body.notes),
-            })
-            .select('*')
-            .single();
-
-        if (error) throw error;
-        return NextResponse.json({ data }, { status: 201 });
+        const body = await readFilmRequestBody(request);
+        if ('error' in body) return jsonError(body.error);
+        const input = parseFilmMaintenanceCreate(body.data);
+        if ('error' in input) return jsonError(input.error);
+        return NextResponse.json(
+            { data: await createFilmMaintenanceForUser(session.user.id, input.data) },
+            { status: 201 }
+        );
     } catch (error) {
+        const serviceError = filmServiceErrorResponse(error);
+        if (serviceError) return serviceError;
         console.error('Error creating maintenance record:', error);
         return jsonError('Failed to create maintenance record', 500);
     }
@@ -76,43 +54,14 @@ export async function PUT(request: NextRequest) {
     try {
         const session = await authorizeFilmJournal();
         if ('response' in session) return session.response;
-
-        const body = await request.json();
-        const id = toRequiredText(body.id);
-        if (!id) return jsonError('Maintenance record ID is required');
-
-        const updates: Record<string, unknown> = {
-            ...(body.service_date !== undefined ? { service_date: normalizeDate(body.service_date) } : {}),
-            ...(body.service_type !== undefined ? { service_type: toNullableText(body.service_type) } : {}),
-            ...(body.provider_name !== undefined ? { provider_name: toNullableText(body.provider_name) } : {}),
-            ...(body.maintenance_cost !== undefined
-                ? { maintenance_cost: toNonNegativeNumber(body.maintenance_cost) }
-                : {}),
-            ...(body.notes !== undefined ? { notes: toNullableText(body.notes) } : {}),
-            updated_at: new Date().toISOString(),
-        };
-
-        if (body.camera_id !== undefined) {
-            const cameraId = toRequiredText(body.camera_id);
-            if (!cameraId) return jsonError('Camera ID is required');
-
-            const camera = await getOwnedFilmCamera(session.user.id, cameraId);
-            if (!camera) return jsonError('Camera not found', 404);
-            updates.camera_id = cameraId;
-        }
-
-        const admin = createAdminClient();
-        const { data, error } = await admin
-            .from('film_maintenance_records')
-            .update(updates)
-            .eq('id', id)
-            .eq('user_id', session.user.id)
-            .select('*')
-            .single();
-
-        if (error) throw error;
-        return NextResponse.json({ data });
+        const body = await readFilmRequestBody(request);
+        if ('error' in body) return jsonError(body.error);
+        const input = parseFilmMaintenanceUpdate(body.data);
+        if ('error' in input) return jsonError(input.error);
+        return NextResponse.json({ data: await updateFilmMaintenanceForUser(session.user.id, input.data) });
     } catch (error) {
+        const serviceError = filmServiceErrorResponse(error);
+        if (serviceError) return serviceError;
         console.error('Error updating maintenance record:', error);
         return jsonError('Failed to update maintenance record', 500);
     }
@@ -122,20 +71,13 @@ export async function DELETE(request: NextRequest) {
     try {
         const session = await authorizeFilmJournal();
         if ('response' in session) return session.response;
-
-        const id = new URL(request.url).searchParams.get('id');
-        if (!id) return jsonError('Maintenance record ID is required');
-
-        const admin = createAdminClient();
-        const { error } = await admin
-            .from('film_maintenance_records')
-            .delete()
-            .eq('id', id)
-            .eq('user_id', session.user.id);
-
-        if (error) throw error;
+        const id = parseFilmQueryId(new URL(request.url).searchParams.get('id'), 'Maintenance record ID');
+        if ('error' in id) return jsonError(id.error);
+        await deleteFilmMaintenanceForUser(session.user.id, id.data);
         return NextResponse.json({ success: true });
     } catch (error) {
+        const serviceError = filmServiceErrorResponse(error);
+        if (serviceError) return serviceError;
         console.error('Error deleting maintenance record:', error);
         return jsonError('Failed to delete maintenance record', 500);
     }

@@ -10,6 +10,15 @@ import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
 import { FilmCamera, FilmMaintenanceRecord } from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
+import {
+    createFilmCamera,
+    createFilmMaintenance,
+    deleteFilmCamera,
+    deleteFilmMaintenance,
+    listFilmCameras,
+    listFilmMaintenance,
+    updateFilmCamera,
+} from '@/lib/film/client';
 import { cn, formatCurrencyMYR } from '@/lib/utils';
 
 const blankCamera = {
@@ -51,11 +60,7 @@ export default function FilmCamerasPage() {
     const selected = cameras.find((camera) => camera.id === selectedId) || null;
 
     const loadCameras = useCallback(async (preferredId?: string) => {
-        const response = await fetch('/api/film/cameras');
-        const payload = await response.json();
-        if (!response.ok) throw new Error(payload.error || 'Failed to load cameras');
-
-        const next = payload.data || [];
+        const next = await listFilmCameras();
         setCameras(next);
 
         const nextId = preferredId || selectedId || next[0]?.id || '';
@@ -79,12 +84,8 @@ export default function FilmCamerasPage() {
             return;
         }
 
-        fetch(`/api/film/maintenance?camera_id=${encodeURIComponent(selectedId)}`)
-            .then(async (response) => {
-                const payload = await response.json();
-                if (!response.ok) throw new Error(payload.error);
-                setMaintenance(payload.data || []);
-            })
+        listFilmMaintenance(selectedId)
+            .then(setMaintenance)
             .catch((loadError) => setError(loadError.message || 'Failed to load maintenance'));
     }, [selectedId]);
 
@@ -94,14 +95,10 @@ export default function FilmCamerasPage() {
         setError(null);
 
         try {
-            const response = await fetch('/api/film/cameras', {
-                method: selected ? 'PUT' : 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(selected ? { id: selected.id, ...form } : form),
-            });
-            const payload = await response.json();
-            if (!response.ok) throw new Error(payload.error || 'Failed to save camera');
-            await loadCameras(payload.data.id);
+            const camera = selected
+                ? await updateFilmCamera({ id: selected.id, ...form })
+                : await createFilmCamera(form);
+            await loadCameras(camera.id);
             showSuccess(selected ? 'Camera saved.' : 'Camera added.', 'Saved');
         } catch (saveError) {
             setError(saveError instanceof Error ? saveError.message : 'Failed to save camera');
@@ -113,17 +110,14 @@ export default function FilmCamerasPage() {
     async function deleteCamera() {
         if (!selected || !window.confirm(`Delete ${selected.name}? Its maintenance history will also be deleted.`)) return;
 
-        const response = await fetch(`/api/film/cameras?id=${encodeURIComponent(selected.id)}`, {
-            method: 'DELETE',
-        });
-        if (!response.ok) {
-            setError('Failed to delete camera');
-            return;
+        try {
+            await deleteFilmCamera(selected.id);
+            setSelectedId('');
+            await loadCameras();
+            showSuccess('Camera deleted.', 'Deleted');
+        } catch (deleteError) {
+            setError(deleteError instanceof Error ? deleteError.message : 'Failed to delete camera');
         }
-
-        setSelectedId('');
-        await loadCameras();
-        showSuccess('Camera deleted.', 'Deleted');
     }
 
     async function addMaintenance(event: FormEvent) {
@@ -134,19 +128,13 @@ export default function FilmCamerasPage() {
         setError(null);
 
         try {
-            const response = await fetch('/api/film/maintenance', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    camera_id: selected.id,
-                    ...maintenanceForm,
-                    maintenance_cost: Number(maintenanceForm.maintenance_cost || 0),
-                }),
+            const record = await createFilmMaintenance({
+                camera_id: selected.id,
+                ...maintenanceForm,
+                maintenance_cost: Number(maintenanceForm.maintenance_cost || 0),
             });
-            const payload = await response.json();
-            if (!response.ok) throw new Error(payload.error || 'Failed to add maintenance');
 
-            setMaintenance((records) => [payload.data, ...records]);
+            setMaintenance((records) => [record, ...records]);
             setMaintenanceForm(blankMaintenance);
             showSuccess('Maintenance record added.', 'Saved');
         } catch (saveError) {
@@ -157,16 +145,13 @@ export default function FilmCamerasPage() {
     }
 
     async function deleteMaintenance(id: string) {
-        const response = await fetch(`/api/film/maintenance?id=${encodeURIComponent(id)}`, {
-            method: 'DELETE',
-        });
-        if (!response.ok) {
-            setError('Failed to delete maintenance record');
-            return;
+        try {
+            await deleteFilmMaintenance(id);
+            setMaintenance((records) => records.filter((record) => record.id !== id));
+            showSuccess('Maintenance record deleted.', 'Deleted');
+        } catch (deleteError) {
+            setError(deleteError instanceof Error ? deleteError.message : 'Failed to delete maintenance record');
         }
-
-        setMaintenance((records) => records.filter((record) => record.id !== id));
-        showSuccess('Maintenance record deleted.', 'Deleted');
     }
 
     if (isLoading) {
