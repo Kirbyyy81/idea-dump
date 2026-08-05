@@ -25,7 +25,7 @@ import {
     mergeFinanceCategory,
 } from '@/lib/finance/catalog';
 import { persistVirtualDefaultCategory } from '@/lib/finance/catalogClient';
-import { financeApiRequest } from '@/lib/finance/client';
+import { financeApiRequest } from '@/lib/finance/core/client';
 import { sortFinanceRules } from '@/lib/finance/rules';
 
 type MatchType = FinanceRule['match_type'];

@@ -14,8 +14,8 @@ import {
     PreviousDoodleIcon,
 } from '@/components/atoms/DoodleIcons';
 import { FinanceDashboardSummary } from '@/lib/types';
-import { financeApiRequest } from '@/lib/finance/client';
-import { getLocalFinanceMonth, shiftFinanceMonth } from '@/lib/finance/values';
+import { financeApiRequest } from '@/lib/finance/core/client';
+import { getLocalFinanceMonth, shiftFinanceMonth } from '@/lib/finance/core/values';
 import { formatCurrencyMYR } from '@/lib/utils';
 
 const CHART_COLORS = ['#e76f51', '#2a9d8f', '#457b9d', '#e9c46a', '#8d6e63', '#6d597a'];

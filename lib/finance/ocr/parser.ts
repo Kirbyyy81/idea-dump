@@ -4,7 +4,7 @@ import {
     FinanceRule,
     FinanceTransactionDirection,
 } from '@/lib/types';
-import { FINANCE_V1_CURRENCY } from '@/lib/finance/constants';
+import { FINANCE_V1_CURRENCY } from '@/lib/finance/core/constants';
 import { normalizeFinanceMerchantKey } from '@/lib/finance/ocr/normalizer';
 import { detectFinanceSource } from '@/lib/finance/ocr/sourceDetection';
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authorizeFinance, jsonError } from '@/lib/finance/auth';
-import { getFinanceDashboard, isFinanceServiceError } from '@/lib/finance/service';
+import { authorizeFinance, jsonError } from '@/lib/finance/core/auth';
+import { getFinanceDashboard, isFinanceServiceError } from '@/lib/finance/core/service';
 
 export const dynamic = 'force-dynamic';
 

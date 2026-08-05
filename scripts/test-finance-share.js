@@ -233,11 +233,11 @@ function testServerHandoffContract() {
         'utf8'
     );
     const service = fs.readFileSync(
-        path.join(root, 'lib', 'finance', 'service.ts'),
+        path.join(root, 'lib', 'finance', 'core', 'service.ts'),
         'utf8'
     );
     const repository = fs.readFileSync(
-        path.join(root, 'lib', 'finance', 'repository.ts'),
+        path.join(root, 'lib', 'finance', 'core', 'repository.ts'),
         'utf8'
     );
     assert.match(prepare, /prepareFinanceShareBatchForUser/);

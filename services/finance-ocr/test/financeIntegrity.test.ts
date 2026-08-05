@@ -10,7 +10,7 @@ import {
     normalizeFinanceDate,
     shiftFinanceMonth,
     toPositiveFinanceAmount,
-} from '../../../lib/finance/values';
+} from '../../../lib/finance/core/values';
 
 describe('Finance amount integrity', () => {
     it.each([

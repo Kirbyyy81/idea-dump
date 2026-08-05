@@ -1,4 +1,4 @@
-import { FINANCE_DEFAULT_EXPENSE_CATEGORIES } from '@/lib/finance/constants';
+import { FINANCE_DEFAULT_EXPENSE_CATEGORIES } from '@/lib/finance/core/constants';
 import { FinanceCategory, FinanceCategoryType } from '@/lib/types';
 
 const VIRTUAL_DEFAULT_PREFIX = '__virtual_default_expense_category__:';

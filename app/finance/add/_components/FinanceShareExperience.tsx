@@ -9,7 +9,7 @@ import {
     ScanDoodleIcon,
     WarningDoodleIcon,
 } from '@/components/atoms/DoodleIcons';
-import { FinanceApiError } from '@/lib/finance/client';
+import { FinanceApiError } from '@/lib/finance/core/client';
 import {
     commitFinanceShareBatch,
     getActiveFinanceShareBatch,

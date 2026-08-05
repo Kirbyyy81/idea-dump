@@ -43,8 +43,8 @@ import {
     MAX_FINANCE_NOTES_LENGTH,
     MAX_FINANCE_REFERENCE_LENGTH,
     toPositiveFinanceAmount,
-} from '@/lib/finance/values';
-import { FinanceApiError, financeApiRequest } from '@/lib/finance/client';
+} from '@/lib/finance/core/values';
+import { FinanceApiError, financeApiRequest } from '@/lib/finance/core/client';
 
 const NEW_SOURCE = '__new_source__';
 const NEW_CATEGORY = '__new_category__';

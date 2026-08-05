@@ -1,4 +1,4 @@
-import { getOwnedActiveFinanceShareBatch as getOwnedActiveFinanceShareBatchFromRepository } from '@/lib/finance/repository';
+import { getOwnedActiveFinanceShareBatch as getOwnedActiveFinanceShareBatchFromRepository } from '@/lib/finance/core/repository';
 
 export const FINANCE_SHARE_BUCKET = 'finance-share-batches';
 export const FINANCE_SHARE_PROCESSING_VERSION = 2;

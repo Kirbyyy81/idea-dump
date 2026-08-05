@@ -4,21 +4,21 @@ import {
     isFinanceSerializationError,
     jsonError,
     readFinanceJsonObject,
-} from '@/lib/finance/auth';
+} from '@/lib/finance/core/auth';
 import {
     isFinanceTransactionStatus,
     isFinanceUuid,
     parseManualFinanceTransactionCreate,
     toRequiredFinanceText,
-} from '@/lib/finance/schemas';
+} from '@/lib/finance/core/schemas';
 import {
     createManualFinanceTransactionForUser,
     deleteFinanceTransactionForUser,
     getFinanceTransactions,
     isFinanceServiceError,
     updateFinanceTransactionForUser,
-} from '@/lib/finance/service';
-import { FINANCE_TIME_ZONE_HEADER, getFinanceDateInTimeZone } from '@/lib/finance/values';
+} from '@/lib/finance/core/service';
+import { FINANCE_TIME_ZONE_HEADER, getFinanceDateInTimeZone } from '@/lib/finance/core/values';
 
 export const dynamic = 'force-dynamic';
 

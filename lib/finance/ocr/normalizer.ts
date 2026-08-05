@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { FINANCE_NORMALIZER_VERSION } from '@/lib/finance/constants';
+import { FINANCE_NORMALIZER_VERSION } from '@/lib/finance/core/constants';
 
 export interface NormalizedFinanceText {
     text: string;

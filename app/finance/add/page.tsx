@@ -25,7 +25,7 @@ import {
 import { OcrProgress } from './_components/OcrProgress';
 import { FinanceShareExperience } from './_components/FinanceShareExperience';
 import { FinanceLoadingState } from '../_components/FinanceLoadingState';
-import { financeApiRequest } from '@/lib/finance/client';
+import { financeApiRequest } from '@/lib/finance/core/client';
 import { getManualTransactionAttempt } from '@/lib/finance/transactions/idempotency';
 import {
     getFinanceTransactionTextError,
@@ -39,7 +39,7 @@ import {
     MAX_FINANCE_NOTES_LENGTH,
     MAX_FINANCE_REFERENCE_LENGTH,
     toPositiveFinanceAmount,
-} from '@/lib/finance/values';
+} from '@/lib/finance/core/values';
 import { useFinanceShareTarget } from '@/app/finance/_components/FinanceShareTargetProvider';
 
 const NEW_SOURCE = '__new__';

@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authorizeFinance, jsonError, readFinanceJsonObject } from '@/lib/finance/auth';
+import { authorizeFinance, jsonError, readFinanceJsonObject } from '@/lib/finance/core/auth';
 import {
     isFinanceUuid,
     parseFinanceCategoryCreate,
     parseFinanceCategoryUpdate,
-} from '@/lib/finance/schemas';
+} from '@/lib/finance/core/schemas';
 import {
     createFinanceCategoryForUser,
     deleteFinanceCategoryForUser,
     getFinanceCategories,
     isFinanceServiceError,
     updateFinanceCategoryForUser,
-} from '@/lib/finance/service';
+} from '@/lib/finance/core/service';
 
 export const dynamic = 'force-dynamic';
 

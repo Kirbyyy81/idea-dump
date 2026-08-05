@@ -4,7 +4,7 @@ import {
     FinanceDuplicateSignal,
 } from '@/lib/types';
 import { normalizeFinanceMerchantKey } from '@/lib/finance/ocr/normalizer';
-import { listFinanceDuplicateCandidates } from '@/lib/finance/repository';
+import { listFinanceDuplicateCandidates } from '@/lib/finance/core/repository';
 
 export { normalizeFinanceMerchantKey } from '@/lib/finance/ocr/normalizer';
 

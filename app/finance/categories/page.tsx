@@ -14,7 +14,7 @@ import {
     getMissingDefaultExpenseCategories,
     mergeFinanceCategory,
 } from '@/lib/finance/catalog';
-import { financeApiRequest } from '@/lib/finance/client';
+import { financeApiRequest } from '@/lib/finance/core/client';
 
 const initialForm = {
     name: '',

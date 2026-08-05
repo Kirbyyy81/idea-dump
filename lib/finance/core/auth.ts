@@ -7,12 +7,12 @@ import {
     FinanceTransactionSource,
     FinanceTransactionStatus,
 } from '@/lib/types';
-import { FINANCE_V1_CURRENCY } from '@/lib/finance/constants';
+import { FINANCE_V1_CURRENCY } from '@/lib/finance/core/constants';
 import {
     normalizeFinanceDate,
     toPositiveFinanceAmount,
-} from '@/lib/finance/values';
-import { getFinanceMutationRequestError } from '@/lib/finance/requestSecurity';
+} from '@/lib/finance/core/values';
+import { getFinanceMutationRequestError } from '@/lib/finance/core/requestSecurity';
 
 const categoryTypes: FinanceCategoryType[] = ['expense', 'income'];
 const transactionDirections: FinanceTransactionDirection[] = ['expense', 'income'];

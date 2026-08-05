@@ -4,14 +4,14 @@ import {
     isFinanceSerializationError,
     jsonError,
     readFinanceJsonObject,
-} from '@/lib/finance/auth';
-import { parseFinanceReviewAction } from '@/lib/finance/schemas';
+} from '@/lib/finance/core/auth';
+import { parseFinanceReviewAction } from '@/lib/finance/core/schemas';
 import {
     getFinanceReviewQueueForUser,
     isFinanceServiceError,
     resolveFinanceReviewCandidateForUser,
-} from '@/lib/finance/service';
-import { FINANCE_TIME_ZONE_HEADER, getFinanceDateInTimeZone } from '@/lib/finance/values';
+} from '@/lib/finance/core/service';
+import { FINANCE_TIME_ZONE_HEADER, getFinanceDateInTimeZone } from '@/lib/finance/core/values';
 
 export const dynamic = 'force-dynamic';
 

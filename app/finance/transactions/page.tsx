@@ -37,8 +37,8 @@ import {
     MAX_FINANCE_NOTES_LENGTH,
     MAX_FINANCE_REFERENCE_LENGTH,
     toPositiveFinanceAmount,
-} from '@/lib/finance/values';
-import { financeApiRequest } from '@/lib/finance/client';
+} from '@/lib/finance/core/values';
+import { financeApiRequest } from '@/lib/finance/core/client';
 
 const initialForm = {
     source_id: '',

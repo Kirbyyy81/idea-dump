@@ -56,7 +56,7 @@ import {
     updateFinanceRuleSuggestion,
     updateFinanceSource,
     updateFinanceTransaction,
-} from '@/lib/finance/repository';
+} from '@/lib/finance/core/repository';
 import {
     FinanceCategoryCreateInput,
     FinanceCategoryUpdateInput,
@@ -72,12 +72,12 @@ import {
     toRequiredFinanceText,
     isFinanceUuid,
     parseFinanceTransaction,
-} from '@/lib/finance/schemas';
-import { normalizeFinanceTransaction } from '@/lib/finance/auth';
-import { getFinanceMonthRange, getLocalFinanceMonth } from '@/lib/finance/values';
+} from '@/lib/finance/core/schemas';
+import { normalizeFinanceTransaction } from '@/lib/finance/core/auth';
+import { getFinanceMonthRange, getLocalFinanceMonth } from '@/lib/finance/core/values';
 import { parseFinanceText } from '@/lib/finance/ocr/parser';
-import { FINANCE_V1_CURRENCY } from '@/lib/finance/constants';
-import { getFinanceCandidateReference } from '@/lib/finance/auth';
+import { FINANCE_V1_CURRENCY } from '@/lib/finance/core/constants';
+import { getFinanceCandidateReference } from '@/lib/finance/core/auth';
 import {
     FINANCE_SHARE_PROCESSING_VERSION,
     financeShareRpcError,

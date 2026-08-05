@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authorizeFinance, jsonError, readFinanceJsonObject } from '@/lib/finance/auth';
-import { parseFinanceSharePrepare } from '@/lib/finance/schemas';
-import { isFinanceServiceError, prepareFinanceShareBatchForUser } from '@/lib/finance/service';
+import { authorizeFinance, jsonError, readFinanceJsonObject } from '@/lib/finance/core/auth';
+import { parseFinanceSharePrepare } from '@/lib/finance/core/schemas';
+import { isFinanceServiceError, prepareFinanceShareBatchForUser } from '@/lib/finance/core/service';
 
 export const dynamic = 'force-dynamic';
 

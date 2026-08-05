@@ -3,10 +3,10 @@ import {
     FinanceTransactionDirection,
     FinanceTransactionStatus,
 } from '@/lib/types';
-import { FINANCE_V1_CURRENCY } from '@/lib/finance/constants';
+import { FINANCE_V1_CURRENCY } from '@/lib/finance/core/constants';
 import { isFinanceIdempotencyKey } from '@/lib/finance/transactions/idempotency';
 import { getFinanceSourcePreset, normalizeFinanceSourceAliases } from '@/lib/finance/ocr/sourceDetection';
-import { isFutureFinanceDate, normalizeFinanceDate, toPositiveFinanceAmount } from '@/lib/finance/values';
+import { isFutureFinanceDate, normalizeFinanceDate, toPositiveFinanceAmount } from '@/lib/finance/core/values';
 import {
     FINANCE_SHARE_MIME_TYPES,
     MAX_FINANCE_SHARE_BATCH_BYTES,
