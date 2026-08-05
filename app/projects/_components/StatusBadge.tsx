@@ -1,6 +1,6 @@
 import { Status, statusConfig } from '@/lib/types';
 import { Badge } from '@/components/atoms/Badge';
-import { iconMap } from '@/lib/icons';
+import { iconMap } from '@/lib/projects/icons';
 
 interface StatusBadgeProps {
     status: Status;

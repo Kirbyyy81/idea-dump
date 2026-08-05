@@ -9,7 +9,7 @@ import { Check, ChevronDown, Plus, Search, X } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
 import { cn } from '@/lib/utils';
-import { iconMap } from '@/lib/icons';
+import { iconMap } from '@/lib/projects/icons';
 import { listProjects } from '@/lib/projects/client';
 
 export default function ProjectsPage() {

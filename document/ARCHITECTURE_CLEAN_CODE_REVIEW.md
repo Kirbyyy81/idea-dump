@@ -160,7 +160,6 @@ The largest application files include:
 - [`app/settings/access/AccessControlClient.tsx`](../app/settings/access/AccessControlClient.tsx), 738 lines
 - [`app/film/rolls/[id]/page.tsx`](../app/film/rolls/%5Bid%5D/page.tsx), 724 lines
 - [`services/finance-ocr/src/repository.ts`](../services/finance-ocr/src/repository.ts), 658 lines
-- [`lib/openapi.ts`](../lib/openapi.ts), 637 lines
 - [`lib/types.ts`](../lib/types.ts), 630 lines
 - [`components/organisms/Sidebar.tsx`](../components/organisms/Sidebar.tsx), 439 lines
 - [`app/finance/review/page.tsx`](../app/finance/review/page.tsx), 431 lines
@@ -392,7 +391,6 @@ Examples include:
 - `articleCreation/` and `logViewer/` use camelCase.
 - Most route directories use kebab-case.
 - Other domain directories use lowercase names.
-- Some top-level helpers such as `dailyLogs.ts` sit outside the related `logs/` directory.
 
 #### Recommendation
 
@@ -599,10 +597,10 @@ idea-dump/
 
 Summary as of 2026-08-05:
 
-- Done: 6
+- Done: 7
 - In progress: 0
-- Partial: 7
-- Not started: 9
+- Partial: 8
+- Not started: 7
 - Blocked: 0
 
 | ID | Issue | Status | Current evidence and completion gate | Last updated |
@@ -620,12 +618,12 @@ Summary as of 2026-08-05:
 | AC-011 | Missing typed feature clients | **Done** | Finance and Tickets already had reusable client APIs. Film, Projects, Logs, Notes, and API keys now use domain-owned browser clients; the Log export action also uses the Logs client. `npm run lint`, `npx tsc --noEmit`, and `npm run build` pass. | 2026-08-05 |
 | AC-012 | Direct data access in route handlers | **Done** | A repository-wide route scan finds no `createAdminClient()`, `.from()`, `.rpc()`, or `.storage` calls in `app/api/`. Service-role queries now live in owned repositories, and routes act as HTTP adapters. `npm run lint`, `npx tsc --noEmit`, and `npm run build` pass. | 2026-08-05 |
 | AC-013 | Inconsistent business-service layer | **Partial** | Finance, Film, Tickets, Notes, and API keys now use explicit services for non-trivial operations. Projects remain deliberately repository-only for simple CRUD, and Logs retain their authorization-aware access layer. Focused service behavior coverage is still uneven. Done when business operations have focused service tests. | 2026-08-05 |
-| AC-014 | Monolithic OpenAPI definition | **Not started** | `lib/openapi.ts` is about 637 lines. Done when domain definitions are independently owned, composed into one specification, and contract checks pass. | 2026-08-02 |
+| AC-014 | Monolithic OpenAPI definition | **Done** | The documented Logs, Projects/Ingest, Tickets, and Film paths now live in separate `lib/openapi/` domain modules. `index.ts` composes the final specification, and `npm run test:openapi` verifies its path and composition contract. | 2026-08-05 |
 | AC-015 | Large page and client-component responsibilities | **Partial** | Some Film sections are extracted, but Film roll detail, Access Control, and Finance review remain large stateful files. Done when state, mutations, dialogs, and sections have focused ownership and regression coverage. | 2026-08-02 |
 | AC-016 | Overloaded application shell | **Partial** | Extracted canonical module route mapping and matching into client-safe `lib/rbac/routes.ts`, used by `AppShell` authorization and Sidebar navigation activity. `AppShell` still owns project loading, navigation, responsive behavior, spacing, and loading UI. Done when protected layout, page container, loading state, and mobile navigation responsibilities are explicit. | 2026-08-02 |
 | AC-017 | Client-heavy initial data loading | **Not started** | 26 of 33 remaining pages are client components and 24 pages use `useEffect()`. Done when practical initial reads move to server components and interactive client islands retain only browser state. | 2026-08-02 |
 | AC-018 | Component ownership ambiguity | **Partial** | The Log Viewer was moved into `app/log-viewer/_components/`, and route-private feature sections already exist. `AppShell` now owns rendering `components/molecules/PageHeader.tsx` for shared authenticated-page titles and optional actions. Shared Sidebar and Ticket workflows remain under `components/` because they are reused across feature routes, but ownership rules are not yet applied consistently everywhere. Done when shared UI, layout, cross-feature, and feature-private ownership rules are consistently applied. | 2026-08-04 |
-| AC-019 | Inconsistent non-route naming | **Not started** | `articleCreation`, `logViewer`, and top-level `dailyLogs.ts` remain naming and ownership outliers. Done when one convention is documented and applied without compatibility regressions. | 2026-08-02 |
+| AC-019 | Inconsistent non-route naming | **Partial** | Moved `dailyLogs.ts` to `lib/logs/normalization.ts` and the Project-only icon map to `lib/projects/icons.ts`. `articleCreation` and `logViewer` remain naming and ownership outliers. Done when one convention is documented and applied without compatibility regressions. | 2026-08-05 |
 | AC-020 | Global Finance share-target provider | **Not started** | `FinanceShareTargetProvider` wraps every route through `AuthenticatedAppShell`. Done when the Finance workflow is scoped appropriately and authenticated, unauthorized, expired, and successful share flows are verified. | 2026-08-02 |
 | AC-021 | OCR service source coupling | **Not started** | The OCR TypeScript and bundler aliases point to the application root. Done when both runtimes depend on an explicit shared package and OCR builds without application-source aliases. | 2026-08-02 |
 | AC-022 | Untyped and untested service-worker workflow | **Not started** | `public/sw.js` is about 194 lines and shares an informal protocol with React code. Done when source and protocol are typed, lifecycle behavior is tested, and generated output is verified. | 2026-08-02 |

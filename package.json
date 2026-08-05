@@ -14,6 +14,7 @@
     "test:finance-share": "node scripts/test-finance-share.js",
     "test:logs-api": "node --experimental-strip-types scripts/test-log-schemas.js",
     "test:notes-api": "node --experimental-strip-types scripts/test-note-schemas.js",
+    "test:openapi": "node --experimental-strip-types scripts/test-openapi.js",
     "test:projects-api": "node --experimental-strip-types scripts/test-project-schemas.js",
     "test:api-keys": "node --experimental-strip-types scripts/test-api-key-schemas.js",
     "test:tickets": "node --experimental-strip-types scripts/test-ticket-schemas.js"
