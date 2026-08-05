@@ -327,15 +327,11 @@ The Next.js application and OCR service should depend on this package explicitly
 
 ### 8. Route validation and data access patterns are inconsistent
 
-The repository contains several patterns:
+The initial route-boundary cleanup is complete. Finance, Film, Tickets, Projects, Logs, Notes, API keys, and Project ingestion now validate request data in domain helpers and keep service-role persistence out of route handlers. Routes are now responsible for authorization, transport parsing, calling domain logic, and mapping the result to HTTP responses.
 
-- Projects use a repository.
-- Logs use an access layer.
-- Finance and Film share authorization helpers but perform many Supabase queries in route handlers.
-- Tickets contain substantial inline database behavior.
-- Some request validation is centralized, while other validation is built directly inside route handlers.
+Projects intentionally use a repository directly for simple ownership-scoped CRUD, while Logs retain their existing access layer because it contains their authorization-aware query policy. Finance, Film, Tickets, Notes, and API keys use explicit services where they own non-trivial behavior.
 
-This inconsistency increases the effort required to understand and audit a new endpoint.
+The remaining inconsistency is contractual rather than structural: error bodies, validation-error shapes, pagination conventions, and operational logging are not yet standardized across every feature.
 
 #### Recommendation
 
@@ -365,7 +361,7 @@ Also standardize:
 - Query parameter parsing
 - Logging behavior
 
-Direct `createAdminClient()` calls should be concentrated in repositories. This would make service-role access easier to review.
+Direct `createAdminClient()` calls are now concentrated in domain repositories, making service-role access easier to review.
 
 ### 9. Component organization will become harder to scale
 
@@ -603,9 +599,9 @@ idea-dump/
 
 Summary as of 2026-08-05:
 
-- Done: 4
+- Done: 6
 - In progress: 0
-- Partial: 9
+- Partial: 7
 - Not started: 9
 - Blocked: 0
 
@@ -620,10 +616,10 @@ Summary as of 2026-08-05:
 | AC-007 | Remaining Finance JavaScript and `allowJs` | **Partial** | Converted all four Finance source modules to strict TypeScript and updated their focused test runners. Root TypeScript still enables `allowJs`. Done when `allowJs` is disabled without breaking the build or tests. | 2026-08-05 |
 | AC-008 | Domain type monolith | **Not started** | `lib/types.ts` is about 630 lines and has 71 importers. Done when domain types and runtime configuration have clear owners and cross-domain imports no longer depend on a monolith. | 2026-08-02 |
 | AC-009 | Untyped Supabase schema boundary | **Not started** | Supabase clients have no generated `Database` generic. Done when one reviewed generated type parameterizes browser, server, and admin clients and is refreshed with schema changes. | 2026-08-02 |
-| AC-010 | Inconsistent API errors and validation | **Partial** | Finance, Film, and Tickets have domain validation helpers. Projects and Logs still parse request-specific inputs locally, and error contracts vary by feature. Done when transport errors, validation failures, and query parsing follow one documented contract with tests. | 2026-08-05 |
-| AC-011 | Missing typed feature clients | **Partial** | Finance and Tickets have reusable client APIs. Film, Projects, and Logs still use widespread raw `fetch()`. Done when browser requests use domain-owned typed clients or direct server services. | 2026-08-05 |
-| AC-012 | Direct data access in route handlers | **Partial** | Projects, Logs, and Tickets have data-access modules. 22 of 32 API route files still directly create the admin client. Done when service-role queries are concentrated in owned repositories and routes remain HTTP adapters. | 2026-08-05 |
-| AC-013 | Inconsistent business-service layer | **Partial** | Tickets now has a service layer for its authorization-aware business operations. Film and Finance orchestration remains in routes. Done when business operations have explicit services with focused tests. | 2026-08-05 |
+| AC-010 | Inconsistent API errors and validation | **Partial** | Domain request parsers now cover Finance, Film, Tickets, Projects, Logs, Notes, API keys, and Project ingestion. Error response bodies, pagination conventions, and operational logging still vary by feature. Done when those transport contracts are documented and standardized with tests. | 2026-08-05 |
+| AC-011 | Missing typed feature clients | **Done** | Finance and Tickets already had reusable client APIs. Film, Projects, Logs, Notes, and API keys now use domain-owned browser clients; the Log export action also uses the Logs client. `npm run lint`, `npx tsc --noEmit`, and `npm run build` pass. | 2026-08-05 |
+| AC-012 | Direct data access in route handlers | **Done** | A repository-wide route scan finds no `createAdminClient()`, `.from()`, `.rpc()`, or `.storage` calls in `app/api/`. Service-role queries now live in owned repositories, and routes act as HTTP adapters. `npm run lint`, `npx tsc --noEmit`, and `npm run build` pass. | 2026-08-05 |
+| AC-013 | Inconsistent business-service layer | **Partial** | Finance, Film, Tickets, Notes, and API keys now use explicit services for non-trivial operations. Projects remain deliberately repository-only for simple CRUD, and Logs retain their authorization-aware access layer. Focused service behavior coverage is still uneven. Done when business operations have focused service tests. | 2026-08-05 |
 | AC-014 | Monolithic OpenAPI definition | **Not started** | `lib/openapi.ts` is about 637 lines. Done when domain definitions are independently owned, composed into one specification, and contract checks pass. | 2026-08-02 |
 | AC-015 | Large page and client-component responsibilities | **Partial** | Some Film sections are extracted, but Film roll detail, Access Control, and Finance review remain large stateful files. Done when state, mutations, dialogs, and sections have focused ownership and regression coverage. | 2026-08-02 |
 | AC-016 | Overloaded application shell | **Partial** | Extracted canonical module route mapping and matching into client-safe `lib/rbac/routes.ts`, used by `AppShell` authorization and Sidebar navigation activity. `AppShell` still owns project loading, navigation, responsive behavior, spacing, and loading UI. Done when protected layout, page container, loading state, and mobile navigation responsibilities are explicit. | 2026-08-02 |
