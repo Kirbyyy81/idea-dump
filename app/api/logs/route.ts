@@ -1,13 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveIdentity, AuthError } from '@/lib/auth/resolveIdentity';
 import { createLogForIdentity, listAccessibleLogs } from '@/lib/logs/access';
+import { parseCreateLog, parseLogListQuery, readLogRequestBody } from '@/lib/logs/schemas';
 import { authorizeIdentityModule } from '@/lib/rbac/guards';
-import { CreateDailyLogInput } from '@/lib/types';
-
-// Pagination constants
-const DEFAULT_LIMIT = 200;
-const MAX_LIMIT = 500;
-const DEFAULT_SORT = 'created_at.desc';
 
 // GET /api/logs - List log entries
 export async function GET(request: NextRequest) {
@@ -18,21 +13,12 @@ export async function GET(request: NextRequest) {
             return access.response;
         }
 
-        const { searchParams } = new URL(request.url);
-        const from = searchParams.get('from');
-        const to = searchParams.get('to');
-        const parsedLimit = parseInt(searchParams.get('limit') || String(DEFAULT_LIMIT), 10);
-        const limit = Math.min(Number.isNaN(parsedLimit) ? DEFAULT_LIMIT : parsedLimit, MAX_LIMIT);
-        const cursor = searchParams.get('cursor');
-        const sort = searchParams.get('sort') || DEFAULT_SORT;
+        const query = parseLogListQuery(new URL(request.url).searchParams);
+        if ('error' in query) {
+            return NextResponse.json({ error: 'Validation error', message: query.error }, { status: 400 });
+        }
 
-        const { data, nextCursor } = await listAccessibleLogs(identity, {
-            cursor,
-            from,
-            limit,
-            sort,
-            to,
-        });
+        const { data, nextCursor } = await listAccessibleLogs(identity, query.data);
 
         return NextResponse.json({ data, next_cursor: nextCursor });
     } catch (err) {
@@ -55,8 +41,15 @@ export async function POST(request: NextRequest) {
         if ('response' in access) {
             return access.response;
         }
-        const body: CreateDailyLogInput = await request.json();
-        const result = await createLogForIdentity(identity, body);
+        const body = await readLogRequestBody(request);
+        if ('error' in body) {
+            return NextResponse.json({ error: 'Validation error', message: body.error }, { status: 400 });
+        }
+        const input = parseCreateLog(body.data);
+        if ('error' in input) {
+            return NextResponse.json({ error: 'Validation error', message: input.error }, { status: 400 });
+        }
+        const result = await createLogForIdentity(identity, input.data);
 
         if (result.error) {
             return NextResponse.json(

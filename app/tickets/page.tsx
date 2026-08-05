@@ -11,6 +11,7 @@ import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { deleteTicket, listTickets, updateTicket } from '@/lib/tickets/client';
+import { listProjects } from '@/lib/projects/client';
 import { Project, Ticket, UpdateTicketInput, ticketSourceConfig, ticketStatusConfig } from '@/lib/types';
 
 export default function TicketsPage() {
@@ -29,17 +30,13 @@ export default function TicketsPage() {
     useEffect(() => {
         async function fetchData() {
             try {
-                const [ticketsRes, projectsRes] = await Promise.all([
+                const [ticketsRes, projects] = await Promise.all([
                     listTickets({ scope: 'mine' }),
-                    fetch('/api/projects'),
+                    listProjects(),
                 ]);
 
-                if (!projectsRes.ok) throw new Error('Failed to fetch projects');
-
-                const projectsPayload = await projectsRes.json();
-
                 setTickets(ticketsRes);
-                setProjects(projectsPayload.data || []);
+                setProjects(projects);
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'Failed to load tickets');
             } finally {

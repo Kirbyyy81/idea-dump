@@ -8,6 +8,7 @@ import { AppShell } from '@/components/organisms/AppShell';
 import { ProjectForm } from '../../_components/ProjectForm';
 import { CreateProjectInput } from '@/lib/types';
 import { PageLoader } from '@/components/atoms/Loader';
+import { getProject, updateProject } from '@/lib/projects/client';
 
 export default function EditProjectPage() {
     const router = useRouter();
@@ -23,11 +24,7 @@ export default function EditProjectPage() {
     useEffect(() => {
         async function fetchProject() {
             try {
-                const res = await fetch(`/api/projects?id=${projectId}`);
-                if (!res.ok) throw new Error('Failed to fetch project');
-                const { data } = await res.json();
-
-                if (!data) throw new Error('Project not found');
+                const data = await getProject(projectId);
 
                 setInitialData({
                     title: data.title,
@@ -51,19 +48,7 @@ export default function EditProjectPage() {
         setError(null);
 
         try {
-            const res = await fetch('/api/projects', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    id: projectId,
-                    ...data,
-                }),
-            });
-
-            if (!res.ok) {
-                const resData = await res.json();
-                throw new Error(resData.error || 'Failed to update project');
-            }
+            await updateProject(projectId, data);
 
             router.push(`/projects/${projectId}`);
         } catch (err) {

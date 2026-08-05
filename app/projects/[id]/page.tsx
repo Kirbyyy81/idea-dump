@@ -12,8 +12,10 @@ import { TicketCard } from '@/components/organisms/TicketCard';
 import { TicketForm } from '@/components/organisms/TicketForm';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
-import { CreateTicketInput, Note, Project, Ticket, inferStatus, priorityConfig } from '@/lib/types';
+import { CreateTicketInput, Note, Project, Ticket, UpdateProjectInput, inferStatus, priorityConfig } from '@/lib/types';
+import { createNote, listNotes } from '@/lib/notes/client';
 import { createTicket, deleteTicket, listTickets, updateTicket } from '@/lib/tickets/client';
+import { deleteProject, getProject, listProjects, updateProject } from '@/lib/projects/client';
 import {
     ArrowLeft,
     ExternalLink,
@@ -57,30 +59,16 @@ export default function ProjectPage() {
                 setError(null);
 
                 // First fetch projects for AppShell sidebar navigation
-                const projectsRes = await fetch('/api/projects');
-                if (projectsRes.ok) {
-                    const projectsData = await projectsRes.json();
-                    setProjects(projectsData.data || []);
-                }
+                await listProjects().then(setProjects).catch(() => undefined);
 
-                const [projectRes, notesRes] = await Promise.all([
-                    fetch(`/api/projects?id=${projectId}`),
-                    fetch(`/api/notes?project_id=${projectId}`),
+                const [projectData, notes] = await Promise.all([
+                    getProject(projectId),
+                    listNotes(projectId).catch(() => null),
                 ]);
 
-                if (!projectRes.ok) throw new Error('Failed to fetch project');
-                const projectData = await projectRes.json();
+                setProject(projectData);
 
-                if (!projectData.data) {
-                    throw new Error('Project not found');
-                }
-
-                setProject(projectData.data);
-
-                if (notesRes.ok) {
-                    const notesData = await notesRes.json();
-                    setNotes(notesData.data || []);
-                }
+                if (notes) setNotes(notes);
 
                 if (canAccessTickets) {
                     const scope = canManageTickets ? 'manage' : 'mine';
@@ -99,35 +87,21 @@ export default function ProjectPage() {
 
     const handleAddNote = async (content: string) => {
         try {
-            const res = await fetch('/api/notes', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ project_id: projectId, content }),
-            });
-
-            if (!res.ok) throw new Error('Failed to add note');
-            const { data } = await res.json();
-            setNotes([data, ...notes]);
+            const note = await createNote(projectId, content);
+            setNotes([note, ...notes]);
             showSuccess('Project note added.', 'Saved');
         } catch (err) {
             console.error('Failed to add note:', err);
         }
     };
 
-    const handleUpdateProject = async (updates: Partial<Project>) => {
+    const handleUpdateProject = async (updates: UpdateProjectInput) => {
         if (!project) return;
 
         try {
             setIsUpdating(true);
-            const res = await fetch('/api/projects', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: project.id, ...updates }),
-            });
-
-            if (!res.ok) throw new Error('Failed to update project');
-            const { data } = await res.json();
-            setProject(data);
+            const updatedProject = await updateProject(project.id, updates);
+            setProject(updatedProject);
             if (updates.archived !== undefined) {
                 showSuccess(updates.archived ? 'Project archived.' : 'Project unarchived.', 'Saved');
             } else {
@@ -148,11 +122,7 @@ export default function ProjectPage() {
         if (!project || !confirm('Are you sure you want to delete this project?')) return;
 
         try {
-            const res = await fetch(`/api/projects?id=${project.id}`, {
-                method: 'DELETE',
-            });
-
-            if (!res.ok) throw new Error('Failed to delete project');
+            await deleteProject(project.id);
             showSuccess('Project deleted.', 'Deleted');
             router.push('/projects');
         } catch (err) {

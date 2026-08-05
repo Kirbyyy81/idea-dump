@@ -7,6 +7,7 @@ import { ArrowLeft } from 'lucide-react';
 import { AppShell } from '@/components/organisms/AppShell';
 import { ProjectForm } from '../_components/ProjectForm';
 import { CreateProjectInput } from '@/lib/types';
+import { createProject } from '@/lib/projects/client';
 
 export default function NewProjectPage() {
     const router = useRouter();
@@ -18,18 +19,7 @@ export default function NewProjectPage() {
         setError(null);
 
         try {
-            const res = await fetch('/api/projects', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
-            });
-
-            if (!res.ok) {
-                const resData = await res.json();
-                throw new Error(resData.error || 'Failed to create project');
-            }
-
-            const { data: project } = await res.json();
+            const project = await createProject(data);
             router.push(`/projects/${project.id}`);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An error occurred');

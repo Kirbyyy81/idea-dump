@@ -14,6 +14,14 @@ import { useAlert } from '@/lib/contexts/AlertContext';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
+import {
+    createLog,
+    deleteLog,
+    exportWeeklyLogs,
+    listLogs,
+    updateLog,
+} from '@/lib/logs/client';
+import { listProjects } from '@/lib/projects/client';
 
 export default function LogsPage() {
     const [logs, setLogs] = useState<DailyLogEntry[]>([]);
@@ -44,18 +52,12 @@ export default function LogsPage() {
                 setIsLoading(true);
 
                 const [logsRes, projectsRes] = await Promise.all([
-                    fetch('/api/logs'),
-                    fetch('/api/projects'),
+                    listLogs(),
+                    listProjects(),
                 ]);
 
-                if (!logsRes.ok) throw new Error('Failed to fetch logs');
-                if (!projectsRes.ok) throw new Error('Failed to fetch projects');
-
-                const logsData = await logsRes.json();
-                const projectsData = await projectsRes.json();
-
-                setLogs(logsData.data || []);
-                setProjects(projectsData.data || []);
+                setLogs(logsRes.data);
+                setProjects(projectsRes);
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'An error occurred');
             } finally {
@@ -68,10 +70,8 @@ export default function LogsPage() {
     const handleRefresh = async () => {
         setIsLoading(true);
         try {
-            const res = await fetch('/api/logs');
-            if (!res.ok) throw new Error('Failed to fetch logs');
-            const data = await res.json();
-            setLogs(data.data || []);
+            const data = await listLogs();
+            setLogs(data.data);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Refresh failed');
         } finally {
@@ -82,16 +82,8 @@ export default function LogsPage() {
     const handleCreateLog = async (content: DailyLogContent) => {
         setIsCreating(true);
         try {
-            const res = await fetch('/api/logs', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content }),
-            });
-
-            if (!res.ok) throw new Error('Failed to create log');
-
-            const data = await res.json();
-            setLogs([data.data, ...logs]);
+            const log = await createLog(content);
+            setLogs([log, ...logs]);
             setShowNewForm(false);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Create failed');
@@ -110,16 +102,8 @@ export default function LogsPage() {
 
         setIsEditing(true);
         try {
-            const res = await fetch(`/api/logs/${editingId}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content: editContent }),
-            });
-
-            if (!res.ok) throw new Error('Failed to update log');
-
-            const data = await res.json();
-            setLogs(logs.map(l => l.id === editingId ? data.data : l));
+            const updatedLog = await updateLog(editingId, editContent);
+            setLogs(logs.map(l => l.id === editingId ? updatedLog : l));
             setEditingId(null);
             setEditContent(null);
         } catch (err) {
@@ -138,8 +122,7 @@ export default function LogsPage() {
         if (!confirm('Are you sure you want to delete this log entry?')) return;
 
         try {
-            const res = await fetch(`/api/logs/${id}`, { method: 'DELETE' });
-            if (!res.ok) throw new Error('Failed to delete log');
+            await deleteLog(id);
             setLogs(logs.filter(l => l.id !== id));
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Delete failed');
@@ -216,16 +199,7 @@ export default function LogsPage() {
 
         setIsExporting(true);
         try {
-            const res = await fetch('/api/export/weekly', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ from, to }),
-            });
-
-            if (!res.ok) throw new Error('Failed to export');
-
-            const data = await res.json();
-            const markdown = String(data.markdown || '');
+            const markdown = await exportWeeklyLogs(from, to);
             setExportMarkdown(markdown);
 
             const copied = await copyToClipboard(markdown);

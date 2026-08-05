@@ -1,25 +1,10 @@
 import { createAdminClient } from '@/lib/supabase/admin';
-import type { Priority, Project } from '@/lib/types';
-
-export interface CreateProjectRecord {
-    title: string;
-    description: string | null;
-    prd_content: string | null;
-    github_url: string | null;
-    deploy_url: string | null;
-    priority: Priority;
-}
-
-export interface UpdateProjectRecord {
-    title?: string;
-    description?: string | null;
-    prd_content?: string | null;
-    github_url?: string | null;
-    deploy_url?: string | null;
-    priority?: Priority;
-    completed?: boolean;
-    archived?: boolean;
-}
+import type { Project } from '@/lib/types';
+import type {
+    ProjectCreateCommand,
+    ProjectIngestCommand,
+    ProjectUpdateCommand,
+} from './schemas';
 
 export const PROJECT_COLUMNS = [
     'id',
@@ -61,7 +46,7 @@ export async function getOwnedProject(userId: string, projectId: string): Promis
     return data as unknown as Project | null;
 }
 
-export async function createOwnedProject(userId: string, input: CreateProjectRecord): Promise<Project> {
+export async function createOwnedProject(userId: string, input: ProjectCreateCommand): Promise<Project> {
     const admin = createAdminClient();
     const { data, error } = await admin
         .from('projects')
@@ -81,10 +66,32 @@ export async function createOwnedProject(userId: string, input: CreateProjectRec
     return data as unknown as Project;
 }
 
+export async function createIngestedProject(
+    userId: string,
+    input: ProjectIngestCommand
+): Promise<{ id: string; title: string }> {
+    const admin = createAdminClient();
+    const { data, error } = await admin
+        .from('projects')
+        .insert({
+            user_id: userId,
+            title: input.title,
+            description: input.description,
+            prd_content: input.prd_content,
+            priority: 'medium',
+            tags: input.tags,
+        })
+        .select('id, title')
+        .single();
+
+    if (error) throw error;
+    return data;
+}
+
 export async function updateOwnedProject(
     userId: string,
     projectId: string,
-    input: UpdateProjectRecord
+    input: ProjectUpdateCommand
 ): Promise<Project | null> {
     const updates = {
         ...(input.title !== undefined ? { title: input.title } : {}),

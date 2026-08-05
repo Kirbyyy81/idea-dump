@@ -7,6 +7,7 @@ import { TicketForm } from '@/components/organisms/TicketForm';
 import { PageLoader } from '@/components/atoms/Loader';
 import { createTicket } from '@/lib/tickets/client';
 import { CreateTicketInput, Project } from '@/lib/types';
+import { listProjects } from '@/lib/projects/client';
 
 export default function NewTicketPage() {
     const router = useRouter();
@@ -18,10 +19,7 @@ export default function NewTicketPage() {
     useEffect(() => {
         async function fetchProjects() {
             try {
-                const res = await fetch('/api/projects');
-                if (!res.ok) throw new Error('Failed to fetch projects');
-                const payload = await res.json();
-                setProjects(payload.data || []);
+                setProjects(await listProjects());
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'Failed to load projects');
             } finally {

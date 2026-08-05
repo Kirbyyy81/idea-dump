@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Project } from '@/lib/types';
+import { listProjects } from '@/lib/projects/client';
 import { AppShell } from '@/components/organisms/AppShell';
 import { MinuteReaderCard } from './_components/MinuteReaderCard';
 import { SlugImageNameCard } from './_components/SlugImageNameCard';
@@ -16,12 +17,9 @@ export default function ArticleCreationPage() {
 
         async function fetchProjects() {
             try {
-                const res = await fetch('/api/projects');
-                if (!res.ok || cancelled) return;
-
-                const data = await res.json();
+                const projects = await listProjects();
                 if (!cancelled) {
-                    setProjects(data.data || []);
+                    setProjects(projects);
                 }
             } catch {
                 // Sidebar project list is best-effort only.

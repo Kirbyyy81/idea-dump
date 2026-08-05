@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { findModuleRouteRule } from '@/lib/rbac/routes';
 import { useAccess } from '@/lib/contexts/AccessContext';
 import { PUBLIC_AUTH_PATH_PREFIXES } from '@/lib/auth/routes';
+import { listProjects } from '@/lib/projects/client';
 
 interface AppShellProps extends PropsWithChildren {
     contentClassName?: string;
@@ -106,12 +107,9 @@ export function AppShell({
 
         async function fetchProjects() {
             try {
-                const res = await fetch('/api/projects');
-                if (!res.ok || cancelled) return;
-
-                const payload = await res.json();
+                const projects = await listProjects();
                 if (!cancelled) {
-                    setInternalProjects(payload.data || []);
+                    setInternalProjects(projects);
                 }
             } catch {
                 // Project navigation is best-effort when the user lacks Projects access.

@@ -19,6 +19,7 @@ import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
 import { AppShell } from '@/components/organisms/AppShell';
+import { listProjects } from '@/lib/projects/client';
 import { Project } from '@/lib/types';
 
 const DISPLAY_NAME_MAX_LENGTH = 80;
@@ -41,11 +42,7 @@ export default function SettingsPage() {
         // Fetch projects
         async function fetchProjects() {
             try {
-                const res = await fetch('/api/projects');
-                if (res.ok) {
-                    const payload = await res.json();
-                    setProjects(payload.data || []);
-                }
+                setProjects(await listProjects());
             } catch {
                 // Project navigation is best-effort when the user lacks Projects access.
             } finally {

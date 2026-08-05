@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveIdentity, AuthError } from '@/lib/auth/resolveIdentity';
 import { listAccessibleLogs } from '@/lib/logs/access';
+import { parseWeeklyLogExport, readLogRequestBody } from '@/lib/logs/schemas';
 import { authorizeIdentityModule } from '@/lib/rbac/guards';
 import { DailyLogEntry } from '@/lib/types';
-
-interface ExportRequest {
-    from: string;
-    to: string;
-}
 
 // POST /api/export/weekly - Generate markdown table
 export async function POST(request: NextRequest) {
@@ -26,19 +22,22 @@ export async function POST(request: NextRequest) {
             }, { status: 403 });
         }
 
-        const body: ExportRequest = await request.json();
-
-        if (!body.from || !body.to) {
+        const body = await readLogRequestBody(request);
+        if ('error' in body) {
+            return NextResponse.json({ error: 'Validation error', message: body.error }, { status: 400 });
+        }
+        const input = parseWeeklyLogExport(body.data);
+        if ('error' in input) {
             return NextResponse.json({
                 error: 'Validation error',
-                message: 'from and to dates are required'
+                message: input.error,
             }, { status: 400 });
         }
 
         const { data } = await listAccessibleLogs(identity, {
-            from: body.from,
+            from: input.data.from,
             sort: 'effective_date.asc',
-            to: body.to,
+            to: input.data.to,
         });
         const markdown = generateMarkdownTable(data);
 

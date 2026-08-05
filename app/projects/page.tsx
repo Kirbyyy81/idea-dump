@@ -10,6 +10,7 @@ import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
 import { cn } from '@/lib/utils';
 import { iconMap } from '@/lib/icons';
+import { listProjects } from '@/lib/projects/client';
 
 export default function ProjectsPage() {
     const [projects, setProjects] = useState<Project[]>([]);
@@ -23,10 +24,7 @@ export default function ProjectsPage() {
     useEffect(() => {
         async function fetchProjects() {
             try {
-                const res = await fetch('/api/projects');
-                if (!res.ok) throw new Error('Failed to fetch projects');
-                const { data } = await res.json();
-                setProjects(data || []);
+                setProjects(await listProjects());
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'An error occurred');
             } finally {
