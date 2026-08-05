@@ -45,7 +45,7 @@ import {
     getOpeningFilmRollStep,
     getStatusAfterSavingFilmRollStep,
     isFilmRollStep,
-} from '@/lib/film/workflow';
+} from '@/lib/film/rolls/workflow';
 import { StepStepper } from './_components/StepStepper';
 import { StatsCards } from './_components/StatsCards';
 

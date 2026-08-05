@@ -15,7 +15,7 @@ import {
     getValidDriveAccessToken,
     listDriveImages,
     storeDriveTokens,
-} from './googleDrive';
+} from './integrations/google';
 import {
     createFilmCamera,
     createFilmMaintenanceRecord,

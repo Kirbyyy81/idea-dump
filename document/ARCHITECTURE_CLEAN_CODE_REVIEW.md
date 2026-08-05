@@ -212,7 +212,7 @@ Runtime values such as status configuration should live in domain configuration 
 ```text
 lib/projects/status.ts
 lib/tickets/status.ts
-lib/film/status.ts
+lib/film/rolls/status.ts
 ```
 
 The root [`AGENTS.md`](../AGENTS.md) and scoped [`lib/AGENTS.md`](../lib/AGENTS.md) currently require domain types to remain in `lib/types.ts`. Those instructions should be updated when the domain-type migration is implemented so future work follows the new structure.
@@ -623,7 +623,7 @@ Summary as of 2026-08-05:
 | AC-016 | Overloaded application shell | **Partial** | Extracted canonical module route mapping and matching into client-safe `lib/rbac/routes.ts`, used by `AppShell` authorization and Sidebar navigation activity. `AppShell` still owns project loading, navigation, responsive behavior, spacing, and loading UI. Done when protected layout, page container, loading state, and mobile navigation responsibilities are explicit. | 2026-08-02 |
 | AC-017 | Client-heavy initial data loading | **Not started** | 26 of 33 remaining pages are client components and 24 pages use `useEffect()`. Done when practical initial reads move to server components and interactive client islands retain only browser state. | 2026-08-02 |
 | AC-018 | Component ownership ambiguity | **Partial** | The Log Viewer was moved into `app/log-viewer/_components/`, and route-private feature sections already exist. `AppShell` now owns rendering `components/molecules/PageHeader.tsx` for shared authenticated-page titles and optional actions. Shared Sidebar and Ticket workflows remain under `components/` because they are reused across feature routes, but ownership rules are not yet applied consistently everywhere. Done when shared UI, layout, cross-feature, and feature-private ownership rules are consistently applied. | 2026-08-04 |
-| AC-019 | Inconsistent non-route naming | **Partial** | Moved `dailyLogs.ts` to `lib/logs/normalization.ts` and the Project-only icon map to `lib/projects/icons.ts`. `articleCreation` and `logViewer` remain naming and ownership outliers. Done when one convention is documented and applied without compatibility regressions. | 2026-08-05 |
+| AC-019 | Inconsistent non-route naming | **Partial** | Moved `dailyLogs.ts` to `lib/logs/normalization.ts`, the Project-only icon map to `lib/projects/icons.ts`, Film Roll lifecycle helpers to `lib/film/rolls/`, and the Film Google Drive provider to `lib/film/integrations/`. `articleCreation` and `logViewer` remain naming and ownership outliers. Done when one convention is documented and applied without compatibility regressions. | 2026-08-06 |
 | AC-020 | Global Finance share-target provider | **Not started** | `FinanceShareTargetProvider` wraps every route through `AuthenticatedAppShell`. Done when the Finance workflow is scoped appropriately and authenticated, unauthorized, expired, and successful share flows are verified. | 2026-08-02 |
 | AC-021 | OCR service source coupling | **Not started** | The OCR TypeScript and bundler aliases point to the application root. Done when both runtimes depend on an explicit shared package and OCR builds without application-source aliases. | 2026-08-02 |
 | AC-022 | Untyped and untested service-worker workflow | **Not started** | `public/sw.js` is about 194 lines and shares an informal protocol with React code. Done when source and protocol are typed, lifecycle behavior is tested, and generated output is verified. | 2026-08-02 |
