@@ -1,10 +1,10 @@
-import { createAdminClient } from '@/lib/supabase/admin';
 import {
     FinanceCurrency,
     FinanceDuplicateOutcome,
     FinanceDuplicateSignal,
 } from '@/lib/types';
 import { normalizeFinanceMerchantKey } from '@/lib/finance/normalizer';
+import { listFinanceDuplicateCandidates } from '@/lib/finance/repository';
 
 export { normalizeFinanceMerchantKey } from '@/lib/finance/normalizer';
 
@@ -55,12 +55,6 @@ const SIGNAL_LABELS: Record<FinanceDuplicateSignal, string> = {
 
 export function normalizeFinanceReferenceKey(value: string | null | undefined) {
     return (value || '').normalize('NFKC').trim().toUpperCase();
-}
-
-function dateWithOffset(value: string, offset: number) {
-    const date = new Date(`${value}T00:00:00Z`);
-    date.setUTCDate(date.getUTCDate() + offset);
-    return date.toISOString().slice(0, 10);
 }
 
 function explanationFor(signals: FinanceDuplicateSignal[]) {
@@ -145,61 +139,14 @@ function scoreTransaction(
 export async function assessFinanceDuplicate(
     input: FinanceDuplicateInput
 ): Promise<FinanceDuplicateAssessment> {
-    const admin = createAdminClient();
-    const transactionSelect = 'id, intake_item_id, amount, currency, merchant, reference_number, transaction_date, source_id';
     const transactionRows = new Map<string, DuplicateTransactionRow>();
-    const textHashTransactionIds = new Set<string>();
-
-    const fieldQuery = input.amount !== null && input.transactionDate
-        ? admin
-            .from('finance_transactions')
-            .select(transactionSelect)
-            .eq('user_id', input.userId)
-            .eq('status', 'confirmed')
-            .eq('currency', input.currency)
-            .eq('amount', input.amount)
-            .gte('transaction_date', dateWithOffset(input.transactionDate, -1))
-            .lte('transaction_date', dateWithOffset(input.transactionDate, 1))
-            .limit(100)
-        : Promise.resolve({ data: [], error: null });
-
     const referenceKey = normalizeFinanceReferenceKey(input.referenceNumber);
-    const referenceQuery = referenceKey && input.sourceId
-        ? admin
-            .from('finance_transactions')
-            .select(transactionSelect)
-            .eq('user_id', input.userId)
-            .eq('status', 'confirmed')
-            .eq('currency', input.currency)
-            .eq('source_id', input.sourceId)
-            .eq('reference_number', referenceKey)
-            .limit(20)
-        : Promise.resolve({ data: [], error: null });
-
-    const [fieldResult, referenceResult] = await Promise.all([fieldQuery, referenceQuery]);
-    if (fieldResult.error) throw fieldResult.error;
-    if (referenceResult.error) throw referenceResult.error;
-    for (const row of [...(fieldResult.data || []), ...(referenceResult.data || [])]) {
-        transactionRows.set(row.id, row as DuplicateTransactionRow);
-    }
-
-    if (input.ocrTextHash) {
-        let textHashQuery = admin
-            .from('finance_transactions')
-            .select(`${transactionSelect}, intake:finance_intake_items!inner(ocr_text_hash)`)
-            .eq('user_id', input.userId)
-            .eq('status', 'confirmed')
-            .eq('intake.ocr_text_hash', input.ocrTextHash)
-            .limit(20);
-        if (input.intakeId) {
-            textHashQuery = textHashQuery.neq('intake_item_id', input.intakeId);
-        }
-        const { data, error } = await textHashQuery;
-        if (error) throw error;
-        for (const row of data || []) {
-            transactionRows.set(row.id, row as unknown as DuplicateTransactionRow);
-            textHashTransactionIds.add(row.id);
-        }
+    const { transactions, textHashTransactionIds } = await listFinanceDuplicateCandidates({
+        ...input,
+        referenceKey,
+    });
+    for (const row of transactions) {
+        transactionRows.set(row.id, row as unknown as DuplicateTransactionRow);
     }
 
     const assessments = Array.from(transactionRows.values())

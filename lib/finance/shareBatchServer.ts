@@ -1,4 +1,4 @@
-import { createAdminClient } from '@/lib/supabase/admin';
+import { getOwnedActiveFinanceShareBatch as getOwnedActiveFinanceShareBatchFromRepository } from '@/lib/finance/repository';
 
 export const FINANCE_SHARE_BUCKET = 'finance-share-batches';
 export const FINANCE_SHARE_PROCESSING_VERSION = 2;
@@ -138,10 +138,5 @@ export async function wakeFinanceShareQueue() {
 }
 
 export async function getOwnedActiveFinanceShareBatch(userId: string) {
-    const admin = createAdminClient();
-    const { data, error } = await admin.rpc('finance_get_active_share_batch_v1', {
-        p_user_id: userId,
-    });
-    if (error) throw error;
-    return data && typeof data === 'object' ? data as Record<string, unknown> : null;
+    return getOwnedActiveFinanceShareBatchFromRepository(userId);
 }

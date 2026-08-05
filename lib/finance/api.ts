@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase/admin';
 import { authorizeSessionModule } from '@/lib/rbac/guards';
 import {
-    FinanceSource,
-    FinanceCategory,
     FinanceCategoryType,
     FinanceTransaction,
     FinanceTransactionDirection,
@@ -131,32 +128,6 @@ export function isFinanceTransactionSource(value: unknown): value is FinanceTran
 
 export function isFinanceTransactionStatus(value: unknown): value is FinanceTransactionStatus {
     return transactionStatuses.includes(value as FinanceTransactionStatus);
-}
-
-export async function getOwnedFinanceSource(userId: string, sourceId: string) {
-    const admin = createAdminClient();
-    const { data, error } = await admin
-        .from('dim_finance_sources')
-        .select('*')
-        .eq('id', sourceId)
-        .eq('user_id', userId)
-        .maybeSingle();
-
-    if (error) throw error;
-    return data as FinanceSource | null;
-}
-
-export async function getOwnedFinanceCategory(userId: string, categoryId: string) {
-    const admin = createAdminClient();
-    const { data, error } = await admin
-        .from('dim_finance_categories')
-        .select('*')
-        .eq('id', categoryId)
-        .eq('user_id', userId)
-        .maybeSingle();
-
-    if (error) throw error;
-    return data as FinanceCategory | null;
 }
 
 export function normalizeFinanceTransaction(transaction: FinanceTransaction) {
