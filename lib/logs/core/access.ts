@@ -1,5 +1,5 @@
 import { ResolvedIdentity } from '@/lib/auth/resolveIdentity';
-import { normalizeDailyLogEntry } from '@/lib/logs/normalization';
+import { normalizeDailyLogEntry } from '@/lib/logs/core/normalization';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { CreateDailyLogInput, DailyLogEntry } from '@/lib/types';
 

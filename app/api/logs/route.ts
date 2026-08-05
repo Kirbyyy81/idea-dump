@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveIdentity, AuthError } from '@/lib/auth/resolveIdentity';
-import { createLogForIdentity, listAccessibleLogs } from '@/lib/logs/access';
-import { parseCreateLog, parseLogListQuery, readLogRequestBody } from '@/lib/logs/schemas';
+import { createLogForIdentity, listAccessibleLogs } from '@/lib/logs/core/access';
+import { parseCreateLog, parseLogListQuery, readLogRequestBody } from '@/lib/logs/core/schemas';
 import { authorizeIdentityModule } from '@/lib/rbac/guards';
 
 // GET /api/logs - List log entries

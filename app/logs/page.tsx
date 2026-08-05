@@ -20,7 +20,7 @@ import {
     exportWeeklyLogs,
     listLogs,
     updateLog,
-} from '@/lib/logs/client';
+} from '@/lib/logs/core/client';
 import { listProjects } from '@/lib/projects/core/client';
 
 export default function LogsPage() {

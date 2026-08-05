@@ -5,7 +5,7 @@ const {
     parseLogListQuery,
     parseUpdateLog,
     parseWeeklyLogExport,
-} = require('../lib/logs/schemas.ts');
+} = require('../lib/logs/core/schemas.ts');
 
 test('uses the documented default log list query', () => {
     assert.deepEqual(parseLogListQuery(new URLSearchParams()), {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveIdentity, AuthError } from '@/lib/auth/resolveIdentity';
-import { listAccessibleLogs } from '@/lib/logs/access';
-import { parseWeeklyLogExport, readLogRequestBody } from '@/lib/logs/schemas';
+import { listAccessibleLogs } from '@/lib/logs/core/access';
+import { parseWeeklyLogExport, readLogRequestBody } from '@/lib/logs/core/schemas';
 import { authorizeIdentityModule } from '@/lib/rbac/guards';
 import { DailyLogEntry } from '@/lib/types';
 

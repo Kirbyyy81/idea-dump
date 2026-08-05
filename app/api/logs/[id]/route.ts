@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveIdentity, AuthError, canModifyLog, canDeleteLog } from '@/lib/auth/resolveIdentity';
-import { deleteAccessibleLog, findAccessibleLog, updateAccessibleLog } from '@/lib/logs/access';
-import { parseUpdateLog, readLogRequestBody } from '@/lib/logs/schemas';
+import { deleteAccessibleLog, findAccessibleLog, updateAccessibleLog } from '@/lib/logs/core/access';
+import { parseUpdateLog, readLogRequestBody } from '@/lib/logs/core/schemas';
 import { authorizeIdentityModule } from '@/lib/rbac/guards';
 
 interface RouteParams {
