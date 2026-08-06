@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { getFinanceMutationRequestError } = require('../lib/finance/requestSecurity');
+const { getFinanceMutationRequestError } = require('../lib/finance/core/requestSecurity.ts');
 
 const sameOriginJsonRequest = {
     method: 'POST',

@@ -10,7 +10,7 @@
 
 - The main application is a strict TypeScript, React 18, Next.js 14 App Router project backed by Supabase Auth and Postgres.
 - `services/finance-ocr/` is a separate Node 22.22.x TypeScript service deployed through `render.yaml`.
-- Canonical forward database migrations live in `supabase/migrations/`. Treat `document/migrations/` as historical records.
+- Canonical forward database migrations live in `supabase/migrations/`. The adopted schema baseline and supporting snapshot live directly under `supabase/`.
 
 ## Setup and Environment
 

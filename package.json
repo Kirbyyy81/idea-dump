@@ -3,16 +3,21 @@
   "version": "0.12.0",
   "private": true,
   "scripts": {
-    "predev": "npm install",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "test:log-viewer": "node scripts/test-log-viewer.js",
-    "test:finance-security": "node scripts/test-finance-security.js",
-    "test:finance-idempotency": "node scripts/test-finance-idempotency.js",
-    "test:finance-ordering": "node scripts/test-finance-ordering.js",
-    "test:finance-share": "node scripts/test-finance-share.js"
+    "test:finance-security": "node --experimental-strip-types scripts/test-finance-security.js",
+    "test:finance-idempotency": "node --experimental-strip-types scripts/test-finance-idempotency.js",
+    "test:finance-ordering": "node --experimental-strip-types scripts/test-finance-ordering.js",
+    "test:finance-share": "node scripts/test-finance-share.js",
+    "test:logs-api": "node --experimental-strip-types scripts/test-log-schemas.js",
+    "test:notes-api": "node --experimental-strip-types scripts/test-note-schemas.js",
+    "test:openapi": "node --experimental-strip-types scripts/test-openapi.js",
+    "test:projects-api": "node --experimental-strip-types scripts/test-project-schemas.js",
+    "test:api-keys": "node --experimental-strip-types scripts/test-api-key-schemas.js",
+    "test:tickets": "node --experimental-strip-types scripts/test-ticket-schemas.js"
   },
   "dependencies": {
     "@supabase/ssr": "^0.1.0",

@@ -9,7 +9,7 @@ const ts = require('typescript');
 const root = path.resolve(__dirname, '..');
 
 function loadShareFileModule() {
-    const filename = path.join(root, 'lib', 'finance', 'shareFiles.ts');
+    const filename = path.join(root, 'lib', 'finance', 'share', 'files.ts');
     const source = fs.readFileSync(filename, 'utf8');
     const output = ts.transpileModule(source, {
         compilerOptions: {
@@ -195,7 +195,7 @@ function testManifestContract() {
 
 function testPrepareIdempotencyContract() {
     const source = fs.readFileSync(
-        path.join(root, 'lib', 'finance', 'shareBatchClient.ts'),
+        path.join(root, 'lib', 'finance', 'share', 'client.ts'),
         'utf8'
     );
     assert.match(source, /request_id:\s*requestId/);
@@ -229,14 +229,24 @@ function testServerHandoffContract() {
         'utf8'
     );
     const server = fs.readFileSync(
-        path.join(root, 'lib', 'finance', 'shareBatchServer.ts'),
+        path.join(root, 'lib', 'finance', 'share', 'server.ts'),
         'utf8'
     );
-    assert.match(prepare, /finance_prepare_share_batch_v1/);
-    assert.match(prepare, /createSignedUploadUrl\(item\.storage_path,\s*\{\s*upsert:\s*true\s*\}\)/);
-    assert.match(commit, /\.info\(item\.storage_path\)/);
-    assert.match(commit, /record\.contentType/);
-    assert.match(commit, /finance_commit_share_batch_v1/);
+    const service = fs.readFileSync(
+        path.join(root, 'lib', 'finance', 'core', 'service.ts'),
+        'utf8'
+    );
+    const repository = fs.readFileSync(
+        path.join(root, 'lib', 'finance', 'core', 'repository.ts'),
+        'utf8'
+    );
+    assert.match(prepare, /prepareFinanceShareBatchForUser/);
+    assert.match(repository, /finance_prepare_share_batch_v1/);
+    assert.match(repository, /createSignedUploadUrl\(storagePath,\s*\{\s*upsert:\s*true\s*\}\)/);
+    assert.match(commit, /commitFinanceShareBatchForUser/);
+    assert.match(service, /getFinanceShareObjectInfo\(item\.storage_path\)/);
+    assert.match(service, /record\.contentType/);
+    assert.match(repository, /finance_commit_share_batch_v1/);
     assert.match(commit, /safe_to_close:\s*true/);
     assert.match(active, /getOwnedActiveFinanceShareBatch/);
     assert.match(server, /message\.includes\('FINANCE_SHARE_ACCESS_DENIED'\)/);

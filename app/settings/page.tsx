@@ -19,6 +19,7 @@ import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
 import { AppShell } from '@/components/organisms/AppShell';
+import { listProjects } from '@/lib/projects/core/client';
 import { Project } from '@/lib/types';
 
 const DISPLAY_NAME_MAX_LENGTH = 80;
@@ -41,11 +42,7 @@ export default function SettingsPage() {
         // Fetch projects
         async function fetchProjects() {
             try {
-                const res = await fetch('/api/projects');
-                if (res.ok) {
-                    const payload = await res.json();
-                    setProjects(payload.data || []);
-                }
+                setProjects(await listProjects());
             } catch {
                 // Project navigation is best-effort when the user lacks Projects access.
             } finally {
@@ -190,10 +187,13 @@ export default function SettingsPage() {
         : null;
 
     return (
-        <AppShell contentClassName="p-5 md:p-8" projects={projects} isLoading={isLoading}>
+        <AppShell
+            contentClassName="p-5 md:p-8"
+            projects={projects}
+            isLoading={isLoading}
+            pageTitle="Settings"
+        >
             <div className="max-w-3xl space-y-6">
-                <h1 className="text-text-primary text-2xl font-extrabold">Settings</h1>
-
                 <Card className="p-6">
                     <div className="flex items-start justify-between gap-4">
                         <div className="flex items-center gap-4">

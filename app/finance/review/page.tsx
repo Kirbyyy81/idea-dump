@@ -29,8 +29,8 @@ import { cn, formatCurrency } from '@/lib/utils';
 import {
     getFinanceCategoryOptions,
     mergeFinanceCategory,
-} from '@/lib/finance/categoryOptions';
-import { persistVirtualDefaultCategory } from '@/lib/finance/categoryPersistence';
+} from '@/lib/finance/catalog';
+import { persistVirtualDefaultCategory } from '@/lib/finance/catalogClient';
 import {
     FINANCE_TIME_ZONE_HEADER,
     getFinanceTransactionTextError,
@@ -43,8 +43,8 @@ import {
     MAX_FINANCE_NOTES_LENGTH,
     MAX_FINANCE_REFERENCE_LENGTH,
     toPositiveFinanceAmount,
-} from '@/lib/finance/values';
-import { FinanceApiError, financeApiRequest } from '@/lib/finance/clientApi';
+} from '@/lib/finance/core/values';
+import { FinanceApiError, financeApiRequest } from '@/lib/finance/core/client';
 
 const NEW_SOURCE = '__new_source__';
 const NEW_CATEGORY = '__new_category__';
@@ -298,11 +298,9 @@ export default function FinanceReviewPage() {
     };
 
     return (
-        <AppShell contentClassName="p-5 md:p-8">
+        <AppShell contentClassName="p-5 md:p-8" pageTitle="Review queue">
             <div className="mx-auto max-w-7xl">
-                <header className="pb-5"><h1>Review queue</h1></header>
-
-                <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
+                <div className="grid grid-cols-1 gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
                     <section className="border border-border-default bg-bg-surface">
                         <div className="border-b border-border-default px-5 py-4"><h2 className="text-base font-bold">Awaiting review <span className="text-text-muted">({isLoading ? '…' : candidates.length})</span></h2></div>
                         <div className="divide-y divide-border-default" aria-live="polite" aria-busy={isLoading}>

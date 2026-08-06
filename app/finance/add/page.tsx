@@ -1,11 +1,10 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { AppShell } from '@/components/organisms/AppShell';
 import { Button } from '@/components/atoms/Button';
-import { BackDoodleIcon, DocumentDoodleIcon, ScanDoodleIcon } from '@/components/atoms/DoodleIcons';
+import { DocumentDoodleIcon, ScanDoodleIcon } from '@/components/atoms/DoodleIcons';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
@@ -15,19 +14,19 @@ import { useAlert } from '@/lib/contexts/AlertContext';
 import {
     getFinanceCategoryOptions,
     mergeFinanceCategory,
-} from '@/lib/finance/categoryOptions';
-import { persistVirtualDefaultCategory } from '@/lib/finance/categoryPersistence';
+} from '@/lib/finance/catalog';
+import { persistVirtualDefaultCategory } from '@/lib/finance/catalogClient';
 import {
     FinanceOcrClientError,
     FinanceOcrPhase,
     uploadFinanceScreenshot,
     warmFinanceOcr,
-} from '@/lib/finance/ocrClient';
+} from '@/lib/finance/ocr/client';
 import { OcrProgress } from './_components/OcrProgress';
 import { FinanceShareExperience } from './_components/FinanceShareExperience';
 import { FinanceLoadingState } from '../_components/FinanceLoadingState';
-import { financeApiRequest } from '@/lib/finance/clientApi';
-import { getManualTransactionAttempt } from '@/lib/finance/manualTransactionIdempotency';
+import { financeApiRequest } from '@/lib/finance/core/client';
+import { getManualTransactionAttempt } from '@/lib/finance/transactions/idempotency';
 import {
     getFinanceTransactionTextError,
     FINANCE_TIME_ZONE_HEADER,
@@ -40,7 +39,7 @@ import {
     MAX_FINANCE_NOTES_LENGTH,
     MAX_FINANCE_REFERENCE_LENGTH,
     toPositiveFinanceAmount,
-} from '@/lib/finance/values';
+} from '@/lib/finance/core/values';
 import { useFinanceShareTarget } from '@/app/finance/_components/FinanceShareTargetProvider';
 
 const NEW_SOURCE = '__new__';
@@ -225,11 +224,10 @@ export default function AddFinanceTransactionPage() {
         setFile(nextFile);
     };
 
-    return <AppShell contentClassName="p-5 md:p-8"><div className="mx-auto max-w-2xl">
-        <header><Link href="/finance" className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-text-secondary hover:text-text-primary"><BackDoodleIcon size={16} />Finance</Link><h1>Add transaction</h1></header>
+    return <AppShell contentClassName="p-5 md:p-8" pageTitle="Add transaction"><div className="mx-auto max-w-2xl">
         <FinanceShareExperience />
         {sharedFiles.length === 0 && <>
-        <div className="mt-6 grid grid-cols-2 border border-border-default p-1" role="group" aria-label="Transaction entry method"><button type="button" aria-pressed={mode === 'manual'} disabled={isSaving} onClick={() => setMode('manual')} className={`flex h-10 items-center justify-center gap-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${mode === 'manual' ? 'bg-action-primary text-action-primary-text' : 'text-text-secondary hover:bg-bg-hover'}`}><DocumentDoodleIcon size={16} />Manual</button><button type="button" aria-pressed={mode === 'screenshot'} disabled={isSaving} onClick={() => setMode('screenshot')} className={`flex h-10 items-center justify-center gap-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${mode === 'screenshot' ? 'bg-action-primary text-action-primary-text' : 'text-text-secondary hover:bg-bg-hover'}`}><ScanDoodleIcon size={16} />Screenshot</button></div>
+        <div className="grid grid-cols-2 border border-border-default p-1" role="group" aria-label="Transaction entry method"><button type="button" aria-pressed={mode === 'manual'} disabled={isSaving} onClick={() => setMode('manual')} className={`flex h-10 items-center justify-center gap-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${mode === 'manual' ? 'bg-action-primary text-action-primary-text' : 'text-text-secondary hover:bg-bg-hover'}`}><DocumentDoodleIcon size={16} />Manual</button><button type="button" aria-pressed={mode === 'screenshot'} disabled={isSaving} onClick={() => setMode('screenshot')} className={`flex h-10 items-center justify-center gap-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${mode === 'screenshot' ? 'bg-action-primary text-action-primary-text' : 'text-text-secondary hover:bg-bg-hover'}`}><ScanDoodleIcon size={16} />Screenshot</button></div>
 
         {mode === 'manual' ? isOptionsLoading ? (
             <FinanceLoadingState label="Loading transaction options..." />

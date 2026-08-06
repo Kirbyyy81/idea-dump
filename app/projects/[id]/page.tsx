@@ -12,7 +12,10 @@ import { TicketCard } from '@/components/organisms/TicketCard';
 import { TicketForm } from '@/components/organisms/TicketForm';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
-import { CreateTicketInput, Note, Project, Ticket, inferStatus, priorityConfig } from '@/lib/types';
+import { CreateTicketInput, Note, Project, Ticket, UpdateProjectInput, inferStatus, priorityConfig } from '@/lib/types';
+import { createNote, listNotes } from '@/lib/notes/core/client';
+import { createTicket, deleteTicket, listTickets, updateTicket } from '@/lib/tickets/core/client';
+import { deleteProject, getProject, listProjects, updateProject } from '@/lib/projects/core/client';
 import {
     ArrowLeft,
     ExternalLink,
@@ -56,38 +59,21 @@ export default function ProjectPage() {
                 setError(null);
 
                 // First fetch projects for AppShell sidebar navigation
-                const projectsRes = await fetch('/api/projects');
-                if (projectsRes.ok) {
-                    const projectsData = await projectsRes.json();
-                    setProjects(projectsData.data || []);
-                }
+                await listProjects().then(setProjects).catch(() => undefined);
 
-                const [projectRes, notesRes] = await Promise.all([
-                    fetch(`/api/projects?id=${projectId}`),
-                    fetch(`/api/notes?project_id=${projectId}`),
+                const [projectData, notes] = await Promise.all([
+                    getProject(projectId),
+                    listNotes(projectId).catch(() => null),
                 ]);
 
-                if (!projectRes.ok) throw new Error('Failed to fetch project');
-                const projectData = await projectRes.json();
+                setProject(projectData);
 
-                if (!projectData.data) {
-                    throw new Error('Project not found');
-                }
-
-                setProject(projectData.data);
-
-                if (notesRes.ok) {
-                    const notesData = await notesRes.json();
-                    setNotes(notesData.data || []);
-                }
+                if (notes) setNotes(notes);
 
                 if (canAccessTickets) {
                     const scope = canManageTickets ? 'manage' : 'mine';
-                    const ticketsRes = await fetch(`/api/tickets?project_id=${projectId}&scope=${scope}`);
-                    if (ticketsRes.ok) {
-                        const ticketsData = await ticketsRes.json();
-                        setTickets(ticketsData.data || []);
-                    }
+                    const tickets = await listTickets({ projectId, scope }).catch(() => null);
+                    if (tickets) setTickets(tickets);
                 }
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'An error occurred');
@@ -101,35 +87,21 @@ export default function ProjectPage() {
 
     const handleAddNote = async (content: string) => {
         try {
-            const res = await fetch('/api/notes', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ project_id: projectId, content }),
-            });
-
-            if (!res.ok) throw new Error('Failed to add note');
-            const { data } = await res.json();
-            setNotes([data, ...notes]);
+            const note = await createNote(projectId, content);
+            setNotes([note, ...notes]);
             showSuccess('Project note added.', 'Saved');
         } catch (err) {
             console.error('Failed to add note:', err);
         }
     };
 
-    const handleUpdateProject = async (updates: Partial<Project>) => {
+    const handleUpdateProject = async (updates: UpdateProjectInput) => {
         if (!project) return;
 
         try {
             setIsUpdating(true);
-            const res = await fetch('/api/projects', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: project.id, ...updates }),
-            });
-
-            if (!res.ok) throw new Error('Failed to update project');
-            const { data } = await res.json();
-            setProject(data);
+            const updatedProject = await updateProject(project.id, updates);
+            setProject(updatedProject);
             if (updates.archived !== undefined) {
                 showSuccess(updates.archived ? 'Project archived.' : 'Project unarchived.', 'Saved');
             } else {
@@ -150,11 +122,7 @@ export default function ProjectPage() {
         if (!project || !confirm('Are you sure you want to delete this project?')) return;
 
         try {
-            const res = await fetch(`/api/projects?id=${project.id}`, {
-                method: 'DELETE',
-            });
-
-            if (!res.ok) throw new Error('Failed to delete project');
+            await deleteProject(project.id);
             showSuccess('Project deleted.', 'Deleted');
             router.push('/projects');
         } catch (err) {
@@ -165,15 +133,8 @@ export default function ProjectPage() {
     const handleCreateTicket = async (data: CreateTicketInput) => {
         setIsSavingTicket(true);
         try {
-            const res = await fetch('/api/tickets', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
-            });
-
-            if (!res.ok) throw new Error('Failed to create ticket');
-            const payload = await res.json();
-            setTickets((current) => [payload.data, ...current]);
+            const ticket = await createTicket(data);
+            setTickets((current) => [ticket, ...current]);
             setShowTicketForm(false);
             showSuccess('Ticket created.', 'Saved');
         } catch (err) {
@@ -188,15 +149,10 @@ export default function ProjectPage() {
 
         setIsSavingTicket(true);
         try {
-            const res = await fetch(`/api/tickets/${editingTicket.id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
-            });
-
-            if (!res.ok) throw new Error('Failed to update ticket');
-            const payload = await res.json();
-            setTickets((current) => current.map((ticket) => (ticket.id === editingTicket.id ? payload.data : ticket)));
+            const updatedTicket = await updateTicket(editingTicket.id, data);
+            setTickets((current) => current.map((ticket) => (
+                ticket.id === editingTicket.id ? updatedTicket : ticket
+            )));
             setEditingTicket(null);
             showSuccess('Ticket updated.', 'Saved');
         } catch (err) {
@@ -210,8 +166,7 @@ export default function ProjectPage() {
         if (!confirm('Are you sure you want to delete this ticket?')) return;
 
         try {
-            const res = await fetch(`/api/tickets/${id}`, { method: 'DELETE' });
-            if (!res.ok) throw new Error('Failed to delete ticket');
+            await deleteTicket(id);
             setTickets((current) => current.filter((ticket) => ticket.id !== id));
             showSuccess('Ticket deleted.', 'Deleted');
         } catch (err) {
@@ -245,7 +200,14 @@ export default function ProjectPage() {
     const priority = priorityConfig[project.priority];
 
     return (
-        <AppShell projects={projects} isLoading={isLoading} loadingMessage="Loading project..." contentClassName="p-5 md:p-8">
+        <AppShell
+            projects={projects}
+            isLoading={isLoading}
+            loadingMessage="Loading project..."
+            contentClassName="p-5 md:p-8"
+            pageTitle={project.title}
+            headerAction={<StatusBadge status={inferStatus(project)} className="px-3 py-1 text-sm" />}
+        >
             <div className="max-w-5xl mx-auto">
                 <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <Link
@@ -282,11 +244,6 @@ export default function ProjectPage() {
             </div>
 
             <div className="mb-8">
-                <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-                    <h1 className="text-text-primary text-2xl font-extrabold">{project.title}</h1>
-                    <StatusBadge status={inferStatus(project)} className="px-3 py-1 text-sm" />
-                </div>
-
                 {project.description && (
                     <p className="text-lg mb-6 text-text-secondary">{project.description}</p>
                 )}

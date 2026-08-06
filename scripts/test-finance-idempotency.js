@@ -4,7 +4,7 @@ const {
     getManualTransactionAttempt,
     isFinanceIdempotencyKey,
     isManualTransactionReplay,
-} = require('../lib/finance/manualTransactionIdempotency');
+} = require('../lib/finance/transactions/idempotency.ts');
 
 const firstKey = '0d56116f-4fa8-4ac8-9d78-95ac9d8186f2';
 const secondKey = '78c54fbd-d362-472e-b7ea-a78d9ab5ed36';

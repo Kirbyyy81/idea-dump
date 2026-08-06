@@ -2,7 +2,7 @@ import { FinanceTransactionDirection } from '@/lib/types';
 import {
     financeMinorUnitsToNumber,
     toFinanceAmountMinorUnits,
-} from '@/lib/finance/values';
+} from '@/lib/finance/core/values';
 
 export interface FinanceDashboardRow {
     amount: unknown;

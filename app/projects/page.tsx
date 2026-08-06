@@ -9,7 +9,8 @@ import { Check, ChevronDown, Plus, Search, X } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
 import { cn } from '@/lib/utils';
-import { iconMap } from '@/lib/icons';
+import { iconMap } from '@/lib/projects/icons';
+import { listProjects } from '@/lib/projects/core/client';
 
 export default function ProjectsPage() {
     const [projects, setProjects] = useState<Project[]>([]);
@@ -23,10 +24,7 @@ export default function ProjectsPage() {
     useEffect(() => {
         async function fetchProjects() {
             try {
-                const res = await fetch('/api/projects');
-                if (!res.ok) throw new Error('Failed to fetch projects');
-                const { data } = await res.json();
-                setProjects(data || []);
+                setProjects(await listProjects());
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'An error occurred');
             } finally {
@@ -104,17 +102,20 @@ export default function ProjectsPage() {
     }
 
     return (
-        <AppShell projects={projects} isLoading={isLoading} loadingMessage="Loading projects...">
+        <AppShell
+            projects={projects}
+            isLoading={isLoading}
+            loadingMessage="Loading projects..."
+            pageTitle="Projects"
+            headerAction={
+                <Link href="/projects/new" className="shrink-0">
+                    <Button icon={<Plus size={18} />} className="h-10 px-4">
+                        New Project
+                    </Button>
+                </Link>
+            }
+        >
             <div>
-                <header className="mb-6 flex items-center justify-between gap-3">
-                    <h1 className="text-2xl font-extrabold">Projects</h1>
-                    <Link href="/projects/new" className="shrink-0">
-                        <Button icon={<Plus size={18} />} className="h-10 px-4">
-                            New Project
-                        </Button>
-                    </Link>
-                </header>
-
                 <div className="mb-6 grid gap-3 sm:grid-cols-[minmax(0,1fr)_260px]">
                     <div className="relative min-w-0">
                         <Search

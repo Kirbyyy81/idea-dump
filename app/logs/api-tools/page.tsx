@@ -17,6 +17,7 @@ import { AppShell } from '@/components/organisms/AppShell';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
+import { createApiKey, listApiKeys, revokeApiKey } from '@/lib/auth/apiKeyClient';
 import { formatDate } from '@/lib/utils';
 
 interface ApiKeyDisplay {
@@ -152,9 +153,7 @@ export default function LogApiToolsPage() {
 
         async function fetchKeys() {
             try {
-                const res = await fetch('/api/keys');
-                if (!res.ok) throw new Error('Failed to fetch keys');
-                const { data } = await res.json();
+                const data = await listApiKeys();
                 if (!cancelled) {
                     setApiKeys(data || []);
                 }
@@ -183,18 +182,7 @@ export default function LogApiToolsPage() {
         setKeyError(null);
 
         try {
-            const res = await fetch('/api/keys', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: newKeyName.trim() }),
-            });
-
-            if (!res.ok) {
-                const data = await res.json();
-                throw new Error(data.error || 'Failed to create key');
-            }
-
-            const { data } = await res.json();
+            const data = await createApiKey(newKeyName.trim());
             setNewKey(data.key);
             setApiKeys((prev) => [
                 { id: data.id, name: data.name, created_at: data.created_at, last_used_at: null },
@@ -210,8 +198,7 @@ export default function LogApiToolsPage() {
 
     const handleRevokeKey = async (id: string) => {
         try {
-            const res = await fetch(`/api/keys?id=${id}`, { method: 'DELETE' });
-            if (!res.ok) throw new Error('Failed to revoke key');
+            await revokeApiKey(id);
             setApiKeys((prev) => prev.filter((key) => key.id !== id));
         } catch (err) {
             setKeyError(err instanceof Error ? err.message : 'Failed to revoke API key');
@@ -231,20 +218,20 @@ export default function LogApiToolsPage() {
     };
 
     return (
-        <AppShell contentClassName="p-5 md:p-8">
+        <AppShell
+            contentClassName="p-5 md:p-8"
+            pageTitle="Weekly Logs API Tools"
+            headerAction={
+                <Link
+                    href="/logs"
+                    aria-label="Back to weekly productivity log"
+                    className="flex items-center gap-2 text-text-secondary transition-colors hover:text-text-primary"
+                >
+                    <ArrowLeft size={20} />
+                </Link>
+            }
+        >
             <div className="max-w-5xl space-y-8">
-                <header className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                        <Link
-                            href="/logs"
-                            className="flex items-center gap-2 text-text-secondary transition-colors hover:text-text-primary"
-                        >
-                            <ArrowLeft size={20} />
-                        </Link>
-                        <h1 className="text-2xl font-extrabold">Weekly Logs API Tools</h1>
-                    </div>
-                </header>
-
                     <Card className="p-6">
                         <div className="flex items-center gap-2 mb-3">
                             <Workflow size={20} className="text-accent-rose" />

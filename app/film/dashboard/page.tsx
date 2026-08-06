@@ -24,6 +24,7 @@ import {
     YAxis,
 } from 'recharts';
 import { AppShell } from '@/components/organisms/AppShell';
+import { getFilmDashboard } from '@/lib/film/core/client';
 import { Card } from '@/components/atoms/Card';
 import { FilmDashboardSummary, FilmRollStatus, filmRollStatusConfig } from '@/lib/types';
 import { formatCurrencyMYR } from '@/lib/utils';
@@ -284,12 +285,8 @@ export default function FilmDashboardPage() {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        fetch('/api/film/dashboard')
-            .then(async (response) => {
-                const payload = await response.json();
-                if (!response.ok) throw new Error(payload.error);
-                setSummary(payload.data);
-            })
+        getFilmDashboard()
+            .then(setSummary)
             .catch((loadError) => setError(loadError.message || 'Failed to load dashboard'));
     }, []);
 
@@ -309,14 +306,8 @@ export default function FilmDashboardPage() {
     }
 
     return (
-        <AppShell contentClassName="film-module p-5 md:p-8">
+        <AppShell pageTitle="Film Dashboard" contentClassName="film-module p-5 md:p-8">
             <div className="mx-auto max-w-7xl space-y-7">
-                <header className="flex flex-wrap items-end justify-between gap-4">
-                    <div>
-                        <h1>Film Dashboard</h1>
-                    </div>
-                </header>
-
                 {error ? (
                     <div className="rounded-lg border border-error bg-error-bg p-4 text-error">{error}</div>
                 ) : summary && (

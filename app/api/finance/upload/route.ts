@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase/admin';
-import { authorizeFinance, jsonError } from '@/lib/finance/api';
+import { authorizeFinance, jsonError } from '@/lib/finance/core/auth';
+import { getFinanceIntakeHistory } from '@/lib/finance/core/service';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -10,15 +10,7 @@ export async function GET() {
     try {
         const session = await authorizeFinance();
         if ('response' in session) return session.response;
-        const admin = createAdminClient();
-        const { data, error } = await admin
-            .from('finance_intake_items')
-            .select('id, source, status, received_at, processed_at, error_message')
-            .eq('user_id', session.user.id)
-            .order('received_at', { ascending: false })
-            .limit(20);
-        if (error) throw error;
-        return NextResponse.json({ data: data || [] });
+        return NextResponse.json({ data: await getFinanceIntakeHistory(session.user.id) });
     } catch (error) {
         console.error('Error fetching finance intake history:', error);
         return jsonError('Failed to fetch screenshot history', 500);

@@ -7,6 +7,7 @@ import { ArrowLeft } from 'lucide-react';
 import { AppShell } from '@/components/organisms/AppShell';
 import { ProjectForm } from '../_components/ProjectForm';
 import { CreateProjectInput } from '@/lib/types';
+import { createProject } from '@/lib/projects/core/client';
 
 export default function NewProjectPage() {
     const router = useRouter();
@@ -18,18 +19,7 @@ export default function NewProjectPage() {
         setError(null);
 
         try {
-            const res = await fetch('/api/projects', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
-            });
-
-            if (!res.ok) {
-                const resData = await res.json();
-                throw new Error(resData.error || 'Failed to create project');
-            }
-
-            const { data: project } = await res.json();
+            const project = await createProject(data);
             router.push(`/projects/${project.id}`);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An error occurred');
@@ -38,18 +28,20 @@ export default function NewProjectPage() {
     };
 
     return (
-        <AppShell contentClassName="p-5 md:p-8">
+        <AppShell
+            contentClassName="p-5 md:p-8"
+            pageTitle="New Project"
+            headerAction={
+                <Link
+                    href="/projects"
+                    aria-label="Back to projects"
+                    className="flex items-center gap-2 text-text-secondary transition-colors hover:text-text-primary"
+                >
+                    <ArrowLeft size={20} />
+                </Link>
+            }
+        >
             <div className="max-w-3xl">
-                <div className="flex items-center gap-4 mb-8">
-                    <Link
-                        href="/projects"
-                        className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors"
-                    >
-                        <ArrowLeft size={20} />
-                    </Link>
-                    <h1 className="text-text-primary">New Project</h1>
-                </div>
-
                 {error && (
                     <div className="p-3 rounded-lg bg-error-bg border border-error mb-6">
                         <p className="text-sm text-error">{error}</p>

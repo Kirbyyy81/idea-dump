@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { normalizeFinanceMerchantKey } from '@/lib/finance/normalizer';
+import { normalizeFinanceMerchantKey } from '@/lib/finance/ocr/normalizer';
 import type {
     FinanceCandidateTransaction,
     FinanceDuplicateOutcome,

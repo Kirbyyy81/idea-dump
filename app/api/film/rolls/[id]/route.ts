@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase/admin';
-import { authorizeFilmJournal, jsonError } from '@/lib/film/api';
-import { normalizeFilmRoll } from '@/lib/film/status';
+import { authorizeFilmJournal, filmServiceErrorResponse, jsonError } from '@/lib/film/core/api';
+import { getFilmRollForUser } from '@/lib/film/core/service';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,27 +12,11 @@ export async function GET(_request: Request, { params }: RouteParams) {
     try {
         const session = await authorizeFilmJournal();
         if ('response' in session) return session.response;
-
         const { id } = await params;
-        const admin = createAdminClient();
-        const { data, error } = await admin
-            .from('film_rolls')
-            .select(`
-                *,
-                camera:dim_film_cameras(*),
-                cover_photo:film_photos!film_rolls_cover_photo_id_fkey(*),
-                photos:film_photos!film_photos_film_roll_id_fkey(*)
-            `)
-            .eq('id', id)
-            .eq('user_id', session.user.id)
-            .order('created_at', { referencedTable: 'film_photos!film_photos_film_roll_id_fkey', ascending: true })
-            .maybeSingle();
-
-        if (error) throw error;
-        if (!data) return jsonError('Film roll not found', 404);
-
-        return NextResponse.json({ data: normalizeFilmRoll(data) });
+        return NextResponse.json({ data: await getFilmRollForUser(session.user.id, id) });
     } catch (error) {
+        const serviceError = filmServiceErrorResponse(error);
+        if (serviceError) return serviceError;
         console.error('Error fetching film roll:', error);
         return jsonError('Failed to fetch film roll', 500);
     }

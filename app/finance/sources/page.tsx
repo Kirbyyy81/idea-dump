@@ -9,7 +9,7 @@ import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
 import { FinanceLoadingState } from '../_components/FinanceLoadingState';
 import { FinanceSource } from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
-import { financeApiRequest } from '@/lib/finance/clientApi';
+import { financeApiRequest } from '@/lib/finance/core/client';
 
 export default function FinanceSourcesPage() {
     const { showError, showSuccess } = useAlert();
@@ -124,14 +124,15 @@ export default function FinanceSourcesPage() {
     };
 
     return (
-        <AppShell contentClassName="p-5 md:p-8">
+        <AppShell
+            contentClassName="p-5 md:p-8"
+            pageTitle="Sources"
+            headerClassName="mb-3"
+        >
             <div className="mx-auto max-w-5xl">
-                <header className="pb-5">
-                    <h1>Sources</h1>
-                    <p className="mt-1 text-sm text-text-muted">
-                        Sources identify where money was paid from or received into. V1 does not calculate source balances.
-                    </p>
-                </header>
+                <p className="text-sm text-text-muted">
+                    Sources identify where money was paid from or received into. V1 does not calculate source balances.
+                </p>
 
                 <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[340px_minmax(0,1fr)]">
                     <form onSubmit={createSource}>

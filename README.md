@@ -15,7 +15,7 @@ IdeaDump is a Next.js app for keeping projects, writing weekly work logs, managi
 - Android PWA share target for background Finance screenshot processing
 - Interactive log viewer for system and productivity logs
 - Supabase authentication with login, signup, callback, and password reset
-- In-app API reference inside the API module
+- In-app API reference under Settings
 
 ## Main Modules
 
@@ -30,8 +30,8 @@ The current app is organized around these modules:
 - `Weekly Logs`  
   Create and review daily or weekly work entries, filter by date/source/search, and export a selected range to markdown.
 
-- `API`  
-  Generate and revoke API keys, review example usage, and browse the OpenAPI/Swagger reference. The old `/docs` route now redirects here.
+- `API Tools`
+  Generate and revoke API keys, review example usage, and download the Weekly Log skill from the Logs module.
 
 - `Access Control`  
   Admin-facing module for role assignment, module access, and per-user allow/deny overrides.
@@ -52,7 +52,7 @@ The current app is organized around these modules:
   Interactive viewer for logs and productivity entries.
 
 - `Settings`  
-  Profile details, sign-out flow, and version/build metadata.
+  Profile details, sign-out flow, version/build metadata, access administration, and the OpenAPI/Swagger reference.
 
 ## Local Setup
 
@@ -91,11 +91,10 @@ BUILD_TIME=2026-03-16T00:00:00.000Z
 
 ### 3. Prepare Supabase
 
-The canonical Supabase configuration and forward migrations live in [`supabase`](./supabase). The reviewed live schema baseline is [`document/supabase/schema.sql`](./document/supabase/schema.sql); its SHA-256 is recorded by the first canonical migration.
+The canonical Supabase configuration and forward migrations live in [`supabase`](./supabase). The reviewed live schema baseline is [`supabase/schema.sql`](supabase/schema.sql); the first canonical migration records the reviewed source export hash.
 
 - For the existing production project, apply only unapplied forward migrations. The baseline marker is intentionally a no-op and must not replay the exported schema over production.
 - For a fresh project, restore the schema-only baseline first, then apply the later canonical migrations in timestamp order. Do not run the remediation migrations against an empty database.
-- Treat the older files in [`document/migrations`](./document/migrations) as historical records rather than the current migration ledger.
 
 You should also configure your Supabase auth redirect URLs, including:
 
@@ -139,18 +138,24 @@ Temporary share images and batch records are removed after terminal processing a
 
 ### App routes
 
-- `/` redirects to login or dashboard depending on session state
+- `/` opens the dashboard, with unauthenticated requests handled by the login middleware
 - `/dashboard`
 - `/projects`
-- `/project/new`
-- `/project/[id]`
-- `/project/[id]/edit`
+- `/projects/new`
+- `/projects/[id]`
+- `/projects/[id]/edit`
 - `/logs`
+- `/logs/api-tools`
+- `/api-tools` redirects to `/logs/api-tools` for the database-backed API module path
 - `/log-viewer`
 - `/tickets`
 - `/tickets/new`
 - `/tickets/manage`
 - `/film`
+- `/film/dashboard`
+- `/film/cameras`
+- `/film/new-roll`
+- `/film/rolls/[id]`
 - `/finance`
 - `/finance/add`
 - `/finance/transactions`
@@ -158,14 +163,14 @@ Temporary share images and batch records are removed after terminal processing a
 - `/finance/sources`
 - `/finance/categories`
 - `/finance/rules`
-- `/api-tools`
-- `/docs` redirects to `/api-tools`
 - `/settings`
 - `/settings/access`
+- `/settings/docs`
 - `/article-creation`
 - `/login`
-- `/signup`
-- `/reset-password`
+- `/login/signup`
+- `/login/forgot-password`
+- `/login/reset-password`
 - `/auth/callback`
 
 ### API routes
@@ -194,7 +199,7 @@ Temporary share images and batch records are removed after terminal processing a
   Shared types, auth helpers, RBAC logic, Supabase clients, logging helpers, utility functions, and article-creation utilities.
 
 - `document/`
-  Product docs, design notes, and database migration files. Start new product requirements with [`document/PRD_TEMPLATE.md`](./document/PRD_TEMPLATE.md).
+  Product docs and design notes. Start new product requirements with [`document/prd/PRD_TEMPLATE.md`](document/prd/PRD_TEMPLATE.md).
 
 - `public/`  
   Static assets.
@@ -206,7 +211,7 @@ Temporary share images and batch records are removed after terminal processing a
   Render service for direct Finance OCR and durable share-batch processing.
 
 - `supabase/`
-  Supabase configuration and canonical forward migrations.
+  Supabase configuration, adopted schema baseline, supporting snapshot, and canonical forward migrations.
 
 ## Stack
 
@@ -216,7 +221,7 @@ Temporary share images and batch records are removed after terminal processing a
 - Tailwind CSS
 - Supabase Auth and database
 - React Markdown
-- Swagger UI loaded in the API module
+- Swagger UI loaded in Settings API Docs
 
 ## License
 

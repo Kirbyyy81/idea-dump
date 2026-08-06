@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveIdentity, AuthError, canModifyLog, canDeleteLog } from '@/lib/auth/resolveIdentity';
-import { deleteAccessibleLog, findAccessibleLog, updateAccessibleLog } from '@/lib/logs/access';
+import { deleteAccessibleLog, findAccessibleLog, updateAccessibleLog } from '@/lib/logs/core/access';
+import { parseUpdateLog, readLogRequestBody } from '@/lib/logs/core/schemas';
 import { authorizeIdentityModule } from '@/lib/rbac/guards';
-import { UpdateDailyLogInput } from '@/lib/types';
 
 interface RouteParams {
     params: Promise<{
@@ -19,11 +19,17 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             return access.response;
         }
         const { id } = await params;
-        const body: UpdateDailyLogInput = await request.json();
-
-        if (!body.content || !body.content.date) {
+        const body = await readLogRequestBody(request);
+        if ('error' in body) {
             return NextResponse.json(
-                { error: 'Validation error', message: 'content.date is required' },
+                { error: 'Validation error', message: body.error },
+                { status: 400 }
+            );
+        }
+        const input = parseUpdateLog(body.data);
+        if ('error' in input) {
+            return NextResponse.json(
+                { error: 'Validation error', message: input.error },
                 { status: 400 }
             );
         }
@@ -41,7 +47,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             }, { status: 403 });
         }
 
-        const result = await updateAccessibleLog(identity, existingLog, body.content);
+        const result = await updateAccessibleLog(identity, existingLog, input.data.content);
         if (result.error) {
             return NextResponse.json(
                 { error: result.error, message: result.message },

@@ -14,8 +14,8 @@ import {
     PreviousDoodleIcon,
 } from '@/components/atoms/DoodleIcons';
 import { FinanceDashboardSummary } from '@/lib/types';
-import { financeApiRequest } from '@/lib/finance/clientApi';
-import { getLocalFinanceMonth, shiftFinanceMonth } from '@/lib/finance/values';
+import { financeApiRequest } from '@/lib/finance/core/client';
+import { getLocalFinanceMonth, shiftFinanceMonth } from '@/lib/finance/core/values';
 import { formatCurrencyMYR } from '@/lib/utils';
 
 const CHART_COLORS = ['#e76f51', '#2a9d8f', '#457b9d', '#e9c46a', '#8d6e63', '#6d597a'];
@@ -49,14 +49,13 @@ export default function FinancePage() {
     }, [month]);
 
     return (
-        <AppShell contentClassName="p-5 md:p-8">
+        <AppShell
+            contentClassName="p-5 md:p-8"
+            pageTitle="Finance"
+            headerAction={<Link href="/finance/add" className="btn-primary"><AddDoodleIcon size={16} className="mr-2" />Add transaction</Link>}
+        >
             <div className="mx-auto max-w-7xl">
-                <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                    <div><h1>Finance</h1></div>
-                    <Link href="/finance/add" className="btn-primary"><AddDoodleIcon size={16} className="mr-2" />Add transaction</Link>
-                </header>
-
-                <div className="mt-6 flex items-center justify-between border-y border-border-default py-3">
+                <div className="flex items-center justify-between border-y border-border-default py-3">
                     <button type="button" title="Previous month" aria-label="Previous month" onClick={() => setMonth(shiftFinanceMonth(month, -1) || month)} className="grid size-10 place-items-center text-text-secondary hover:text-text-primary"><PreviousDoodleIcon size={19} /></button>
                     <MonthPicker value={month} onChange={setMonth} />
                     <button type="button" title="Next month" aria-label="Next month" onClick={() => setMonth(shiftFinanceMonth(month, 1) || month)} className="grid size-10 place-items-center text-text-secondary hover:text-text-primary"><NextDoodleIcon size={19} /></button>

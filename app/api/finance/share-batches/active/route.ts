@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { authorizeFinance, jsonError } from '@/lib/finance/api';
-import { getOwnedActiveFinanceShareBatch } from '@/lib/finance/shareBatchServer';
+import { authorizeFinance, jsonError } from '@/lib/finance/core/auth';
+import { getOwnedActiveFinanceShareBatch } from '@/lib/finance/share/server';
 
 export const dynamic = 'force-dynamic';
 

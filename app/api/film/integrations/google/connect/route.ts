@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
-import { authorizeFilmJournal, jsonError } from '@/lib/film/api';
-import { getGoogleAuthUrl } from '@/lib/film/googleDrive';
+import { authorizeFilmJournal, jsonError } from '@/lib/film/core/api';
+import { getFilmGoogleAuthorizationUrl } from '@/lib/film/core/service';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
         const rollId = url.searchParams.get('roll_id');
 
         const state = crypto.randomBytes(16).toString('hex');
-        const response = NextResponse.redirect(getGoogleAuthUrl(state));
+        const response = NextResponse.redirect(getFilmGoogleAuthorizationUrl(state));
         response.cookies.set('film_google_oauth_state', state, {
             httpOnly: true,
             maxAge: 60 * 10,

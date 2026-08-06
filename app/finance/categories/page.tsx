@@ -13,8 +13,8 @@ import { useAlert } from '@/lib/contexts/AlertContext';
 import {
     getMissingDefaultExpenseCategories,
     mergeFinanceCategory,
-} from '@/lib/finance/categoryOptions';
-import { financeApiRequest } from '@/lib/finance/clientApi';
+} from '@/lib/finance/catalog';
+import { financeApiRequest } from '@/lib/finance/core/client';
 
 const initialForm = {
     name: '',
@@ -157,13 +157,9 @@ export default function FinanceCategoriesPage() {
     const missingDefaultExpenseCategories = getMissingDefaultExpenseCategories(categories);
 
     return (
-        <AppShell contentClassName="p-5 md:p-8">
+        <AppShell contentClassName="p-5 md:p-8" pageTitle="Categories">
             <div className="mx-auto max-w-7xl">
-                <header className="pb-5">
-                    <h1>Categories</h1>
-                </header>
-
-                <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[360px_minmax(0,1fr)]">
+                <div className="grid grid-cols-1 gap-5 lg:grid-cols-[360px_minmax(0,1fr)]">
                     <form onSubmit={addCategory}>
                         <Card className="p-5">
                             <h2 className="text-base font-bold">New category</h2>
