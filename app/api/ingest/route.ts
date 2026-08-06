@@ -31,12 +31,12 @@ export async function POST(request: NextRequest) {
 
         const rawBody = await readProjectRequestBody(request);
         if ('error' in rawBody) {
-            return NextResponse.json({ error: rawBody.error }, { status: 400 });
+            return NextResponse.json({ error: rawBody.error.message }, { status: 400 });
         }
 
         const input = parseProjectIngest(rawBody.data);
         if ('error' in input) {
-            return NextResponse.json({ error: input.error }, { status: 400 });
+            return NextResponse.json({ error: input.error.message }, { status: 400 });
         }
 
         const project = await createIngestedProject(keyData.userId, input.data);

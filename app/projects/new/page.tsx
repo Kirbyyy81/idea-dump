@@ -7,22 +7,29 @@ import { ArrowLeft } from 'lucide-react';
 import { AppShell } from '@/components/organisms/AppShell';
 import { ProjectForm } from '../_components/ProjectForm';
 import { CreateProjectInput } from '@/lib/types';
-import { createProject } from '@/lib/projects/core/client';
+import { createProject, ProjectClientError } from '@/lib/projects/core/client';
 
 export default function NewProjectPage() {
     const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
     const handleSubmit = async (data: CreateProjectInput) => {
         setIsSubmitting(true);
         setError(null);
+        setFieldErrors({});
 
         try {
             const project = await createProject(data);
             router.push(`/projects/${project.id}`);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'An error occurred');
+            if (err instanceof ProjectClientError) {
+                setFieldErrors(err.fieldErrors ?? {});
+                setError(err.fieldErrors ? 'Please correct the highlighted fields.' : err.message);
+            } else {
+                setError(err instanceof Error ? err.message : 'An error occurred');
+            }
             setIsSubmitting(false);
         }
     };
@@ -53,6 +60,7 @@ export default function NewProjectPage() {
                     isSubmitting={isSubmitting}
                     onCancel={() => router.push('/projects')}
                     submitLabel="Create Project"
+                    serverErrors={fieldErrors}
                 />
             </div>
         </AppShell>

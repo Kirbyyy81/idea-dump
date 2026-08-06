@@ -1,35 +1,24 @@
 'use client';
 
+import { ApiClientError, requestApi } from '@/lib/api/client';
 import type { CreateProjectInput, Project, UpdateProjectInput } from '@/lib/types';
 
-interface ProjectResponse<T> {
-    data: T;
-}
-
-interface ProjectErrorResponse {
-    error?: string;
-}
-
-export class ProjectClientError extends Error {
-    readonly status: number;
-
-    constructor(message: string, status: number) {
-        super(message);
+export class ProjectClientError extends ApiClientError {
+    constructor(error: ApiClientError) {
+        super(error.message, error.code, error.status, error.fieldErrors);
         this.name = 'ProjectClientError';
-        this.status = status;
     }
 }
 
 async function requestProject<T>(url: string, init?: RequestInit): Promise<T> {
-    const response = await fetch(url, init);
-    const payload = await response.json().catch(() => null) as ProjectResponse<T> | ProjectErrorResponse | null;
-
-    if (!response.ok) {
-        const message = payload && 'error' in payload ? payload.error : undefined;
-        throw new ProjectClientError(message ?? 'Project request failed', response.status);
+    try {
+        return await requestApi<T>(url, init);
+    } catch (error) {
+        if (error instanceof ApiClientError) {
+            throw new ProjectClientError(error);
+        }
+        throw error;
     }
-
-    return (payload as ProjectResponse<T>).data;
 }
 
 export function listProjects(): Promise<Project[]> {

@@ -40,6 +40,22 @@ test('validates project updates and ingest payloads', () => {
         },
     });
     assert.deepEqual(parseProjectIngest({ title: 'Imported', tags: ['ok', 3] }), {
-        error: 'tags must be an array of strings',
+        error: {
+            message: 'tags must be an array of strings',
+            fieldErrors: {
+                tags: 'tags must be an array of strings',
+            },
+        },
+    });
+});
+
+test('returns field errors for invalid project form values', () => {
+    assert.deepEqual(parseCreateProject({ title: '', priority: 'urgent' }), {
+        error: {
+            message: 'Title is required',
+            fieldErrors: {
+                title: 'Title is required',
+            },
+        },
     });
 });
