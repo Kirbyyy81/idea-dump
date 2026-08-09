@@ -1,3 +1,4 @@
+-- Add server-managed payees and recipient references to Finance transactions.
 create function finance_private.finance_normalize_payee_key(p_value text)
 returns text
 language sql
@@ -7,7 +8,7 @@ set search_path = ''
 as $function$
   select pg_catalog.lower(
     pg_catalog.regexp_replace(
-      normalize(pg_catalog.coalesce(p_value, ''), NFKC),
+      normalize(coalesce(p_value, ''), NFKC),
       '[^[:alnum:]]+',
       '',
       'g'
@@ -233,7 +234,7 @@ begin
     p_confirmation_mode
   );
 
-  if pg_catalog.coalesce((confirmation ->> 'confirmed')::boolean, false) is false then
+  if coalesce((confirmation ->> 'confirmed')::boolean, false) is false then
     return confirmation;
   end if;
 
@@ -261,7 +262,7 @@ begin
   end if;
 
   if transaction_row.intake_item_id is not null then
-    select pg_catalog.left(pg_catalog.coalesce(ocr_normalized_text, ocr_text), 1000)
+    select pg_catalog.left(coalesce(ocr_normalized_text, ocr_text), 1000)
     into intake_context
     from public.finance_intake_items
     where id = transaction_row.intake_item_id
@@ -282,18 +283,18 @@ begin
         to_jsonb(nullif(pg_catalog.btrim(p_recipient_reference), ''))
       )
     ) as changes(field_name, previous_value, corrected_value)
-    where pg_catalog.coalesce(previous_value, 'null'::jsonb)
-          is distinct from pg_catalog.coalesce(corrected_value, 'null'::jsonb)
+    where coalesce(previous_value, 'null'::jsonb)
+          is distinct from coalesce(corrected_value, 'null'::jsonb)
       and not exists (
         select 1
         from public.finance_corrections existing
         where existing.user_id = p_user_id
           and existing.transaction_id = transaction_row.id
           and existing.field_name = changes.field_name
-          and pg_catalog.coalesce(existing.previous_value, 'null'::jsonb)
-              = pg_catalog.coalesce(changes.previous_value, 'null'::jsonb)
-          and pg_catalog.coalesce(existing.corrected_value, 'null'::jsonb)
-              = pg_catalog.coalesce(changes.corrected_value, 'null'::jsonb)
+          and coalesce(existing.previous_value, 'null'::jsonb)
+              = coalesce(changes.previous_value, 'null'::jsonb)
+          and coalesce(existing.corrected_value, 'null'::jsonb)
+              = coalesce(changes.corrected_value, 'null'::jsonb)
       )
   loop
     insert into public.finance_corrections (
@@ -357,19 +358,22 @@ begin
     pg_catalog.hashtextextended('idea-dump:finance-ledger:' || p_user_id::text, 0)
   );
 
-  select transactions, payees.name
-  into previous_row, previous_payee_name
+  select transactions.*
+  into previous_row
   from public.finance_transactions transactions
-  left join public.dim_finance_payees payees
-    on payees.id = transactions.payee_id
-   and payees.user_id = transactions.user_id
   where transactions.id = p_transaction_id
     and transactions.user_id = p_user_id
-  for update of transactions;
+  for update;
 
   if not found then
     raise exception using errcode = 'P0002', message = 'Finance transaction not found';
   end if;
+
+  select payees.name
+  into previous_payee_name
+  from public.dim_finance_payees payees
+  where payees.id = previous_row.payee_id
+    and payees.user_id = previous_row.user_id;
 
   updated_row := public.finance_update_transaction(
     p_user_id,
@@ -397,7 +401,7 @@ begin
   returning * into updated_row;
 
   if updated_row.intake_item_id is not null then
-    select pg_catalog.left(pg_catalog.coalesce(ocr_normalized_text, ocr_text), 1000)
+    select pg_catalog.left(coalesce(ocr_normalized_text, ocr_text), 1000)
     into context_text
     from public.finance_intake_items
     where id = updated_row.intake_item_id
@@ -414,8 +418,8 @@ begin
         to_jsonb(updated_row.recipient_reference)
       )
     ) as changes(field_name, previous_value, corrected_value)
-    where pg_catalog.coalesce(previous_value, 'null'::jsonb)
-          is distinct from pg_catalog.coalesce(corrected_value, 'null'::jsonb)
+    where coalesce(previous_value, 'null'::jsonb)
+          is distinct from coalesce(corrected_value, 'null'::jsonb)
   loop
     insert into public.finance_corrections (
       user_id,

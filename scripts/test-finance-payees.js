@@ -7,7 +7,7 @@ const migrationPath = path.resolve(
     '..',
     'supabase',
     'migrations',
-    '20260809075627_add_finance_payees.sql'
+    '20260809143246_add_finance_payees.sql'
 );
 const sql = fs.readFileSync(migrationPath, 'utf8');
 const duplicateSource = fs.readFileSync(
