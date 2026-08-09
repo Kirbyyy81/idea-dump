@@ -48,6 +48,8 @@ export function extractFinanceReferenceNumber(text: string) {
     for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
         const line = lines[lineIndex];
         for (const labelMatch of Array.from(line.matchAll(referenceLabelPattern))) {
+            const labelPrefix = line.slice(0, labelMatch.index ?? 0);
+            if (/\bRECIPIENT\s*$/.test(labelPrefix)) continue;
             const label = labelMatch[1];
             const labelRank = referenceLabelRank(label);
             const sameLineCandidates = windowCandidates(

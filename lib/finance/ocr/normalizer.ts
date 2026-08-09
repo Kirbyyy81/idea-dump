@@ -41,3 +41,11 @@ export function normalizeFinanceMerchantKey(value: string | null | undefined) {
         ) || character.toLocaleLowerCase('en') !== character.toLocaleUpperCase('en'))
         .join('');
 }
+
+export function normalizeFinancePayeeKey(value: string | null | undefined) {
+    return Array.from((value || '').normalize('NFKC').toLocaleLowerCase('en'))
+        .filter((character) => (
+            character >= '0' && character <= '9'
+        ) || character.toLocaleLowerCase('en') !== character.toLocaleUpperCase('en'))
+        .join('');
+}

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseFinanceText } from '@/lib/finance/ocr/parser';
 import { extractFinanceReferenceNumber } from '@/lib/finance/ocr/reference';
+import { extractFinanceRecipientReference } from '@/lib/finance/ocr/recipientReference';
 
 describe('Finance reference extraction', () => {
     it.each(['9', '&', '@', '>', '&®', '('])(
@@ -73,5 +74,29 @@ describe('Finance reference extraction', () => {
             'Screenshot.png',
         );
         expect(parsed.payload.reference_number).toBe('202607241234ABC');
+    });
+
+    it.each([
+        ['Recipient Reference: Dinner share', 'Dinner share'],
+        ['Recipient Ref\nDinner share', 'Dinner share'],
+        ['Recipient Reference: \u00a7 Dinner share', 'Dinner share'],
+        ['Recipient Reference: 9 Dinner share', 'Dinner share'],
+        ['Recipient Reference\nCOPY\nDinner share', 'Dinner share'],
+    ])('extracts recipient reference from %s', (text, expected) => {
+        expect(extractFinanceRecipientReference(text)).toBe(expected);
+    });
+
+    it('stops recipient reference lookup at the next field label', () => {
+        expect(extractFinanceRecipientReference('Recipient Reference\nAmount RM 12.50')).toBeNull();
+    });
+
+    it('keeps recipient and transaction references separate', () => {
+        const parsed = parseFinanceText([
+            'Recipient Reference: Dinner share',
+            'Reference ID 9 TXN-123456',
+            'Paid RM 12.50',
+        ].join('\n'), [], [], 'Screenshot.png');
+        expect(parsed.payload.recipient_reference).toBe('Dinner share');
+        expect(parsed.payload.reference_number).toBe('TXN-123456');
     });
 });

@@ -1,7 +1,7 @@
 import { getOwnedActiveFinanceShareBatch as getOwnedActiveFinanceShareBatchFromRepository } from '@/lib/finance/core/repository';
 
 export const FINANCE_SHARE_BUCKET = 'finance-share-batches';
-export const FINANCE_SHARE_PROCESSING_VERSION = 2;
+export const FINANCE_SHARE_PROCESSING_VERSION = 3;
 export const MAX_FINANCE_SHARE_FILES = 10;
 export const MAX_FINANCE_SHARE_FILE_BYTES = 4 * 1024 * 1024;
 export const MAX_FINANCE_SHARE_BATCH_BYTES =

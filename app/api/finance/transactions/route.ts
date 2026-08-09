@@ -50,7 +50,12 @@ export async function POST(request: NextRequest) {
         if (!body) return jsonError('Request body must be a JSON object');
         const today = getFinanceDateInTimeZone(request.headers.get(FINANCE_TIME_ZONE_HEADER));
         const parsed = parseManualFinanceTransactionCreate(body, today);
-        if ('error' in parsed) return jsonError(parsed.error);
+        if ('error' in parsed) {
+            return NextResponse.json(
+                { error: parsed.error, field_errors: parsed.field_errors || {} },
+                { status: 422 }
+            );
+        }
         const result = await createManualFinanceTransactionForUser(session.user.id, parsed.data);
         return NextResponse.json(
             { data: result.data, ...(result.recovered ? { recovered: true } : {}) },
@@ -58,7 +63,12 @@ export async function POST(request: NextRequest) {
         );
     } catch (error) {
         console.error('Error creating finance transaction:', error);
-        if (isFinanceServiceError(error)) return jsonError(error.message, error.status);
+        if (isFinanceServiceError(error)) {
+            return NextResponse.json(
+                { error: error.message, ...(error.details || {}) },
+                { status: error.status }
+            );
+        }
         if (isFinanceSerializationError(error)) return jsonError('Finance data changed concurrently. Retry the action.', 409);
         return jsonError('Failed to create finance transaction', 500);
     }
@@ -77,7 +87,12 @@ export async function PUT(request: NextRequest) {
         return NextResponse.json({ data: await updateFinanceTransactionForUser(session.user.id, id, body, today) });
     } catch (error) {
         console.error('Error updating finance transaction:', error);
-        if (isFinanceServiceError(error)) return jsonError(error.message, error.status);
+        if (isFinanceServiceError(error)) {
+            return NextResponse.json(
+                { error: error.message, ...(error.details || {}) },
+                { status: error.status }
+            );
+        }
         if (isFinanceSerializationError(error)) return jsonError('Finance data changed concurrently. Retry the action.', 409);
         return jsonError('Failed to update finance transaction', 500);
     }

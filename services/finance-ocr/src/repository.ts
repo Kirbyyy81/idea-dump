@@ -300,7 +300,7 @@ export class SupabaseFinanceRepository implements FinanceRepository, ShareQueueR
     }
 
     async loadContext(userId: string): Promise<FinanceContext> {
-        const [sources, rules, fieldLearningRules, categories] = await Promise.all([
+        const [sources, rules, fieldLearningRules, categories, payees] = await Promise.all([
             this.secretClient.from('dim_finance_sources').select('*').eq('user_id', userId).eq('is_archived', false),
             this.secretClient.from('finance_rules').select('*').eq('user_id', userId).eq('is_active', true),
             this.secretClient
@@ -312,16 +312,19 @@ export class SupabaseFinanceRepository implements FinanceRepository, ShareQueueR
                 .order('created_at')
                 .order('id'),
             this.secretClient.from('dim_finance_categories').select('id, type').eq('user_id', userId).eq('is_archived', false),
+            this.secretClient.from('dim_finance_payees').select('*').eq('user_id', userId).eq('is_archived', false),
         ]);
         if (sources.error) throw new RepositoryError('load_sources', sources.error);
         if (rules.error) throw new RepositoryError('load_rules', rules.error);
         if (fieldLearningRules.error) throw new RepositoryError('load_field_learning_rules', fieldLearningRules.error);
         if (categories.error) throw new RepositoryError('load_categories', categories.error);
+        if (payees.error) throw new RepositoryError('load_payees', payees.error);
         return {
             sources: (sources.data ?? []) as FinanceContext['sources'],
             rules: (rules.data ?? []) as FinanceContext['rules'],
             fieldLearningRules: (fieldLearningRules.data ?? []) as FinanceContext['fieldLearningRules'],
             categories: (categories.data ?? []) as FinanceContext['categories'],
+            payees: (payees.data ?? []) as FinanceContext['payees'],
         };
     }
 
@@ -565,7 +568,7 @@ export class SupabaseFinanceRepository implements FinanceRepository, ShareQueueR
         ) {
             return null;
         }
-        const { data, error } = await this.secretClient.rpc('finance_confirm_candidate', {
+        const { data, error } = await this.secretClient.rpc('finance_confirm_candidate_v2', {
             p_user_id: input.userId,
             p_candidate_id: candidate.id,
             p_source_id: payload.source_id,
@@ -573,10 +576,12 @@ export class SupabaseFinanceRepository implements FinanceRepository, ShareQueueR
             p_direction: payload.direction,
             p_amount: payload.amount,
             p_merchant: payload.merchant,
+            p_payee_name: payload.payee_name,
             p_transaction_date: payload.transaction_date,
             p_notes: null,
             p_currency: payload.currency,
             p_reference_number: payload.reference_number ?? payload.reference ?? null,
+            p_recipient_reference: payload.recipient_reference,
             p_allow_duplicate: false,
             p_duplicate_override_reason: null,
             p_confirmation_mode: 'automatic',

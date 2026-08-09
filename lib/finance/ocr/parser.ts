@@ -2,13 +2,15 @@ import {
     FinanceSource,
     FinanceCandidatePayload,
     FinanceFieldLearningRule,
+    FinancePayee,
     FinanceRule,
     FinanceTransactionDirection,
 } from '@/lib/types';
 import { FINANCE_V1_CURRENCY } from '@/lib/finance/core/constants';
 import { applyLearnedReferenceRules } from '@/lib/finance/ocr/fieldLearning';
-import { normalizeFinanceMerchantKey } from '@/lib/finance/ocr/normalizer';
+import { normalizeFinanceMerchantKey, normalizeFinancePayeeKey } from '@/lib/finance/ocr/normalizer';
 import { extractFinanceReferenceNumber } from '@/lib/finance/ocr/reference';
+import { extractFinanceRecipientReference } from '@/lib/finance/ocr/recipientReference';
 import { detectFinanceSource } from '@/lib/finance/ocr/sourceDetection';
 
 interface ParsedCandidate {
@@ -74,27 +76,42 @@ function parseDirection(text: string): FinanceTransactionDirection | null {
     return null;
 }
 
-function cleanMerchant(value: string) {
+function cleanParty(value: string) {
     return value
-        .replace(/^(?:to|from|merchant|recipient|payee|sender)\s*[:\-]?\s*/i, '')
         .replace(/\s{2,}/g, ' ')
         .trim();
 }
 
-function parseMerchant(lines: string[]) {
-    for (const line of lines) {
-        if (/^(?:to|from|merchant|recipient|payee|sender)(?:\s*[:\-]\s*|\s+)/i.test(line)) {
-            const merchant = cleanMerchant(line);
-            const lower = merchant.toLowerCase();
-            if (
-                merchant.length >= 2
-                && !ignoredMerchantTerms.some((term) => lower.includes(term))
-            ) return merchant;
+function validParty(value: string) {
+    const lower = value.toLowerCase();
+    return value.length >= 2
+        && value.length <= 500
+        && !ignoredMerchantTerms.some((term) => lower.includes(term));
+}
+
+function labeledPartyValue(
+    lines: string[],
+    pattern: RegExp,
+) {
+    for (let index = 0; index < lines.length; index += 1) {
+        const match = pattern.exec(lines[index]);
+        if (!match) continue;
+        const sameLine = cleanParty(match[1] || '');
+        if (validParty(sameLine)) return sameLine;
+
+        for (let nextIndex = index + 1; nextIndex < lines.length && nextIndex <= index + 2; nextIndex += 1) {
+            const nextLine = cleanParty(lines[nextIndex] || '');
+            if (!nextLine) continue;
+            if (/^(?:amount|total|date|time|merchant|payee|recipient|sender|reference|ref|available balance|current balance)\b/i.test(nextLine)) break;
+            if (validParty(nextLine)) return nextLine;
         }
     }
+    return null;
+}
 
+function fallbackParty(lines: string[]) {
     return lines
-        .map(cleanMerchant)
+        .map(cleanParty)
         .find((line) => {
             const lower = line.toLowerCase();
             return line.length >= 3
@@ -103,6 +120,43 @@ function parseMerchant(lines: string[]) {
                 && !/\d{2,}/.test(line)
                 && !ignoredMerchantTerms.some((term) => lower.includes(term));
         }) ?? null;
+}
+
+function matchSavedPayee(value: string | null, payees: FinancePayee[]) {
+    const key = normalizeFinancePayeeKey(value);
+    if (!key) return null;
+    return payees.find((payee) => (
+        !payee.is_archived
+        && (payee.normalized_name || normalizeFinancePayeeKey(payee.name)) === key
+    )) || null;
+}
+
+function parseParties(lines: string[], payees: FinancePayee[]) {
+    const explicitMerchant = labeledPartyValue(lines, /^merchant(?:\s+name)?\s*[:\-]?\s*(.*)$/i);
+    const explicitPayee = labeledPartyValue(
+        lines,
+        /^(?:payee|recipient|transfer\s+(?:recipient|to)|to)\b(?!\s+(?:reference|ref))(?:\s+name)?\s*[:\-]?\s*(.*)$/i,
+    );
+    const savedExplicitPayee = matchSavedPayee(explicitPayee, payees);
+
+    if (explicitMerchant || explicitPayee) {
+        return {
+            merchant: explicitMerchant,
+            payeeId: savedExplicitPayee?.id || null,
+            payeeName: savedExplicitPayee?.name || explicitPayee,
+        };
+    }
+
+    for (const line of lines) {
+        const value = cleanParty(line);
+        if (!validParty(value)) continue;
+        const savedPayee = matchSavedPayee(value, payees);
+        if (savedPayee) {
+            return { merchant: null, payeeId: savedPayee.id, payeeName: savedPayee.name };
+        }
+    }
+
+    return { merchant: fallbackParty(lines), payeeId: null, payeeName: null };
 }
 
 function ruleMatches(rule: FinanceRule, text: string, merchant: string | null) {
@@ -141,6 +195,7 @@ export function parseFinanceText(
     sources: FinanceSource[],
     filename: string | null = null,
     fieldLearningRules: FinanceFieldLearningRule[] = [],
+    payees: FinancePayee[] = [],
 ): ParsedCandidate {
     const lines = normalizedText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
     const normalized = lines.join('\n').toLowerCase();
@@ -153,15 +208,19 @@ export function parseFinanceText(
     const sourceSignalsConflict = new Set(
         sourceDetectionSignals.map((signal) => signal.source_id)
     ).size > 1;
+    const parties = parseParties(lines, payees);
     const payload: FinanceCandidatePayload = {
         amount: parseAmount(lines),
         currency: FINANCE_V1_CURRENCY,
-        merchant: parseMerchant(lines),
+        merchant: parties.merchant,
+        payee_id: parties.payeeId,
+        payee_name: parties.payeeName,
         direction: parseDirection(normalizedText),
         transaction_date: parseTransactionDate(normalizedText),
         source_id: sourceDetection.sourceId,
         category_id: null,
         reference_number: extractFinanceReferenceNumber(normalizedText),
+        recipient_reference: extractFinanceRecipientReference(normalizedText),
         matched_rule_names: [],
         learned_field_rule_ids: [],
         duplicate_transaction_id: null,
@@ -230,7 +289,7 @@ export function parseFinanceText(
     let confidence = 0;
     if (payload.amount) confidence += 0.35;
     if (payload.transaction_date) confidence += 0.2;
-    if (payload.merchant) confidence += 0.15;
+    if (payload.merchant || payload.payee_name) confidence += 0.15;
     if (payload.direction) confidence += 0.1;
     if (payload.source_id) confidence += 0.1;
     if (payload.category_id) confidence += 0.05;

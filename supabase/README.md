@@ -83,7 +83,7 @@ outbox in v1. Keep the bucket private and periodically compare
 before deleting it.
 
 Confirmed Finance ledger updates and deletes are RPC-only application
-operations. Use `finance_update_transaction` and `finance_delete_transaction`;
+operations. Use `finance_update_transaction_v2` and `finance_delete_transaction`;
 an ad hoc service-role `DELETE` bypasses screenshot-lineage and duplicate-state
 cleanup even though browser roles cannot perform it. Candidate duplicate-target
 writes and trusted RPC mutations share the fail-fast per-user ledger lock.
