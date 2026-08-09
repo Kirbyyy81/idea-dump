@@ -1,20 +1,34 @@
 'use client';
 
+import type { FinanceFieldErrors } from '@/lib/finance/core/values';
+
 const DEFAULT_FINANCE_REQUEST_TIMEOUT_MS = 20_000;
 
 type FinanceErrorPayload = {
     error?: unknown;
     message?: unknown;
+    field_errors?: unknown;
 };
 
 export class FinanceApiError extends Error {
     readonly status: number;
+    readonly fieldErrors: FinanceFieldErrors;
 
-    constructor(message: string, status: number) {
+    constructor(message: string, status: number, fieldErrors: FinanceFieldErrors = {}) {
         super(message);
         this.name = 'FinanceApiError';
         this.status = status;
+        this.fieldErrors = fieldErrors;
     }
+}
+
+function financeFieldErrors(value: unknown): FinanceFieldErrors {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+    return Object.fromEntries(
+        Object.entries(value).filter((entry): entry is [string, string] => (
+            typeof entry[1] === 'string' && Boolean(entry[1].trim())
+        ))
+    ) as FinanceFieldErrors;
 }
 
 function financeErrorMessage(payload: FinanceErrorPayload | null, fallback: string) {
@@ -78,7 +92,7 @@ export async function financeApiRequest<T>(
             throw new FinanceApiError(financeErrorMessage(
                 payload,
                 options.fallbackMessage ?? `Finance request failed (${response.status})`
-            ), response.status);
+            ), response.status, financeFieldErrors(payload?.field_errors));
         }
 
         if (!payload) {

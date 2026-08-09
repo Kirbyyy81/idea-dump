@@ -20,6 +20,9 @@ export interface SelectProps {
     buttonClassName?: string;
     menuClassName?: string;
     disabled?: boolean;
+    error?: boolean;
+    id?: string;
+    dataFinanceField?: string;
     ariaLabel?: string;
     ariaDescribedBy?: string;
 }
@@ -33,6 +36,9 @@ export function Select({
     buttonClassName,
     menuClassName,
     disabled,
+    error,
+    id,
+    dataFinanceField,
     ariaLabel,
     ariaDescribedBy,
 }: SelectProps) {
@@ -41,7 +47,7 @@ export function Select({
     const menuRef = useRef<HTMLDivElement>(null);
     const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
     const selectId = useId();
-    const triggerId = `select-trigger-${selectId}`;
+    const triggerId = id || `select-trigger-${selectId}`;
     const listboxId = `select-listbox-${selectId}`;
     const [isOpen, setIsOpen] = useState(false);
     const [menuPosition, setMenuPosition] = useState({ left: 0, maxHeight: 256, top: 0, width: 0 });
@@ -177,17 +183,21 @@ export function Select({
                 ref={buttonRef}
                 id={triggerId}
                 type="button"
+                role="combobox"
                 disabled={disabled}
                 aria-haspopup="listbox"
                 aria-expanded={isOpen}
                 aria-controls={listboxId}
                 aria-label={ariaLabel}
                 aria-describedby={ariaDescribedBy}
+                aria-invalid={error || undefined}
+                data-finance-field={dataFinanceField}
                 onClick={() => setIsOpen((current) => !current)}
                 onKeyDown={handleButtonKeyDown}
                 className={cn(
                     'input flex h-10 items-center justify-between gap-2 pr-10 text-left',
                     disabled && 'cursor-not-allowed opacity-60',
+                    error && 'border-error focus:border-error',
                     buttonClassName
                 )}
             >

@@ -25,6 +25,12 @@ import {
 } from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
 import { FinanceLoadingState } from '../_components/FinanceLoadingState';
+import {
+    FinanceFormErrorSummary,
+    FinanceFormField,
+    financeFieldErrorProps,
+    focusFirstFinanceError,
+} from '../_components/FinanceFormField';
 import { cn, formatCurrency } from '@/lib/utils';
 import {
     getFinanceCategoryOptions,
@@ -33,14 +39,17 @@ import {
 import { persistVirtualDefaultCategory } from '@/lib/finance/catalogClient';
 import {
     FINANCE_TIME_ZONE_HEADER,
-    getFinanceTransactionTextError,
+    FinanceFieldErrors,
+    FinanceTransactionField,
+    getFinanceTransactionFieldErrors,
     getFinanceTimeZone,
     getLocalFinanceDate,
-    isFutureFinanceDate,
     MAX_FINANCE_AMOUNT,
     MAX_FINANCE_MERCHANT_LENGTH,
     MAX_FINANCE_NAME_LENGTH,
     MAX_FINANCE_NOTES_LENGTH,
+    MAX_FINANCE_PAYEE_LENGTH,
+    MAX_FINANCE_RECIPIENT_REFERENCE_LENGTH,
     MAX_FINANCE_REFERENCE_LENGTH,
     toPositiveFinanceAmount,
 } from '@/lib/finance/core/values';
@@ -65,7 +74,10 @@ interface ReviewForm {
     direction: FinanceTransactionDirection;
     amount: string;
     merchant: string;
+    has_payee: boolean;
+    payee_name: string;
     reference_number: string;
+    recipient_reference: string;
     transaction_date: string;
     notes: string;
     allow_duplicate: boolean;
@@ -104,7 +116,10 @@ function formFromCandidate(candidate: FinanceCandidateTransaction): ReviewForm {
         direction: payload.direction || 'expense',
         amount: payload.amount?.toString() || '',
         merchant: payload.merchant || '',
+        has_payee: Boolean(payload.payee_name || payload.payee_id),
+        payee_name: payload.payee_name || '',
         reference_number: payload.reference_number || payload.reference || '',
+        recipient_reference: payload.recipient_reference || '',
         transaction_date: payload.transaction_date || getLocalFinanceDate(),
         notes: '',
         allow_duplicate: false,
@@ -130,6 +145,7 @@ export default function FinanceReviewPage() {
     const [isDirectionProposalPending, setIsDirectionProposalPending] = useState(false);
     const [isDateProposalPending, setIsDateProposalPending] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [fieldErrors, setFieldErrors] = useState<FinanceFieldErrors>({});
     const [isLoading, setIsLoading] = useState(true);
     const pendingDraftRef = useRef<PendingReviewDraft | null>(null);
     const selected = candidates.find((candidate) => candidate.id === selectedId) || null;
@@ -187,12 +203,23 @@ export default function FinanceReviewPage() {
         }
         setNewSourceName('');
         setNewCategoryName('');
+        setFieldErrors({});
     }, [selected]);
 
     const availableCategories = useMemo(
         () => getFinanceCategoryOptions(categories, form?.direction === 'income' ? 'income' : 'expense'),
         [categories, form?.direction]
     );
+
+    const setReviewField = <Key extends keyof ReviewForm>(key: Key, value: ReviewForm[Key]) => {
+        setForm((current) => current ? { ...current, [key]: value } : current);
+        setFieldErrors((current) => {
+            if (!current[key as FinanceTransactionField]) return current;
+            const next = { ...current };
+            delete next[key as FinanceTransactionField];
+            return next;
+        });
+    };
 
     const resolveItem = async (
         action: 'confirm' | 'reject' | 'retry' | 'mark_duplicate',
@@ -202,21 +229,33 @@ export default function FinanceReviewPage() {
         if (!selected || !form) return;
         let normalizedAmount: number | null = null;
         if (action === 'confirm') {
+            const nextErrors = getFinanceTransactionFieldErrors(form);
+            if (form.source_id === NEW_SOURCE) {
+                delete nextErrors.source_id;
+                if (!newSourceName.trim()) nextErrors.new_source_name = 'Enter the new source name';
+            }
+            if (form.category_id === NEW_CATEGORY) {
+                delete nextErrors.category_id;
+                if (!newCategoryName.trim()) nextErrors.new_category_name = 'Enter the new category name';
+            }
+            if (isDirectionProposalPending) nextErrors.direction = 'Confirm the proposed direction';
+            if (isDateProposalPending) nextErrors.transaction_date = 'Confirm the proposed transaction date';
+            const outcome = duplicateOutcome(selected);
+            if (outcome !== 'none' && !form.allow_duplicate) {
+                nextErrors.allow_duplicate = 'Confirm that this is a separate transaction';
+            }
+            if (outcome === 'strong' && !form.duplicate_override_reason.trim()) {
+                nextErrors.duplicate_override_reason = 'Explain why this is a separate transaction';
+            }
+            if (Object.keys(nextErrors).length > 0) {
+                setFieldErrors(nextErrors);
+                focusFirstFinanceError(nextErrors, Object.keys(nextErrors) as FinanceTransactionField[]);
+                return;
+            }
             normalizedAmount = toPositiveFinanceAmount(form.amount);
-            if (normalizedAmount === null) {
-                showError('Amount must be positive, within range, and use at most two decimals');
-                return;
-            }
-            const textError = getFinanceTransactionTextError(form);
-            if (textError) {
-                showError(textError);
-                return;
-            }
-            if (isFutureFinanceDate(form.transaction_date)) {
-                showError('Transaction date cannot be in the future');
-                return;
-            }
+            if (normalizedAmount === null) return;
         }
+        setFieldErrors({});
         setIsSaving(true);
         let attemptedForm = form;
         try {
@@ -281,6 +320,11 @@ export default function FinanceReviewPage() {
                         : 'Review item rejected');
             }
         } catch (error) {
+            if (error instanceof FinanceApiError && Object.keys(error.fieldErrors).length > 0) {
+                setFieldErrors(error.fieldErrors);
+                focusFirstFinanceError(error.fieldErrors, Object.keys(error.fieldErrors) as FinanceTransactionField[]);
+                return;
+            }
             if (error instanceof FinanceApiError && error.status === 409) {
                 pendingDraftRef.current = {
                     candidateId: selected.id,
@@ -311,7 +355,8 @@ export default function FinanceReviewPage() {
                                 const outcome = duplicateOutcome(candidate);
                                 return (
                                     <button key={candidate.id} type="button" aria-pressed={candidate.id === selectedId} onClick={() => setSelectedId(candidate.id)} className={cn('w-full border-l-4 border-l-transparent px-5 py-4 text-left transition-colors hover:bg-bg-hover', candidate.id === selectedId && 'border-l-accent-blue bg-bg-hover')}>
-                                        <div className="flex items-center justify-between gap-3"><p className="break-words font-semibold">{candidate.payload.merchant || 'Unknown merchant'}</p><span className="shrink-0 text-sm font-bold">{candidate.payload.amount ? formatCurrency(candidate.payload.amount, candidate.payload.currency || 'MYR') : 'No amount'}</span></div>
+                                        <div className="flex items-center justify-between gap-3"><p className="break-words font-semibold">{candidate.payload.payee_name || candidate.payload.merchant || 'Unknown counterparty'}</p><span className="shrink-0 text-sm font-bold">{candidate.payload.amount ? formatCurrency(candidate.payload.amount, candidate.payload.currency || 'MYR') : 'No amount'}</span></div>
+                                        {candidate.payload.payee_name && candidate.payload.merchant && <p className="mt-1 break-words text-sm text-text-secondary">Merchant: {candidate.payload.merchant}</p>}
                                         {candidate.id === selectedId && <span className="mt-1 block text-xs font-semibold text-accent-blue">Selected</span>}
                                         <div className="mt-1 flex items-center justify-between gap-3 text-sm text-text-muted"><span>{candidate.payload.transaction_date || 'No date'}</span><span>{Math.round((candidate.confidence || 0) * 100)}%</span></div>
                                         {outcome !== 'none' && <p className="mt-2 flex items-center gap-1 text-xs font-semibold text-warning"><WarningDoodleIcon size={13} />{outcome === 'strong' ? 'Strong duplicate match' : 'Possible duplicate'}</p>}
@@ -333,27 +378,32 @@ export default function FinanceReviewPage() {
                                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-center gap-2"><OcrDoodleIcon size={18} className="text-accent-blue" /><h2 className="text-base font-bold">Candidate details</h2></div><Button type="button" variant="ghost" icon={<RefreshDoodleIcon size={15} />} onClick={() => void resolveItem('retry')} disabled={isSaving}>Retry rules</Button></div>
                                 {selected.payload.matched_rule_names.length > 0 && <p className="mt-3 text-sm text-text-muted">Matched: {selected.payload.matched_rule_names.join(', ')}</p>}
                                 <p className="mt-2 text-xs text-text-muted">OCR confidence: {selected.intake?.ocr_confidence === null || selected.intake?.ocr_confidence === undefined ? 'Unavailable' : `${Math.round(selected.intake.ocr_confidence)}%`} · Normalizer version: {selected.intake?.normalizer_version ?? 'Legacy'}</p>
+                                <FinanceFormErrorSummary errors={fieldErrors} />
 
                                 {duplicateOutcome(selected) !== 'none' && (
                                     <div className="mt-4 border border-warning bg-warning-bg px-4 py-3 text-sm text-warning">
                                         <p className="font-semibold">{duplicateOutcome(selected) === 'strong' ? 'Strong duplicate match' : 'Possible duplicate match'}</p>
                                         {selected.duplicate_explanation && <p className="mt-1">{selected.duplicate_explanation}</p>}
                                         {selected.duplicate_signals?.length > 0 && <div className="mt-2 flex flex-wrap gap-2">{selected.duplicate_signals.map((signal) => <span key={signal} className="border border-warning px-2 py-1 text-xs font-semibold">{DUPLICATE_SIGNAL_LABELS[signal]}</span>)}</div>}
-                                        {selected.duplicate_transaction && <div className="mt-3 border-t border-warning pt-3"><p className="font-semibold">Existing transaction</p><p className="mt-1">{selected.duplicate_transaction.merchant || 'Untitled'} · {formatCurrency(selected.duplicate_transaction.amount, selected.duplicate_transaction.currency || 'MYR')} · {selected.duplicate_transaction.transaction_date} · {selected.duplicate_transaction.finance_source?.name || 'Unknown source'}</p></div>}
-                                        <Toggle checked={form.allow_duplicate} onChange={(allow_duplicate) => setForm({ ...form, allow_duplicate })} label="Confirm anyway" className="mt-3" />
-                                        {form.allow_duplicate && <label className="mt-3 block space-y-2"><span className="text-sm">Override reason {duplicateOutcome(selected) === 'strong' ? '(required)' : '(optional)'}</span><Textarea required={duplicateOutcome(selected) === 'strong'} maxLength={500} value={form.duplicate_override_reason} onChange={(event) => setForm({ ...form, duplicate_override_reason: event.target.value })} placeholder="Why is this a separate transaction?" /></label>}
+                                        {selected.duplicate_transaction && <div className="mt-3 border-t border-warning pt-3"><p className="font-semibold">Existing transaction</p><p className="mt-1">{selected.duplicate_transaction.finance_payee?.name || selected.duplicate_transaction.merchant || 'Untitled'} · {formatCurrency(selected.duplicate_transaction.amount, selected.duplicate_transaction.currency || 'MYR')} · {selected.duplicate_transaction.transaction_date} · {selected.duplicate_transaction.finance_source?.name || 'Unknown source'}</p>{selected.duplicate_transaction.finance_payee?.name && selected.duplicate_transaction.merchant && <p className="mt-1 text-sm">Merchant: {selected.duplicate_transaction.merchant}</p>}</div>}
+                                        <Toggle id="review-allow-duplicate" dataFinanceField="allow_duplicate" checked={form.allow_duplicate} onChange={(allow_duplicate) => setReviewField('allow_duplicate', allow_duplicate)} label="Confirm anyway" className="mt-3" error={Boolean(fieldErrors.allow_duplicate)} ariaDescribedBy={fieldErrors.allow_duplicate ? 'review-allow-duplicate-error' : undefined} />
+                                        {fieldErrors.allow_duplicate && <p id="review-allow-duplicate-error" className="mt-1 text-xs font-semibold text-error">{fieldErrors.allow_duplicate}</p>}
+                                        {form.allow_duplicate && <FinanceFormField className="mt-3" fieldId="review-duplicate-reason" label="Override reason" required={duplicateOutcome(selected) === 'strong'} error={fieldErrors.duplicate_override_reason}><Textarea id="review-duplicate-reason" data-finance-field="duplicate_override_reason" {...financeFieldErrorProps(fieldErrors, 'duplicate_override_reason', 'review-duplicate-reason')} maxLength={500} value={form.duplicate_override_reason} onChange={(event) => setReviewField('duplicate_override_reason', event.target.value)} placeholder="Why is this a separate transaction?" /></FinanceFormField>}
                                     </div>
                                 )}
 
                                 <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
-                                    <label className="space-y-2">
-                                        <span className="text-sm text-text-secondary">Direction</span>
+                                    <FinanceFormField fieldId="review-direction" label="Direction" error={fieldErrors.direction}>
                                         <Select
+                                            id="review-direction"
+                                            dataFinanceField="direction"
+                                            error={Boolean(fieldErrors.direction)}
                                             ariaLabel="Transaction direction"
-                                            ariaDescribedBy={isDirectionProposalPending ? 'direction-proposal-help' : undefined}
+                                            ariaDescribedBy={[fieldErrors.direction ? 'review-direction-error' : '', isDirectionProposalPending ? 'direction-proposal-help' : ''].filter(Boolean).join(' ') || undefined}
                                             value={form.direction}
                                             onChange={(direction) => {
-                                                setForm({ ...form, direction: direction as FinanceTransactionDirection, category_id: '' });
+                                                setReviewField('direction', direction as FinanceTransactionDirection);
+                                                setReviewField('category_id', '');
                                                 setIsDirectionProposalPending(false);
                                             }}
                                             options={[
@@ -366,15 +416,20 @@ export default function FinanceReviewPage() {
                                                 No direction was detected. Expense is proposed; verify it before confirming.
                                             </span>
                                         )}
-                                    </label>
-                                    <label className="space-y-2"><span className="text-sm text-text-secondary">Amount</span><Input required type="number" min="0.01" max={MAX_FINANCE_AMOUNT} step="0.01" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} /></label>
-                                    <label className="space-y-2"><span className="text-sm text-text-secondary">Currency</span><Input value="MYR" readOnly aria-readonly="true" /></label>
-                                    <label className="space-y-2"><span className="text-sm text-text-secondary">Reference number</span><Input maxLength={MAX_FINANCE_REFERENCE_LENGTH} value={form.reference_number} onChange={(event) => setForm({ ...form, reference_number: event.target.value })} /></label>
-                                    <div className="space-y-2"><label className="block space-y-2"><span className="text-sm text-text-secondary">Source</span><Select ariaLabel="Transaction source" value={form.source_id} onChange={(source_id) => setForm({ ...form, source_id })} placeholder="Choose a source" options={[...sources.filter((source) => !source.is_archived).map((source) => ({ value: source.id, label: source.name })), { value: NEW_SOURCE, label: '+ Add new source' }]} /></label>{form.source_id === NEW_SOURCE && <label className="block space-y-2"><span className="text-sm text-text-secondary">New source name</span><Input required maxLength={MAX_FINANCE_NAME_LENGTH} value={newSourceName} onChange={(event) => setNewSourceName(event.target.value)} placeholder="e.g. Maybank" /></label>}</div>
-                                    <div className="space-y-2"><label className="block space-y-2"><span className="text-sm text-text-secondary">Category</span><Select ariaLabel="Transaction category" value={form.category_id} onChange={(category_id) => setForm({ ...form, category_id })} placeholder="Uncategorised" options={[{ value: '', label: 'Uncategorised' }, ...availableCategories, { value: NEW_CATEGORY, label: '+ Add new category' }]} /></label>{form.category_id === NEW_CATEGORY && <label className="block space-y-2"><span className="text-sm text-text-secondary">New category name</span><Input required maxLength={MAX_FINANCE_NAME_LENGTH} value={newCategoryName} onChange={(event) => setNewCategoryName(event.target.value)} placeholder={form.direction === 'income' ? 'e.g. Salary' : 'e.g. Groceries'} /></label>}</div>
-                                    <label className="space-y-2"><span className="text-sm text-text-secondary">Merchant or payee</span><Input maxLength={MAX_FINANCE_MERCHANT_LENGTH} value={form.merchant} onChange={(event) => setForm({ ...form, merchant: event.target.value })} /></label>
-                                    <label className="space-y-2"><span className="text-sm text-text-secondary">Date</span><Input required type="date" max={getLocalFinanceDate()} aria-describedby={isDateProposalPending ? 'date-proposal-help' : undefined} value={form.transaction_date} onChange={(event) => { setForm({ ...form, transaction_date: event.target.value }); setIsDateProposalPending(false); }} />{isDateProposalPending && <span id="date-proposal-help" className="block text-xs text-warning">No date was detected. Today is proposed; confirm this date before continuing.</span>}{isDateProposalPending && <Button type="button" variant="ghost" onClick={() => setIsDateProposalPending(false)}>Use proposed date</Button>}</label>
-                                    <label className="space-y-2 md:col-span-2"><span className="text-sm text-text-secondary">Notes</span><Textarea maxLength={MAX_FINANCE_NOTES_LENGTH} value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></label>
+                                    </FinanceFormField>
+                                    <FinanceFormField fieldId="review-amount" label="Amount" required error={fieldErrors.amount}><Input id="review-amount" data-finance-field="amount" {...financeFieldErrorProps(fieldErrors, 'amount', 'review-amount')} type="number" min="0.01" max={MAX_FINANCE_AMOUNT} step="0.01" value={form.amount} onChange={(event) => setReviewField('amount', event.target.value)} /></FinanceFormField>
+                                    <FinanceFormField fieldId="review-currency" label="Currency"><Input id="review-currency" value="MYR" readOnly aria-readonly="true" /></FinanceFormField>
+                                    <div className="grid gap-4 md:col-span-2 md:grid-cols-2">
+                                        <FinanceFormField fieldId="review-reference" label="Transaction reference" error={fieldErrors.reference_number}><Input id="review-reference" data-finance-field="reference_number" {...financeFieldErrorProps(fieldErrors, 'reference_number', 'review-reference')} maxLength={MAX_FINANCE_REFERENCE_LENGTH} value={form.reference_number} onChange={(event) => setReviewField('reference_number', event.target.value)} /></FinanceFormField>
+                                        <FinanceFormField fieldId="review-recipient-reference" label="Recipient reference" error={fieldErrors.recipient_reference}><Input id="review-recipient-reference" data-finance-field="recipient_reference" {...financeFieldErrorProps(fieldErrors, 'recipient_reference', 'review-recipient-reference')} maxLength={MAX_FINANCE_RECIPIENT_REFERENCE_LENGTH} value={form.recipient_reference} onChange={(event) => setReviewField('recipient_reference', event.target.value)} /></FinanceFormField>
+                                    </div>
+                                    <div className="space-y-4"><FinanceFormField fieldId="review-source" label="Source" required error={fieldErrors.source_id}><Select id="review-source" dataFinanceField="source_id" error={Boolean(fieldErrors.source_id)} ariaDescribedBy={fieldErrors.source_id ? 'review-source-error' : undefined} ariaLabel="Transaction source" value={form.source_id} onChange={(source_id) => setReviewField('source_id', source_id)} placeholder="Choose a source" options={[...sources.filter((source) => !source.is_archived).map((source) => ({ value: source.id, label: source.name })), { value: NEW_SOURCE, label: '+ Add new source' }]} /></FinanceFormField>{form.source_id === NEW_SOURCE && <FinanceFormField fieldId="review-new-source" label="New source name" required error={fieldErrors.new_source_name}><Input id="review-new-source" data-finance-field="new_source_name" {...financeFieldErrorProps(fieldErrors, 'new_source_name', 'review-new-source')} maxLength={MAX_FINANCE_NAME_LENGTH} value={newSourceName} onChange={(event) => { setNewSourceName(event.target.value); setFieldErrors((current) => ({ ...current, new_source_name: undefined })); }} placeholder="e.g. Maybank" /></FinanceFormField>}</div>
+                                    <div className="space-y-4"><FinanceFormField fieldId="review-category" label="Category" error={fieldErrors.category_id}><Select id="review-category" dataFinanceField="category_id" error={Boolean(fieldErrors.category_id)} ariaDescribedBy={fieldErrors.category_id ? 'review-category-error' : undefined} ariaLabel="Transaction category" value={form.category_id} onChange={(category_id) => setReviewField('category_id', category_id)} placeholder="Uncategorised" options={[{ value: '', label: 'Uncategorised' }, ...availableCategories, { value: NEW_CATEGORY, label: '+ Add new category' }]} /></FinanceFormField>{form.category_id === NEW_CATEGORY && <FinanceFormField fieldId="review-new-category" label="New category name" required error={fieldErrors.new_category_name}><Input id="review-new-category" data-finance-field="new_category_name" {...financeFieldErrorProps(fieldErrors, 'new_category_name', 'review-new-category')} maxLength={MAX_FINANCE_NAME_LENGTH} value={newCategoryName} onChange={(event) => { setNewCategoryName(event.target.value); setFieldErrors((current) => ({ ...current, new_category_name: undefined })); }} placeholder={form.direction === 'income' ? 'e.g. Salary' : 'e.g. Groceries'} /></FinanceFormField>}</div>
+                                    <FinanceFormField fieldId="review-merchant" label="Merchant (optional)" error={fieldErrors.merchant}><Input id="review-merchant" data-finance-field="merchant" {...financeFieldErrorProps(fieldErrors, 'merchant', 'review-merchant')} maxLength={MAX_FINANCE_MERCHANT_LENGTH} value={form.merchant} onChange={(event) => setReviewField('merchant', event.target.value)} /></FinanceFormField>
+                                    <FinanceFormField fieldId="review-has-payee" label="Payee" error={fieldErrors.has_payee}><Toggle id="review-has-payee" dataFinanceField="has_payee" checked={form.has_payee} onChange={(hasPayee) => { setReviewField('has_payee', hasPayee); if (!hasPayee) setReviewField('payee_name', ''); }} label="Has a payee" error={Boolean(fieldErrors.has_payee)} ariaDescribedBy={fieldErrors.has_payee ? 'review-has-payee-error' : undefined} /></FinanceFormField>
+                                    {form.has_payee && <FinanceFormField fieldId="review-payee" label="Payee" required error={fieldErrors.payee_name}><Input id="review-payee" data-finance-field="payee_name" {...financeFieldErrorProps(fieldErrors, 'payee_name', 'review-payee')} maxLength={MAX_FINANCE_PAYEE_LENGTH} value={form.payee_name} onChange={(event) => setReviewField('payee_name', event.target.value)} /></FinanceFormField>}
+                                    <FinanceFormField fieldId="review-date" label="Date" required error={fieldErrors.transaction_date}><Input id="review-date" data-finance-field="transaction_date" {...financeFieldErrorProps(fieldErrors, 'transaction_date', 'review-date')} type="date" max={getLocalFinanceDate()} aria-describedby={[fieldErrors.transaction_date ? 'review-date-error' : '', isDateProposalPending ? 'date-proposal-help' : ''].filter(Boolean).join(' ') || undefined} value={form.transaction_date} onChange={(event) => { setReviewField('transaction_date', event.target.value); setIsDateProposalPending(false); }} />{isDateProposalPending && <span id="date-proposal-help" className="mt-1 block text-xs text-warning">No date was detected. Today is proposed; confirm this date before continuing.</span>}{isDateProposalPending && <Button type="button" variant="ghost" onClick={() => { setIsDateProposalPending(false); setFieldErrors((current) => ({ ...current, transaction_date: undefined })); }}>Use proposed date</Button>}</FinanceFormField>
+                                    <FinanceFormField className="md:col-span-2" fieldId="review-notes" label="Notes" error={fieldErrors.notes}><Textarea id="review-notes" data-finance-field="notes" {...financeFieldErrorProps(fieldErrors, 'notes', 'review-notes')} maxLength={MAX_FINANCE_NOTES_LENGTH} value={form.notes} onChange={(event) => setReviewField('notes', event.target.value)} /></FinanceFormField>
                                 </div>
 
                                 <details className="mt-5 border border-border-default bg-bg-subtle"><summary className="cursor-pointer px-4 py-3 text-sm font-semibold">Normalized OCR text</summary><pre className="max-h-64 overflow-auto whitespace-pre-wrap border-t border-border-default p-4 text-xs text-text-secondary">{selected.intake?.ocr_normalized_text || selected.intake?.ocr_text || 'No OCR text available.'}</pre></details>
@@ -383,7 +438,7 @@ export default function FinanceReviewPage() {
                                 <div className="mt-5 grid grid-cols-2 gap-3 sm:flex sm:justify-end">
                                     {selected.payload.duplicate_transaction_id && <Button type="button" variant="secondary" className="col-span-2 sm:w-auto" onClick={() => void resolveItem('mark_duplicate')} disabled={isSaving}>Mark duplicate</Button>}
                                     <Button type="button" variant="ghost" className="w-full min-w-0 px-3 sm:w-auto" icon={<CloseDoodleIcon size={15} />} onClick={() => void resolveItem('reject')} disabled={isSaving}>Cancel transaction</Button>
-                                    <Button type="submit" className="w-full min-w-0 px-3 sm:w-auto" icon={<CheckDoodleIcon size={15} />} isLoading={isSaving} disabled={isDateProposalPending || !form.source_id || (form.source_id === NEW_SOURCE && !newSourceName.trim()) || (form.category_id === NEW_CATEGORY && !newCategoryName.trim()) || (duplicateOutcome(selected) !== 'none' && !form.allow_duplicate) || (duplicateOutcome(selected) === 'strong' && !form.duplicate_override_reason.trim())}>Confirm transaction</Button>
+                                    <Button type="submit" className="w-full min-w-0 px-3 sm:w-auto" icon={<CheckDoodleIcon size={15} />} isLoading={isSaving} disabled={isSaving}>Confirm transaction</Button>
                                 </div>
                             </Card>
                         </form>
