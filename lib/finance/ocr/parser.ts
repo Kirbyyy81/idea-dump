@@ -1,10 +1,12 @@
 import {
     FinanceSource,
     FinanceCandidatePayload,
+    FinanceFieldLearningRule,
     FinanceRule,
     FinanceTransactionDirection,
 } from '@/lib/types';
 import { FINANCE_V1_CURRENCY } from '@/lib/finance/core/constants';
+import { applyLearnedReferenceRules } from '@/lib/finance/ocr/fieldLearning';
 import { normalizeFinanceMerchantKey } from '@/lib/finance/ocr/normalizer';
 import { detectFinanceSource } from '@/lib/finance/ocr/sourceDetection';
 
@@ -141,7 +143,8 @@ export function parseFinanceText(
     normalizedText: string,
     rules: FinanceRule[],
     sources: FinanceSource[],
-    filename: string | null = null
+    filename: string | null = null,
+    fieldLearningRules: FinanceFieldLearningRule[] = [],
 ): ParsedCandidate {
     const lines = normalizedText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
     const normalized = lines.join('\n').toLowerCase();
@@ -164,6 +167,7 @@ export function parseFinanceText(
         category_id: null,
         reference_number: parseReference(normalizedText),
         matched_rule_names: [],
+        learned_field_rule_ids: [],
         duplicate_transaction_id: null,
     };
 
@@ -218,6 +222,14 @@ export function parseFinanceText(
             merchantAssigned = true;
         }
     }
+
+    const learnedReference = applyLearnedReferenceRules(
+        payload.reference_number,
+        payload.source_id,
+        fieldLearningRules,
+    );
+    payload.reference_number = learnedReference.referenceNumber;
+    payload.learned_field_rule_ids = learnedReference.matchedRuleIds;
 
     let confidence = 0;
     if (payload.amount) confidence += 0.35;

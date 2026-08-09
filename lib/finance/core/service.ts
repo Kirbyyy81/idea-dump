@@ -38,6 +38,7 @@ import {
     listFinanceSources,
     listFinanceTransactionsByIds,
     listActiveFinanceRules,
+    listActiveFinanceFieldLearningRules,
     listActiveFinanceSources,
     markFinanceReviewCandidateDuplicate,
     rejectFinanceReviewCandidate,
@@ -87,6 +88,7 @@ import {
 import {
     FinanceCandidatePayload,
     FinanceCandidateTransaction,
+    FinanceFieldLearningRule,
     FinanceIntakeItem,
     FinanceCategory,
     FinanceRule,
@@ -640,18 +642,21 @@ export async function resolveFinanceReviewCandidateForUser(
 
     if (action === 'retry') {
         if (candidate.status !== 'pending') fail('Only pending review items can be retried', 409);
-        const [sourcesResult, rulesResult] = await Promise.all([
+        const [sourcesResult, rulesResult, fieldLearningRulesResult] = await Promise.all([
             listActiveFinanceSources(userId),
             listActiveFinanceRules(userId),
+            listActiveFinanceFieldLearningRules(userId),
         ]);
         if (sourcesResult.error) throw sourcesResult.error;
         if (rulesResult.error) throw rulesResult.error;
+        if (fieldLearningRulesResult.error) throw fieldLearningRulesResult.error;
         const normalizedText = candidate.intake?.ocr_normalized_text || candidate.intake?.ocr_text || '';
         const parsed = parseFinanceText(
             normalizedText,
             (rulesResult.data || []) as FinanceRule[],
             (sourcesResult.data || []) as FinanceSource[],
-            candidate.intake?.original_filename || null
+            candidate.intake?.original_filename || null,
+            (fieldLearningRulesResult.data || []) as FinanceFieldLearningRule[],
         );
         const { error: sourceEvidenceError } = await updateFinanceIntakeSourceEvidence(
             userId,

@@ -188,6 +188,17 @@ export async function listActiveFinanceRules(userId: string) {
         .eq('is_active', true);
 }
 
+export async function listActiveFinanceFieldLearningRules(userId: string) {
+    return createAdminClient()
+        .from('finance_field_learning_rules')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .order('evidence_count', { ascending: false })
+        .order('created_at')
+        .order('id');
+}
+
 export async function findFinanceRule(userId: string, ruleId: string, select = '*') {
     return createAdminClient()
         .from('finance_rules')

@@ -23,9 +23,9 @@ const other: FinanceSource = {
 };
 
 describe('Finance source evidence', () => {
-    it('leaves filename-only evidence unresolved', () => {
+    it('uses one unambiguous filename match as the source', () => {
         const result = detectFinanceSource('Transfer completed', 'Screenshot_Ryt_Bank.png', [ryt]);
-        expect(result.sourceId).toBeNull();
+        expect(result.sourceId).toBe(ryt.id);
         expect(result.signals.map((signal) => signal.kind)).toEqual(['filename_alias']);
     });
 
@@ -35,13 +35,31 @@ describe('Finance source evidence', () => {
         expect(result.signals.map((signal) => signal.kind).sort()).toEqual(['filename_alias', 'ocr_alias']);
     });
 
-    it('leaves cross-source filename and OCR evidence unresolved', () => {
+    it('keeps one filename match authoritative when OCR identifies another source', () => {
         const result = detectFinanceSource('Other Bank transfer completed', 'Screenshot_Ryt_Bank.png', [ryt, other]);
-        expect(result.sourceId).toBeNull();
+        expect(result.sourceId).toBe(ryt.id);
         expect(new Set(result.signals.map((signal) => signal.source_id))).toEqual(new Set([ryt.id, other.id]));
     });
 
-    it('allows an OCR-text rule to corroborate compatible filename evidence', () => {
+    it('leaves a filename with multiple source matches unresolved', () => {
+        const result = detectFinanceSource(
+            'Ryt Bank transfer completed',
+            'Screenshot_Ryt_Bank_Other_Bank.png',
+            [ryt, other],
+        );
+        expect(result.sourceId).toBeNull();
+        expect(new Set(result.signals
+            .filter((signal) => signal.kind === 'filename_alias')
+            .map((signal) => signal.source_id))).toEqual(new Set([ryt.id, other.id]));
+    });
+
+    it('falls back to one OCR source when the filename has no match', () => {
+        const result = detectFinanceSource('Ryt Bank transfer completed', 'Screenshot.png', [ryt]);
+        expect(result.sourceId).toBe(ryt.id);
+        expect(result.signals.map((signal) => signal.kind)).toEqual(['ocr_alias']);
+    });
+
+    it('allows an OCR-text rule to assign a source when aliases do not match', () => {
         const rule: FinanceRule = {
             id: 'rule-1',
             user_id: 'user-1',
@@ -63,7 +81,7 @@ describe('Finance source evidence', () => {
             'Coffee Shop\nPaid RM 12.50\n15/07/2026',
             [rule],
             [ryt],
-            'Screenshot_Ryt_Bank.png',
+            'Screenshot.png',
         );
         expect(result.payload.source_id).toBe(ryt.id);
         expect(result.sourceDetectionSignals).toContainEqual(expect.objectContaining({

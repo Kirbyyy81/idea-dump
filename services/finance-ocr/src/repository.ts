@@ -300,17 +300,27 @@ export class SupabaseFinanceRepository implements FinanceRepository, ShareQueueR
     }
 
     async loadContext(userId: string): Promise<FinanceContext> {
-        const [sources, rules, categories] = await Promise.all([
+        const [sources, rules, fieldLearningRules, categories] = await Promise.all([
             this.secretClient.from('dim_finance_sources').select('*').eq('user_id', userId).eq('is_archived', false),
             this.secretClient.from('finance_rules').select('*').eq('user_id', userId).eq('is_active', true),
+            this.secretClient
+                .from('finance_field_learning_rules')
+                .select('*')
+                .eq('user_id', userId)
+                .eq('is_active', true)
+                .order('evidence_count', { ascending: false })
+                .order('created_at')
+                .order('id'),
             this.secretClient.from('dim_finance_categories').select('id, type').eq('user_id', userId).eq('is_archived', false),
         ]);
         if (sources.error) throw new RepositoryError('load_sources', sources.error);
         if (rules.error) throw new RepositoryError('load_rules', rules.error);
+        if (fieldLearningRules.error) throw new RepositoryError('load_field_learning_rules', fieldLearningRules.error);
         if (categories.error) throw new RepositoryError('load_categories', categories.error);
         return {
             sources: (sources.data ?? []) as FinanceContext['sources'],
             rules: (rules.data ?? []) as FinanceContext['rules'],
+            fieldLearningRules: (fieldLearningRules.data ?? []) as FinanceContext['fieldLearningRules'],
             categories: (categories.data ?? []) as FinanceContext['categories'],
         };
     }

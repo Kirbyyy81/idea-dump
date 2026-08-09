@@ -69,18 +69,24 @@ export function detectFinanceSource(text: string, filename: string | null, sourc
         }
     }
 
-    const signaledSourceIds = new Set(signals.map((signal) => signal.source_id));
+    const filenameSourceIds = new Set(
+        signals
+            .filter((signal) => signal.kind === 'filename_alias')
+            .map((signal) => signal.source_id)
+    );
     const ocrSourceIds = new Set(
         signals
             .filter((signal) => signal.kind === 'ocr_alias')
             .map((signal) => signal.source_id)
     );
 
-    // A filename is useful evidence, but it is controlled by the client and can
-    // never identify a source by itself. Any cross-source disagreement is left
-    // unresolved for review rather than being hidden by score ordering.
-    const sourceId = signaledSourceIds.size === 1 && ocrSourceIds.size === 1
-        ? Array.from(ocrSourceIds)[0]
-        : null;
+    // A single filename match is authoritative because share-target filenames
+    // carry the source convention. Ambiguous filenames remain unresolved. OCR
+    // aliases are a fallback only when the filename supplies no source signal.
+    const sourceId = filenameSourceIds.size === 1
+        ? Array.from(filenameSourceIds)[0]
+        : filenameSourceIds.size === 0 && ocrSourceIds.size === 1
+            ? Array.from(ocrSourceIds)[0]
+            : null;
     return { sourceId, signals: signals.slice(0, 50) };
 }

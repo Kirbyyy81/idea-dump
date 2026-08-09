@@ -525,6 +525,7 @@ export interface FinanceCandidatePayload {
     /** Compatibility key retained for candidates created before the OCR contract migration. */
     reference?: string | null;
     matched_rule_names: string[];
+    learned_field_rule_ids?: string[];
     duplicate_transaction_id: string | null;
 }
 
@@ -562,6 +563,27 @@ export interface FinanceRule {
     source: 'manual' | 'learning';
     auto_created_at: string | null;
     learning_evidence_count: number | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export type FinanceLearnedFieldName = 'reference_number';
+
+export type FinanceLearnedTransformType =
+    | 'strip_prefix'
+    | 'strip_suffix'
+    | 'digits_only'
+    | 'alphanumeric_only';
+
+export interface FinanceFieldLearningRule {
+    id: string;
+    user_id: string;
+    source_id: string;
+    field_name: FinanceLearnedFieldName;
+    transform_type: FinanceLearnedTransformType;
+    transform_value: string | null;
+    evidence_count: number;
+    is_active: boolean;
     created_at: string;
     updated_at: string;
 }
