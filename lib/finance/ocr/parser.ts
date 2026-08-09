@@ -8,6 +8,7 @@ import {
 import { FINANCE_V1_CURRENCY } from '@/lib/finance/core/constants';
 import { applyLearnedReferenceRules } from '@/lib/finance/ocr/fieldLearning';
 import { normalizeFinanceMerchantKey } from '@/lib/finance/ocr/normalizer';
+import { extractFinanceReferenceNumber } from '@/lib/finance/ocr/reference';
 import { detectFinanceSource } from '@/lib/finance/ocr/sourceDetection';
 
 interface ParsedCandidate {
@@ -104,11 +105,6 @@ function parseMerchant(lines: string[]) {
         }) ?? null;
 }
 
-function parseReference(text: string) {
-    const match = text.match(/(?:reference|ref(?:erence)?)(?:\s*(?:id|no\.?))?\s*[:#-]?\s*([A-Z0-9-]{5,})/i);
-    return match?.[1]?.normalize('NFKC').trim().toUpperCase() ?? null;
-}
-
 function ruleMatches(rule: FinanceRule, text: string, merchant: string | null) {
     const pattern = rule.pattern.trim().toLowerCase();
     if (!pattern) return false;
@@ -165,7 +161,7 @@ export function parseFinanceText(
         transaction_date: parseTransactionDate(normalizedText),
         source_id: sourceDetection.sourceId,
         category_id: null,
-        reference_number: parseReference(normalizedText),
+        reference_number: extractFinanceReferenceNumber(normalizedText),
         matched_rule_names: [],
         learned_field_rule_ids: [],
         duplicate_transaction_id: null,

@@ -268,22 +268,22 @@ begin
   select count(*)::integer into category_inserted_rows
   from inserted;
 
-  with latest_reference_corrections as materialized (
-    select distinct on (corrections.user_id, corrections.transaction_id)
+  with initial_reference_corrections as materialized (
+    select
       corrections.user_id,
       corrections.transaction_id,
       public.finance_normalize_reference_number(corrections.previous_value #>> '{}') as previous_reference,
       public.finance_normalize_reference_number(corrections.corrected_value #>> '{}') as corrected_reference
     from public.finance_corrections corrections
+    join public.finance_transactions transactions
+      on transactions.id = corrections.transaction_id
+     and transactions.user_id = corrections.user_id
+     and transactions.status = 'confirmed'
+     and corrections.created_at = transactions.created_at
     where corrections.field_name = 'reference_number'
       and corrections.transaction_id is not null
       and jsonb_typeof(corrections.previous_value) = 'string'
       and jsonb_typeof(corrections.corrected_value) = 'string'
-    order by
-      corrections.user_id,
-      corrections.transaction_id,
-      corrections.created_at desc,
-      corrections.id desc
   ), reference_evidence as materialized (
     select
       latest.user_id,
@@ -291,12 +291,11 @@ begin
       transactions.source_id,
       latest.previous_reference,
       latest.corrected_reference
-    from latest_reference_corrections latest
+    from initial_reference_corrections latest
     join public.finance_transactions transactions
       on transactions.id = latest.transaction_id
      and transactions.user_id = latest.user_id
      and transactions.status = 'confirmed'
-     and transactions.reference_number = latest.corrected_reference
     join public.dim_finance_sources sources
       on sources.id = transactions.source_id
      and sources.user_id = transactions.user_id
@@ -343,6 +342,7 @@ begin
           'alphanumeric_only'::text,
           null::text,
           regexp_replace(evidence.previous_reference, '[^A-Z0-9]+', '', 'g') = evidence.corrected_reference
+          and regexp_replace(evidence.previous_reference, '[^0-9]+', '', 'g') <> evidence.corrected_reference
         )
     ) as transforms(transform_type, transform_value, is_match)
     where transforms.is_match
@@ -350,7 +350,7 @@ begin
         transforms.transform_value is null
         or char_length(transforms.transform_value) between 1 and 100
       )
-  ), eligible as materialized (
+  ), transform_counts as materialized (
     select
       candidate_transforms.user_id,
       candidate_transforms.source_id,
@@ -363,7 +363,120 @@ begin
       candidate_transforms.source_id,
       candidate_transforms.transform_type,
       candidate_transforms.transform_value
-    having count(distinct candidate_transforms.transaction_id) >= 3
+  ), reviewed_references as materialized (
+    select
+      candidates.user_id,
+      candidates.id as candidate_id,
+      transactions.source_id,
+      public.finance_normalize_reference_number(
+        coalesce(
+          candidates.payload ->> 'reference_number',
+          candidates.payload ->> 'reference'
+        )
+      ) as parsed_reference,
+      case
+        when initial_correction.id is null then
+          public.finance_normalize_reference_number(
+            coalesce(
+              candidates.payload ->> 'reference_number',
+              candidates.payload ->> 'reference'
+            )
+          )
+        else public.finance_normalize_reference_number(initial_correction.corrected_value #>> '{}')
+      end as confirmed_reference
+    from public.finance_candidate_transactions candidates
+    join public.finance_transactions transactions
+      on transactions.id = candidates.confirmed_transaction_id
+     and transactions.user_id = candidates.user_id
+     and transactions.intake_item_id = candidates.intake_item_id
+     and transactions.status = 'confirmed'
+    join public.dim_finance_sources sources
+      on sources.id = transactions.source_id
+     and sources.user_id = transactions.user_id
+     and sources.is_archived = false
+    left join public.finance_corrections initial_correction
+      on initial_correction.transaction_id = transactions.id
+     and initial_correction.user_id = transactions.user_id
+     and initial_correction.intake_item_id = transactions.intake_item_id
+     and initial_correction.field_name = 'reference_number'
+     and initial_correction.created_at = transactions.created_at
+    where candidates.status = 'accepted'
+      and candidates.duplicate_outcome = 'none'
+  ), applied_reviews as materialized (
+    select
+      transform_counts.user_id,
+      transform_counts.source_id,
+      transform_counts.transform_type,
+      transform_counts.transform_value,
+      reviewed_references.candidate_id,
+      reviewed_references.confirmed_reference,
+      case transform_counts.transform_type
+        when 'strip_prefix' then btrim(substr(
+          reviewed_references.parsed_reference,
+          char_length(transform_counts.transform_value) + 1
+        ))
+        when 'strip_suffix' then btrim(left(
+          reviewed_references.parsed_reference,
+          char_length(reviewed_references.parsed_reference)
+            - char_length(transform_counts.transform_value)
+        ))
+        when 'digits_only' then regexp_replace(
+          reviewed_references.parsed_reference,
+          '[^0-9]+',
+          '',
+          'g'
+        )
+        when 'alphanumeric_only' then regexp_replace(
+          reviewed_references.parsed_reference,
+          '[^A-Z0-9]+',
+          '',
+          'g'
+        )
+      end as transformed_reference
+    from transform_counts
+    join reviewed_references
+      on reviewed_references.user_id = transform_counts.user_id
+     and reviewed_references.source_id = transform_counts.source_id
+    where reviewed_references.parsed_reference is not null
+      and (
+        (
+          transform_counts.transform_type = 'strip_prefix'
+          and left(
+            reviewed_references.parsed_reference,
+            char_length(transform_counts.transform_value)
+          ) = transform_counts.transform_value
+        )
+        or (
+          transform_counts.transform_type = 'strip_suffix'
+          and right(
+            reviewed_references.parsed_reference,
+            char_length(transform_counts.transform_value)
+          ) = transform_counts.transform_value
+        )
+        or (
+          transform_counts.transform_type = 'digits_only'
+          and regexp_replace(reviewed_references.parsed_reference, '[^0-9]+', '', 'g')
+            <> reviewed_references.parsed_reference
+        )
+        or (
+          transform_counts.transform_type = 'alphanumeric_only'
+          and regexp_replace(reviewed_references.parsed_reference, '[^A-Z0-9]+', '', 'g')
+            <> reviewed_references.parsed_reference
+        )
+      )
+  ), eligible as materialized (
+    select transform_counts.*
+    from transform_counts
+    where transform_counts.evidence_count >= 3
+      and not exists (
+        select 1
+        from applied_reviews
+        where applied_reviews.user_id = transform_counts.user_id
+          and applied_reviews.source_id = transform_counts.source_id
+          and applied_reviews.transform_type = transform_counts.transform_type
+          and applied_reviews.transform_value is not distinct from transform_counts.transform_value
+          and applied_reviews.transformed_reference is distinct from applied_reviews.confirmed_reference
+      )
   ), supported_updates as (
     update public.finance_field_learning_rules rules
     set evidence_count = eligible.evidence_count,
@@ -432,7 +545,7 @@ end;
 $function$;
 
 comment on function public.finance_refresh_rule_suggestions() is
-  'Cron-only learning entry point. Refreshes category rules and source-specific reference transforms after three distinct confirmed correction examples.';
+  'Cron-only learning entry point. Refreshes category rules and source-specific reference transforms after three initial review corrections and zero contradictory reviewed outcomes.';
 
 revoke execute on function public.finance_refresh_rule_suggestions()
   from public, anon, authenticated, service_role;
