@@ -433,6 +433,16 @@ export interface FinanceCategory {
     updated_at: string;
 }
 
+export interface FinancePayee {
+    id: string;
+    user_id: string;
+    name: string;
+    normalized_name: string;
+    is_archived: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
 export interface FinanceTransaction {
     id: string;
     user_id: string;
@@ -444,7 +454,9 @@ export interface FinanceTransaction {
     amount: number;
     currency: FinanceCurrency;
     merchant: string | null;
+    payee_id: string | null;
     reference_number: string | null;
+    recipient_reference: string | null;
     transaction_date: string;
     notes: string | null;
     source: FinanceTransactionSource;
@@ -453,6 +465,7 @@ export interface FinanceTransaction {
     updated_at: string;
     finance_source?: FinanceSource | null;
     category?: FinanceCategory | null;
+    finance_payee?: FinancePayee | null;
 }
 
 export interface FinanceDashboardSummary {
@@ -517,14 +530,18 @@ export interface FinanceCandidatePayload {
     amount: number | null;
     currency: FinanceCurrency;
     merchant: string | null;
+    payee_id: string | null;
+    payee_name: string | null;
     direction: FinanceTransactionDirection | null;
     transaction_date: string | null;
     source_id: string | null;
     category_id: string | null;
     reference_number: string | null;
+    recipient_reference: string | null;
     /** Compatibility key retained for candidates created before the OCR contract migration. */
     reference?: string | null;
     matched_rule_names: string[];
+    learned_field_rule_ids?: string[];
     duplicate_transaction_id: string | null;
 }
 
@@ -562,6 +579,27 @@ export interface FinanceRule {
     source: 'manual' | 'learning';
     auto_created_at: string | null;
     learning_evidence_count: number | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export type FinanceLearnedFieldName = 'reference_number';
+
+export type FinanceLearnedTransformType =
+    | 'strip_prefix'
+    | 'strip_suffix'
+    | 'digits_only'
+    | 'alphanumeric_only';
+
+export interface FinanceFieldLearningRule {
+    id: string;
+    user_id: string;
+    source_id: string;
+    field_name: FinanceLearnedFieldName;
+    transform_type: FinanceLearnedTransformType;
+    transform_value: string | null;
+    evidence_count: number;
+    is_active: boolean;
     created_at: string;
     updated_at: string;
 }

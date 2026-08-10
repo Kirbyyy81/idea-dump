@@ -41,17 +41,23 @@ test('distinguishes an exact replay from conflicting key reuse', () => {
         amount: 12.34,
         currency: 'MYR',
         merchant: 'Merchant',
+        payee_name: 'Alice Tan',
         reference_number: null,
+        recipient_reference: 'Dinner share',
         transaction_date: '2026-07-23',
         notes: null,
     };
     const existing = {
         ...requested,
         amount: '12.34',
+        finance_payee: { name: 'Alice Tan' },
+        recipient_reference: 'Dinner share',
         source: 'manual',
         status: 'confirmed',
     };
 
     assert.equal(isManualTransactionReplay(existing, requested), true);
     assert.equal(isManualTransactionReplay(existing, { ...requested, amount: 12.35 }), false);
+    assert.equal(isManualTransactionReplay(existing, { ...requested, payee_name: 'Bob Lee' }), false);
+    assert.equal(isManualTransactionReplay(existing, { ...requested, recipient_reference: 'Lunch share' }), false);
 });

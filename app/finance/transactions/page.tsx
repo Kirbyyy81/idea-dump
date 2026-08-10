@@ -16,6 +16,7 @@ import {
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
+import { Toggle } from '@/components/atoms/Toggle';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
 import { FinanceCategory, FinanceSource, FinanceTransaction, FinanceTransactionDirection } from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
@@ -28,17 +29,26 @@ import { persistVirtualDefaultCategory } from '@/lib/finance/catalogClient';
 import { sortFinanceTransactions } from '@/lib/finance/transactions/ordering';
 import {
     FINANCE_TIME_ZONE_HEADER,
-    getFinanceTransactionTextError,
+    FinanceFieldErrors,
+    FinanceTransactionField,
+    getFinanceTransactionFieldErrors,
     getFinanceTimeZone,
     getLocalFinanceDate,
-    isFutureFinanceDate,
     MAX_FINANCE_AMOUNT,
     MAX_FINANCE_MERCHANT_LENGTH,
     MAX_FINANCE_NOTES_LENGTH,
+    MAX_FINANCE_PAYEE_LENGTH,
+    MAX_FINANCE_RECIPIENT_REFERENCE_LENGTH,
     MAX_FINANCE_REFERENCE_LENGTH,
     toPositiveFinanceAmount,
 } from '@/lib/finance/core/values';
-import { financeApiRequest } from '@/lib/finance/core/client';
+import { FinanceApiError, financeApiRequest } from '@/lib/finance/core/client';
+import {
+    FinanceFormErrorSummary,
+    FinanceFormField,
+    financeFieldErrorProps,
+    focusFirstFinanceError,
+} from '../_components/FinanceFormField';
 
 const initialForm = {
     source_id: '',
@@ -46,10 +56,17 @@ const initialForm = {
     direction: 'expense' as FinanceTransactionDirection,
     amount: '',
     merchant: '',
+    has_payee: false,
+    payee_name: '',
     reference_number: '',
+    recipient_reference: '',
     transaction_date: getLocalFinanceDate(),
     notes: '',
 };
+
+function transactionRecipient(transaction: FinanceTransaction) {
+    return transaction.finance_payee?.name || transaction.merchant || 'Untitled transaction';
+}
 
 export default function FinanceTransactionsPage() {
     const { showError, showSuccess } = useAlert();
@@ -63,6 +80,7 @@ export default function FinanceTransactionsPage() {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [deleting, setDeleting] = useState<FinanceTransaction | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [fieldErrors, setFieldErrors] = useState<FinanceFieldErrors>({});
 
     const loadData = useCallback(async (signal?: AbortSignal) => {
         try {
@@ -120,26 +138,31 @@ export default function FinanceTransactionsPage() {
     const filteredTransactions = useMemo(() => {
         const needle = query.trim().toLowerCase();
         if (!needle) return transactions;
-        return transactions.filter((transaction) => [transaction.merchant, transaction.reference_number, transaction.notes, transaction.category?.name, transaction.finance_source?.name]
+        return transactions.filter((transaction) => [transaction.merchant, transaction.finance_payee?.name, transaction.reference_number, transaction.recipient_reference, transaction.notes, transaction.category?.name, transaction.finance_source?.name]
             .filter(Boolean).join(' ').toLowerCase().includes(needle));
     }, [query, transactions]);
 
+    const setTransactionField = <Key extends keyof typeof initialForm>(key: Key, value: (typeof initialForm)[Key]) => {
+        setForm((current) => ({ ...current, [key]: value }));
+        setFieldErrors((current) => {
+            if (!current[key as FinanceTransactionField]) return current;
+            const next = { ...current };
+            delete next[key as FinanceTransactionField];
+            return next;
+        });
+    };
+
     const saveTransaction = async (event: FormEvent) => {
         event.preventDefault();
+        const nextErrors = getFinanceTransactionFieldErrors(form);
+        if (Object.keys(nextErrors).length > 0) {
+            setFieldErrors(nextErrors);
+            focusFirstFinanceError(nextErrors, Object.keys(nextErrors) as FinanceTransactionField[]);
+            return;
+        }
         const amount = toPositiveFinanceAmount(form.amount);
-        if (amount === null) {
-            showError('Amount must be positive, within range, and use at most two decimals');
-            return;
-        }
-        const textError = getFinanceTransactionTextError(form);
-        if (textError) {
-            showError(textError);
-            return;
-        }
-        if (isFutureFinanceDate(form.transaction_date)) {
-            showError('Transaction date cannot be in the future');
-            return;
-        }
+        if (amount === null) return;
+        setFieldErrors({});
         setIsSaving(true);
         try {
             let categoryId = form.category_id;
@@ -162,7 +185,12 @@ export default function FinanceTransactionsPage() {
             showSuccess(editingId ? 'Transaction updated' : 'Transaction added');
             setEditingId(null);
         } catch (error) {
-            showError(error instanceof Error ? error.message : 'Could not save transaction');
+            if (error instanceof FinanceApiError && Object.keys(error.fieldErrors).length > 0) {
+                setFieldErrors(error.fieldErrors);
+                focusFirstFinanceError(error.fieldErrors, Object.keys(error.fieldErrors) as FinanceTransactionField[]);
+            } else {
+                showError(error instanceof Error ? error.message : 'Could not save transaction');
+            }
         } finally {
             setIsSaving(false);
         }
@@ -176,10 +204,14 @@ export default function FinanceTransactionsPage() {
             direction: transaction.direction,
             amount: transaction.amount.toString(),
             merchant: transaction.merchant || '',
+            has_payee: Boolean(transaction.payee_id),
+            payee_name: transaction.finance_payee?.name || '',
             reference_number: transaction.reference_number || '',
+            recipient_reference: transaction.recipient_reference || '',
             transaction_date: transaction.transaction_date,
             notes: transaction.notes || '',
         });
+        setFieldErrors({});
         window.scrollTo({
             top: 0,
             behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
@@ -189,6 +221,7 @@ export default function FinanceTransactionsPage() {
     const cancelEditing = () => {
         setEditingId(null);
         setForm((current) => ({ ...initialForm, source_id: current.source_id, transaction_date: getLocalFinanceDate() }));
+        setFieldErrors({});
     };
 
     const deleteTransaction = async () => {
@@ -219,20 +252,43 @@ export default function FinanceTransactionsPage() {
         >
             <div className="mx-auto max-w-7xl">
                 <div className="space-y-5">
-                    {editingId && <form onSubmit={saveTransaction} className="max-w-xl">
+                    {editingId && <form onSubmit={saveTransaction} className="max-w-xl" noValidate>
                         <Card className="p-5">
                             <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2">{editingId ? <EditDoodleIcon size={18} className="text-accent-blue" /> : <AddDoodleIcon size={18} className="text-accent-blue" />}<h2 className="text-base font-bold">{editingId ? 'Edit transaction' : 'New transaction'}</h2></div>{editingId && <button type="button" title="Cancel editing" aria-label="Cancel editing" onClick={cancelEditing} className="grid size-10 place-items-center text-text-muted hover:text-text-primary"><CloseDoodleIcon size={16} /></button>}</div>
+                            <FinanceFormErrorSummary errors={fieldErrors} />
                             <div className="mt-5 space-y-4">
-                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Direction</span><Select ariaLabel="Transaction direction" value={form.direction} onChange={(direction) => setForm({ ...form, direction: direction as FinanceTransactionDirection, category_id: '' })} options={[{ value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }]} /></label>
-                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Source</span><Select ariaLabel="Transaction source" value={form.source_id} onChange={(source_id) => setForm({ ...form, source_id })} placeholder="Choose a source" options={sourceOptions} /></label>
-                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Category</span><Select ariaLabel="Transaction category" value={form.category_id} onChange={(category_id) => setForm({ ...form, category_id })} placeholder="Uncategorised" options={[{ value: '', label: 'Uncategorised' }, ...categoryOptions]} /></label>
-                                <div className="grid gap-4 sm:grid-cols-2"><label className="block space-y-2"><span className="text-sm text-text-secondary">Amount</span><Input required inputMode="decimal" type="number" min="0.01" max={MAX_FINANCE_AMOUNT} step="0.01" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} placeholder="0.00" /></label><label className="block space-y-2"><span className="text-sm text-text-secondary">Currency</span><Input value="MYR" readOnly aria-readonly="true" /></label></div>
-                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Merchant or payee</span><Input maxLength={MAX_FINANCE_MERCHANT_LENGTH} value={form.merchant} onChange={(event) => setForm({ ...form, merchant: event.target.value })} /></label>
-                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Reference number</span><Input maxLength={MAX_FINANCE_REFERENCE_LENGTH} value={form.reference_number} onChange={(event) => setForm({ ...form, reference_number: event.target.value })} /></label>
-                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Date</span><Input required type="date" max={getLocalFinanceDate()} value={form.transaction_date} onChange={(event) => setForm({ ...form, transaction_date: event.target.value })} /></label>
-                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Notes</span><Textarea maxLength={MAX_FINANCE_NOTES_LENGTH} value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></label>
+                                <FinanceFormField fieldId="edit-direction" label="Direction" error={fieldErrors.direction} required>
+                                    <Select id="edit-direction" dataFinanceField="direction" error={Boolean(fieldErrors.direction)} ariaDescribedBy={fieldErrors.direction ? 'edit-direction-error' : undefined} ariaLabel="Transaction direction" value={form.direction} onChange={(direction) => {
+                                        setTransactionField('direction', direction as FinanceTransactionDirection);
+                                        setTransactionField('category_id', '');
+                                    }} options={[{ value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }]} />
+                                </FinanceFormField>
+                                <FinanceFormField fieldId="edit-source" label="Source" error={fieldErrors.source_id} required>
+                                    <Select id="edit-source" dataFinanceField="source_id" error={Boolean(fieldErrors.source_id)} ariaDescribedBy={fieldErrors.source_id ? 'edit-source-error' : undefined} ariaLabel="Transaction source" value={form.source_id} onChange={(sourceId) => setTransactionField('source_id', sourceId)} placeholder="Choose a source" options={sourceOptions} />
+                                </FinanceFormField>
+                                <FinanceFormField fieldId="edit-category" label="Category" error={fieldErrors.category_id}>
+                                    <Select id="edit-category" dataFinanceField="category_id" error={Boolean(fieldErrors.category_id)} ariaDescribedBy={fieldErrors.category_id ? 'edit-category-error' : undefined} ariaLabel="Transaction category" value={form.category_id} onChange={(categoryId) => setTransactionField('category_id', categoryId)} placeholder="Uncategorised" options={[{ value: '', label: 'Uncategorised' }, ...categoryOptions]} />
+                                </FinanceFormField>
+                                <div className="grid gap-4 sm:grid-cols-2">
+                                    <FinanceFormField fieldId="edit-amount" label="Amount" error={fieldErrors.amount} required><Input id="edit-amount" data-finance-field="amount" {...financeFieldErrorProps(fieldErrors, 'amount', 'edit-amount')} inputMode="decimal" type="number" min="0.01" max={MAX_FINANCE_AMOUNT} step="0.01" value={form.amount} onChange={(event) => setTransactionField('amount', event.target.value)} placeholder="0.00" /></FinanceFormField>
+                                    <FinanceFormField fieldId="edit-currency" label="Currency"><Input id="edit-currency" value="MYR" readOnly aria-readonly="true" /></FinanceFormField>
+                                </div>
+                                <FinanceFormField fieldId="edit-merchant" label="Merchant (optional)" error={fieldErrors.merchant}><Input id="edit-merchant" data-finance-field="merchant" {...financeFieldErrorProps(fieldErrors, 'merchant', 'edit-merchant')} maxLength={MAX_FINANCE_MERCHANT_LENGTH} value={form.merchant} onChange={(event) => setTransactionField('merchant', event.target.value)} /></FinanceFormField>
+                                <FinanceFormField fieldId="edit-has-payee" label="Payee" error={fieldErrors.has_payee}>
+                                    <Toggle id="edit-has-payee" dataFinanceField="has_payee" checked={form.has_payee} label="Has a payee" ariaLabel="Has a payee" ariaDescribedBy={fieldErrors.has_payee ? 'edit-has-payee-error' : undefined} error={Boolean(fieldErrors.has_payee)} onChange={(checked) => {
+                                        setTransactionField('has_payee', checked);
+                                        if (!checked) setTransactionField('payee_name', '');
+                                    }} />
+                                </FinanceFormField>
+                                {form.has_payee && <FinanceFormField fieldId="edit-payee" label="Payee name" error={fieldErrors.payee_name} required><Input id="edit-payee" data-finance-field="payee_name" {...financeFieldErrorProps(fieldErrors, 'payee_name', 'edit-payee')} maxLength={MAX_FINANCE_PAYEE_LENGTH} value={form.payee_name} onChange={(event) => setTransactionField('payee_name', event.target.value)} /></FinanceFormField>}
+                                <div className="grid gap-4 sm:grid-cols-2">
+                                    <FinanceFormField fieldId="edit-reference" label="Transaction reference" error={fieldErrors.reference_number}><Input id="edit-reference" data-finance-field="reference_number" {...financeFieldErrorProps(fieldErrors, 'reference_number', 'edit-reference')} maxLength={MAX_FINANCE_REFERENCE_LENGTH} value={form.reference_number} onChange={(event) => setTransactionField('reference_number', event.target.value)} /></FinanceFormField>
+                                    <FinanceFormField fieldId="edit-recipient-reference" label="Recipient reference" error={fieldErrors.recipient_reference}><Input id="edit-recipient-reference" data-finance-field="recipient_reference" {...financeFieldErrorProps(fieldErrors, 'recipient_reference', 'edit-recipient-reference')} maxLength={MAX_FINANCE_RECIPIENT_REFERENCE_LENGTH} value={form.recipient_reference} onChange={(event) => setTransactionField('recipient_reference', event.target.value)} /></FinanceFormField>
+                                </div>
+                                <FinanceFormField fieldId="edit-date" label="Date" error={fieldErrors.transaction_date} required><Input id="edit-date" data-finance-field="transaction_date" {...financeFieldErrorProps(fieldErrors, 'transaction_date', 'edit-date')} type="date" max={getLocalFinanceDate()} value={form.transaction_date} onChange={(event) => setTransactionField('transaction_date', event.target.value)} /></FinanceFormField>
+                                <FinanceFormField fieldId="edit-notes" label="Notes" error={fieldErrors.notes}><Textarea id="edit-notes" data-finance-field="notes" {...financeFieldErrorProps(fieldErrors, 'notes', 'edit-notes')} maxLength={MAX_FINANCE_NOTES_LENGTH} value={form.notes} onChange={(event) => setTransactionField('notes', event.target.value)} /></FinanceFormField>
                             </div>
-                            <Button type="submit" className="mt-5 w-full" isLoading={isSaving} disabled={!form.source_id}>Save changes</Button>
+                            <Button type="submit" className="mt-5 w-full" isLoading={isSaving} disabled={isSaving}>Save changes</Button>
                         </Card>
                     </form>}
 
@@ -248,14 +304,15 @@ export default function FinanceTransactionsPage() {
                                                 ? <IncomeDoodleIcon size={18} className="shrink-0 text-success" />
                                                 : <ExpenseDoodleIcon size={18} className="shrink-0 text-error" />}
                                             <div className="min-w-0">
-                                                <p className="truncate font-semibold">{transaction.merchant || 'Untitled transaction'}</p>
-                                                <p className="text-sm text-text-muted">{transaction.finance_source?.name || 'Unknown source'} - {transaction.category?.name || 'Uncategorised'} - {transaction.transaction_date}{transaction.reference_number ? ` - Ref ${transaction.reference_number}` : ''}</p>
+                                                <p className="truncate font-semibold">{transactionRecipient(transaction)}</p>
+                                                {transaction.finance_payee?.name && transaction.merchant && <p className="truncate text-sm text-text-secondary">Merchant: {transaction.merchant}</p>}
+                                                <p className="text-sm text-text-muted">{transaction.finance_source?.name || 'Unknown source'} - {transaction.category?.name || 'Uncategorised'} - {transaction.transaction_date}{transaction.reference_number ? ` - Ref ${transaction.reference_number}` : ''}{transaction.recipient_reference ? ` - Recipient ref ${transaction.recipient_reference}` : ''}</p>
                                             </div>
                                         </div>
                                         <div className="flex flex-wrap items-center justify-end gap-2">
                                             <p className={isIncome ? 'mr-1 font-bold text-success' : 'mr-1 font-bold text-error'}>{isIncome ? '+' : '-'}{formatCurrency(transaction.amount, transaction.currency || 'MYR')}</p>
-                                            <Button type="button" variant="ghost" aria-label={`Edit transaction ${transaction.merchant || 'Untitled transaction'}`} icon={<EditDoodleIcon size={15} />} onClick={() => editTransaction(transaction)}>Edit</Button>
-                                            <Button type="button" variant="ghost" aria-label={`Delete transaction ${transaction.merchant || 'Untitled transaction'}`} className="text-error hover:text-error" icon={<DeleteDoodleIcon size={15} />} onClick={() => setDeleting(transaction)}>Delete</Button>
+                                            <Button type="button" variant="ghost" aria-label={`Edit transaction ${transactionRecipient(transaction)}`} icon={<EditDoodleIcon size={15} />} onClick={() => editTransaction(transaction)}>Edit</Button>
+                                            <Button type="button" variant="ghost" aria-label={`Delete transaction ${transactionRecipient(transaction)}`} className="text-error hover:text-error" icon={<DeleteDoodleIcon size={15} />} onClick={() => setDeleting(transaction)}>Delete</Button>
                                         </div>
                                     </div>
                                 );
@@ -269,7 +326,7 @@ export default function FinanceTransactionsPage() {
             <ConfirmDialog
                 isOpen={Boolean(deleting)}
                 title="Permanently delete this transaction?"
-                description={`The ${deleting?.merchant || 'selected'} transaction will be removed from the ledger. This cannot be undone.`}
+                description={`The ${deleting ? transactionRecipient(deleting) : 'selected'} transaction will be removed from the ledger. This cannot be undone.`}
                 confirmLabel="Delete transaction"
                 isConfirming={isDeleting}
                 onCancel={() => setDeleting(null)}

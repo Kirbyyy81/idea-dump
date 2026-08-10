@@ -110,7 +110,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServiceConfig 
         maxRequestBytes,
         maxImageDimension: integer(env, 'MAX_IMAGE_DIMENSION', 12_000),
         maxImagePixels: integer(env, 'MAX_IMAGE_PIXELS', 25_000_000),
-        processingVersion: integer(env, 'PROCESSING_VERSION', 2),
+        processingVersion: integer(env, 'PROCESSING_VERSION', 3),
         intakeLeaseSeconds,
         rateLimitWindowSeconds: integer(env, 'OCR_RATE_LIMIT_WINDOW_SECONDS', 60),
         ocrRateLimitMaxRequests: integer(env, 'OCR_RATE_LIMIT_MAX_REQUESTS', 4),

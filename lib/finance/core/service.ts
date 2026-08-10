@@ -38,6 +38,8 @@ import {
     listFinanceSources,
     listFinanceTransactionsByIds,
     listActiveFinanceRules,
+    listActiveFinanceFieldLearningRules,
+    listActiveFinancePayees,
     listActiveFinanceSources,
     markFinanceReviewCandidateDuplicate,
     rejectFinanceReviewCandidate,
@@ -74,7 +76,7 @@ import {
     parseFinanceTransaction,
 } from '@/lib/finance/core/schemas';
 import { normalizeFinanceTransaction } from '@/lib/finance/core/auth';
-import { getFinanceMonthRange, getLocalFinanceMonth } from '@/lib/finance/core/values';
+import { FinanceFieldErrors, getFinanceMonthRange, getLocalFinanceMonth } from '@/lib/finance/core/values';
 import { parseFinanceText } from '@/lib/finance/ocr/parser';
 import { FINANCE_V1_CURRENCY } from '@/lib/finance/core/constants';
 import { getFinanceCandidateReference } from '@/lib/finance/core/auth';
@@ -87,8 +89,10 @@ import {
 import {
     FinanceCandidatePayload,
     FinanceCandidateTransaction,
+    FinanceFieldLearningRule,
     FinanceIntakeItem,
     FinanceCategory,
+    FinancePayee,
     FinanceRule,
     FinanceSource,
     FinanceTransaction,
@@ -389,18 +393,25 @@ async function validateFinanceTransactionReferences(
     input: FinanceTransactionInput,
     existing?: FinanceTransaction
 ) {
-    const source = await getOwnedFinanceSource(userId, input.source_id);
-    if (!source) fail('Source not found', 404);
-    if (source.is_archived && existing?.source_id !== input.source_id) {
-        fail('Archived sources cannot be used for new entries', 404);
+    const [source, category] = await Promise.all([
+        getOwnedFinanceSource(userId, input.source_id),
+        input.category_id ? getOwnedFinanceCategory(userId, input.category_id) : Promise.resolve(null),
+    ]);
+    const fieldErrors: FinanceFieldErrors = {};
+    if (!source) fieldErrors.source_id = 'Choose a valid source';
+    else if (source.is_archived && existing?.source_id !== input.source_id) {
+        fieldErrors.source_id = 'Archived sources cannot be used';
     }
     if (input.category_id) {
-        const category = await getOwnedFinanceCategory(userId, input.category_id);
-        if (!category) fail('Category not found', 404);
-        if (category.is_archived && existing?.category_id !== input.category_id) {
-            fail('Archived categories cannot be used for new entries', 404);
+        if (!category) fieldErrors.category_id = 'Choose a valid category';
+        else if (category.is_archived && existing?.category_id !== input.category_id) {
+            fieldErrors.category_id = 'Archived categories cannot be used';
+        } else if (category.type !== input.direction) {
+            fieldErrors.category_id = 'Category must match the transaction direction';
         }
-        if (category.type !== input.direction) fail('Category type must match the transaction direction', 404);
+    }
+    if (Object.keys(fieldErrors).length > 0) {
+        fail('Check the highlighted fields', 422, { field_errors: fieldErrors });
     }
 }
 
@@ -429,12 +440,19 @@ export async function createManualFinanceTransactionForUser(
         return { data: replay, recovered: true, status: 200 };
     }
     await validateFinanceTransactionReferences(userId, input);
-    const { idempotency_key: idempotencyKey, ...transaction } = input;
     const { data, error } = await createManualFinanceTransaction(userId, {
-        ...transaction,
-        manual_idempotency_key: idempotencyKey,
-        source: 'manual',
-        status: 'confirmed',
+        p_source_id: input.source_id,
+        p_category_id: input.category_id,
+        p_direction: input.direction,
+        p_amount: input.amount,
+        p_merchant: input.merchant,
+        p_payee_name: input.payee_name,
+        p_transaction_date: input.transaction_date,
+        p_notes: input.notes,
+        p_currency: input.currency,
+        p_reference_number: input.reference_number,
+        p_recipient_reference: input.recipient_reference,
+        p_manual_idempotency_key: input.idempotency_key,
     });
     if (error) {
         if (error.code === '23505') {
@@ -446,19 +464,40 @@ export async function createManualFinanceTransactionForUser(
             }
             if (concurrent) fail('Transaction request ID was already used for different details', 409);
         }
+        transactionRpcError(error);
         throw error;
     }
-    return { data: normalizeFinanceTransaction(data as FinanceTransaction), recovered: false, status: 201 };
+    const created = data as FinanceTransaction;
+    const { data: reloaded, error: reloadError } = await findFinanceTransaction(
+        userId,
+        created.id,
+        '*, finance_source:dim_finance_sources(*), category:dim_finance_categories(*), finance_payee:dim_finance_payees(*)'
+    );
+    if (reloadError) throw reloadError;
+    return { data: normalizeFinanceTransaction(reloaded as unknown as FinanceTransaction), recovered: false, status: 201 };
 }
 
 function transactionRpcError(error: { code?: string; message?: string }) {
     const message = error.message || 'The transaction could not be updated';
     if (error.code === '40001') fail('Finance data changed concurrently. Retry the action.', 409);
     if (error.code === 'P0002' || /not found/i.test(message)) fail('Transaction not found', 404);
-    if (error.code === '23514') fail('Transaction conflicts with current Finance data', 409);
-    if (error.code === '22023' || error.code === '23503' || /invalid|required|compatible/i.test(message)) {
-        fail('Transaction details are invalid or no longer available', 400);
+    if (error.code === '23514' || error.code === '23503') {
+        fail('Transaction conflicts with current Finance data', 409);
     }
+    if (error.code === '22023' || /invalid|required|compatible/i.test(message)) {
+        fail('Check the highlighted fields', 422, { field_errors: financeRpcFieldErrors(message) });
+    }
+}
+
+function financeRpcFieldErrors(message: string): FinanceFieldErrors {
+    if (/recipient reference/i.test(message)) return { recipient_reference: message };
+    if (/payee/i.test(message)) return { payee_name: message };
+    if (/amount/i.test(message)) return { amount: message };
+    if (/date/i.test(message)) return { transaction_date: message };
+    if (/direction/i.test(message)) return { direction: message };
+    if (/source/i.test(message)) return { source_id: message };
+    if (/category/i.test(message)) return { category_id: message };
+    return {};
 }
 
 export async function updateFinanceTransactionForUser(
@@ -473,7 +512,7 @@ export async function updateFinanceTransactionForUser(
     const existingTransaction = existing as unknown as FinanceTransaction;
     if (existingTransaction.status !== 'confirmed') fail('Only confirmed ledger transactions can be edited', 409);
     const parsed = parseFinanceTransaction({ ...existingTransaction, ...body }, today);
-    if ('error' in parsed) fail(parsed.error);
+    if ('error' in parsed) fail(parsed.error, 422, { field_errors: parsed.field_errors || {} });
     const input = parsed.data;
     await validateFinanceTransactionReferences(userId, input, existingTransaction);
     const { error } = await updateFinanceTransaction(userId, transactionId, {
@@ -482,13 +521,15 @@ export async function updateFinanceTransactionForUser(
         p_direction: input.direction,
         p_amount: input.amount,
         p_merchant: input.merchant,
+        p_payee_name: input.payee_name,
         p_transaction_date: input.transaction_date,
         p_notes: input.notes,
         p_currency: input.currency,
         p_reference_number: input.reference_number,
+        p_recipient_reference: input.recipient_reference,
     });
     if (error) transactionRpcError(error);
-    const { data, error: reloadError } = await findFinanceTransaction(userId, transactionId, '*, finance_source:dim_finance_sources(*), category:dim_finance_categories(*)');
+    const { data, error: reloadError } = await findFinanceTransaction(userId, transactionId, '*, finance_source:dim_finance_sources(*), category:dim_finance_categories(*), finance_payee:dim_finance_payees(*)');
     if (reloadError) throw reloadError;
     return normalizeFinanceTransaction(data as unknown as FinanceTransaction);
 }
@@ -541,9 +582,12 @@ function reviewRpcError(error: { code?: string; message?: string }) {
     const message = error.message || 'The review action could not be completed';
     if (error.code === '40001') fail('Finance data changed concurrently. Retry the action.', 409);
     if (error.code === '23505' || /already|duplicate|conflict/i.test(message)) fail('Review item was already changed. Reload and retry.', 409);
-    if (error.code === '23514') fail('Review action conflicts with current Finance data', 409);
+    if (error.code === '23514' || error.code === '23503') fail('Review action conflicts with current Finance data', 409);
     if (/not found/i.test(message)) fail('Review item not found', 404);
-    if (error.code === 'P0001' || error.code === '22023' || error.code === '23503' || /invalid|required|archived|match/i.test(message)) {
+    if (error.code === '22023' || /invalid|required/i.test(message)) {
+        fail('Check the highlighted fields', 422, { field_errors: financeRpcFieldErrors(message) });
+    }
+    if (error.code === 'P0001' || /archived|match/i.test(message)) {
         fail('Review action is invalid or references unavailable Finance data', 400);
     }
 }
@@ -581,12 +625,18 @@ async function validateFinanceReviewReferences(
     categoryId: string | null,
     direction: FinanceTransactionInput['direction']
 ) {
-    const source = await getOwnedFinanceSource(userId, sourceId);
-    if (!source || source.is_archived) fail('Choose an active source', 404);
+    const [source, category] = await Promise.all([
+        getOwnedFinanceSource(userId, sourceId),
+        categoryId ? getOwnedFinanceCategory(userId, categoryId) : Promise.resolve(null),
+    ]);
+    const fieldErrors: FinanceFieldErrors = {};
+    if (!source || source.is_archived) fieldErrors.source_id = 'Choose an active source';
     if (categoryId) {
-        const category = await getOwnedFinanceCategory(userId, categoryId);
-        if (!category || category.is_archived) fail('Choose an active category', 404);
-        if (category.type !== direction) fail('Category type must match the transaction direction');
+        if (!category || category.is_archived) fieldErrors.category_id = 'Choose an active category';
+        else if (category.type !== direction) fieldErrors.category_id = 'Category must match the transaction direction';
+    }
+    if (Object.keys(fieldErrors).length > 0) {
+        fail('Check the highlighted fields', 422, { field_errors: fieldErrors });
     }
 }
 
@@ -599,10 +649,12 @@ function confirmationParams(userId: string, input: FinanceReviewConfirmInput) {
         p_direction: input.direction,
         p_amount: input.amount,
         p_merchant: input.merchant,
+        p_payee_name: input.payee_name,
         p_transaction_date: input.transaction_date,
         p_notes: input.notes,
         p_currency: input.currency,
         p_reference_number: input.reference_number,
+        p_recipient_reference: input.recipient_reference,
         p_allow_duplicate: input.allow_duplicate,
         p_duplicate_override_reason: input.duplicate_override_reason,
         p_confirmation_mode: 'manual',
@@ -640,18 +692,24 @@ export async function resolveFinanceReviewCandidateForUser(
 
     if (action === 'retry') {
         if (candidate.status !== 'pending') fail('Only pending review items can be retried', 409);
-        const [sourcesResult, rulesResult] = await Promise.all([
+        const [sourcesResult, rulesResult, fieldLearningRulesResult, payeesResult] = await Promise.all([
             listActiveFinanceSources(userId),
             listActiveFinanceRules(userId),
+            listActiveFinanceFieldLearningRules(userId),
+            listActiveFinancePayees(userId),
         ]);
         if (sourcesResult.error) throw sourcesResult.error;
         if (rulesResult.error) throw rulesResult.error;
+        if (fieldLearningRulesResult.error) throw fieldLearningRulesResult.error;
+        if (payeesResult.error) throw payeesResult.error;
         const normalizedText = candidate.intake?.ocr_normalized_text || candidate.intake?.ocr_text || '';
         const parsed = parseFinanceText(
             normalizedText,
             (rulesResult.data || []) as FinanceRule[],
             (sourcesResult.data || []) as FinanceSource[],
-            candidate.intake?.original_filename || null
+            candidate.intake?.original_filename || null,
+            (fieldLearningRulesResult.data || []) as FinanceFieldLearningRule[],
+            (payeesResult.data || []) as FinancePayee[],
         );
         const { error: sourceEvidenceError } = await updateFinanceIntakeSourceEvidence(
             userId,
@@ -686,7 +744,7 @@ export async function resolveFinanceReviewCandidateForUser(
 
     if (action !== 'confirm') fail('Invalid review action');
     const parsed = parseFinanceReviewConfirm(body, today);
-    if ('error' in parsed) fail(parsed.error);
+    if ('error' in parsed) fail(parsed.error, 422, { field_errors: parsed.field_errors || {} });
     const input = parsed.data;
     const params = confirmationParams(userId, input);
 

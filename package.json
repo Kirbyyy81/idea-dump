@@ -9,6 +9,8 @@
     "lint": "next lint",
     "test:log-viewer": "node scripts/test-log-viewer.js",
     "test:finance-security": "node --experimental-strip-types scripts/test-finance-security.js",
+    "test:finance-validation": "node --experimental-strip-types scripts/test-finance-validation.js",
+    "test:finance-payees": "node scripts/test-finance-payees.js",
     "test:finance-idempotency": "node --experimental-strip-types scripts/test-finance-idempotency.js",
     "test:finance-ordering": "node --experimental-strip-types scripts/test-finance-ordering.js",
     "test:finance-share": "node scripts/test-finance-share.js",

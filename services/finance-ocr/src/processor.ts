@@ -163,6 +163,8 @@ export async function processScreenshot(
             context.rules,
             context.sources,
             image.originalFilename,
+            context.fieldLearningRules,
+            context.payees,
         );
         const duplicate = await dependencies.repository.assessDuplicate({
             userId,

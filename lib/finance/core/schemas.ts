@@ -6,7 +6,12 @@ import {
 import { FINANCE_V1_CURRENCY } from '@/lib/finance/core/constants';
 import { isFinanceIdempotencyKey } from '@/lib/finance/transactions/idempotency';
 import { getFinanceSourcePreset, normalizeFinanceSourceAliases } from '@/lib/finance/ocr/sourceDetection';
-import { isFutureFinanceDate, normalizeFinanceDate, toPositiveFinanceAmount } from '@/lib/finance/core/values';
+import {
+    FinanceFieldErrors,
+    getFinanceTransactionFieldErrors,
+    normalizeFinanceDate,
+    toPositiveFinanceAmount,
+} from '@/lib/finance/core/values';
 import {
     FINANCE_SHARE_MIME_TYPES,
     MAX_FINANCE_SHARE_BATCH_BYTES,
@@ -19,7 +24,7 @@ const TRANSACTION_DIRECTIONS: FinanceTransactionDirection[] = ['expense', 'incom
 const TRANSACTION_STATUSES: FinanceTransactionStatus[] = ['confirmed', 'review', 'duplicate', 'rejected'];
 const RULE_MATCH_TYPES = ['exact_phrase', 'merchant_alias', 'keyword', 'account_hint'] as const;
 
-export type FinanceValidationResult<T> = { data: T } | { error: string };
+export type FinanceValidationResult<T> = { data: T } | { error: string; field_errors?: FinanceFieldErrors };
 
 export interface FinanceCategoryCreateInput {
     name: string;
@@ -72,7 +77,9 @@ export interface FinanceTransactionInput {
     amount: number;
     currency: typeof FINANCE_V1_CURRENCY;
     merchant: string | null;
+    payee_name: string | null;
     reference_number: string | null;
+    recipient_reference: string | null;
     transaction_date: string;
     notes: string | null;
 }
@@ -332,25 +339,22 @@ export function parseFinanceTransaction(
     const amount = toPositiveFinanceAmount(body.amount);
     const transactionDate = normalizeFinanceDate(body.transaction_date);
     const categoryId = toNullableFinanceText(body.category_id);
-    if (!sourceId) return { error: 'Source is required' };
-    if (!isFinanceUuid(sourceId)) return { error: 'Source ID must be a valid UUID' };
-    if (categoryId && !isFinanceUuid(categoryId)) return { error: 'Category ID must be a valid UUID' };
-    if (!amount) return { error: 'Amount must be positive, within range, and use at most two decimals' };
-    if (!isFinanceTransactionDirection(body.direction)) return { error: 'Select a valid transaction direction' };
-    if (!transactionDate) return { error: 'Transaction date is required' };
-    if (isFutureFinanceDate(transactionDate, today)) return { error: 'Transaction date cannot be in the future' };
-    if (!isFinanceTextWithinLength(body.merchant, 500)) return { error: 'Merchant must be 500 characters or fewer' };
-    if (!isFinanceTextWithinLength(body.notes, 2000)) return { error: 'Notes must be 2,000 characters or fewer' };
-    if (!isFinanceTextWithinLength(body.reference_number, 200)) return { error: 'Reference number must be 200 characters or fewer' };
+    const direction = isFinanceTransactionDirection(body.direction) ? body.direction : null;
+    const fieldErrors = getFinanceTransactionFieldErrors(body, today, { validateIds: true });
+    if (Object.keys(fieldErrors).length > 0 || amount === null || !transactionDate || !direction) {
+        return { error: 'Check the highlighted fields', field_errors: fieldErrors };
+    }
     return {
         data: {
             source_id: sourceId,
             category_id: categoryId,
-            direction: body.direction,
+            direction,
             amount,
             currency: FINANCE_V1_CURRENCY,
             merchant: toNullableFinanceText(body.merchant),
+            payee_name: body.has_payee === true ? toNullableFinanceText(body.payee_name) : null,
             reference_number: normalizeFinanceReferenceNumber(body.reference_number),
+            recipient_reference: toNullableFinanceText(body.recipient_reference),
             transaction_date: transactionDate,
             notes: toNullableFinanceText(body.notes),
         },
@@ -388,7 +392,10 @@ export function parseFinanceReviewConfirm(
     const parsed = parseFinanceTransaction(body, today);
     if ('error' in parsed) return parsed;
     if (!isFinanceTextWithinLength(body.duplicate_override_reason, 500)) {
-        return { error: 'Duplicate override reason must be 500 characters or fewer' };
+        return {
+            error: 'Check the highlighted fields',
+            field_errors: { duplicate_override_reason: 'Duplicate override reason must be 500 characters or fewer' },
+        };
     }
     return {
         data: {

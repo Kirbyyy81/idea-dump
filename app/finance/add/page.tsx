@@ -25,18 +25,28 @@ import {
 import { OcrProgress } from './_components/OcrProgress';
 import { FinanceShareExperience } from './_components/FinanceShareExperience';
 import { FinanceLoadingState } from '../_components/FinanceLoadingState';
-import { financeApiRequest } from '@/lib/finance/core/client';
+import {
+    FinanceFormErrorSummary,
+    FinanceFormField,
+    financeFieldErrorProps,
+    focusFirstFinanceError,
+} from '../_components/FinanceFormField';
+import { FinanceApiError, financeApiRequest } from '@/lib/finance/core/client';
+import { Toggle } from '@/components/atoms/Toggle';
 import { getManualTransactionAttempt } from '@/lib/finance/transactions/idempotency';
 import {
-    getFinanceTransactionTextError,
+    FinanceFieldErrors,
+    FinanceTransactionField,
+    getFinanceTransactionFieldErrors,
     FINANCE_TIME_ZONE_HEADER,
     getFinanceTimeZone,
     getLocalFinanceDate,
-    isFutureFinanceDate,
     MAX_FINANCE_AMOUNT,
     MAX_FINANCE_MERCHANT_LENGTH,
     MAX_FINANCE_NAME_LENGTH,
     MAX_FINANCE_NOTES_LENGTH,
+    MAX_FINANCE_PAYEE_LENGTH,
+    MAX_FINANCE_RECIPIENT_REFERENCE_LENGTH,
     MAX_FINANCE_REFERENCE_LENGTH,
     toPositiveFinanceAmount,
 } from '@/lib/finance/core/values';
@@ -45,7 +55,7 @@ import { useFinanceShareTarget } from '@/app/finance/_components/FinanceShareTar
 const NEW_SOURCE = '__new__';
 const MAX_FINANCE_UPLOAD_BYTES = 4 * 1024 * 1024;
 const FINANCE_UPLOAD_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
-const initialForm = { source_id: '', category_id: '', direction: 'expense' as FinanceTransactionDirection, amount: '', merchant: '', reference_number: '', transaction_date: getLocalFinanceDate(), notes: '' };
+const initialForm = { source_id: '', category_id: '', direction: 'expense' as FinanceTransactionDirection, amount: '', merchant: '', has_payee: false, payee_name: '', reference_number: '', recipient_reference: '', transaction_date: getLocalFinanceDate(), notes: '' };
 
 function financeOcrErrorMessage(error: unknown) {
     if (!(error instanceof FinanceOcrClientError)) {
@@ -67,6 +77,7 @@ export default function AddFinanceTransactionPage() {
     const [newSource, setNewSource] = useState('');
     const [file, setFile] = useState<File | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [fieldErrors, setFieldErrors] = useState<FinanceFieldErrors>({});
     const [ocrPhase, setOcrPhase] = useState<FinanceOcrPhase>('idle');
     const [uploadProgress, setUploadProgress] = useState(0);
     const [isOptionsLoading, setIsOptionsLoading] = useState(true);
@@ -102,22 +113,31 @@ export default function AddFinanceTransactionPage() {
         [categories, form.direction]
     );
 
+    const setManualField = <Key extends keyof typeof initialForm>(key: Key, value: (typeof initialForm)[Key]) => {
+        setForm((current) => ({ ...current, [key]: value }));
+        setFieldErrors((current) => {
+            if (!current[key as FinanceTransactionField]) return current;
+            const next = { ...current };
+            delete next[key as FinanceTransactionField];
+            return next;
+        });
+    };
+
     const submitManual = async (event: FormEvent) => {
         event.preventDefault();
+        const nextErrors = getFinanceTransactionFieldErrors(form);
+        if (form.source_id === NEW_SOURCE) {
+            delete nextErrors.source_id;
+            if (!newSource.trim()) nextErrors.new_source_name = 'Enter the new source name';
+        }
+        if (Object.keys(nextErrors).length > 0) {
+            setFieldErrors(nextErrors);
+            focusFirstFinanceError(nextErrors, Object.keys(nextErrors) as FinanceTransactionField[]);
+            return;
+        }
         const amount = toPositiveFinanceAmount(form.amount);
-        if (amount === null) {
-            showError('Amount must be positive, within range, and use at most two decimals');
-            return;
-        }
-        const textError = getFinanceTransactionTextError(form);
-        if (textError) {
-            showError(textError);
-            return;
-        }
-        if (isFutureFinanceDate(form.transaction_date)) {
-            showError('Transaction date cannot be in the future');
-            return;
-        }
+        if (amount === null) return;
+        setFieldErrors({});
         setIsSaving(true);
         try {
             let sourceId = form.source_id;
@@ -154,7 +174,14 @@ export default function AddFinanceTransactionPage() {
             showSuccess('Transaction added');
             setForm({ ...initialForm, transaction_date: getLocalFinanceDate() });
             setNewSource('');
-        } catch (error) { showError(error instanceof Error ? error.message : 'Could not add transaction'); }
+        } catch (error) {
+            if (error instanceof FinanceApiError && Object.keys(error.fieldErrors).length > 0) {
+                setFieldErrors(error.fieldErrors);
+                focusFirstFinanceError(error.fieldErrors, Object.keys(error.fieldErrors) as FinanceTransactionField[]);
+            } else {
+                showError(error instanceof Error ? error.message : 'Could not add transaction');
+            }
+        }
         finally { setIsSaving(false); }
     };
 
@@ -231,16 +258,64 @@ export default function AddFinanceTransactionPage() {
 
         {mode === 'manual' ? isOptionsLoading ? (
             <FinanceLoadingState label="Loading transaction options..." />
-        ) : <form onSubmit={submitManual} className="mt-6 space-y-4">
-            <label className="block space-y-2"><span className="text-sm text-text-secondary">Type</span><Select ariaLabel="Transaction type" value={form.direction} onChange={(direction) => setForm({ ...form, direction: direction as FinanceTransactionDirection, category_id: '' })} options={[{ value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }]} /></label>
-            <label className="block space-y-2"><span className="text-sm text-text-secondary">Source</span><Select ariaLabel="Transaction source" value={form.source_id} onChange={(source_id) => setForm({ ...form, source_id })} placeholder="Choose or add a source" options={[...sources.filter((source) => !source.is_archived).map((source) => ({ value: source.id, label: source.name })), { value: NEW_SOURCE, label: '+ Add new source' }]} /></label>
-            {form.source_id === NEW_SOURCE && <label className="block space-y-2"><span className="text-sm text-text-secondary">New source name</span><Input required maxLength={MAX_FINANCE_NAME_LENGTH} value={newSource} onChange={(event) => setNewSource(event.target.value)} placeholder="e.g. Maybank debit card" /></label>}
-            <label className="block space-y-2"><span className="text-sm text-text-secondary">Category</span><Select ariaLabel="Transaction category" value={form.category_id} onChange={(category_id) => setForm({ ...form, category_id })} placeholder="Uncategorised" options={[{ value: '', label: 'Uncategorised' }, ...availableCategories]} /></label>
-            <div className="grid gap-4 sm:grid-cols-2"><label className="block space-y-2"><span className="text-sm text-text-secondary">Amount</span><Input required type="number" inputMode="decimal" min="0.01" max={MAX_FINANCE_AMOUNT} step="0.01" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} placeholder="0.00" /></label><label className="block space-y-2"><span className="text-sm text-text-secondary">Currency</span><Input value="MYR" readOnly aria-readonly="true" /></label></div>
-            <div className="grid gap-4 sm:grid-cols-2"><label className="block space-y-2"><span className="text-sm text-text-secondary">Date</span><Input required type="date" max={getLocalFinanceDate()} value={form.transaction_date} onChange={(event) => setForm({ ...form, transaction_date: event.target.value })} /></label><label className="block space-y-2"><span className="text-sm text-text-secondary">Reference number</span><Input maxLength={MAX_FINANCE_REFERENCE_LENGTH} value={form.reference_number} onChange={(event) => setForm({ ...form, reference_number: event.target.value })} /></label></div>
-            <label className="block space-y-2"><span className="text-sm text-text-secondary">Merchant or payee</span><Input maxLength={MAX_FINANCE_MERCHANT_LENGTH} value={form.merchant} onChange={(event) => setForm({ ...form, merchant: event.target.value })} /></label>
-            <label className="block space-y-2"><span className="text-sm text-text-secondary">Notes</span><Textarea maxLength={MAX_FINANCE_NOTES_LENGTH} value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></label>
-            <Button type="submit" className="w-full" isLoading={isSaving} disabled={!form.source_id || (form.source_id === NEW_SOURCE && !newSource.trim())}>Add transaction</Button>
+        ) : <form onSubmit={submitManual} className="mt-6 space-y-4" noValidate>
+            <FinanceFormErrorSummary errors={fieldErrors} />
+            <FinanceFormField fieldId="manual-direction" label="Type" error={fieldErrors.direction} required>
+                <Select id="manual-direction" dataFinanceField="direction" ariaLabel="Transaction type" ariaDescribedBy={fieldErrors.direction ? 'manual-direction-error' : undefined} error={Boolean(fieldErrors.direction)} value={form.direction} onChange={(direction) => {
+                    setManualField('direction', direction as FinanceTransactionDirection);
+                    setManualField('category_id', '');
+                }} options={[{ value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }]} />
+            </FinanceFormField>
+            <FinanceFormField fieldId="manual-source" label="Source" error={fieldErrors.source_id} required>
+                <Select id="manual-source" dataFinanceField="source_id" ariaLabel="Transaction source" ariaDescribedBy={fieldErrors.source_id ? 'manual-source-error' : undefined} error={Boolean(fieldErrors.source_id)} value={form.source_id} onChange={(sourceId) => setManualField('source_id', sourceId)} placeholder="Choose or add a source" options={[...sources.filter((source) => !source.is_archived).map((source) => ({ value: source.id, label: source.name })), { value: NEW_SOURCE, label: '+ Add new source' }]} />
+            </FinanceFormField>
+            {form.source_id === NEW_SOURCE && <FinanceFormField fieldId="manual-new-source" label="New source name" error={fieldErrors.new_source_name} required>
+                <Input id="manual-new-source" data-finance-field="new_source_name" maxLength={MAX_FINANCE_NAME_LENGTH} value={newSource} onChange={(event) => {
+                    setNewSource(event.target.value);
+                    setFieldErrors((current) => {
+                        if (!current.new_source_name) return current;
+                        const next = { ...current };
+                        delete next.new_source_name;
+                        return next;
+                    });
+                }} placeholder="e.g. Maybank debit card" {...financeFieldErrorProps(fieldErrors, 'new_source_name', 'manual-new-source')} />
+            </FinanceFormField>}
+            <FinanceFormField fieldId="manual-category" label="Category" error={fieldErrors.category_id}>
+                <Select id="manual-category" dataFinanceField="category_id" ariaLabel="Transaction category" ariaDescribedBy={fieldErrors.category_id ? 'manual-category-error' : undefined} error={Boolean(fieldErrors.category_id)} value={form.category_id} onChange={(categoryId) => setManualField('category_id', categoryId)} placeholder="Uncategorised" options={[{ value: '', label: 'Uncategorised' }, ...availableCategories]} />
+            </FinanceFormField>
+            <div className="grid gap-4 sm:grid-cols-2">
+                <FinanceFormField fieldId="manual-amount" label="Amount" error={fieldErrors.amount} required>
+                    <Input id="manual-amount" data-finance-field="amount" type="number" inputMode="decimal" min="0.01" max={MAX_FINANCE_AMOUNT} step="0.01" value={form.amount} onChange={(event) => setManualField('amount', event.target.value)} placeholder="0.00" {...financeFieldErrorProps(fieldErrors, 'amount', 'manual-amount')} />
+                </FinanceFormField>
+                <FinanceFormField fieldId="manual-currency" label="Currency"><Input id="manual-currency" value="MYR" readOnly aria-readonly="true" /></FinanceFormField>
+            </div>
+            <FinanceFormField fieldId="manual-merchant" label="Merchant (optional)" error={fieldErrors.merchant}>
+                <Input id="manual-merchant" data-finance-field="merchant" maxLength={MAX_FINANCE_MERCHANT_LENGTH} value={form.merchant} onChange={(event) => setManualField('merchant', event.target.value)} {...financeFieldErrorProps(fieldErrors, 'merchant', 'manual-merchant')} />
+            </FinanceFormField>
+            <FinanceFormField fieldId="manual-has-payee" label="Payee" error={fieldErrors.has_payee}>
+                <Toggle id="manual-has-payee" dataFinanceField="has_payee" checked={form.has_payee} label="Has a payee" ariaLabel="Has a payee" ariaDescribedBy={fieldErrors.has_payee ? 'manual-has-payee-error' : undefined} error={Boolean(fieldErrors.has_payee)} onChange={(checked) => {
+                    setManualField('has_payee', checked);
+                    if (!checked) setManualField('payee_name', '');
+                }} />
+            </FinanceFormField>
+            {form.has_payee && <FinanceFormField fieldId="manual-payee" label="Payee name" error={fieldErrors.payee_name} required>
+                <Input id="manual-payee" data-finance-field="payee_name" maxLength={MAX_FINANCE_PAYEE_LENGTH} value={form.payee_name} onChange={(event) => setManualField('payee_name', event.target.value)} {...financeFieldErrorProps(fieldErrors, 'payee_name', 'manual-payee')} />
+            </FinanceFormField>}
+            <div className="grid gap-4 sm:grid-cols-2">
+                <FinanceFormField fieldId="manual-reference" label="Transaction reference" error={fieldErrors.reference_number}>
+                    <Input id="manual-reference" data-finance-field="reference_number" maxLength={MAX_FINANCE_REFERENCE_LENGTH} value={form.reference_number} onChange={(event) => setManualField('reference_number', event.target.value)} {...financeFieldErrorProps(fieldErrors, 'reference_number', 'manual-reference')} />
+                </FinanceFormField>
+                <FinanceFormField fieldId="manual-recipient-reference" label="Recipient reference" error={fieldErrors.recipient_reference}>
+                    <Input id="manual-recipient-reference" data-finance-field="recipient_reference" maxLength={MAX_FINANCE_RECIPIENT_REFERENCE_LENGTH} value={form.recipient_reference} onChange={(event) => setManualField('recipient_reference', event.target.value)} {...financeFieldErrorProps(fieldErrors, 'recipient_reference', 'manual-recipient-reference')} />
+                </FinanceFormField>
+            </div>
+            <FinanceFormField fieldId="manual-date" label="Date" error={fieldErrors.transaction_date} required>
+                <Input id="manual-date" data-finance-field="transaction_date" type="date" max={getLocalFinanceDate()} value={form.transaction_date} onChange={(event) => setManualField('transaction_date', event.target.value)} {...financeFieldErrorProps(fieldErrors, 'transaction_date', 'manual-date')} />
+            </FinanceFormField>
+            <FinanceFormField fieldId="manual-notes" label="Notes" error={fieldErrors.notes}>
+                <Textarea id="manual-notes" data-finance-field="notes" maxLength={MAX_FINANCE_NOTES_LENGTH} value={form.notes} onChange={(event) => setManualField('notes', event.target.value)} {...financeFieldErrorProps(fieldErrors, 'notes', 'manual-notes')} />
+            </FinanceFormField>
+            <Button type="submit" className="w-full" isLoading={isSaving} disabled={isSaving}>Add transaction</Button>
         </form> : <form onSubmit={submitScreenshot} className="mt-6"><FileUpload label="Transaction screenshot" aria-describedby="finance-upload-help" accept="image/png,image/jpeg,image/webp" value={file} onChange={selectScreenshot} disabled={isSaving} /><p id="finance-upload-help" className="mt-2 text-sm text-text-muted">PNG, JPEG, or WebP · Max 4 MB</p>{ocrPhase !== 'idle' && <OcrProgress phase={ocrPhase} uploadProgress={uploadProgress} />}<Button type="submit" className="mt-5 w-full" isLoading={isSaving} disabled={!file || isSaving}>Process screenshot</Button></form>}
         </>}
     </div></AppShell>;

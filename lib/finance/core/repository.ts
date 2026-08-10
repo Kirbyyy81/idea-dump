@@ -2,7 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { FinanceCategory, FinanceSource, FinanceTransaction } from '@/lib/types';
 
 const FINANCE_TRANSACTION_SELECT =
-    '*, finance_source:dim_finance_sources(*), category:dim_finance_categories(*)';
+    '*, finance_source:dim_finance_sources(*), category:dim_finance_categories(*), finance_payee:dim_finance_payees(*)';
 const FINANCE_RULE_SELECT =
     '*, finance_source:dim_finance_sources(*), category:dim_finance_categories(*)';
 const FINANCE_RULE_SUGGESTION_SELECT =
@@ -188,6 +188,26 @@ export async function listActiveFinanceRules(userId: string) {
         .eq('is_active', true);
 }
 
+export async function listActiveFinancePayees(userId: string) {
+    return createAdminClient()
+        .from('dim_finance_payees')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('is_archived', false)
+        .order('name');
+}
+
+export async function listActiveFinanceFieldLearningRules(userId: string) {
+    return createAdminClient()
+        .from('finance_field_learning_rules')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .order('evidence_count', { ascending: false })
+        .order('created_at')
+        .order('id');
+}
+
 export async function findFinanceRule(userId: string, ruleId: string, select = '*') {
     return createAdminClient()
         .from('finance_rules')
@@ -282,6 +302,17 @@ export async function listFinanceTransactions(
 ) {
     const transactions: FinanceTransaction[] = [];
     const admin = createAdminClient();
+    let matchingPayeeIds: string[] = [];
+    if (options.query) {
+        const { data, error } = await admin
+            .from('dim_finance_payees')
+            .select('id')
+            .eq('user_id', userId)
+            .ilike('name', `%${options.query}%`)
+            .limit(100);
+        if (error) throw error;
+        matchingPayeeIds = (data || []).map((payee) => payee.id);
+    }
     for (let from = 0; ; from += options.pageSize) {
         let query = admin
             .from('finance_transactions')
@@ -293,7 +324,18 @@ export async function listFinanceTransactions(
             .order('id', { ascending: true })
             .range(from, from + options.pageSize - 1);
         if (options.sourceId) query = query.eq('source_id', options.sourceId);
-        if (options.query) query = query.or(`merchant.ilike.%${options.query}%,reference_number.ilike.%${options.query}%,notes.ilike.%${options.query}%`);
+        if (options.query) {
+            const filters = [
+                `merchant.ilike.%${options.query}%`,
+                `reference_number.ilike.%${options.query}%`,
+                `recipient_reference.ilike.%${options.query}%`,
+                `notes.ilike.%${options.query}%`,
+            ];
+            if (matchingPayeeIds.length > 0) {
+                filters.push(`payee_id.in.(${matchingPayeeIds.join(',')})`);
+            }
+            query = query.or(filters.join(','));
+        }
         const { data, error } = await query;
         if (error) throw error;
         const page = (data || []) as FinanceTransaction[];
@@ -313,11 +355,10 @@ export async function getManualFinanceTransactionByIdempotencyKey(userId: string
 }
 
 export async function createManualFinanceTransaction(userId: string, input: Record<string, unknown>) {
-    return createAdminClient()
-        .from('finance_transactions')
-        .insert({ user_id: userId, ...input })
-        .select(FINANCE_TRANSACTION_SELECT)
-        .single();
+    return createAdminClient().rpc('finance_create_manual_transaction_v1', {
+        p_user_id: userId,
+        ...input,
+    }).single();
 }
 
 export async function findFinanceTransaction(userId: string, transactionId: string, select = '*') {
@@ -334,7 +375,7 @@ export async function updateFinanceTransaction(
     transactionId: string,
     input: Record<string, unknown>
 ) {
-    return createAdminClient().rpc('finance_update_transaction', {
+    return createAdminClient().rpc('finance_update_transaction_v2', {
         p_user_id: userId,
         p_transaction_id: transactionId,
         ...input,
@@ -515,7 +556,7 @@ export async function updateFinanceReviewDuplicateAssessment(
 export async function confirmFinanceReviewCandidate(
     params: Record<string, unknown>
 ) {
-    return createAdminClient().rpc('finance_confirm_candidate', params);
+    return createAdminClient().rpc('finance_confirm_candidate_v2', params);
 }
 
 export async function prepareFinanceShareBatch(userId: string, requestId: string, files: unknown[]) {
