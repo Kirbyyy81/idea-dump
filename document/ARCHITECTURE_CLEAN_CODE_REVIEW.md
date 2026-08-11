@@ -2,7 +2,7 @@
 
 Original review date: 2026-07-31
 
-Progress tracker last verified: 2026-08-05
+Progress tracker last verified: 2026-08-11
 
 ## Purpose
 
@@ -404,17 +404,17 @@ daily-logs/
 
 Move domain-owned top-level helpers into their domain directories.
 
-### 11. A feature-specific provider is installed globally
+### 11. Finance share-target handling crosses application boundaries
 
-[`AuthenticatedAppShell`](../components/organisms/AuthenticatedAppShell.tsx) installs `FinanceShareTargetProvider` around every route, including public authentication routes that the persistent shell later bypasses. This makes a Finance-only browser workflow part of the global application composition and increases the responsibility of the root shell.
+Accepted Finance share files are now owned by `FinanceShareTargetProvider` inside the protected Finance layout. Leaving Finance unmounts that provider and discards files that were not submitted. Durable batches that were already committed continue processing independently.
 
-The provider also owns navigation, access checks, service-worker messaging, alerts, and temporary shared files. Its placement makes the Finance share-target protocol harder to reason about independently from authentication and navigation.
+`AuthenticatedAppShell` retains only a narrow `FinanceShareRejectionBridge` inside `AccessProvider`. It listens only when the user is signed out or lacks Finance access so pending service-worker files can be acknowledged, discarded, and explained instead of waiting for expiry. `AccessProvider` remains a generic RBAC context and does not own Finance or service-worker behavior.
 
 #### Recommendation
 
-- Install the Finance share-target provider only within the protected Finance boundary, or introduce a narrowly scoped global share-target adapter that hands validated events to Finance.
+- Keep accepted file state within the protected Finance boundary and keep the global rejection bridge free of Finance file state.
 - Keep service-worker transport separate from Finance page state and presentation.
-- Add end-to-end coverage for authenticated, unauthenticated, unauthorized, expired, and successfully claimed share payloads before relocating the provider.
+- Add end-to-end coverage for authenticated, unauthenticated, unauthorized, expired, and successfully claimed share payloads before considering the boundary complete.
 
 ### 12. Database type safety stops at the Supabase client boundary
 
@@ -431,9 +431,9 @@ This concern is separate from moving queries into repositories. A repository bou
 
 ### 13. The PWA service worker is a separate untyped application boundary
 
-[`public/sw.js`](../public/sw.js) is approximately 194 lines and implements caching, lifecycle handling, a Finance share-target protocol, temporary file ownership, message delivery, acknowledgements, and expiry behavior. Because it lives under `public/`, it is copied as-is rather than passing through the main TypeScript build.
+[`public/sw.js`](../public/sw.js) implements caching, lifecycle handling, a Finance share-target protocol, temporary file ownership, message delivery, acknowledgements, and expiry behavior. Because it lives under `public/`, it is copied as-is rather than passing through the main TypeScript build.
 
-The Finance share-target flow depends on a message contract shared informally between this service worker and `FinanceShareTargetProvider`, but that contract has no shared type or focused automated test.
+The React share-target bridge and provider now use a shared typed protocol module with runtime message parsing. Focused contract tests verify that the untyped service worker still uses the same message names. The service worker cannot import that TypeScript contract until it becomes a typed build input, so manual duplication remains at that boundary.
 
 #### Recommendation
 
@@ -575,7 +575,7 @@ idea-dump/
 2. Split access control into focused panels and hooks.
 3. Split the Finance review workflow.
 4. Separate navigation shell behavior from page containers.
-5. Move the Finance share-target provider out of the global application shell.
+5. Complete end-to-end verification of the scoped Finance share-target boundary.
 6. Move initial data loading to server components where practical.
 
 ### Phase 5: OCR service boundary
@@ -595,12 +595,12 @@ idea-dump/
 
 ## Architecture Issue Progress Tracker
 
-Summary as of 2026-08-05:
+Summary as of 2026-08-11:
 
 - Done: 7
 - In progress: 0
-- Partial: 8
-- Not started: 7
+- Partial: 10
+- Not started: 5
 - Blocked: 0
 
 | ID | Issue | Status | Current evidence and completion gate | Last updated |
@@ -624,9 +624,9 @@ Summary as of 2026-08-05:
 | AC-017 | Client-heavy initial data loading | **Not started** | 26 of 33 remaining pages are client components and 24 pages use `useEffect()`. Done when practical initial reads move to server components and interactive client islands retain only browser state. | 2026-08-02 |
 | AC-018 | Component ownership ambiguity | **Partial** | The Log Viewer was moved into `app/log-viewer/_components/`, and route-private feature sections already exist. `AppShell` now owns rendering `components/molecules/PageHeader.tsx` for shared authenticated-page titles and optional actions. Shared Sidebar and Ticket workflows remain under `components/` because they are reused across feature routes, but ownership rules are not yet applied consistently everywhere. Done when shared UI, layout, cross-feature, and feature-private ownership rules are consistently applied. | 2026-08-04 |
 | AC-019 | Inconsistent non-route naming | **Partial** | Documented a `core/` convention for domain-wide layers. Moved the Logs normalizer to `lib/logs/core/normalization.ts`, the Project-only icon map to `lib/projects/icons.ts`, Film Roll lifecycle helpers to `lib/film/rolls/`, the Film Google Drive provider to `lib/film/integrations/`, and common layers to `lib/film/core/`, `lib/finance/core/`, `lib/logs/core/`, `lib/notes/core/`, `lib/projects/core/`, and `lib/tickets/core/`. `articleCreation` and `logViewer` remain naming and ownership outliers. Done when one convention is documented and applied without compatibility regressions. | 2026-08-06 |
-| AC-020 | Global Finance share-target provider | **Not started** | `FinanceShareTargetProvider` wraps every route through `AuthenticatedAppShell`. Done when the Finance workflow is scoped appropriately and authenticated, unauthorized, expired, and successful share flows are verified. | 2026-08-02 |
+| AC-020 | Global Finance share-target provider | **Partial** | Accepted file state now lives under the protected Finance layout and is discarded when that layout unmounts. A narrow global rejection bridge handles signed-out and unauthorized shares without adding Finance behavior to `AccessProvider`. Focused protocol and placement contracts pass. Done when authenticated, unauthorized, expired, successful, navigation, and multi-tab flows have end-to-end coverage. | 2026-08-11 |
 | AC-021 | OCR service source coupling | **Not started** | The OCR TypeScript and bundler aliases point to the application root. Done when both runtimes depend on an explicit shared package and OCR builds without application-source aliases. | 2026-08-02 |
-| AC-022 | Untyped and untested service-worker workflow | **Not started** | `public/sw.js` is about 194 lines and shares an informal protocol with React code. Done when source and protocol are typed, lifecycle behavior is tested, and generated output is verified. | 2026-08-02 |
+| AC-022 | Untyped service-worker workflow | **Partial** | React consumers now use `lib/finance/share/protocol.ts` for typed messages and runtime parsing, and the Finance share contract test verifies the service worker message names. `public/sw.js` remains an untyped manual artifact. Done when the worker consumes the typed protocol through a documented build, lifecycle behavior has focused coverage, and generated output is verified. | 2026-08-11 |
 
 ## Final Assessment
 

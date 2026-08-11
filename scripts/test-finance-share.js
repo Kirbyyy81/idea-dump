@@ -8,8 +8,8 @@ const ts = require('typescript');
 
 const root = path.resolve(__dirname, '..');
 
-function loadShareFileModule() {
-    const filename = path.join(root, 'lib', 'finance', 'share', 'files.ts');
+function loadTypeScriptModule(...segments) {
+    const filename = path.join(root, ...segments);
     const source = fs.readFileSync(filename, 'utf8');
     const output = ts.transpileModule(source, {
         compilerOptions: {
@@ -22,6 +22,77 @@ function loadShareFileModule() {
     const execute = new Function('exports', 'require', 'module', '__filename', '__dirname', output);
     execute(module.exports, require, module, filename, path.dirname(filename));
     return module.exports;
+}
+
+function loadShareFileModule() {
+    return loadTypeScriptModule('lib', 'finance', 'share', 'files.ts');
+}
+
+function loadShareProtocolModule() {
+    return loadTypeScriptModule('lib', 'finance', 'share', 'protocol.ts');
+}
+
+function testShareProtocolContract() {
+    const protocol = loadShareProtocolModule();
+    const types = protocol.FINANCE_SHARE_MESSAGE_TYPES;
+    assert.equal(protocol.FINANCE_SHARE_QUERY_PARAM, 'finance_share');
+    assert.deepEqual(
+        protocol.parseFinanceShareWorkerMessage({
+            type: types.payload,
+            shareId: 'share-1',
+            files: ['file'],
+        }),
+        {
+            type: types.payload,
+            shareId: 'share-1',
+            files: ['file'],
+        }
+    );
+    assert.deepEqual(
+        protocol.parseFinanceShareWorkerMessage({
+            type: types.error,
+            shareId: 'share-2',
+            message: 'Could not read files',
+        }),
+        {
+            type: types.error,
+            shareId: 'share-2',
+            message: 'Could not read files',
+        }
+    );
+    assert.equal(protocol.parseFinanceShareWorkerMessage({ type: types.payload }), null);
+    assert.equal(protocol.parseFinanceShareWorkerMessage({ type: 'unknown', shareId: 'share-3' }), null);
+
+    const workerSource = fs.readFileSync(path.join(root, 'public', 'sw.js'), 'utf8');
+    Object.values(types).forEach((type) => assert.match(workerSource, new RegExp(type)));
+}
+
+function testShareProviderBoundaryContract() {
+    const shell = fs.readFileSync(
+        path.join(root, 'components', 'organisms', 'AuthenticatedAppShell.tsx'),
+        'utf8'
+    );
+    const financeLayout = fs.readFileSync(
+        path.join(root, 'app', 'finance', 'layout.tsx'),
+        'utf8'
+    );
+    const provider = fs.readFileSync(
+        path.join(root, 'app', 'finance', '_components', 'FinanceShareTargetProvider.tsx'),
+        'utf8'
+    );
+    const rejectionBridge = fs.readFileSync(
+        path.join(root, 'app', '_components', 'FinanceShareRejectionBridge.tsx'),
+        'utf8'
+    );
+
+    assert.match(shell, /<FinanceShareRejectionBridge\s*\/>/);
+    assert.doesNotMatch(shell, /<FinanceShareTargetProvider>/);
+    assert.match(financeLayout, /<FinanceShareTargetProvider>\{children\}<\/FinanceShareTargetProvider>/);
+    assert.doesNotMatch(provider, /useAccess/);
+    assert.match(provider, /parseFinanceShareWorkerMessage/);
+    assert.match(rejectionBridge, /const canAccessFinance/);
+    assert.match(rejectionBridge, /if \(canAccessFinance/);
+    assert.match(rejectionBridge, /shared images were discarded/);
 }
 
 async function testValidation() {
@@ -97,6 +168,7 @@ async function testValidation() {
 }
 
 async function testServiceWorkerHandoff() {
+    const { FINANCE_SHARE_MESSAGE_TYPES } = loadShareProtocolModule();
     const workerSource = fs.readFileSync(path.join(root, 'public', 'sw.js'), 'utf8');
     const handlers = new Map();
     const context = vm.createContext({
@@ -169,14 +241,14 @@ async function testServiceWorkerHandoff() {
         },
     };
     handlers.get('message')({
-        data: { type: 'finance-share:claim', shareId },
+        data: { type: FINANCE_SHARE_MESSAGE_TYPES.claim, shareId },
         source,
     });
-    assert.equal(posted[0].type, 'finance-share:payload');
+    assert.equal(posted[0].type, FINANCE_SHARE_MESSAGE_TYPES.payload);
     assert.equal(posted[0].files.length, 2);
 
     handlers.get('message')({
-        data: { type: 'finance-share:acknowledge', shareId },
+        data: { type: FINANCE_SHARE_MESSAGE_TYPES.acknowledge, shareId },
         source,
     });
     await lifetimePromise;
@@ -270,6 +342,8 @@ function testDatabaseQueueContract() {
 }
 
 (async () => {
+    testShareProtocolContract();
+    testShareProviderBoundaryContract();
     await testValidation();
     await testServiceWorkerHandoff();
     testManifestContract();
