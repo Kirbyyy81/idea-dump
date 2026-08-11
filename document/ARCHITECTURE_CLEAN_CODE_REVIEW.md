@@ -414,7 +414,7 @@ Accepted Finance share files are now owned by `FinanceShareTargetProvider` insid
 
 - Keep accepted file state within the protected Finance boundary and keep the global rejection bridge free of Finance file state.
 - Keep service-worker transport separate from Finance page state and presentation.
-- Add end-to-end coverage for authenticated, unauthenticated, unauthorized, expired, and successfully claimed share payloads before considering the boundary complete.
+- Maintain the Finance share lifecycle suite covering authenticated success, signed-out and unauthorized rejection, expired payloads, navigation disposal, and multi-tab isolation.
 
 ### 12. Database type safety stops at the Supabase client boundary
 
@@ -433,7 +433,7 @@ This concern is separate from moving queries into repositories. A repository bou
 
 [`public/sw.js`](../public/sw.js) implements caching, lifecycle handling, a Finance share-target protocol, temporary file ownership, message delivery, acknowledgements, and expiry behavior. Because it lives under `public/`, it is copied as-is rather than passing through the main TypeScript build.
 
-The React share-target bridge and provider now use a shared typed protocol module with runtime message parsing. Focused contract tests verify that the untyped service worker still uses the same message names. The service worker cannot import that TypeScript contract until it becomes a typed build input, so manual duplication remains at that boundary.
+The React share-target bridge and provider now use a shared typed protocol module with runtime message parsing. Focused tests verify the untyped worker message names, successful claims and acknowledgements, expiry, and multi-tab delivery isolation. The service worker cannot import that TypeScript contract until it becomes a typed build input, so manual duplication remains at that boundary.
 
 #### Recommendation
 
@@ -447,7 +447,7 @@ The React share-target bridge and provider now use a shared typed protocol modul
 ### Current observations
 
 - The OCR service has a normal Vitest suite.
-- The main application uses several custom Node.js test scripts.
+- The main application now has a root Vitest runner and a top-level `tests/` directory for the Finance share lifecycle suite. Several older checks remain custom Node.js scripts.
 - All Finance source modules are strict TypeScript, while `allowJs` remains enabled in the main TypeScript configuration.
 - The GitHub workflows create pull requests and releases, but do not run application validation.
 - Phase 1 removed the automatic `predev: npm install`; dependency installation remains an explicit setup step.
@@ -575,7 +575,7 @@ idea-dump/
 2. Split access control into focused panels and hooks.
 3. Split the Finance review workflow.
 4. Separate navigation shell behavior from page containers.
-5. Complete end-to-end verification of the scoped Finance share-target boundary.
+5. Maintain end-to-end verification of the scoped Finance share-target boundary.
 6. Move initial data loading to server components where practical.
 
 ### Phase 5: OCR service boundary
@@ -597,9 +597,9 @@ idea-dump/
 
 Summary as of 2026-08-11:
 
-- Done: 7
+- Done: 8
 - In progress: 0
-- Partial: 10
+- Partial: 9
 - Not started: 5
 - Blocked: 0
 
@@ -610,7 +610,7 @@ Summary as of 2026-08-11:
 | AC-003 | `predev` installs dependencies | **Done** | Removed the `predev` script. Setup continues to require an explicit `npm install`, and no dependency or lockfile change was needed. | 2026-08-02 |
 | AC-004 | No-op route layouts | **Done** | Removed all eleven layouts that only returned `children`. The root layout and Finance authorization layout remain. | 2026-08-02 |
 | AC-005 | Legacy redirect route noise | **Done** | Removed five unused legacy routes after verifying PWA, Auth, and Film navigation use canonical paths. Retained and documented `/api-tools` because Supabase module metadata actively supplies it to runtime navigation. | 2026-08-02 |
-| AC-006 | Main-app test organization | **Partial** | OCR has Vitest, while the main app uses custom Node.js scripts. Done when the main app has a standard test runner, consistent test placement, and CI execution. | 2026-08-02 |
+| AC-006 | Main-app test organization | **Partial** | The main app now has a root Vitest runner and top-level `tests/` placement for the Finance share lifecycle suite. Several older checks remain custom Node.js scripts, and CI does not run the suite. Done when remaining tests use consistent placement and application validation runs in CI. | 2026-08-11 |
 | AC-007 | Remaining Finance JavaScript and `allowJs` | **Partial** | Converted all four Finance source modules to strict TypeScript and updated their focused test runners. Root TypeScript still enables `allowJs`. Done when `allowJs` is disabled without breaking the build or tests. | 2026-08-05 |
 | AC-008 | Domain type monolith | **Not started** | `lib/types.ts` is about 630 lines and has 71 importers. Done when domain types and runtime configuration have clear owners and cross-domain imports no longer depend on a monolith. | 2026-08-02 |
 | AC-009 | Untyped Supabase schema boundary | **Not started** | Supabase clients have no generated `Database` generic. Done when one reviewed generated type parameterizes browser, server, and admin clients and is refreshed with schema changes. | 2026-08-02 |
@@ -624,9 +624,9 @@ Summary as of 2026-08-11:
 | AC-017 | Client-heavy initial data loading | **Not started** | 26 of 33 remaining pages are client components and 24 pages use `useEffect()`. Done when practical initial reads move to server components and interactive client islands retain only browser state. | 2026-08-02 |
 | AC-018 | Component ownership ambiguity | **Partial** | The Log Viewer was moved into `app/log-viewer/_components/`, and route-private feature sections already exist. `AppShell` now owns rendering `components/molecules/PageHeader.tsx` for shared authenticated-page titles and optional actions. Shared Sidebar and Ticket workflows remain under `components/` because they are reused across feature routes, but ownership rules are not yet applied consistently everywhere. Done when shared UI, layout, cross-feature, and feature-private ownership rules are consistently applied. | 2026-08-04 |
 | AC-019 | Inconsistent non-route naming | **Partial** | Documented a `core/` convention for domain-wide layers. Moved the Logs normalizer to `lib/logs/core/normalization.ts`, the Project-only icon map to `lib/projects/icons.ts`, Film Roll lifecycle helpers to `lib/film/rolls/`, the Film Google Drive provider to `lib/film/integrations/`, and common layers to `lib/film/core/`, `lib/finance/core/`, `lib/logs/core/`, `lib/notes/core/`, `lib/projects/core/`, and `lib/tickets/core/`. `articleCreation` and `logViewer` remain naming and ownership outliers. Done when one convention is documented and applied without compatibility regressions. | 2026-08-06 |
-| AC-020 | Global Finance share-target provider | **Partial** | Accepted file state now lives under the protected Finance layout and is discarded when that layout unmounts. A narrow global rejection bridge handles signed-out and unauthorized shares without adding Finance behavior to `AccessProvider`. Focused protocol and placement contracts pass. Done when authenticated, unauthorized, expired, successful, navigation, and multi-tab flows have end-to-end coverage. | 2026-08-11 |
+| AC-020 | Global Finance share-target provider | **Done** | Accepted file state lives under the protected Finance layout and is discarded when that layout unmounts. A narrow global rejection bridge handles signed-out and unauthorized shares without adding Finance behavior to `AccessProvider`. Automated React lifecycle and service-worker tests cover authenticated success, signed-out and unauthorized rejection, expiry, navigation disposal, and multi-tab isolation. | 2026-08-11 |
 | AC-021 | OCR service source coupling | **Not started** | The OCR TypeScript and bundler aliases point to the application root. Done when both runtimes depend on an explicit shared package and OCR builds without application-source aliases. | 2026-08-02 |
-| AC-022 | Untyped service-worker workflow | **Partial** | React consumers now use `lib/finance/share/protocol.ts` for typed messages and runtime parsing, and the Finance share contract test verifies the service worker message names. `public/sw.js` remains an untyped manual artifact. Done when the worker consumes the typed protocol through a documented build, lifecycle behavior has focused coverage, and generated output is verified. | 2026-08-11 |
+| AC-022 | Untyped service-worker workflow | **Partial** | React consumers use `lib/finance/share/protocol.ts` for typed messages and runtime parsing. Focused worker tests cover protocol names, successful claims and acknowledgements, expiry, and multi-tab isolation. `public/sw.js` remains an untyped manual artifact. Done when typed worker source consumes the shared protocol through a documented build and the generated output is verified against source. | 2026-08-11 |
 
 ## Final Assessment
 

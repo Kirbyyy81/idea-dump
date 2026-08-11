@@ -171,6 +171,8 @@ async function testServiceWorkerHandoff() {
     const { FINANCE_SHARE_MESSAGE_TYPES } = loadShareProtocolModule();
     const workerSource = fs.readFileSync(path.join(root, 'public', 'sw.js'), 'utf8');
     const handlers = new Map();
+    const timers = new Map();
+    let nextTimerId = 1;
     const context = vm.createContext({
         URL,
         Request,
@@ -179,8 +181,14 @@ async function testServiceWorkerHandoff() {
         File,
         Promise,
         Map,
-        setTimeout,
-        clearTimeout,
+        setTimeout(callback) {
+            const timerId = nextTimerId++;
+            timers.set(timerId, callback);
+            return timerId;
+        },
+        clearTimeout(timerId) {
+            timers.delete(timerId);
+        },
         crypto: { randomUUID },
         caches: {
             open: async () => ({
@@ -206,52 +214,103 @@ async function testServiceWorkerHandoff() {
     });
     vm.runInContext(workerSource, context, { filename: 'public/sw.js' });
 
-    const formData = new FormData();
-    formData.append('finance_images', new File(['one'], 'one.png', { type: 'image/png' }));
-    formData.append('finance_images', new File(['two'], 'two.jpg', { type: 'image/jpeg' }));
-    const request = new Request('https://idea-dump.test/share-target/finance', {
-        method: 'POST',
-        body: formData,
-    });
+    async function receiveShare(resultingClientId, filenames) {
+        const formData = new FormData();
+        filenames.forEach((filename) => formData.append(
+            'finance_images',
+            new File([filename], filename, { type: 'image/png' })
+        ));
+        const request = new Request('https://idea-dump.test/share-target/finance', {
+            method: 'POST',
+            body: formData,
+        });
+        let responsePromise;
+        let lifetimePromise;
+        handlers.get('fetch')({
+            request,
+            resultingClientId,
+            respondWith(value) {
+                responsePromise = Promise.resolve(value);
+            },
+            waitUntil(value) {
+                lifetimePromise = Promise.resolve(value);
+            },
+        });
+        const response = await responsePromise;
+        assert.equal(response.status, 303);
+        const location = new URL(response.headers.get('location'));
+        assert.equal(location.pathname, '/finance/add');
+        const shareId = location.searchParams.get('finance_share');
+        assert.ok(shareId);
+        return { shareId, lifetimePromise };
+    }
 
-    let responsePromise;
-    let lifetimePromise;
-    handlers.get('fetch')({
-        request,
-        resultingClientId: 'finance-client',
-        respondWith(value) {
-            responsePromise = Promise.resolve(value);
-        },
-        waitUntil(value) {
-            lifetimePromise = Promise.resolve(value);
-        },
-    });
-    const response = await responsePromise;
-    assert.equal(response.status, 303);
-    const location = new URL(response.headers.get('location'));
-    assert.equal(location.pathname, '/finance/add');
-    const shareId = location.searchParams.get('finance_share');
-    assert.ok(shareId);
+    function createClient(id) {
+        const posted = [];
+        return {
+            posted,
+            source: {
+                id,
+                postMessage(message) {
+                    posted.push(message);
+                },
+            },
+        };
+    }
 
-    const posted = [];
-    const source = {
-        id: 'finance-client',
-        postMessage(message) {
-            posted.push(message);
-        },
-    };
+    const accepted = await receiveShare('finance-client', ['one.png', 'two.png']);
+    const acceptedClient = createClient('finance-client');
     handlers.get('message')({
-        data: { type: FINANCE_SHARE_MESSAGE_TYPES.claim, shareId },
-        source,
+        data: { type: FINANCE_SHARE_MESSAGE_TYPES.claim, shareId: accepted.shareId },
+        source: acceptedClient.source,
     });
-    assert.equal(posted[0].type, FINANCE_SHARE_MESSAGE_TYPES.payload);
-    assert.equal(posted[0].files.length, 2);
+    assert.equal(acceptedClient.posted[0].type, FINANCE_SHARE_MESSAGE_TYPES.payload);
+    assert.equal(acceptedClient.posted[0].files.length, 2);
 
     handlers.get('message')({
-        data: { type: FINANCE_SHARE_MESSAGE_TYPES.acknowledge, shareId },
-        source,
+        data: {
+            type: FINANCE_SHARE_MESSAGE_TYPES.acknowledge,
+            shareId: accepted.shareId,
+        },
+        source: acceptedClient.source,
     });
-    await lifetimePromise;
+    await accepted.lifetimePromise;
+
+    const isolated = await receiveShare('target-tab', ['isolated.png']);
+    const wrongTab = createClient('other-tab');
+    handlers.get('message')({
+        data: { type: FINANCE_SHARE_MESSAGE_TYPES.ready },
+        source: wrongTab.source,
+    });
+    assert.equal(wrongTab.posted.length, 0);
+
+    const targetTab = createClient('target-tab');
+    handlers.get('message')({
+        data: { type: FINANCE_SHARE_MESSAGE_TYPES.ready },
+        source: targetTab.source,
+    });
+    assert.equal(targetTab.posted[0].type, FINANCE_SHARE_MESSAGE_TYPES.payload);
+    assert.equal(targetTab.posted[0].shareId, isolated.shareId);
+    handlers.get('message')({
+        data: {
+            type: FINANCE_SHARE_MESSAGE_TYPES.acknowledge,
+            shareId: isolated.shareId,
+        },
+        source: targetTab.source,
+    });
+    await isolated.lifetimePromise;
+
+    const expired = await receiveShare('expired-tab', ['expired.png']);
+    assert.equal(timers.size, 1);
+    [...timers.values()].forEach((callback) => callback());
+    await expired.lifetimePromise;
+
+    const expiredTab = createClient('expired-tab');
+    handlers.get('message')({
+        data: { type: FINANCE_SHARE_MESSAGE_TYPES.claim, shareId: expired.shareId },
+        source: expiredTab.source,
+    });
+    assert.equal(expiredTab.posted[0].type, FINANCE_SHARE_MESSAGE_TYPES.missing);
 }
 
 function testManifestContract() {
