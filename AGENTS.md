@@ -8,14 +8,15 @@
 
 ## Repository
 
-- The main application is a strict TypeScript, React 18, Next.js 14 App Router project backed by Supabase Auth and Postgres.
+- The main application is a strict TypeScript, React 19, Next.js 15 App Router project backed by Supabase Auth and Postgres.
 - `services/finance-ocr/` is a separate Node 22.22.x TypeScript service deployed through `render.yaml`.
 - `service-worker/sw.ts` is the typed PWA worker source. `public/sw.js` is its generated deployment artifact.
 - Canonical forward database migrations live in `supabase/migrations/`. The adopted schema baseline and supporting snapshot live directly under `supabase/`.
 
 ## Setup and Environment
 
-- Install application dependencies with `npm install`.
+- Use Node.js 22.22.0 for the root application and Finance OCR service. The root `.nvmrc` is the canonical local runtime declaration.
+- Install application dependencies with `npm ci`.
 - Copy `.env.example` to `.env.local` and provide the required local values.
 - Never commit `.env.local`, access tokens, service-role keys, OCR secret keys, or other credentials.
 - Keep `SUPABASE_SERVICE_ROLE_KEY` and `SUPABASE_SECRET_KEY` in trusted server environments only. Never expose them through `NEXT_PUBLIC_*` variables or browser code.
@@ -26,8 +27,11 @@
 - Validate application changes with:
 
   ```powershell
+  npm audit
+  npm audit --omit=dev
   npm run lint
   npx tsc --noEmit
+  npm test
   npm run build
   ```
 
@@ -36,6 +40,8 @@
 - Validate Finance OCR changes from `services/finance-ocr/` with:
 
   ```powershell
+  npm audit
+  npm audit --omit=dev
   npm run typecheck
   npm test
   npm run build
