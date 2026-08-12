@@ -1,4 +1,4 @@
-import { createServerClient } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
 
 /**
  * Create an admin Supabase client using the service role key.
@@ -9,9 +9,15 @@ export function createAdminClient() {
         throw new Error('Missing Supabase admin credentials');
     }
 
-    return createServerClient(
+    return createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL,
         process.env.SUPABASE_SERVICE_ROLE_KEY,
-        { cookies: { get: () => undefined, set: () => { }, remove: () => { } } }
+        {
+            auth: {
+                autoRefreshToken: false,
+                detectSessionInUrl: false,
+                persistSession: false,
+            },
+        }
     );
 }
