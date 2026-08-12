@@ -34,6 +34,7 @@ import {
 import { FinanceApiError, financeApiRequest } from '@/lib/finance/core/client';
 import { Toggle } from '@/components/atoms/Toggle';
 import { getManualTransactionAttempt } from '@/lib/finance/transactions/idempotency';
+import { setFinancePayeeClassification } from '@/lib/finance/transactions/payeeClassification';
 import {
     FinanceFieldErrors,
     FinanceTransactionField,
@@ -119,6 +120,20 @@ export default function AddFinanceTransactionPage() {
             if (!current[key as FinanceTransactionField]) return current;
             const next = { ...current };
             delete next[key as FinanceTransactionField];
+            return next;
+        });
+    };
+
+    const setManualPayeeClassification = (isPayee: boolean) => {
+        setForm((current) => ({
+            ...current,
+            ...setFinancePayeeClassification(current, isPayee),
+        }));
+        setFieldErrors((current) => {
+            const next = { ...current };
+            delete next.merchant;
+            delete next.has_payee;
+            delete next.payee_name;
             return next;
         });
     };
@@ -293,10 +308,7 @@ export default function AddFinanceTransactionPage() {
                 <Input id="manual-merchant" data-finance-field="merchant" maxLength={MAX_FINANCE_MERCHANT_LENGTH} value={form.merchant} onChange={(event) => setManualField('merchant', event.target.value)} {...financeFieldErrorProps(fieldErrors, 'merchant', 'manual-merchant')} />
             </FinanceFormField>
             <FinanceFormField fieldId="manual-has-payee" label="Payee" error={fieldErrors.has_payee}>
-                <Toggle id="manual-has-payee" dataFinanceField="has_payee" checked={form.has_payee} label="Has a payee" ariaLabel="Has a payee" ariaDescribedBy={fieldErrors.has_payee ? 'manual-has-payee-error' : undefined} error={Boolean(fieldErrors.has_payee)} onChange={(checked) => {
-                    setManualField('has_payee', checked);
-                    if (!checked) setManualField('payee_name', '');
-                }} />
+                <Toggle id="manual-has-payee" dataFinanceField="has_payee" checked={form.has_payee} label="Is a payee" ariaLabel="Is a payee" ariaDescribedBy={fieldErrors.has_payee ? 'manual-has-payee-error' : undefined} error={Boolean(fieldErrors.has_payee)} onChange={setManualPayeeClassification} />
             </FinanceFormField>
             {form.has_payee && <FinanceFormField fieldId="manual-payee" label="Payee name" error={fieldErrors.payee_name} required>
                 <Input id="manual-payee" data-finance-field="payee_name" maxLength={MAX_FINANCE_PAYEE_LENGTH} value={form.payee_name} onChange={(event) => setManualField('payee_name', event.target.value)} {...financeFieldErrorProps(fieldErrors, 'payee_name', 'manual-payee')} />
