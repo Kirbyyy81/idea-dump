@@ -36,6 +36,30 @@ function isRecord(value: unknown): value is Record<string, unknown> {
     return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
+export function parseFinanceShareClientMessage(value: unknown): FinanceShareClientMessage | null {
+    if (!isRecord(value)) return null;
+
+    if (value.type === FINANCE_SHARE_MESSAGE_TYPES.ready) {
+        return { type: value.type };
+    }
+
+    if (
+        (
+            value.type === FINANCE_SHARE_MESSAGE_TYPES.claim
+            || value.type === FINANCE_SHARE_MESSAGE_TYPES.acknowledge
+        )
+        && typeof value.shareId === 'string'
+        && value.shareId
+    ) {
+        return {
+            type: value.type,
+            shareId: value.shareId,
+        };
+    }
+
+    return null;
+}
+
 export function parseFinanceShareWorkerMessage(value: unknown): FinanceShareWorkerMessage | null {
     if (!isRecord(value) || typeof value.shareId !== 'string' || !value.shareId) return null;
 

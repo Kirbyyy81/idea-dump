@@ -2,7 +2,7 @@
 
 Original review date: 2026-07-31
 
-Progress tracker last verified: 2026-08-11
+Progress tracker last verified: 2026-08-12
 
 ## Purpose
 
@@ -429,18 +429,17 @@ This concern is separate from moving queries into repositories. A repository bou
 - Keep domain models distinct when they intentionally normalize or hide database fields.
 - Regenerate and review the database type whenever a canonical migration changes the exposed contract.
 
-### 13. The PWA service worker is a separate untyped application boundary
+### 13. The PWA service worker is a distinct build boundary
 
-[`public/sw.js`](../public/sw.js) implements caching, lifecycle handling, a Finance share-target protocol, temporary file ownership, message delivery, acknowledgements, and expiry behavior. Because it lives under `public/`, it is copied as-is rather than passing through the main TypeScript build.
+[`service-worker/sw.ts`](../service-worker/sw.ts) implements caching, lifecycle handling, temporary Finance file ownership, message delivery, acknowledgements, and expiry behavior. It imports the environment-independent protocol from [`lib/finance/share/protocol.ts`](../lib/finance/share/protocol.ts), is checked with a Web Worker-specific TypeScript configuration, and is bundled into [`public/sw.js`](../public/sw.js).
 
-The React share-target bridge and provider now use a shared typed protocol module with runtime message parsing. Focused tests verify the untyped worker message names, successful claims and acknowledgements, expiry, and multi-tab delivery isolation. The service worker cannot import that TypeScript contract until it becomes a typed build input, so manual duplication remains at that boundary.
+The React bridge, Finance provider, and service worker now consume the same typed message contract and runtime parsers. The application build regenerates the deployable worker, while root and Finance share tests reject generated-output drift. Focused tests cover valid and invalid messages, successful claims and acknowledgements, duplicate delivery prevention, expiry, invalid file submissions, and multi-tab isolation.
 
 #### Recommendation
 
-- Move service-worker source into a typed build input and emit the deployable `public/sw.js` artifact through a documented build step.
-- Define the share-target message protocol in one environment-independent module.
-- Add focused tests for claim, acknowledge, expiry, duplicate delivery, invalid payload, and client-navigation behavior.
-- Keep generated service-worker output out of manual edits and document how it is validated.
+- Keep `service-worker/sw.ts` as the only manually edited worker implementation.
+- Regenerate `public/sw.js` with `npm run build:service-worker` whenever the worker or protocol changes.
+- Keep drift verification and lifecycle tests in the root validation workflow.
 
 ## Testing and Tooling
 
@@ -588,18 +587,18 @@ idea-dump/
 
 ### Phase 6: PWA boundary
 
-1. Define the service-worker message protocol in a shared typed module.
-2. Move service-worker source into the TypeScript build workflow.
-3. Add focused protocol and lifecycle tests.
-4. Generate and verify the deployable `public/sw.js` artifact.
+1. Maintain the shared typed service-worker message protocol.
+2. Keep service-worker source in the TypeScript build workflow.
+3. Maintain focused protocol and lifecycle tests.
+4. Generate and verify the deployable `public/sw.js` artifact on every relevant change.
 
 ## Architecture Issue Progress Tracker
 
-Summary as of 2026-08-11:
+Summary as of 2026-08-12:
 
-- Done: 8
+- Done: 9
 - In progress: 0
-- Partial: 9
+- Partial: 8
 - Not started: 5
 - Blocked: 0
 
@@ -626,7 +625,7 @@ Summary as of 2026-08-11:
 | AC-019 | Inconsistent non-route naming | **Partial** | Documented a `core/` convention for domain-wide layers. Moved the Logs normalizer to `lib/logs/core/normalization.ts`, the Project-only icon map to `lib/projects/icons.ts`, Film Roll lifecycle helpers to `lib/film/rolls/`, the Film Google Drive provider to `lib/film/integrations/`, and common layers to `lib/film/core/`, `lib/finance/core/`, `lib/logs/core/`, `lib/notes/core/`, `lib/projects/core/`, and `lib/tickets/core/`. `articleCreation` and `logViewer` remain naming and ownership outliers. Done when one convention is documented and applied without compatibility regressions. | 2026-08-06 |
 | AC-020 | Global Finance share-target provider | **Done** | Accepted file state lives under the protected Finance layout and is discarded when that layout unmounts. A narrow global rejection bridge handles signed-out and unauthorized shares without adding Finance behavior to `AccessProvider`. Automated React lifecycle and service-worker tests cover authenticated success, signed-out and unauthorized rejection, expiry, navigation disposal, and multi-tab isolation. | 2026-08-11 |
 | AC-021 | OCR service source coupling | **Not started** | The OCR TypeScript and bundler aliases point to the application root. Done when both runtimes depend on an explicit shared package and OCR builds without application-source aliases. | 2026-08-02 |
-| AC-022 | Untyped service-worker workflow | **Partial** | React consumers use `lib/finance/share/protocol.ts` for typed messages and runtime parsing. Focused worker tests cover protocol names, successful claims and acknowledgements, expiry, and multi-tab isolation. `public/sw.js` remains an untyped manual artifact. Done when typed worker source consumes the shared protocol through a documented build and the generated output is verified against source. | 2026-08-11 |
+| AC-022 | Untyped service-worker workflow | **Done** | `service-worker/sw.ts` consumes the shared Finance protocol and runtime client-message parser, passes its Web Worker-specific typecheck, and bundles reproducibly into generated `public/sw.js`. Build and test scripts verify source/output drift, the workflow is documented, and focused tests cover valid and invalid messages, acknowledgement, duplicate prevention, expiry, invalid submissions, navigation disposal, and multi-tab isolation. | 2026-08-12 |
 
 ## Final Assessment
 

@@ -62,9 +62,23 @@ function testShareProtocolContract() {
     );
     assert.equal(protocol.parseFinanceShareWorkerMessage({ type: types.payload }), null);
     assert.equal(protocol.parseFinanceShareWorkerMessage({ type: 'unknown', shareId: 'share-3' }), null);
+    assert.deepEqual(
+        protocol.parseFinanceShareClientMessage({ type: types.ready }),
+        { type: types.ready }
+    );
+    assert.deepEqual(
+        protocol.parseFinanceShareClientMessage({ type: types.claim, shareId: 'share-4' }),
+        { type: types.claim, shareId: 'share-4' }
+    );
+    assert.equal(protocol.parseFinanceShareClientMessage({ type: types.claim }), null);
+    assert.equal(protocol.parseFinanceShareClientMessage({ type: 'unknown' }), null);
 
     const workerSource = fs.readFileSync(path.join(root, 'public', 'sw.js'), 'utf8');
     Object.values(types).forEach((type) => assert.match(workerSource, new RegExp(type)));
+    const typedWorkerSource = fs.readFileSync(path.join(root, 'service-worker', 'sw.ts'), 'utf8');
+    assert.match(typedWorkerSource, /from ['"]\.\.\/lib\/finance\/share\/protocol['"]/);
+    assert.match(typedWorkerSource, /parseFinanceShareClientMessage/);
+    Object.values(types).forEach((type) => assert.doesNotMatch(typedWorkerSource, new RegExp(type)));
 }
 
 function testShareProviderBoundaryContract() {
@@ -268,6 +282,22 @@ async function testServiceWorkerHandoff() {
     assert.equal(acceptedClient.posted[0].files.length, 2);
 
     handlers.get('message')({
+        data: { type: FINANCE_SHARE_MESSAGE_TYPES.ready },
+        source: acceptedClient.source,
+    });
+    assert.equal(acceptedClient.posted.length, 1);
+
+    handlers.get('message')({
+        data: { type: 'finance-share:invalid', shareId: accepted.shareId },
+        source: acceptedClient.source,
+    });
+    handlers.get('message')({
+        data: { type: FINANCE_SHARE_MESSAGE_TYPES.claim },
+        source: acceptedClient.source,
+    });
+    assert.equal(acceptedClient.posted.length, 1);
+
+    handlers.get('message')({
         data: {
             type: FINANCE_SHARE_MESSAGE_TYPES.acknowledge,
             shareId: accepted.shareId,
@@ -275,6 +305,12 @@ async function testServiceWorkerHandoff() {
         source: acceptedClient.source,
     });
     await accepted.lifetimePromise;
+
+    handlers.get('message')({
+        data: { type: FINANCE_SHARE_MESSAGE_TYPES.claim, shareId: accepted.shareId },
+        source: acceptedClient.source,
+    });
+    assert.equal(acceptedClient.posted[1].type, FINANCE_SHARE_MESSAGE_TYPES.missing);
 
     const isolated = await receiveShare('target-tab', ['isolated.png']);
     const wrongTab = createClient('other-tab');
@@ -311,6 +347,16 @@ async function testServiceWorkerHandoff() {
         source: expiredTab.source,
     });
     assert.equal(expiredTab.posted[0].type, FINANCE_SHARE_MESSAGE_TYPES.missing);
+
+    const invalid = await receiveShare('invalid-tab', []);
+    const invalidTab = createClient('invalid-tab');
+    handlers.get('message')({
+        data: { type: FINANCE_SHARE_MESSAGE_TYPES.claim, shareId: invalid.shareId },
+        source: invalidTab.source,
+    });
+    assert.equal(invalidTab.posted[0].type, FINANCE_SHARE_MESSAGE_TYPES.error);
+    assert.match(invalidTab.posted[0].message, /No image files were received/);
+    await invalid.lifetimePromise;
 }
 
 function testManifestContract() {

@@ -10,6 +10,7 @@
 
 - The main application is a strict TypeScript, React 18, Next.js 14 App Router project backed by Supabase Auth and Postgres.
 - `services/finance-ocr/` is a separate Node 22.22.x TypeScript service deployed through `render.yaml`.
+- `service-worker/sw.ts` is the typed PWA worker source. `public/sw.js` is its generated deployment artifact.
 - Canonical forward database migrations live in `supabase/migrations/`. The adopted schema baseline and supporting snapshot live directly under `supabase/`.
 
 ## Setup and Environment
@@ -31,6 +32,7 @@
   ```
 
 - Run `npm run test:log-viewer` when changing the log-viewer parser or fixtures.
+- Run `npm run check:service-worker` when changing the PWA worker or Finance share-message protocol. Regenerate the checked-in artifact with `npm run build:service-worker`.
 - Validate Finance OCR changes from `services/finance-ocr/` with:
 
   ```powershell
@@ -50,7 +52,7 @@
 - Keep domain types in `lib/types.ts` unless a nearer scoped guide documents an exception.
 - Reuse the repository Supabase clients and RBAC guards; do not create inline clients or bypass authorization helpers.
 - Add database changes as new forward migrations. Do not rewrite applied migrations or replay the reviewed production baseline over an existing project.
-- Do not edit generated output such as `.next/`, OCR `dist/`, or dependency directories.
+- Do not edit generated output such as `.next/`, `public/sw.js`, OCR `dist/`, or dependency directories. Change `service-worker/sw.ts`, then regenerate `public/sw.js` through its build script.
 
 ## Contribution Rules
 
