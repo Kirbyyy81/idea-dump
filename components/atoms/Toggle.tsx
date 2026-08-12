@@ -7,22 +7,31 @@ export interface ToggleProps {
   onChange: (checked: boolean) => void;
   label: string;
   ariaLabel?: string;
+  ariaDescribedBy?: string;
+  error?: boolean;
+  id?: string;
+  dataFinanceField?: string;
   className?: string;
   disabled?: boolean;
 }
 
-export function Toggle({ checked, onChange, label, ariaLabel, className, disabled }: ToggleProps) {
+export function Toggle({ checked, onChange, label, ariaLabel, ariaDescribedBy, error, id, dataFinanceField, className, disabled }: ToggleProps) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
       aria-label={ariaLabel}
+      aria-describedby={ariaDescribedBy}
+      aria-invalid={error || undefined}
+      data-finance-field={dataFinanceField}
+      id={id}
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className={cn(
         'inline-flex h-10 items-center gap-2 rounded-md border border-border-default bg-bg-elevated px-3 text-sm text-text-secondary transition-colors hover:bg-bg-hover disabled:cursor-not-allowed disabled:opacity-60',
         checked && 'border-accent-rose bg-accent-rose/10 text-text-primary',
+        error && 'border-error text-error',
         className,
       )}
     >

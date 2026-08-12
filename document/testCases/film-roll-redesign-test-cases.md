@@ -10,7 +10,7 @@
 3. Step Switching
 4. Stepper Navigation
 5. Stats Cards
-6. Photobook Page
+6. Photobook Step
 7. OAuth Redirect
 8. Edge Cases
 
@@ -86,26 +86,26 @@
 - **Then**: The page does not crash, `activeStep` falls back to `defaultStep` (first incomplete step), and the corresponding default step's card content is visible
 - **Priority**: critical
 
-### Test: ?step=photobook on base page falls back to default step
+### Test: ?step=photobook shows the Photobook step
 - **Given**: The user is on the base roll page (`/film/rolls/{rollId}`)
 - **When**: The user navigates to `/film/rolls/{rollId}?step=photobook`
-- **Then**: The `?step=photobook` value is NOT in the valid list `['film', 'processing', 'drive']`, so `activeStep` falls back to `defaultStep`; the page renders the default step's content (does NOT show photobook content on the base page - photobook is a separate route)
+- **Then**: `activeStep` is `photobook` and the Photobook content is visible on the roll page
 - **Priority**: medium
 
 ---
 
 ## 4. Stepper Navigation
 
-### Test: Clicking stepper step 4 navigates to the photobook route
+### Test: Clicking stepper step 4 selects the Photobook step
 - **Given**: The user is on `/film/rolls/{rollId}` with the stepper visible
 - **When**: The user clicks the "Photobook" step (step 4) on the stepper
-- **Then**: The browser navigates to `/film/rolls/{rollId}/photobook` (a separate route, not a query param change)
+- **Then**: The browser navigates to `/film/rolls/{rollId}?step=photobook`
 - **Priority**: critical
 
-### Test: Stepper on photobook page links back to base page
-- **Given**: The user is on `/film/rolls/{rollId}/photobook` with the stepper visible (activeStep = `'photobook'`)
+### Test: Stepper from the Photobook step selects another step
+- **Given**: The user is on `/film/rolls/{rollId}?step=photobook` with the stepper visible (activeStep = `'photobook'`)
 - **When**: The user clicks the "Film" step (step 1) on the stepper
-- **Then**: The browser navigates to `/film/rolls/{rollId}?step=film` (back to the base page with Film step active)
+- **Then**: The browser navigates to `/film/rolls/{rollId}?step=film` with the Film step active
 - **Priority**: critical
 
 ### Test: Active step gets distinct visual styling
@@ -118,43 +118,43 @@
 
 ## 5. Stats Cards
 
-### Test: Stats cards visible on base page regardless of active step
-- **Given**: The user is on `/film/rolls/{rollId}` with any `?step=` value (film, processing, drive, or invalid)
+### Test: Stats cards visible regardless of active step
+- **Given**: The user is on `/film/rolls/{rollId}` with any `?step=` value (film, processing, drive, photobook, or invalid)
 - **When**: The page renders
 - **Then**: The StatsCards section (Total Cost, Frames, Cost/Frame, Cost/Successful Photo) is always visible above or below the stepper, independent of which step content is shown
 - **Priority**: medium
 
-### Test: Stats cards visible on photobook page
-- **Given**: The user is on `/film/rolls/{rollId}/photobook`
+### Test: Stats cards visible on the Photobook step
+- **Given**: The user is on `/film/rolls/{rollId}?step=photobook`
 - **When**: The page renders
-- **Then**: The StatsCards section is visible on the photobook page (same 4 cards: Total Cost, Frames, Cost/Frame, Cost/Successful Photo)
+- **Then**: The StatsCards section is visible on the Photobook step (same 4 cards: Total Cost, Frames, Cost/Frame, Cost/Successful Photo)
 - **Priority**: medium
 
 ---
 
-## 6. Photobook Page
+## 6. Photobook Step
 
 ### Test: Empty state when no processing details
 - **Given**: A film roll exists with `hasProcessingDetails = false` (no lab_name, no processing_date, zero costs)
-- **When**: The user navigates to `/film/rolls/{rollId}/photobook`
+- **When**: The user navigates to `/film/rolls/{rollId}?step=photobook`
 - **Then**: The page shows the empty state with text "Processing comes before the photobook." and subtitle "Add the lab, date, or costs first. Drive setup can happen now or later." The photo grid is NOT visible
 - **Priority**: critical
 
 ### Test: Empty state when processing done but no photos
 - **Given**: A film roll exists with `hasProcessingDetails = true` but `hasSyncedPhotos = false` (zero photos)
-- **When**: The user navigates to `/film/rolls/{rollId}/photobook`
+- **When**: The user navigates to `/film/rolls/{rollId}?step=photobook`
 - **Then**: The page shows the empty state with text "Ready for Drive sync." and subtitle "Processing is tracked. Link or sync the Google Drive folder to open this photobook." The photo grid is NOT visible
 - **Priority**: critical
 
 ### Test: Photo grid renders with Favorite and Cover buttons when processing and photos exist
 - **Given**: A film roll exists with `hasProcessingDetails = true` AND `hasSyncedPhotos = true` (at least 1 photo)
-- **When**: The user navigates to `/film/rolls/{rollId}/photobook`
+- **When**: The user navigates to `/film/rolls/{rollId}?step=photobook`
 - **Then**: The photo grid renders (`grid-cols-1 sm:grid-cols-2 xl:grid-cols-3`), each photo article has a thumbnail link, a "Favorite" button (Heart icon, variant toggles to `primary` when `is_favorite` is true), and a "Cover" button (Star icon, variant is `primary` when `roll.cover_photo_id === photo.id`)
 - **Priority**: critical
 
 ### Test: Favorite shots carousel uses scroll-snap
 - **Given**: A film roll exists with `canShowPhotobook = true` and at least 1 favorite photo (`is_favorite = true`)
-- **When**: The user navigates to `/film/rolls/{rollId}/photobook`
+- **When**: The user navigates to `/film/rolls/{rollId}?step=photobook`
 - **Then**: The "Favorite Shots" card is visible, the carousel container has classes `flex gap-3 overflow-x-auto snap-x pb-2`, and each carousel item has class `snap-start` (with `h-28 w-36 shrink-0`). No external carousel library is used
 - **Priority**: medium
 
@@ -202,8 +202,8 @@
 - **Then**: The page shows a not-found state with a "Back to Film Journal" link and a Card with text "Film roll not found." - no crash, no blank screen
 - **Priority**: medium
 
-### Test: Roll not found on photobook page shows not-found state
-- **Given**: The user navigates to `/film/rolls/{nonExistentRollId}/photobook` where the API returns a 404 or error
+### Test: Roll not found on Photobook step shows not-found state
+- **Given**: The user navigates to `/film/rolls/{nonExistentRollId}?step=photobook` where the API returns a 404 or error
 - **When**: The `loadRoll` fetch fails (`res.ok` is false) or returns null data
 - **Then**: The page shows a not-found state with a "Back to Film Journal" link and a Card with text "Film roll not found." - no crash, no blank screen
 - **Priority**: medium

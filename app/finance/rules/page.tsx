@@ -23,10 +23,10 @@ import {
     getFinanceCategoryOptions,
     isVirtualDefaultCategoryValue,
     mergeFinanceCategory,
-} from '@/lib/finance/categoryOptions';
-import { persistVirtualDefaultCategory } from '@/lib/finance/categoryPersistence';
-import { financeApiRequest } from '@/lib/finance/clientApi';
-import { sortFinanceRules } from '@/lib/finance/ruleOrdering';
+} from '@/lib/finance/catalog';
+import { persistVirtualDefaultCategory } from '@/lib/finance/catalogClient';
+import { financeApiRequest } from '@/lib/finance/core/client';
+import { sortFinanceRules } from '@/lib/finance/rules';
 
 type MatchType = FinanceRule['match_type'];
 type RuleWithRelations = FinanceRule & { finance_source?: FinanceSource | null; category?: FinanceCategory | null };
@@ -200,9 +200,13 @@ export default function FinanceRulesPage() {
     };
 
     return (
-        <AppShell contentClassName="p-5 md:p-8">
+        <AppShell
+            contentClassName="p-5 md:p-8"
+            pageTitle="Finance rules"
+            headerClassName="mb-3"
+        >
             <div className="mx-auto max-w-7xl">
-                <header className="pb-5"><h1>Finance rules</h1><p className="mt-1 text-sm text-text-muted">Active rules are applied by priority during screenshot processing.</p></header>
+                <p className="text-sm text-text-muted">Active rules are applied by priority during screenshot processing.</p>
 
                 {!isLoading && suggestions.length > 0 && (
                     <section className="mt-5 border border-border-default bg-bg-subtle">

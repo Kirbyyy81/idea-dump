@@ -5,7 +5,7 @@
 import { ReactNode, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, ExternalLink, FolderSync, Heart, ImageIcon, Save, Star, X } from 'lucide-react';
+import { ExternalLink, FolderSync, Heart, ImageIcon, Save, Star, X } from 'lucide-react';
 import { AppShell } from '@/components/organisms/AppShell';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
@@ -24,18 +24,28 @@ import {
     filmFormats,
     filmProcessTypeConfig,
     filmProcessTypes,
+    filmRollStatusConfig,
     filmTypeConfig,
     filmTypes,
 } from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
+import {
+    getFilmGoogleConnectUrl,
+    getFilmPhotoImageUrl,
+    getFilmRoll,
+    listFilmCameras,
+    syncFilmDrive,
+    updateFilmPhoto,
+    updateFilmRoll,
+    uploadFilmCover,
+} from '@/lib/film/core/client';
 import { cn } from '@/lib/utils';
 import {
     getNextFilmRollStep,
     getOpeningFilmRollStep,
     getStatusAfterSavingFilmRollStep,
     isFilmRollStep,
-} from '@/lib/film/workflow';
-import { RollHeader } from './_components/RollHeader';
+} from '@/lib/film/rolls/workflow';
 import { StepStepper } from './_components/StepStepper';
 import { StatsCards } from './_components/StatsCards';
 
@@ -76,7 +86,7 @@ function getRollForm(roll: FilmRoll) {
 }
 
 function getPhotoImageUrl(photo: Pick<FilmPhoto, 'id'>) {
-    return `/api/film/photos/${photo.id}/image`;
+    return getFilmPhotoImageUrl(photo.id);
 }
 
 export default function FilmRollDetailPage() {
@@ -109,23 +119,15 @@ function RollDetailContent() {
     const loadRoll = useCallback(async () => {
         setError(null);
         try {
-            const [rollRes, camerasRes] = await Promise.all([
-                fetch(`/api/film/rolls/${rollId}`),
-                fetch('/api/film/cameras'),
+            const [loadedRoll, loadedCameras] = await Promise.all([
+                getFilmRoll(rollId),
+                listFilmCameras(),
             ]);
 
-            if (!rollRes.ok) throw new Error('Failed to load film roll');
-            if (!camerasRes.ok) throw new Error('Failed to load cameras');
-
-            const [rollPayload, camerasPayload] = await Promise.all([
-                rollRes.json(),
-                camerasRes.json(),
-            ]);
-
-            setRoll(rollPayload.data);
-            setRollForm(getRollForm(rollPayload.data));
-            setDriveFolderInput(rollPayload.data.drive_folder_id ?? '');
-            setCameras(camerasPayload.data || []);
+            setRoll(loadedRoll);
+            setRollForm(getRollForm(loadedRoll));
+            setDriveFolderInput(loadedRoll.drive_folder_id ?? '');
+            setCameras(loadedCameras);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to load roll');
         } finally {
@@ -156,16 +158,9 @@ function RollDetailContent() {
         setIsUploadingCover(true);
         setError(null);
         try {
-            const coverData = new FormData();
-            coverData.append('cover', coverFile);
-            const res = await fetch(`/api/film/rolls/${roll.id}/cover`, {
-                method: 'POST',
-                body: coverData,
-            });
-            const payload = await res.json();
-            if (!res.ok) throw new Error(payload.error || 'Failed to upload film cover');
-            setRoll(payload.data);
-            setRollForm(getRollForm(payload.data));
+            const updatedRoll = await uploadFilmCover(roll.id, coverFile);
+            setRoll(updatedRoll);
+            setRollForm(getRollForm(updatedRoll));
             setCoverFile(null);
             showSuccess('Film cover updated.', 'Saved');
         } catch (err) {
@@ -184,22 +179,15 @@ function RollDetailContent() {
         setUpdatingPhotoId(photo.id);
         setError(null);
         try {
-            const res = await fetch('/api/film/photos', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    id: photo.id,
-                    film_roll_id: roll.id,
-                    ...updates,
-                }),
+            const updatedPhoto = await updateFilmPhoto({
+                id: photo.id,
+                film_roll_id: roll.id,
+                ...updates,
             });
-
-            const payload = await res.json();
-            if (!res.ok) throw new Error(payload.error || 'Failed to update photo');
 
             await loadRoll();
             setSelectedPhoto((current) => current && current.id === photo.id
-                ? { ...current, ...payload.data }
+                ? { ...current, ...updatedPhoto }
                 : current);
             showSuccess(updates.set_as_cover ? 'Cover photo updated.' : 'Photo updated.', 'Saved');
         } catch (err) {
@@ -217,28 +205,23 @@ function RollDetailContent() {
         try {
             const nextStatus = getStatusAfterSavingFilmRollStep(activeStep, roll.status);
             const nextStep = getNextFilmRollStep(activeStep);
-            const res = await fetch('/api/film/rolls', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    id: roll.id,
-                    ...rollForm,
-                    status: nextStatus,
-                    iso: Number(rollForm.iso),
-                    film_type: rollForm.film_type,
-                    process_type: rollForm.process_type || null,
-                    purchase_price: Number(rollForm.purchase_price || 0),
-                    processing_cost: Number(rollForm.processing_cost || 0),
-                    scanning_cost: Number(rollForm.scanning_cost || 0),
-                    shipping_cost: Number(rollForm.shipping_cost || 0),
-                    frames_taken: Number(rollForm.frames_taken || 0),
-                    successful_photos: Number(rollForm.successful_photos || 0),
-                    camera_id: rollForm.camera_id || null,
-                    drive_folder_id: rollForm.drive_folder_id || null,
-                }),
+            await updateFilmRoll({
+                id: roll.id,
+                ...rollForm,
+                status: nextStatus,
+                iso: Number(rollForm.iso),
+                film_type: rollForm.film_type,
+                process_type: rollForm.process_type || null,
+                purchase_price: Number(rollForm.purchase_price || 0),
+                processing_cost: Number(rollForm.processing_cost || 0),
+                scanning_cost: Number(rollForm.scanning_cost || 0),
+                shipping_cost: Number(rollForm.shipping_cost || 0),
+                frames_taken: Number(rollForm.frames_taken || 0),
+                successful_photos: Number(rollForm.successful_photos || 0),
+                camera_id: rollForm.camera_id || null,
+                drive_folder_id: rollForm.drive_folder_id || null,
             });
 
-            if (!res.ok) throw new Error('Failed to save film roll');
             await loadRoll();
             showSuccess('Film roll saved.', 'Saved');
             router.replace(`/film/rolls/${roll.id}?step=${nextStep}`);
@@ -255,20 +238,14 @@ function RollDetailContent() {
         setIsSyncing(true);
         setError(null);
         try {
-            const res = await fetch('/api/film/integrations/google/sync', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    film_roll_id: roll.id,
-                    folder: driveFolderInput,
-                }),
+            const synced = await syncFilmDrive({
+                film_roll_id: roll.id,
+                folder: driveFolderInput,
             });
 
-            const payload = await res.json();
-            if (!res.ok) throw new Error(payload.error || 'Failed to sync Google Drive folder');
             await loadRoll();
             showSuccess('Drive metadata synced.', 'Synced');
-            if (Number(payload.data?.synced_count || 0) > 0) {
+            if (Number(synced.synced_count || 0) > 0) {
                 router.replace(`/film/rolls/${roll.id}?step=photobook`);
             }
         } catch (err) {
@@ -288,13 +265,9 @@ function RollDetailContent() {
 
     if (!roll || !rollForm) {
         return (
-            <AppShell contentClassName="film-module p-5 md:p-8">
+            <AppShell contentClassName="film-module p-5 md:p-8" pageTitle="Film Roll">
                 <div className="max-w-4xl">
-                    <Link href="/film" className="action-link inline-flex items-center gap-2 text-text-secondary hover:text-text-primary">
-                        <ArrowLeft size={18} />
-                        Back to Film Journal
-                    </Link>
-                    <Card className="mt-6 p-10 text-center text-text-muted">
+                    <Card className="p-10 text-center text-text-muted">
                         Film roll not found.
                     </Card>
                 </div>
@@ -303,21 +276,27 @@ function RollDetailContent() {
     }
 
     return (
-        <AppShell contentClassName="film-module p-5 md:p-8">
-            <div className="max-w-7xl space-y-8">
-                <RollHeader
-                    roll={roll}
-                    isSaving={isSaving}
-                    onSave={handleSaveRoll}
-                    showSave={activeStep === 'film'}
-                    saveLabel="Save & Continue"
-                    alternateAction={activeStep === 'photobook' ? (
+        <AppShell
+            contentClassName="film-module p-5 md:p-8"
+            pageTitle={roll.film_name}
+            headerAction={(
+                <>
+                    <span className={cn('rounded-full border px-3 py-1 text-xs', filmRollStatusConfig[roll.status].colorClass)}>
+                        {filmRollStatusConfig[roll.status].label}
+                    </span>
+                    {activeStep === 'photobook' ? (
                         <Link href={`/film/rolls/${roll.id}?step=film`} className="btn-secondary min-h-8 self-start px-3 py-1.5 text-xs">
                             Roll Details
                         </Link>
-                    ) : undefined}
-                />
-
+                    ) : activeStep === 'film' ? (
+                        <Button icon={<Save size={16} />} onClick={handleSaveRoll} isLoading={isSaving} className="w-full sm:w-auto">
+                            Save & Continue
+                        </Button>
+                    ) : null}
+                </>
+            )}
+        >
+            <div className="max-w-7xl space-y-8">
                 {error && (
                     <div className="rounded-lg border border-error bg-error-bg px-4 py-3 text-sm text-error">
                         {error}
@@ -489,7 +468,7 @@ function RollDetailContent() {
                                 <Button icon={<FolderSync size={16} />} onClick={handleSyncDrive} isLoading={isSyncing} className="w-full sm:w-auto">
                                     Sync & Continue
                                 </Button>
-                                <a href={`/api/film/integrations/google/connect?roll_id=${roll.id}`} className="btn-ghost w-full sm:w-auto">
+                                <a href={getFilmGoogleConnectUrl(roll.id)} className="btn-ghost w-full sm:w-auto">
                                     Connect Google
                                 </a>
                             </div>

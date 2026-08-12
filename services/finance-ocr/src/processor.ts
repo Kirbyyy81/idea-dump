@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { hashNormalizedFinanceText, normalizeFinanceOcrText } from '@/lib/finance/normalizer';
-import { parseFinanceText } from '@/lib/finance/parser';
+import { hashNormalizedFinanceText, normalizeFinanceOcrText } from '@/lib/finance/ocr/normalizer';
+import { parseFinanceText } from '@/lib/finance/ocr/parser';
 import type { ServiceConfig } from './config.js';
 import type { BeginIntakeResult, FinanceRepository, OcrSuccessData } from './contracts.js';
 import { RepositoryError } from './repository.js';
@@ -163,6 +163,8 @@ export async function processScreenshot(
             context.rules,
             context.sources,
             image.originalFilename,
+            context.fieldLearningRules,
+            context.payees,
         );
         const duplicate = await dependencies.repository.assessDuplicate({
             userId,

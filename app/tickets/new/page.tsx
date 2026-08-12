@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/organisms/AppShell';
 import { TicketForm } from '@/components/organisms/TicketForm';
 import { PageLoader } from '@/components/atoms/Loader';
+import { createTicket } from '@/lib/tickets/core/client';
 import { CreateTicketInput, Project } from '@/lib/types';
+import { listProjects } from '@/lib/projects/core/client';
 
 export default function NewTicketPage() {
     const router = useRouter();
@@ -17,10 +19,7 @@ export default function NewTicketPage() {
     useEffect(() => {
         async function fetchProjects() {
             try {
-                const res = await fetch('/api/projects');
-                if (!res.ok) throw new Error('Failed to fetch projects');
-                const payload = await res.json();
-                setProjects(payload.data || []);
+                setProjects(await listProjects());
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'Failed to load projects');
             } finally {
@@ -36,16 +35,7 @@ export default function NewTicketPage() {
         setError(null);
 
         try {
-            const res = await fetch('/api/tickets', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
-            });
-
-            if (!res.ok) {
-                const payload = await res.json();
-                throw new Error(payload.error || 'Failed to create ticket');
-            }
+            await createTicket(data);
 
             router.push('/tickets');
             router.refresh();
@@ -61,10 +51,8 @@ export default function NewTicketPage() {
     }
 
     return (
-        <AppShell contentClassName="p-5 md:p-8">
+        <AppShell contentClassName="p-5 md:p-8" pageTitle="Raise Ticket">
             <div className="max-w-3xl space-y-6">
-                <h1 className="text-2xl font-extrabold">Raise Ticket</h1>
-
                 {error && (
                     <div className="rounded-lg border border-error bg-error-bg px-4 py-3 text-sm text-error">
                         {error}

@@ -8,13 +8,15 @@
 
 ## Repository
 
-- The main application is a strict TypeScript, React 18, Next.js 14 App Router project backed by Supabase Auth and Postgres.
+- The main application is a strict TypeScript, React 19, Next.js 15 App Router project backed by Supabase Auth and Postgres.
 - `services/finance-ocr/` is a separate Node 22.22.x TypeScript service deployed through `render.yaml`.
-- Canonical forward database migrations live in `supabase/migrations/`. Treat `document/migrations/` as historical records.
+- `service-worker/sw.ts` is the typed PWA worker source. `public/sw.js` is its generated deployment artifact.
+- Canonical forward database migrations live in `supabase/migrations/`. The adopted schema baseline and supporting snapshot live directly under `supabase/`.
 
 ## Setup and Environment
 
-- Install application dependencies with `npm install`.
+- Use Node.js 22.22.0 for the root application and Finance OCR service. The root `.nvmrc` is the canonical local runtime declaration.
+- Install application dependencies with `npm ci`.
 - Copy `.env.example` to `.env.local` and provide the required local values.
 - Never commit `.env.local`, access tokens, service-role keys, OCR secret keys, or other credentials.
 - Keep `SUPABASE_SERVICE_ROLE_KEY` and `SUPABASE_SECRET_KEY` in trusted server environments only. Never expose them through `NEXT_PUBLIC_*` variables or browser code.
@@ -25,15 +27,21 @@
 - Validate application changes with:
 
   ```powershell
+  npm audit
+  npm audit --omit=dev
   npm run lint
   npx tsc --noEmit
+  npm test
   npm run build
   ```
 
 - Run `npm run test:log-viewer` when changing the log-viewer parser or fixtures.
+- Run `npm run check:service-worker` when changing the PWA worker or Finance share-message protocol. Regenerate the checked-in artifact with `npm run build:service-worker`.
 - Validate Finance OCR changes from `services/finance-ocr/` with:
 
   ```powershell
+  npm audit
+  npm audit --omit=dev
   npm run typecheck
   npm test
   npm run build
@@ -50,7 +58,7 @@
 - Keep domain types in `lib/types.ts` unless a nearer scoped guide documents an exception.
 - Reuse the repository Supabase clients and RBAC guards; do not create inline clients or bypass authorization helpers.
 - Add database changes as new forward migrations. Do not rewrite applied migrations or replay the reviewed production baseline over an existing project.
-- Do not edit generated output such as `.next/`, OCR `dist/`, or dependency directories.
+- Do not edit generated output such as `.next/`, `public/sw.js`, OCR `dist/`, or dependency directories. Change `service-worker/sw.ts`, then regenerate `public/sw.js` through its build script.
 
 ## Contribution Rules
 

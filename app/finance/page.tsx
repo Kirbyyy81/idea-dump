@@ -14,8 +14,8 @@ import {
     PreviousDoodleIcon,
 } from '@/components/atoms/DoodleIcons';
 import { FinanceDashboardSummary } from '@/lib/types';
-import { financeApiRequest } from '@/lib/finance/clientApi';
-import { getLocalFinanceMonth, shiftFinanceMonth } from '@/lib/finance/values';
+import { financeApiRequest } from '@/lib/finance/core/client';
+import { getLocalFinanceMonth, shiftFinanceMonth } from '@/lib/finance/core/values';
 import { formatCurrencyMYR } from '@/lib/utils';
 
 const CHART_COLORS = ['#e76f51', '#2a9d8f', '#457b9d', '#e9c46a', '#8d6e63', '#6d597a'];
@@ -49,14 +49,13 @@ export default function FinancePage() {
     }, [month]);
 
     return (
-        <AppShell contentClassName="p-5 md:p-8">
+        <AppShell
+            contentClassName="p-5 md:p-8"
+            pageTitle="Finance"
+            headerAction={<Link href="/finance/add" className="btn-primary"><AddDoodleIcon size={16} className="mr-2" />Add transaction</Link>}
+        >
             <div className="mx-auto max-w-7xl">
-                <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                    <div><h1>Finance</h1></div>
-                    <Link href="/finance/add" className="btn-primary"><AddDoodleIcon size={16} className="mr-2" />Add transaction</Link>
-                </header>
-
-                <div className="mt-6 flex items-center justify-between border-y border-border-default py-3">
+                <div className="flex items-center justify-between border-y border-border-default py-3">
                     <button type="button" title="Previous month" aria-label="Previous month" onClick={() => setMonth(shiftFinanceMonth(month, -1) || month)} className="grid size-10 place-items-center text-text-secondary hover:text-text-primary"><PreviousDoodleIcon size={19} /></button>
                     <MonthPicker value={month} onChange={setMonth} />
                     <button type="button" title="Next month" aria-label="Next month" onClick={() => setMonth(shiftFinanceMonth(month, 1) || month)} className="grid size-10 place-items-center text-text-secondary hover:text-text-primary"><NextDoodleIcon size={19} /></button>
@@ -91,7 +90,7 @@ export default function FinancePage() {
                     </section>
                 </div>
 
-                <section className="mt-6"><div className="flex items-center justify-between"><h2 className="text-base font-bold">Recent transactions</h2><Link href="/finance/transactions" className="text-sm font-semibold text-accent-blue hover:underline">View all</Link></div><ul className="mt-3 divide-y divide-border-default border-y border-border-default">{summary.recent_transactions.map((transaction) => { const isIncome = transaction.direction === 'income'; return <li key={transaction.id} className="flex flex-col items-start gap-2 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4"><div className="flex min-w-0 items-center gap-3">{isIncome ? <IncomeDoodleIcon size={18} className="shrink-0 text-success" /> : <ExpenseDoodleIcon size={18} className="shrink-0 text-error" />}<div className="min-w-0"><p className="break-words font-semibold">{transaction.merchant || 'Untitled transaction'}</p><p className="break-words text-sm text-text-muted">{transaction.finance_source?.name || 'Unknown source'} · {transaction.transaction_date}</p></div></div><p className={isIncome ? 'break-words pl-7 font-bold text-success sm:pl-0 sm:text-right' : 'break-words pl-7 font-bold text-error sm:pl-0 sm:text-right'}>{isIncome ? '+' : '-'}{formatCurrencyMYR(transaction.amount)}</p></li>; })}{!summary.recent_transactions.length && <li className="py-10 text-center text-sm text-text-muted">No transactions yet.</li>}</ul></section>
+                <section className="mt-6"><div className="flex items-center justify-between"><h2 className="text-base font-bold">Recent transactions</h2><Link href="/finance/transactions" className="text-sm font-semibold text-accent-blue hover:underline">View all</Link></div><ul className="mt-3 divide-y divide-border-default border-y border-border-default">{summary.recent_transactions.map((transaction) => { const isIncome = transaction.direction === 'income'; return <li key={transaction.id} className="flex flex-col items-start gap-2 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4"><div className="flex min-w-0 items-center gap-3">{isIncome ? <IncomeDoodleIcon size={18} className="shrink-0 text-success" /> : <ExpenseDoodleIcon size={18} className="shrink-0 text-error" />}<div className="min-w-0"><p className="break-words font-semibold">{transaction.finance_payee?.name || transaction.merchant || 'Untitled transaction'}</p>{transaction.finance_payee?.name && transaction.merchant && <p className="break-words text-sm text-text-secondary">Merchant: {transaction.merchant}</p>}<p className="break-words text-sm text-text-muted">{transaction.finance_source?.name || 'Unknown source'} · {transaction.transaction_date}</p></div></div><p className={isIncome ? 'break-words pl-7 font-bold text-success sm:pl-0 sm:text-right' : 'break-words pl-7 font-bold text-error sm:pl-0 sm:text-right'}>{isIncome ? '+' : '-'}{formatCurrencyMYR(transaction.amount)}</p></li>; })}{!summary.recent_transactions.length && <li className="py-10 text-center text-sm text-text-muted">No transactions yet.</li>}</ul></section>
                     </>
                 ) : null}
             </div>

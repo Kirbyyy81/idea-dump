@@ -10,6 +10,8 @@ import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
+import { deleteTicket, listTickets, TicketClientError, updateTicket } from '@/lib/tickets/core/client';
+import { listProjects } from '@/lib/projects/core/client';
 import { Project, Ticket, UpdateTicketInput, ticketSourceConfig, ticketStatusConfig } from '@/lib/types';
 
 export default function ManageTicketsPage() {
@@ -28,24 +30,23 @@ export default function ManageTicketsPage() {
     useEffect(() => {
         async function fetchData() {
             try {
-                const [ticketsRes, projectsRes] = await Promise.all([
-                    fetch('/api/tickets?scope=manage'),
-                    fetch('/api/projects'),
+                const [ticketsRes, projects] = await Promise.all([
+                    listTickets({ scope: 'manage' })
+                        .then((data) => ({ data }))
+                        .catch((error: unknown) => ({ error })),
+                    listProjects(),
                 ]);
 
-                if (ticketsRes.status === 403) {
+                if ('error' in ticketsRes && ticketsRes.error instanceof TicketClientError && ticketsRes.error.status === 403) {
                     setError('You do not have access to manage tickets.');
                     setTickets([]);
-                } else if (!ticketsRes.ok) {
-                    throw new Error('Failed to fetch tickets');
+                } else if ('error' in ticketsRes) {
+                    throw ticketsRes.error;
                 } else {
-                    const ticketsPayload = await ticketsRes.json();
-                    setTickets(ticketsPayload.data || []);
+                    setTickets(ticketsRes.data);
                 }
 
-                if (!projectsRes.ok) throw new Error('Failed to fetch projects');
-                const projectsPayload = await projectsRes.json();
-                setProjects(projectsPayload.data || []);
+                setProjects(projects);
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'Failed to load tickets');
             } finally {
@@ -83,16 +84,10 @@ export default function ManageTicketsPage() {
 
         setIsSaving(true);
         try {
-            const res = await fetch(`/api/tickets/${editingTicket.id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
-            });
-
-            if (!res.ok) throw new Error('Failed to update ticket');
-
-            const payload = await res.json();
-            setTickets((current) => current.map((ticket) => (ticket.id === editingTicket.id ? payload.data : ticket)));
+            const updatedTicket = await updateTicket(editingTicket.id, data);
+            setTickets((current) => current.map((ticket) => (
+                ticket.id === editingTicket.id ? updatedTicket : ticket
+            )));
             setEditingTicket(null);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to update ticket');
@@ -105,8 +100,7 @@ export default function ManageTicketsPage() {
         if (!confirm('Are you sure you want to delete this ticket?')) return;
 
         try {
-            const res = await fetch(`/api/tickets/${id}`, { method: 'DELETE' });
-            if (!res.ok) throw new Error('Failed to delete ticket');
+            await deleteTicket(id);
             setTickets((current) => current.filter((ticket) => ticket.id !== id));
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to delete ticket');
@@ -124,15 +118,14 @@ export default function ManageTicketsPage() {
             isLoading={isLoading}
             loadingMessage="Loading tickets..."
             contentClassName="p-5 md:p-8"
+            pageTitle="Manage Tickets"
+            headerAction={
+                <Link href="/tickets/new" className="shrink-0">
+                    <Button icon={<Plus size={18} />} className="h-10 px-4">Raise Ticket</Button>
+                </Link>
+            }
         >
             <div className="max-w-5xl space-y-6">
-                <header className="flex items-center justify-between gap-3">
-                    <h1 className="text-2xl font-extrabold">Manage Tickets</h1>
-                    <Link href="/tickets/new" className="shrink-0">
-                        <Button icon={<Plus size={18} />} className="h-10 px-4">Raise Ticket</Button>
-                    </Link>
-                </header>
-
                 {error && (
                     <div className="rounded-lg border border-error bg-error-bg px-4 py-3 text-sm text-error">
                         {error}

@@ -26,7 +26,7 @@ services:
       - key: MAX_IMAGE_PIXELS
         value: "25000000"
       - key: PROCESSING_VERSION
-        value: "2"
+        value: "3"
       - key: INTAKE_LEASE_SECONDS
         value: "300"
       - key: OCR_RATE_LIMIT_WINDOW_SECONDS

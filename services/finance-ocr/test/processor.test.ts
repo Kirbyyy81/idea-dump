@@ -23,7 +23,7 @@ function repository(overrides: Partial<FinanceRepository> = {}) {
         authenticate: vi.fn(),
         canAccessFinance: vi.fn(),
         beginIntake: vi.fn(),
-        loadContext: vi.fn().mockResolvedValue({ sources: [], rules: [], categories: [] }),
+        loadContext: vi.fn().mockResolvedValue({ sources: [], rules: [], fieldLearningRules: [], categories: [], payees: [] }),
         assessDuplicate: vi.fn().mockResolvedValue({
             outcome: 'none',
             matchedTransactionId: null,

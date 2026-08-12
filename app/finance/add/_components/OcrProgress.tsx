@@ -2,7 +2,7 @@
 
 import { CheckDoodleIcon, OcrDoodleIcon } from '@/components/atoms/DoodleIcons';
 import { cn } from '@/lib/utils';
-import { FinanceOcrPhase } from '@/lib/finance/ocrClient';
+import { FinanceOcrPhase } from '@/lib/finance/ocr/client';
 
 interface OcrProgressProps {
     phase: Exclude<FinanceOcrPhase, 'idle'>;

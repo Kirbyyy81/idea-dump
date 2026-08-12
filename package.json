@@ -2,40 +2,66 @@
   "name": "idea-dump",
   "version": "0.12.0",
   "private": true,
+  "engines": {
+    "node": ">=22.22.0 <23.0.0"
+  },
   "scripts": {
-    "predev": "npm install",
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm run typecheck:service-worker && npm run build:service-worker && next build",
+    "build:service-worker": "node scripts/build-service-worker.mjs",
+    "check:service-worker": "node scripts/build-service-worker.mjs --check && npm run typecheck:service-worker",
     "start": "next start",
     "lint": "next lint",
+    "test": "npm run check:service-worker && vitest run",
     "test:log-viewer": "node scripts/test-log-viewer.js",
-    "test:finance-security": "node scripts/test-finance-security.js",
-    "test:finance-idempotency": "node scripts/test-finance-idempotency.js",
-    "test:finance-ordering": "node scripts/test-finance-ordering.js",
-    "test:finance-share": "node scripts/test-finance-share.js"
+    "test:finance-security": "node --experimental-strip-types scripts/test-finance-security.js",
+    "test:finance-validation": "node --experimental-strip-types scripts/test-finance-validation.js",
+    "test:finance-payees": "node scripts/test-finance-payees.js",
+    "test:finance-idempotency": "node --experimental-strip-types scripts/test-finance-idempotency.js",
+    "test:finance-ordering": "node --experimental-strip-types scripts/test-finance-ordering.js",
+    "test:finance-share": "npm run check:service-worker && node scripts/test-finance-share.js && vitest run tests/finance-share-target.test.tsx",
+    "test:logs-api": "node --experimental-strip-types scripts/test-log-schemas.js",
+    "test:notes-api": "node --experimental-strip-types scripts/test-note-schemas.js",
+    "test:openapi": "node --experimental-strip-types scripts/test-openapi.js",
+    "test:projects-api": "node --experimental-strip-types scripts/test-project-schemas.js",
+    "test:api-keys": "node --experimental-strip-types scripts/test-api-key-schemas.js",
+    "test:tickets": "node --experimental-strip-types scripts/test-ticket-schemas.js",
+    "typecheck:service-worker": "tsc -p tsconfig.service-worker.json --noEmit"
   },
   "dependencies": {
-    "@supabase/ssr": "^0.1.0",
-    "@supabase/supabase-js": "^2.39.0",
+    "@supabase/ssr": "0.12.4",
+    "@supabase/supabase-js": "2.112.3",
     "clsx": "^2.1.0",
-    "lucide-react": "^0.312.0",
-    "next": "^14.2.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
+    "lucide-react": "0.475.0",
+    "next": "15.5.21",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
     "react-markdown": "^9.0.1",
     "recharts": "^3.9.2",
     "remark-gfm": "^4.0.0",
     "tailwind-merge": "^2.2.0"
   },
   "devDependencies": {
-    "@types/node": "^20.11.0",
-    "@types/react": "^18.2.48",
-    "@types/react-dom": "^18.2.18",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/node": "22.20.1",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
     "autoprefixer": "^10.4.17",
+    "esbuild": "^0.28.2",
     "eslint": "^8.56.0",
-    "eslint-config-next": "^14.2.0",
-    "postcss": "^8.4.33",
+    "eslint-config-next": "15.5.21",
+    "jsdom": "^27.4.0",
+    "postcss": "8.5.26",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vitest": "^4.1.10"
+  },
+  "overrides": {
+    "next": {
+      "postcss": "8.5.26",
+      "sharp": "0.35.0"
+    },
+    "ws": "8.21.3"
   }
 }

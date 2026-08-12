@@ -24,6 +24,7 @@ import { AppModuleMetadata } from '@/lib/rbac/types';
 import { useAccess } from '@/lib/contexts/AccessContext';
 import { Project } from '@/lib/types';
 import { AppShell } from '@/components/organisms/AppShell';
+import { listProjects, ProjectClientError } from '@/lib/projects/core/client';
 
 const MODULE_ICONS: Record<string, LucideIcon> = {
     BookOpen,
@@ -53,13 +54,13 @@ export default function DashboardPage() {
         async function loadProjects() {
             try {
                 if (allowedModules.includes('projects')) {
-                    const projectsRes = await fetch('/api/projects');
-                    if (projectsRes.ok && !cancelled) {
-                        const projectsPayload = await projectsRes.json();
-                        setProjects(projectsPayload.data || []);
+                    const projects = await listProjects();
+                    if (!cancelled) {
+                        setProjects(projects);
                     }
                 }
             } catch (err) {
+                if (err instanceof ProjectClientError) return;
                 if (!cancelled) {
                     setError(err instanceof Error ? err.message : 'Failed to load dashboard');
                 }
@@ -99,12 +100,13 @@ export default function DashboardPage() {
     }
 
     return (
-        <AppShell projects={projects} isLoading={isLoading} loadingMessage="Loading dashboard...">
+        <AppShell
+            projects={projects}
+            isLoading={isLoading}
+            loadingMessage="Loading dashboard..."
+            pageTitle="Dashboard"
+        >
             <div className="max-w-5xl space-y-8">
-                <header>
-                    <h1 className="text-2xl font-extrabold">Dashboard</h1>
-                </header>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                     {quickLinks.map((item) => {
                         const Icon = item.icon ? MODULE_ICONS[item.icon] ?? LayoutDashboard : LayoutDashboard;

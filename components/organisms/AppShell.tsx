@@ -1,23 +1,28 @@
 'use client';
 
-import { createContext, PropsWithChildren, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { createContext, PropsWithChildren, ReactNode, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
 import { Sidebar } from '@/components/organisms/Sidebar';
 import { LoaderOne } from '@/components/atoms/Loader';
+import { PageHeader } from '@/components/molecules/PageHeader';
 import { Project } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { AppModuleSlug } from '@/lib/rbac/constants';
+import { findModuleRouteRule } from '@/lib/rbac/routes';
 import { useAccess } from '@/lib/contexts/AccessContext';
 import { PUBLIC_AUTH_PATH_PREFIXES } from '@/lib/auth/routes';
+import { listProjects } from '@/lib/projects/core/client';
 
 interface AppShellProps extends PropsWithChildren {
     contentClassName?: string;
+    headerAction?: ReactNode;
+    headerClassName?: string;
     projects?: Project[];
     isLoading?: boolean;
     loadingMessage?: string;
+    pageTitle?: string;
     persistent?: boolean;
 }
 
@@ -25,28 +30,7 @@ interface ShellContextValue {
     setProjects: (projects: Project[]) => void;
 }
 
-interface ModuleRouteRule {
-    module: AppModuleSlug;
-    prefix: string;
-    requiresManager?: boolean;
-}
-
 const ShellContext = createContext<ShellContextValue | null>(null);
-const MODULE_ROUTE_RULES: ModuleRouteRule[] = [
-    { prefix: '/settings/access', module: 'access_control', requiresManager: true },
-    { prefix: '/dashboard', module: 'dashboard' },
-    { prefix: '/projects', module: 'projects' },
-    { prefix: '/tickets/manage', module: 'tickets', requiresManager: true },
-    { prefix: '/tickets', module: 'tickets' },
-    { prefix: '/logs', module: 'logs' },
-    { prefix: '/api-tools', module: 'logs' },
-    { prefix: '/log-viewer', module: 'log_viewer' },
-    { prefix: '/article-creation', module: 'article_creation' },
-    { prefix: '/film', module: 'film_journal' },
-    { prefix: '/finance', module: 'finance' },
-    { prefix: '/settings', module: 'settings' },
-    { prefix: '/docs', module: 'settings' },
-];
 
 function matchesPath(pathname: string, prefix: string) {
     return pathname === prefix || pathname.startsWith(`${prefix}/`);
@@ -54,10 +38,20 @@ function matchesPath(pathname: string, prefix: string) {
 
 function ShellContent({
     children,
+    headerAction,
+    headerClassName,
     isLoading,
     loadingMessage,
-}: PropsWithChildren<Pick<AppShellProps, 'isLoading' | 'loadingMessage'>>) {
-    if (!isLoading) return children;
+    pageTitle,
+}: PropsWithChildren<Pick<AppShellProps, 'headerAction' | 'headerClassName' | 'isLoading' | 'loadingMessage' | 'pageTitle'>>) {
+    if (!isLoading) {
+        return (
+            <>
+                {pageTitle && <PageHeader title={pageTitle} action={headerAction} className={headerClassName} />}
+                {children}
+            </>
+        );
+    }
 
     return (
         <div className="flex flex-col items-center justify-center gap-4 py-16">
@@ -72,9 +66,12 @@ function ShellContent({
 export function AppShell({
     children,
     contentClassName = 'p-5 md:p-6',
+    headerAction,
+    headerClassName,
     projects: externalProjects,
     isLoading,
     loadingMessage,
+    pageTitle,
     persistent = false,
 }: AppShellProps) {
     const pathname = usePathname();
@@ -88,7 +85,7 @@ export function AppShell({
     const mobileNavTriggerRef = useRef<HTMLButtonElement>(null);
     const mobileNavId = `mobile-navigation-${useId()}`;
     const isPublicPath = PUBLIC_AUTH_PATH_PREFIXES.some((prefix) => matchesPath(pathname, prefix));
-    const routeRule = MODULE_ROUTE_RULES.find((rule) => matchesPath(pathname, rule.prefix));
+    const routeRule = findModuleRouteRule(pathname);
     const isAccessDenied = Boolean(
         persistent &&
         access &&
@@ -110,12 +107,9 @@ export function AppShell({
 
         async function fetchProjects() {
             try {
-                const res = await fetch('/api/projects');
-                if (!res.ok || cancelled) return;
-
-                const payload = await res.json();
+                const projects = await listProjects();
                 if (!cancelled) {
-                    setInternalProjects(payload.data || []);
+                    setInternalProjects(projects);
                 }
             } catch {
                 // Project navigation is best-effort when the user lacks Projects access.
@@ -210,7 +204,13 @@ export function AppShell({
     if (!persistent && parentShell) {
         return (
             <div className={cn('min-w-0', contentClassName)}>
-                <ShellContent isLoading={isLoading} loadingMessage={loadingMessage}>
+                <ShellContent
+                    headerAction={headerAction}
+                    headerClassName={headerClassName}
+                    isLoading={isLoading}
+                    loadingMessage={loadingMessage}
+                    pageTitle={pageTitle}
+                >
                     {children}
                 </ShellContent>
             </div>
@@ -254,7 +254,7 @@ export function AppShell({
                     </button>
                 </header>
 
-                <div aria-hidden={isMobileNavOpen || undefined} className="hidden md:block">
+                <div aria-hidden={isMobileNavOpen || undefined} className="hidden self-stretch md:block">
                     <Sidebar
                         projects={projects}
                         collapsed={isSidebarCollapsed}
@@ -303,7 +303,13 @@ export function AppShell({
                     {persistent ? (
                         children
                     ) : (
-                        <ShellContent isLoading={isLoading} loadingMessage={loadingMessage}>
+                        <ShellContent
+                            headerAction={headerAction}
+                            headerClassName={headerClassName}
+                            isLoading={isLoading}
+                            loadingMessage={loadingMessage}
+                            pageTitle={pageTitle}
+                        >
                             {children}
                         </ShellContent>
                     )}

@@ -5,7 +5,7 @@ import { getAccessAdminData } from './actions';
 export default async function SettingsAccessPage() {
     const data = await getAccessAdminData();
     return (
-        <AppShell contentClassName="p-4 md:p-8">
+        <AppShell contentClassName="p-4 md:p-8" pageTitle="Access Control">
             <AccessControlClient initialData={data} />
         </AppShell>
     );

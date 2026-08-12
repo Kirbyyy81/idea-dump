@@ -1,8 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import Link from 'next/link';
-import { ArrowLeft, Eye, EyeOff, Lock, Plus, Search, X } from 'lucide-react';
+import { Eye, EyeOff, Lock, Plus, Search, X } from 'lucide-react';
 import { AppModuleSlug, AppRoleSlug } from '@/lib/rbac/constants';
 import { AccessAdminRoleRecord, AccessAdminUserRecord, ModuleOverrideEffect } from '@/lib/rbac/types';
 import { Badge } from '@/components/atoms/Badge';
@@ -336,19 +335,9 @@ export function AccessControlClient({ initialData }: AccessControlClientProps) {
     };
 
     return (
-        <div className="mx-auto min-h-screen max-w-7xl space-y-5 p-4 md:p-6">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                <div className="flex items-center gap-4">
-                    <Link
-                        href="/settings"
-                        className="flex items-center gap-2 text-text-secondary transition-colors hover:text-text-primary"
-                    >
-                        <ArrowLeft size={20} />
-                    </Link>
-                    <h1 className="text-text-primary">Access Control</h1>
-                </div>
-
-                <div className="relative w-full md:max-w-sm">
+        <div className="mx-auto max-w-7xl space-y-5">
+            <div className="flex justify-end">
+                <div className="relative w-full md:w-80">
                     <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
                     <Input
                         value={search}

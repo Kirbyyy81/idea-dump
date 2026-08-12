@@ -2,23 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { consumeActiveApiKey } from '@/lib/auth/apiKeys';
 import { canAccessModule, getUserAppAccess } from '@/lib/rbac/access';
 import { authorizeSessionModule, createForbiddenModuleResponse } from '@/lib/rbac/guards';
-import { createAdminClient } from '@/lib/supabase/admin';
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function optionalText(value: unknown) {
-    return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
-function stringTags(value: unknown) {
-    if (!Array.isArray(value)) return [];
-    return value
-        .filter((tag): tag is string => typeof tag === 'string')
-        .map((tag) => tag.trim())
-        .filter(Boolean);
-}
+import { createIngestedProject } from '@/lib/projects/core/repository';
+import { parseProjectIngest, readProjectRequestBody } from '@/lib/projects/core/schemas';
 
 // POST /api/ingest - External API for ingesting projects
 // Headers: { "x-api-key": "your-api-key" }
@@ -44,37 +29,23 @@ export async function POST(request: NextRequest) {
             return createForbiddenModuleResponse();
         }
 
-        const rawBody: unknown = await request.json();
-        if (!isRecord(rawBody)) {
-            return NextResponse.json({ error: 'Request body must be an object' }, { status: 400 });
+        const rawBody = await readProjectRequestBody(request);
+        if ('error' in rawBody) {
+            return NextResponse.json({ error: rawBody.error }, { status: 400 });
         }
 
-        const title = typeof rawBody.title === 'string' ? rawBody.title.trim() : '';
-        if (!title) {
-            return NextResponse.json({ error: 'Title is required' }, { status: 400 });
+        const input = parseProjectIngest(rawBody.data);
+        if ('error' in input) {
+            return NextResponse.json({ error: input.error }, { status: 400 });
         }
 
-        const admin = createAdminClient();
-        const { data, error } = await admin
-            .from('projects')
-            .insert({
-                user_id: keyData.userId,
-                title,
-                description: optionalText(rawBody.description),
-                prd_content: optionalText(rawBody.prd_content),
-                priority: 'medium',
-                tags: stringTags(rawBody.tags),
-            })
-            .select('id, title')
-            .single();
-
-        if (error) throw error;
+        const project = await createIngestedProject(keyData.userId, input.data);
 
         return NextResponse.json(
             {
                 success: true,
                 message: 'Project created successfully',
-                project: { id: data.id, title: data.title }
+                project
             },
             { status: 201 }
         );

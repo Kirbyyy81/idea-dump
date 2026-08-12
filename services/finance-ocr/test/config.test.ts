@@ -17,6 +17,7 @@ describe('Finance queue configuration', () => {
         expect(loadConfig(env())).toMatchObject({
             financeShareBucket: 'finance-share-batches',
             financeShareQueue: 'finance_share_ocr',
+            processingVersion: 3,
             intakeLeaseSeconds: 300,
             financeQueueVisibilitySeconds: 420,
         });

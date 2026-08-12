@@ -8,8 +8,8 @@ const ts = require('typescript');
 
 const root = path.resolve(__dirname, '..');
 
-function loadShareFileModule() {
-    const filename = path.join(root, 'lib', 'finance', 'shareFiles.ts');
+function loadTypeScriptModule(...segments) {
+    const filename = path.join(root, ...segments);
     const source = fs.readFileSync(filename, 'utf8');
     const output = ts.transpileModule(source, {
         compilerOptions: {
@@ -22,6 +22,91 @@ function loadShareFileModule() {
     const execute = new Function('exports', 'require', 'module', '__filename', '__dirname', output);
     execute(module.exports, require, module, filename, path.dirname(filename));
     return module.exports;
+}
+
+function loadShareFileModule() {
+    return loadTypeScriptModule('lib', 'finance', 'share', 'files.ts');
+}
+
+function loadShareProtocolModule() {
+    return loadTypeScriptModule('lib', 'finance', 'share', 'protocol.ts');
+}
+
+function testShareProtocolContract() {
+    const protocol = loadShareProtocolModule();
+    const types = protocol.FINANCE_SHARE_MESSAGE_TYPES;
+    assert.equal(protocol.FINANCE_SHARE_QUERY_PARAM, 'finance_share');
+    assert.deepEqual(
+        protocol.parseFinanceShareWorkerMessage({
+            type: types.payload,
+            shareId: 'share-1',
+            files: ['file'],
+        }),
+        {
+            type: types.payload,
+            shareId: 'share-1',
+            files: ['file'],
+        }
+    );
+    assert.deepEqual(
+        protocol.parseFinanceShareWorkerMessage({
+            type: types.error,
+            shareId: 'share-2',
+            message: 'Could not read files',
+        }),
+        {
+            type: types.error,
+            shareId: 'share-2',
+            message: 'Could not read files',
+        }
+    );
+    assert.equal(protocol.parseFinanceShareWorkerMessage({ type: types.payload }), null);
+    assert.equal(protocol.parseFinanceShareWorkerMessage({ type: 'unknown', shareId: 'share-3' }), null);
+    assert.deepEqual(
+        protocol.parseFinanceShareClientMessage({ type: types.ready }),
+        { type: types.ready }
+    );
+    assert.deepEqual(
+        protocol.parseFinanceShareClientMessage({ type: types.claim, shareId: 'share-4' }),
+        { type: types.claim, shareId: 'share-4' }
+    );
+    assert.equal(protocol.parseFinanceShareClientMessage({ type: types.claim }), null);
+    assert.equal(protocol.parseFinanceShareClientMessage({ type: 'unknown' }), null);
+
+    const workerSource = fs.readFileSync(path.join(root, 'public', 'sw.js'), 'utf8');
+    Object.values(types).forEach((type) => assert.match(workerSource, new RegExp(type)));
+    const typedWorkerSource = fs.readFileSync(path.join(root, 'service-worker', 'sw.ts'), 'utf8');
+    assert.match(typedWorkerSource, /from ['"]\.\.\/lib\/finance\/share\/protocol['"]/);
+    assert.match(typedWorkerSource, /parseFinanceShareClientMessage/);
+    Object.values(types).forEach((type) => assert.doesNotMatch(typedWorkerSource, new RegExp(type)));
+}
+
+function testShareProviderBoundaryContract() {
+    const shell = fs.readFileSync(
+        path.join(root, 'components', 'organisms', 'AuthenticatedAppShell.tsx'),
+        'utf8'
+    );
+    const financeLayout = fs.readFileSync(
+        path.join(root, 'app', 'finance', 'layout.tsx'),
+        'utf8'
+    );
+    const provider = fs.readFileSync(
+        path.join(root, 'app', 'finance', '_components', 'FinanceShareTargetProvider.tsx'),
+        'utf8'
+    );
+    const rejectionBridge = fs.readFileSync(
+        path.join(root, 'app', '_components', 'FinanceShareRejectionBridge.tsx'),
+        'utf8'
+    );
+
+    assert.match(shell, /<FinanceShareRejectionBridge\s*\/>/);
+    assert.doesNotMatch(shell, /<FinanceShareTargetProvider>/);
+    assert.match(financeLayout, /<FinanceShareTargetProvider>\{children\}<\/FinanceShareTargetProvider>/);
+    assert.doesNotMatch(provider, /useAccess/);
+    assert.match(provider, /parseFinanceShareWorkerMessage/);
+    assert.match(rejectionBridge, /const canAccessFinance/);
+    assert.match(rejectionBridge, /if \(canAccessFinance/);
+    assert.match(rejectionBridge, /shared images were discarded/);
 }
 
 async function testValidation() {
@@ -97,8 +182,11 @@ async function testValidation() {
 }
 
 async function testServiceWorkerHandoff() {
+    const { FINANCE_SHARE_MESSAGE_TYPES } = loadShareProtocolModule();
     const workerSource = fs.readFileSync(path.join(root, 'public', 'sw.js'), 'utf8');
     const handlers = new Map();
+    const timers = new Map();
+    let nextTimerId = 1;
     const context = vm.createContext({
         URL,
         Request,
@@ -107,8 +195,14 @@ async function testServiceWorkerHandoff() {
         File,
         Promise,
         Map,
-        setTimeout,
-        clearTimeout,
+        setTimeout(callback) {
+            const timerId = nextTimerId++;
+            timers.set(timerId, callback);
+            return timerId;
+        },
+        clearTimeout(timerId) {
+            timers.delete(timerId);
+        },
         crypto: { randomUUID },
         caches: {
             open: async () => ({
@@ -134,52 +228,135 @@ async function testServiceWorkerHandoff() {
     });
     vm.runInContext(workerSource, context, { filename: 'public/sw.js' });
 
-    const formData = new FormData();
-    formData.append('finance_images', new File(['one'], 'one.png', { type: 'image/png' }));
-    formData.append('finance_images', new File(['two'], 'two.jpg', { type: 'image/jpeg' }));
-    const request = new Request('https://idea-dump.test/share-target/finance', {
-        method: 'POST',
-        body: formData,
-    });
+    async function receiveShare(resultingClientId, filenames) {
+        const formData = new FormData();
+        filenames.forEach((filename) => formData.append(
+            'finance_images',
+            new File([filename], filename, { type: 'image/png' })
+        ));
+        const request = new Request('https://idea-dump.test/share-target/finance', {
+            method: 'POST',
+            body: formData,
+        });
+        let responsePromise;
+        let lifetimePromise;
+        handlers.get('fetch')({
+            request,
+            resultingClientId,
+            respondWith(value) {
+                responsePromise = Promise.resolve(value);
+            },
+            waitUntil(value) {
+                lifetimePromise = Promise.resolve(value);
+            },
+        });
+        const response = await responsePromise;
+        assert.equal(response.status, 303);
+        const location = new URL(response.headers.get('location'));
+        assert.equal(location.pathname, '/finance/add');
+        const shareId = location.searchParams.get('finance_share');
+        assert.ok(shareId);
+        return { shareId, lifetimePromise };
+    }
 
-    let responsePromise;
-    let lifetimePromise;
-    handlers.get('fetch')({
-        request,
-        resultingClientId: 'finance-client',
-        respondWith(value) {
-            responsePromise = Promise.resolve(value);
-        },
-        waitUntil(value) {
-            lifetimePromise = Promise.resolve(value);
-        },
-    });
-    const response = await responsePromise;
-    assert.equal(response.status, 303);
-    const location = new URL(response.headers.get('location'));
-    assert.equal(location.pathname, '/finance/add');
-    const shareId = location.searchParams.get('finance_share');
-    assert.ok(shareId);
+    function createClient(id) {
+        const posted = [];
+        return {
+            posted,
+            source: {
+                id,
+                postMessage(message) {
+                    posted.push(message);
+                },
+            },
+        };
+    }
 
-    const posted = [];
-    const source = {
-        id: 'finance-client',
-        postMessage(message) {
-            posted.push(message);
-        },
-    };
+    const accepted = await receiveShare('finance-client', ['one.png', 'two.png']);
+    const acceptedClient = createClient('finance-client');
     handlers.get('message')({
-        data: { type: 'finance-share:claim', shareId },
-        source,
+        data: { type: FINANCE_SHARE_MESSAGE_TYPES.claim, shareId: accepted.shareId },
+        source: acceptedClient.source,
     });
-    assert.equal(posted[0].type, 'finance-share:payload');
-    assert.equal(posted[0].files.length, 2);
+    assert.equal(acceptedClient.posted[0].type, FINANCE_SHARE_MESSAGE_TYPES.payload);
+    assert.equal(acceptedClient.posted[0].files.length, 2);
 
     handlers.get('message')({
-        data: { type: 'finance-share:acknowledge', shareId },
-        source,
+        data: { type: FINANCE_SHARE_MESSAGE_TYPES.ready },
+        source: acceptedClient.source,
     });
-    await lifetimePromise;
+    assert.equal(acceptedClient.posted.length, 1);
+
+    handlers.get('message')({
+        data: { type: 'finance-share:invalid', shareId: accepted.shareId },
+        source: acceptedClient.source,
+    });
+    handlers.get('message')({
+        data: { type: FINANCE_SHARE_MESSAGE_TYPES.claim },
+        source: acceptedClient.source,
+    });
+    assert.equal(acceptedClient.posted.length, 1);
+
+    handlers.get('message')({
+        data: {
+            type: FINANCE_SHARE_MESSAGE_TYPES.acknowledge,
+            shareId: accepted.shareId,
+        },
+        source: acceptedClient.source,
+    });
+    await accepted.lifetimePromise;
+
+    handlers.get('message')({
+        data: { type: FINANCE_SHARE_MESSAGE_TYPES.claim, shareId: accepted.shareId },
+        source: acceptedClient.source,
+    });
+    assert.equal(acceptedClient.posted[1].type, FINANCE_SHARE_MESSAGE_TYPES.missing);
+
+    const isolated = await receiveShare('target-tab', ['isolated.png']);
+    const wrongTab = createClient('other-tab');
+    handlers.get('message')({
+        data: { type: FINANCE_SHARE_MESSAGE_TYPES.ready },
+        source: wrongTab.source,
+    });
+    assert.equal(wrongTab.posted.length, 0);
+
+    const targetTab = createClient('target-tab');
+    handlers.get('message')({
+        data: { type: FINANCE_SHARE_MESSAGE_TYPES.ready },
+        source: targetTab.source,
+    });
+    assert.equal(targetTab.posted[0].type, FINANCE_SHARE_MESSAGE_TYPES.payload);
+    assert.equal(targetTab.posted[0].shareId, isolated.shareId);
+    handlers.get('message')({
+        data: {
+            type: FINANCE_SHARE_MESSAGE_TYPES.acknowledge,
+            shareId: isolated.shareId,
+        },
+        source: targetTab.source,
+    });
+    await isolated.lifetimePromise;
+
+    const expired = await receiveShare('expired-tab', ['expired.png']);
+    assert.equal(timers.size, 1);
+    [...timers.values()].forEach((callback) => callback());
+    await expired.lifetimePromise;
+
+    const expiredTab = createClient('expired-tab');
+    handlers.get('message')({
+        data: { type: FINANCE_SHARE_MESSAGE_TYPES.claim, shareId: expired.shareId },
+        source: expiredTab.source,
+    });
+    assert.equal(expiredTab.posted[0].type, FINANCE_SHARE_MESSAGE_TYPES.missing);
+
+    const invalid = await receiveShare('invalid-tab', []);
+    const invalidTab = createClient('invalid-tab');
+    handlers.get('message')({
+        data: { type: FINANCE_SHARE_MESSAGE_TYPES.claim, shareId: invalid.shareId },
+        source: invalidTab.source,
+    });
+    assert.equal(invalidTab.posted[0].type, FINANCE_SHARE_MESSAGE_TYPES.error);
+    assert.match(invalidTab.posted[0].message, /No image files were received/);
+    await invalid.lifetimePromise;
 }
 
 function testManifestContract() {
@@ -195,7 +372,7 @@ function testManifestContract() {
 
 function testPrepareIdempotencyContract() {
     const source = fs.readFileSync(
-        path.join(root, 'lib', 'finance', 'shareBatchClient.ts'),
+        path.join(root, 'lib', 'finance', 'share', 'client.ts'),
         'utf8'
     );
     assert.match(source, /request_id:\s*requestId/);
@@ -229,14 +406,24 @@ function testServerHandoffContract() {
         'utf8'
     );
     const server = fs.readFileSync(
-        path.join(root, 'lib', 'finance', 'shareBatchServer.ts'),
+        path.join(root, 'lib', 'finance', 'share', 'server.ts'),
         'utf8'
     );
-    assert.match(prepare, /finance_prepare_share_batch_v1/);
-    assert.match(prepare, /createSignedUploadUrl\(item\.storage_path,\s*\{\s*upsert:\s*true\s*\}\)/);
-    assert.match(commit, /\.info\(item\.storage_path\)/);
-    assert.match(commit, /record\.contentType/);
-    assert.match(commit, /finance_commit_share_batch_v1/);
+    const service = fs.readFileSync(
+        path.join(root, 'lib', 'finance', 'core', 'service.ts'),
+        'utf8'
+    );
+    const repository = fs.readFileSync(
+        path.join(root, 'lib', 'finance', 'core', 'repository.ts'),
+        'utf8'
+    );
+    assert.match(prepare, /prepareFinanceShareBatchForUser/);
+    assert.match(repository, /finance_prepare_share_batch_v1/);
+    assert.match(repository, /createSignedUploadUrl\(storagePath,\s*\{\s*upsert:\s*true\s*\}\)/);
+    assert.match(commit, /commitFinanceShareBatchForUser/);
+    assert.match(service, /getFinanceShareObjectInfo\(item\.storage_path\)/);
+    assert.match(service, /record\.contentType/);
+    assert.match(repository, /finance_commit_share_batch_v1/);
     assert.match(commit, /safe_to_close:\s*true/);
     assert.match(active, /getOwnedActiveFinanceShareBatch/);
     assert.match(server, /message\.includes\('FINANCE_SHARE_ACCESS_DENIED'\)/);
@@ -260,6 +447,8 @@ function testDatabaseQueueContract() {
 }
 
 (async () => {
+    testShareProtocolContract();
+    testShareProviderBoundaryContract();
     await testValidation();
     await testServiceWorkerHandoff();
     testManifestContract();

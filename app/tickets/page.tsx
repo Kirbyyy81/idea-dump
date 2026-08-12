@@ -10,6 +10,8 @@ import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
+import { deleteTicket, listTickets, updateTicket } from '@/lib/tickets/core/client';
+import { listProjects } from '@/lib/projects/core/client';
 import { Project, Ticket, UpdateTicketInput, ticketSourceConfig, ticketStatusConfig } from '@/lib/types';
 
 export default function TicketsPage() {
@@ -28,19 +30,13 @@ export default function TicketsPage() {
     useEffect(() => {
         async function fetchData() {
             try {
-                const [ticketsRes, projectsRes] = await Promise.all([
-                    fetch('/api/tickets?scope=mine'),
-                    fetch('/api/projects'),
+                const [ticketsRes, projects] = await Promise.all([
+                    listTickets({ scope: 'mine' }),
+                    listProjects(),
                 ]);
 
-                if (!ticketsRes.ok) throw new Error('Failed to fetch tickets');
-                if (!projectsRes.ok) throw new Error('Failed to fetch projects');
-
-                const ticketsPayload = await ticketsRes.json();
-                const projectsPayload = await projectsRes.json();
-
-                setTickets(ticketsPayload.data || []);
-                setProjects(projectsPayload.data || []);
+                setTickets(ticketsRes);
+                setProjects(projects);
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'Failed to load tickets');
             } finally {
@@ -78,16 +74,10 @@ export default function TicketsPage() {
 
         setIsSaving(true);
         try {
-            const res = await fetch(`/api/tickets/${editingTicket.id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
-            });
-
-            if (!res.ok) throw new Error('Failed to update ticket');
-
-            const payload = await res.json();
-            setTickets((current) => current.map((ticket) => (ticket.id === editingTicket.id ? payload.data : ticket)));
+            const updatedTicket = await updateTicket(editingTicket.id, data);
+            setTickets((current) => current.map((ticket) => (
+                ticket.id === editingTicket.id ? updatedTicket : ticket
+            )));
             setEditingTicket(null);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to update ticket');
@@ -100,8 +90,7 @@ export default function TicketsPage() {
         if (!confirm('Are you sure you want to delete this ticket?')) return;
 
         try {
-            const res = await fetch(`/api/tickets/${id}`, { method: 'DELETE' });
-            if (!res.ok) throw new Error('Failed to delete ticket');
+            await deleteTicket(id);
             setTickets((current) => current.filter((ticket) => ticket.id !== id));
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to delete ticket');
@@ -119,15 +108,14 @@ export default function TicketsPage() {
             isLoading={isLoading}
             loadingMessage="Loading tickets..."
             contentClassName="p-5 md:p-8"
+            pageTitle="My Tickets"
+            headerAction={
+                <Link href="/tickets/new" className="shrink-0">
+                    <Button icon={<Plus size={18} />} className="h-10 px-4">Raise Ticket</Button>
+                </Link>
+            }
         >
             <div className="max-w-5xl space-y-6">
-                <header className="flex items-center justify-between gap-3">
-                    <h1 className="text-2xl font-extrabold">My Tickets</h1>
-                    <Link href="/tickets/new" className="shrink-0">
-                        <Button icon={<Plus size={18} />} className="h-10 px-4">Raise Ticket</Button>
-                    </Link>
-                </header>
-
                 {error && (
                     <div className="rounded-lg border border-error bg-error-bg px-4 py-3 text-sm text-error">
                         {error}

@@ -30,7 +30,7 @@ Required service-only functions:
 - `finance_retry_share_queue_item_v1`
 - `finance_complete_share_queue_item_v1`
 - `finance_cleanup_share_batch_v1`
-- `finance_confirm_candidate`
+- `finance_confirm_candidate_v2`
 
 The secret key must only exist in Render environment secrets. Never prefix it with `NEXT_PUBLIC_`, commit it, or send it to the browser.
 

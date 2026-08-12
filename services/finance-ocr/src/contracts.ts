@@ -4,7 +4,9 @@ import type {
     FinanceCategory,
     FinanceDuplicateOutcome,
     FinanceDuplicateSignal,
+    FinanceFieldLearningRule,
     FinanceIntakeItem,
+    FinancePayee,
     FinanceRule,
     FinanceSource,
     FinanceSourceDetectionSignal,
@@ -18,6 +20,8 @@ export interface AuthenticatedUser {
 export interface FinanceContext {
     sources: FinanceSource[];
     rules: FinanceRule[];
+    fieldLearningRules: FinanceFieldLearningRule[];
+    payees: FinancePayee[];
     categories: Pick<FinanceCategory, 'id' | 'type'>[];
 }
 

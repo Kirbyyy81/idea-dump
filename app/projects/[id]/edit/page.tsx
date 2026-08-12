@@ -8,6 +8,7 @@ import { AppShell } from '@/components/organisms/AppShell';
 import { ProjectForm } from '../../_components/ProjectForm';
 import { CreateProjectInput } from '@/lib/types';
 import { PageLoader } from '@/components/atoms/Loader';
+import { getProject, updateProject } from '@/lib/projects/core/client';
 
 export default function EditProjectPage() {
     const router = useRouter();
@@ -23,11 +24,7 @@ export default function EditProjectPage() {
     useEffect(() => {
         async function fetchProject() {
             try {
-                const res = await fetch(`/api/projects?id=${projectId}`);
-                if (!res.ok) throw new Error('Failed to fetch project');
-                const { data } = await res.json();
-
-                if (!data) throw new Error('Project not found');
+                const data = await getProject(projectId);
 
                 setInitialData({
                     title: data.title,
@@ -51,19 +48,7 @@ export default function EditProjectPage() {
         setError(null);
 
         try {
-            const res = await fetch('/api/projects', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    id: projectId,
-                    ...data,
-                }),
-            });
-
-            if (!res.ok) {
-                const resData = await res.json();
-                throw new Error(resData.error || 'Failed to update project');
-            }
+            await updateProject(projectId, data);
 
             router.push(`/projects/${projectId}`);
         } catch (err) {
@@ -77,18 +62,20 @@ export default function EditProjectPage() {
     }
 
     return (
-        <AppShell contentClassName="p-5 md:p-8">
+        <AppShell
+            contentClassName="p-5 md:p-8"
+            pageTitle="Edit Project"
+            headerAction={
+                <Link
+                    href={`/projects/${projectId}`}
+                    aria-label="Back to project"
+                    className="flex items-center gap-2 text-text-secondary transition-colors hover:text-text-primary"
+                >
+                    <ArrowLeft size={20} />
+                </Link>
+            }
+        >
             <div className="max-w-3xl">
-                <div className="flex items-center gap-4 mb-8">
-                    <Link
-                        href={`/projects/${projectId}`}
-                        className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors"
-                    >
-                        <ArrowLeft size={20} />
-                    </Link>
-                    <h1 className="text-text-primary">Edit Project</h1>
-                </div>
-
                 {error && (
                     <div className="p-3 rounded-lg bg-error-bg border border-error mb-6">
                         <p className="text-sm text-error">{error}</p>

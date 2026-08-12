@@ -1,7 +1,7 @@
 import { AppShell } from '@/components/organisms/AppShell';
 import { AccessProvider } from '@/lib/contexts/AccessContext';
 import { getSessionUserAppAccess } from '@/lib/rbac/access';
-import { FinanceShareTargetProvider } from '@/app/finance/_components/FinanceShareTargetProvider';
+import { FinanceShareRejectionBridge } from '@/app/_components/FinanceShareRejectionBridge';
 
 export async function AuthenticatedAppShell({
     children,
@@ -12,9 +12,8 @@ export async function AuthenticatedAppShell({
 
     return (
         <AccessProvider access={session?.access ?? null}>
-            <FinanceShareTargetProvider>
-                <AppShell persistent>{children}</AppShell>
-            </FinanceShareTargetProvider>
+            <FinanceShareRejectionBridge />
+            <AppShell persistent>{children}</AppShell>
         </AccessProvider>
     );
 }

@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase/admin';
 import { authorizeSessionModule } from '@/lib/rbac/guards';
-import { hashApiKey } from '@/lib/auth/apiKeys';
-import crypto from 'node:crypto';
-
-// Generate a secure random API key
-function generateApiKey(): string {
-    return 'id_' + crypto.randomBytes(32).toString('hex');
-}
+import { parseApiKeyId, parseApiKeyName, readApiKeyRequestBody } from '@/lib/auth/apiKeySchemas';
+import {
+    createApiKeyForUser,
+    listApiKeysForUser,
+    revokeApiKeyForUser,
+} from '@/lib/auth/apiKeyService';
 
 // GET /api/keys - List all API keys for current user
 export async function GET() {
@@ -17,17 +15,7 @@ export async function GET() {
             return session.response;
         }
 
-        const admin = createAdminClient();
-        const { data, error } = await admin
-            .from('api_keys')
-            .select('id, name, created_at, last_used_at')
-            .eq('user_id', session.user.id)
-            .is('revoked_at', null)
-            .order('created_at', { ascending: false });
-
-        if (error) throw error;
-
-        return NextResponse.json({ data });
+        return NextResponse.json({ data: await listApiKeysForUser(session.user.id) });
     } catch (error) {
         console.error('Error fetching API keys:', error);
         return NextResponse.json({ error: 'Failed to fetch API keys' }, { status: 500 });
@@ -42,41 +30,15 @@ export async function POST(request: NextRequest) {
             return session.response;
         }
 
-        const admin = createAdminClient();
+        const body = await readApiKeyRequestBody(request);
+        if ('error' in body) return NextResponse.json({ error: body.error }, { status: 400 });
+        const name = parseApiKeyName(body.data);
+        if ('error' in name) return NextResponse.json({ error: name.error }, { status: 400 });
 
-        const body: unknown = await request.json();
-        const name = typeof body === 'object' && body !== null && 'name' in body && typeof body.name === 'string'
-            ? body.name.trim()
-            : '';
-
-        if (!name) {
-            return NextResponse.json({ error: 'Key name is required' }, { status: 400 });
-        }
-
-        // Generate new API key
-        const apiKey = generateApiKey();
-
-        const keyHash = hashApiKey(apiKey);
-
-        const { data, error } = await admin
-            .from('api_keys')
-            .insert({
-                user_id: session.user.id,
-                key_hash: keyHash,
-                name,
-            })
-            .select('id, name, created_at')
-            .single();
-
-        if (error) throw error;
-
-        // Return the key in plain text (only shown once)
-        return NextResponse.json({
-            data: {
-                ...data,
-                key: apiKey, // Only returned on creation
-            }
-        }, { status: 201 });
+        return NextResponse.json(
+            { data: await createApiKeyForUser(session.user.id, name.data) },
+            { status: 201 }
+        );
     } catch (error) {
         console.error('Error creating API key:', error);
         return NextResponse.json({ error: 'Failed to create API key' }, { status: 500 });
@@ -91,26 +53,10 @@ export async function DELETE(request: NextRequest) {
             return session.response;
         }
 
-        const admin = createAdminClient();
+        const id = parseApiKeyId(new URL(request.url).searchParams.get('id'));
+        if ('error' in id) return NextResponse.json({ error: id.error }, { status: 400 });
 
-        const { searchParams } = new URL(request.url);
-        const id = searchParams.get('id');
-
-        if (!id) {
-            return NextResponse.json({ error: 'Key ID is required' }, { status: 400 });
-        }
-
-        const { data, error } = await admin
-            .from('api_keys')
-            .update({ revoked_at: new Date().toISOString() })
-            .eq('id', id)
-            .eq('user_id', session.user.id)
-            .is('revoked_at', null)
-            .select('id')
-            .maybeSingle();
-
-        if (error) throw error;
-        if (!data) {
+        if (!await revokeApiKeyForUser(session.user.id, id.data)) {
             return NextResponse.json({ error: 'API key not found' }, { status: 404 });
         }
 

@@ -2,7 +2,6 @@
 node_modules/
 .pnp
 .pnp.js
-AGENTS.md
 
 # Build output
 .next/
@@ -39,4 +38,3 @@ Thumbs.db
 
 # Agent secrets
 .agent/**/.wpl_api_key
-AGENTS.md
