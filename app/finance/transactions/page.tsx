@@ -27,6 +27,7 @@ import {
 } from '@/lib/finance/catalog';
 import { persistVirtualDefaultCategory } from '@/lib/finance/catalogClient';
 import { sortFinanceTransactions } from '@/lib/finance/transactions/ordering';
+import { setFinancePayeeClassification } from '@/lib/finance/transactions/payeeClassification';
 import {
     FINANCE_TIME_ZONE_HEADER,
     FinanceFieldErrors,
@@ -148,6 +149,20 @@ export default function FinanceTransactionsPage() {
             if (!current[key as FinanceTransactionField]) return current;
             const next = { ...current };
             delete next[key as FinanceTransactionField];
+            return next;
+        });
+    };
+
+    const setTransactionPayeeClassification = (isPayee: boolean) => {
+        setForm((current) => ({
+            ...current,
+            ...setFinancePayeeClassification(current, isPayee),
+        }));
+        setFieldErrors((current) => {
+            const next = { ...current };
+            delete next.merchant;
+            delete next.has_payee;
+            delete next.payee_name;
             return next;
         });
     };
@@ -275,10 +290,7 @@ export default function FinanceTransactionsPage() {
                                 </div>
                                 <FinanceFormField fieldId="edit-merchant" label="Merchant (optional)" error={fieldErrors.merchant}><Input id="edit-merchant" data-finance-field="merchant" {...financeFieldErrorProps(fieldErrors, 'merchant', 'edit-merchant')} maxLength={MAX_FINANCE_MERCHANT_LENGTH} value={form.merchant} onChange={(event) => setTransactionField('merchant', event.target.value)} /></FinanceFormField>
                                 <FinanceFormField fieldId="edit-has-payee" label="Payee" error={fieldErrors.has_payee}>
-                                    <Toggle id="edit-has-payee" dataFinanceField="has_payee" checked={form.has_payee} label="Has a payee" ariaLabel="Has a payee" ariaDescribedBy={fieldErrors.has_payee ? 'edit-has-payee-error' : undefined} error={Boolean(fieldErrors.has_payee)} onChange={(checked) => {
-                                        setTransactionField('has_payee', checked);
-                                        if (!checked) setTransactionField('payee_name', '');
-                                    }} />
+                                    <Toggle id="edit-has-payee" dataFinanceField="has_payee" checked={form.has_payee} label="Is a payee" ariaLabel="Is a payee" ariaDescribedBy={fieldErrors.has_payee ? 'edit-has-payee-error' : undefined} error={Boolean(fieldErrors.has_payee)} onChange={setTransactionPayeeClassification} />
                                 </FinanceFormField>
                                 {form.has_payee && <FinanceFormField fieldId="edit-payee" label="Payee name" error={fieldErrors.payee_name} required><Input id="edit-payee" data-finance-field="payee_name" {...financeFieldErrorProps(fieldErrors, 'payee_name', 'edit-payee')} maxLength={MAX_FINANCE_PAYEE_LENGTH} value={form.payee_name} onChange={(event) => setTransactionField('payee_name', event.target.value)} /></FinanceFormField>}
                                 <div className="grid gap-4 sm:grid-cols-2">

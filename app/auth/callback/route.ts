@@ -4,6 +4,12 @@ import { AUTH_PATHS, getSafeNextPath } from '@/lib/auth/routes';
 
 const DEFAULT_PRODUCTION_ORIGIN = 'https://idea-dump-alpha.vercel.app';
 
+type PendingCookie = {
+    name: string;
+    value: string;
+    options: CookieOptions;
+};
+
 function getTrustedAppOrigin(requestOrigin: string) {
     if (process.env.NODE_ENV === 'development') return requestOrigin;
 
@@ -25,6 +31,20 @@ export async function GET(request: NextRequest) {
     const isPasswordRecovery =
         authType === 'recovery' || nextPath === AUTH_PATHS.resetPassword;
     const authTarget = isPasswordRecovery ? AUTH_PATHS.resetPassword : nextPath;
+    const pendingCookies: PendingCookie[] = [];
+    const pendingHeaders = new Headers();
+
+    const createRedirect = (target: string) => {
+        const response = NextResponse.redirect(`${trustedOrigin}${target}`);
+        response.headers.set('Cache-Control', 'private, no-store');
+        pendingCookies.forEach(({ name, value, options }) => {
+            response.cookies.set({ name, value, ...options });
+        });
+        pendingHeaders.forEach((value, name) => {
+            response.headers.set(name, value);
+        });
+        return response;
+    };
 
     let errorMsg = 'Could not authenticate user';
     const error = searchParams.get('error');
@@ -34,26 +54,25 @@ export async function GET(request: NextRequest) {
     if (error) {
         const errorTarget = isPasswordRecovery ? AUTH_PATHS.resetPassword : AUTH_PATHS.signIn;
         const separator = errorTarget.includes('?') ? '&' : '?';
-        return NextResponse.redirect(
-            `${trustedOrigin}${errorTarget}${separator}error=${encodeURIComponent(errorDescription || error)}&code=${encodeURIComponent(errorCode || '')}`
+        return createRedirect(
+            `${errorTarget}${separator}error=${encodeURIComponent(errorDescription || error)}&code=${encodeURIComponent(errorCode || '')}`
         );
     }
 
     if (code || (tokenHash && authType)) {
-        const response = NextResponse.redirect(`${trustedOrigin}${authTarget}`);
         const supabase = createServerClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
             {
                 cookies: {
-                    get(name: string) {
-                        return request.cookies.get(name)?.value;
+                    getAll() {
+                        return request.cookies.getAll();
                     },
-                    set(name: string, value: string, options: CookieOptions) {
-                        response.cookies.set({ name, value, ...options });
-                    },
-                    remove(name: string, options: CookieOptions) {
-                        response.cookies.set({ name, value: '', ...options });
+                    setAll(cookiesToSet, responseHeaders) {
+                        pendingCookies.push(...cookiesToSet);
+                        Object.entries(responseHeaders).forEach(([name, value]) => {
+                            pendingHeaders.set(name, value);
+                        });
                     },
                 },
             }
@@ -66,7 +85,7 @@ export async function GET(request: NextRequest) {
                 token_hash: tokenHash as string,
             });
 
-        if (!sessionError) return response;
+        if (!sessionError) return createRedirect(authTarget);
         errorMsg = sessionError.message;
     } else {
         errorMsg = 'No auth parameters provided';
@@ -74,7 +93,7 @@ export async function GET(request: NextRequest) {
 
     const errorTarget = isPasswordRecovery ? AUTH_PATHS.resetPassword : AUTH_PATHS.signIn;
     const separator = errorTarget.includes('?') ? '&' : '?';
-    return NextResponse.redirect(
-        `${trustedOrigin}${errorTarget}${separator}error=${encodeURIComponent(errorMsg)}`
+    return createRedirect(
+        `${errorTarget}${separator}error=${encodeURIComponent(errorMsg)}`
     );
 }

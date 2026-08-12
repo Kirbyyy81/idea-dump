@@ -54,6 +54,7 @@ import {
     toPositiveFinanceAmount,
 } from '@/lib/finance/core/values';
 import { FinanceApiError, financeApiRequest } from '@/lib/finance/core/client';
+import { setFinancePayeeClassification } from '@/lib/finance/transactions/payeeClassification';
 
 const NEW_SOURCE = '__new_source__';
 const NEW_CATEGORY = '__new_category__';
@@ -217,6 +218,20 @@ export default function FinanceReviewPage() {
             if (!current[key as FinanceTransactionField]) return current;
             const next = { ...current };
             delete next[key as FinanceTransactionField];
+            return next;
+        });
+    };
+
+    const setReviewPayeeClassification = (isPayee: boolean) => {
+        setForm((current) => current ? {
+            ...current,
+            ...setFinancePayeeClassification(current, isPayee),
+        } : current);
+        setFieldErrors((current) => {
+            const next = { ...current };
+            delete next.merchant;
+            delete next.has_payee;
+            delete next.payee_name;
             return next;
         });
     };
@@ -426,7 +441,7 @@ export default function FinanceReviewPage() {
                                     <div className="space-y-4"><FinanceFormField fieldId="review-source" label="Source" required error={fieldErrors.source_id}><Select id="review-source" dataFinanceField="source_id" error={Boolean(fieldErrors.source_id)} ariaDescribedBy={fieldErrors.source_id ? 'review-source-error' : undefined} ariaLabel="Transaction source" value={form.source_id} onChange={(source_id) => setReviewField('source_id', source_id)} placeholder="Choose a source" options={[...sources.filter((source) => !source.is_archived).map((source) => ({ value: source.id, label: source.name })), { value: NEW_SOURCE, label: '+ Add new source' }]} /></FinanceFormField>{form.source_id === NEW_SOURCE && <FinanceFormField fieldId="review-new-source" label="New source name" required error={fieldErrors.new_source_name}><Input id="review-new-source" data-finance-field="new_source_name" {...financeFieldErrorProps(fieldErrors, 'new_source_name', 'review-new-source')} maxLength={MAX_FINANCE_NAME_LENGTH} value={newSourceName} onChange={(event) => { setNewSourceName(event.target.value); setFieldErrors((current) => ({ ...current, new_source_name: undefined })); }} placeholder="e.g. Maybank" /></FinanceFormField>}</div>
                                     <div className="space-y-4"><FinanceFormField fieldId="review-category" label="Category" error={fieldErrors.category_id}><Select id="review-category" dataFinanceField="category_id" error={Boolean(fieldErrors.category_id)} ariaDescribedBy={fieldErrors.category_id ? 'review-category-error' : undefined} ariaLabel="Transaction category" value={form.category_id} onChange={(category_id) => setReviewField('category_id', category_id)} placeholder="Uncategorised" options={[{ value: '', label: 'Uncategorised' }, ...availableCategories, { value: NEW_CATEGORY, label: '+ Add new category' }]} /></FinanceFormField>{form.category_id === NEW_CATEGORY && <FinanceFormField fieldId="review-new-category" label="New category name" required error={fieldErrors.new_category_name}><Input id="review-new-category" data-finance-field="new_category_name" {...financeFieldErrorProps(fieldErrors, 'new_category_name', 'review-new-category')} maxLength={MAX_FINANCE_NAME_LENGTH} value={newCategoryName} onChange={(event) => { setNewCategoryName(event.target.value); setFieldErrors((current) => ({ ...current, new_category_name: undefined })); }} placeholder={form.direction === 'income' ? 'e.g. Salary' : 'e.g. Groceries'} /></FinanceFormField>}</div>
                                     <FinanceFormField fieldId="review-merchant" label="Merchant (optional)" error={fieldErrors.merchant}><Input id="review-merchant" data-finance-field="merchant" {...financeFieldErrorProps(fieldErrors, 'merchant', 'review-merchant')} maxLength={MAX_FINANCE_MERCHANT_LENGTH} value={form.merchant} onChange={(event) => setReviewField('merchant', event.target.value)} /></FinanceFormField>
-                                    <FinanceFormField fieldId="review-has-payee" label="Payee" error={fieldErrors.has_payee}><Toggle id="review-has-payee" dataFinanceField="has_payee" checked={form.has_payee} onChange={(hasPayee) => { setReviewField('has_payee', hasPayee); if (!hasPayee) setReviewField('payee_name', ''); }} label="Has a payee" error={Boolean(fieldErrors.has_payee)} ariaDescribedBy={fieldErrors.has_payee ? 'review-has-payee-error' : undefined} /></FinanceFormField>
+                                    <FinanceFormField fieldId="review-has-payee" label="Payee" error={fieldErrors.has_payee}><Toggle id="review-has-payee" dataFinanceField="has_payee" checked={form.has_payee} onChange={setReviewPayeeClassification} label="Is a payee" ariaLabel="Is a payee" error={Boolean(fieldErrors.has_payee)} ariaDescribedBy={fieldErrors.has_payee ? 'review-has-payee-error' : undefined} /></FinanceFormField>
                                     {form.has_payee && <FinanceFormField fieldId="review-payee" label="Payee" required error={fieldErrors.payee_name}><Input id="review-payee" data-finance-field="payee_name" {...financeFieldErrorProps(fieldErrors, 'payee_name', 'review-payee')} maxLength={MAX_FINANCE_PAYEE_LENGTH} value={form.payee_name} onChange={(event) => setReviewField('payee_name', event.target.value)} /></FinanceFormField>}
                                     <FinanceFormField fieldId="review-date" label="Date" required error={fieldErrors.transaction_date}><Input id="review-date" data-finance-field="transaction_date" {...financeFieldErrorProps(fieldErrors, 'transaction_date', 'review-date')} type="date" max={getLocalFinanceDate()} aria-describedby={[fieldErrors.transaction_date ? 'review-date-error' : '', isDateProposalPending ? 'date-proposal-help' : ''].filter(Boolean).join(' ') || undefined} value={form.transaction_date} onChange={(event) => { setReviewField('transaction_date', event.target.value); setIsDateProposalPending(false); }} />{isDateProposalPending && <span id="date-proposal-help" className="mt-1 block text-xs text-warning">No date was detected. Today is proposed; confirm this date before continuing.</span>}{isDateProposalPending && <Button type="button" variant="ghost" onClick={() => { setIsDateProposalPending(false); setFieldErrors((current) => ({ ...current, transaction_date: undefined })); }}>Use proposed date</Button>}</FinanceFormField>
                                     <FinanceFormField className="md:col-span-2" fieldId="review-notes" label="Notes" error={fieldErrors.notes}><Textarea id="review-notes" data-finance-field="notes" {...financeFieldErrorProps(fieldErrors, 'notes', 'review-notes')} maxLength={MAX_FINANCE_NOTES_LENGTH} value={form.notes} onChange={(event) => setReviewField('notes', event.target.value)} /></FinanceFormField>

@@ -11,7 +11,12 @@ import {
 } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAlert } from '@/lib/contexts/AlertContext';
-import { useAccess } from '@/lib/contexts/AccessContext';
+import {
+    FINANCE_SHARE_MESSAGE_TYPES,
+    FINANCE_SHARE_QUERY_PARAM,
+    parseFinanceShareWorkerMessage,
+} from '@/lib/finance/share/protocol';
+import { postFinanceShareWorkerMessage } from '@/lib/finance/share/workerClient';
 
 export interface IncomingFinanceShareFile {
     id: string;
@@ -24,42 +29,21 @@ interface FinanceShareTargetContextValue {
     removeFile: (id: string) => void;
 }
 
-type FinanceShareWorkerMessage = {
-    type?: unknown;
-    shareId?: unknown;
-    files?: unknown;
-    message?: unknown;
-};
-
 const FinanceShareTargetContext = createContext<FinanceShareTargetContextValue | null>(null);
-
-function serviceWorkerTarget() {
-    if (!('serviceWorker' in navigator)) return Promise.resolve<ServiceWorker | null>(null);
-    if (navigator.serviceWorker.controller) {
-        return Promise.resolve(navigator.serviceWorker.controller);
-    }
-    return navigator.serviceWorker.ready.then((registration) => registration.active);
-}
-
-async function postToServiceWorker(message: Record<string, unknown>) {
-    const worker = await serviceWorkerTarget();
-    worker?.postMessage(message);
-}
 
 function isFileArray(value: unknown): value is File[] {
     return Array.isArray(value) && value.every((entry) => entry instanceof File);
 }
 
 export function FinanceShareTargetProvider({ children }: PropsWithChildren) {
-    const access = useAccess();
     const pathname = usePathname();
     const router = useRouter();
     const { showError } = useAlert();
     const [files, setFiles] = useState<IncomingFinanceShareFile[]>([]);
 
     const acknowledge = useCallback((shareId: string) => {
-        void postToServiceWorker({
-            type: 'finance-share:acknowledge',
+        void postFinanceShareWorkerMessage({
+            type: FINANCE_SHARE_MESSAGE_TYPES.acknowledge,
             shareId,
         });
     }, []);
@@ -67,35 +51,33 @@ export function FinanceShareTargetProvider({ children }: PropsWithChildren) {
     useEffect(() => {
         if (!('serviceWorker' in navigator)) return;
 
-        const handleMessage = (event: MessageEvent<FinanceShareWorkerMessage>) => {
-            const message = event.data;
-            const shareId = typeof message?.shareId === 'string' ? message.shareId : '';
-            if (!shareId || typeof message?.type !== 'string') return;
+        const handleMessage = (event: MessageEvent<unknown>) => {
+            const message = parseFinanceShareWorkerMessage(event.data);
+            if (!message) return;
 
-            if (message.type === 'finance-share:missing' || message.type === 'finance-share:error') {
+            if (
+                message.type === FINANCE_SHARE_MESSAGE_TYPES.missing
+                || message.type === FINANCE_SHARE_MESSAGE_TYPES.error
+            ) {
                 showError(
-                    typeof message.message === 'string'
-                        ? message.message
-                        : 'The shared images could not be received. Share them again from the source app.'
+                    message.message
+                    || 'The shared images could not be received. Share them again from the source app.'
                 );
-                acknowledge(shareId);
-                if (window.location.search.includes('finance_share=')) router.replace(pathname);
+                acknowledge(message.shareId);
+                if (new URLSearchParams(window.location.search).has(FINANCE_SHARE_QUERY_PARAM)) {
+                    router.replace(pathname);
+                }
                 return;
             }
 
-            if (message.type !== 'finance-share:payload' || !isFileArray(message.files)) return;
+            if (message.type !== FINANCE_SHARE_MESSAGE_TYPES.payload) return;
 
-            if (!access) {
-                acknowledge(shareId);
-                showError('Sign in first, then return to the source app and share the images again.');
-                if (window.location.search.includes('finance_share=')) router.replace('/login');
-                return;
-            }
-
-            if (!access.allowedModules.includes('finance')) {
-                acknowledge(shareId);
-                showError('You do not have access to Finance. The shared images were discarded.');
-                if (window.location.search.includes('finance_share=')) router.replace(pathname);
+            if (!isFileArray(message.files)) {
+                acknowledge(message.shareId);
+                showError('The shared images were invalid. Share them again from the source app.');
+                if (new URLSearchParams(window.location.search).has(FINANCE_SHARE_QUERY_PARAM)) {
+                    router.replace(pathname);
+                }
                 return;
             }
 
@@ -103,21 +85,21 @@ export function FinanceShareTargetProvider({ children }: PropsWithChildren) {
                 id: window.crypto.randomUUID(),
                 file,
             })));
-            acknowledge(shareId);
+            acknowledge(message.shareId);
             router.replace('/finance/add');
         };
 
         navigator.serviceWorker.addEventListener('message', handleMessage);
 
-        const shareId = new URLSearchParams(window.location.search).get('finance_share');
-        void postToServiceWorker(
+        const shareId = new URLSearchParams(window.location.search).get(FINANCE_SHARE_QUERY_PARAM);
+        void postFinanceShareWorkerMessage(
             shareId
-                ? { type: 'finance-share:claim', shareId }
-                : { type: 'finance-share:ready' }
+                ? { type: FINANCE_SHARE_MESSAGE_TYPES.claim, shareId }
+                : { type: FINANCE_SHARE_MESSAGE_TYPES.ready }
         );
 
         return () => navigator.serviceWorker.removeEventListener('message', handleMessage);
-    }, [access, acknowledge, pathname, router, showError]);
+    }, [acknowledge, pathname, router, showError]);
 
     const value = useMemo<FinanceShareTargetContextValue>(() => ({
         files,

@@ -5,32 +5,42 @@ import {
     PUBLIC_AUTH_PATH_PREFIXES,
 } from '@/lib/auth/routes';
 
+type PendingCookie = {
+    name: string;
+    value: string;
+    options: CookieOptions;
+};
+
 export async function middleware(request: NextRequest) {
-    let supabaseResponse = NextResponse.next({
-        request,
-    });
+    const pendingCookies: PendingCookie[] = [];
+    const pendingHeaders = new Headers();
+
+    const applySupabaseState = (response: NextResponse) => {
+        pendingCookies.forEach(({ name, value, options }) => {
+            response.cookies.set({ name, value, ...options });
+        });
+        pendingHeaders.forEach((value, name) => {
+            response.headers.set(name, value);
+        });
+        return response;
+    };
 
     const supabase = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         {
             cookies: {
-                get(name: string) {
-                    return request.cookies.get(name)?.value;
+                getAll() {
+                    return request.cookies.getAll();
                 },
-                set(name: string, value: string, options: CookieOptions) {
-                    request.cookies.set({ name, value, ...options });
-                    supabaseResponse = NextResponse.next({
-                        request,
+                setAll(cookiesToSet, responseHeaders) {
+                    cookiesToSet.forEach(({ name, value }) => {
+                        request.cookies.set(name, value);
                     });
-                    supabaseResponse.cookies.set({ name, value, ...options });
-                },
-                remove(name: string, options: CookieOptions) {
-                    request.cookies.set({ name, value: '', ...options });
-                    supabaseResponse = NextResponse.next({
-                        request,
+                    pendingCookies.push(...cookiesToSet);
+                    Object.entries(responseHeaders).forEach(([name, value]) => {
+                        pendingHeaders.set(name, value);
                     });
-                    supabaseResponse.cookies.set({ name, value: '', ...options });
                 },
             },
         }
@@ -50,11 +60,7 @@ export async function middleware(request: NextRequest) {
     if (!isPublicPath && !user) {
         const url = request.nextUrl.clone();
         url.pathname = '/login';
-        const redirectResponse = NextResponse.redirect(url);
-        supabaseResponse.cookies.getAll().forEach((cookie) => {
-            redirectResponse.cookies.set(cookie);
-        });
-        return redirectResponse;
+        return applySupabaseState(NextResponse.redirect(url));
     }
 
     // If logged in and trying to access login page, redirect to dashboard
@@ -66,14 +72,10 @@ export async function middleware(request: NextRequest) {
     if (user && isLoginRoute && !isPasswordRecovery) {
         const url = request.nextUrl.clone();
         url.pathname = '/';
-        const redirectResponse = NextResponse.redirect(url);
-        supabaseResponse.cookies.getAll().forEach((cookie) => {
-            redirectResponse.cookies.set(cookie);
-        });
-        return redirectResponse;
+        return applySupabaseState(NextResponse.redirect(url));
     }
 
-    return supabaseResponse;
+    return applySupabaseState(NextResponse.next({ request }));
 }
 
 export const config = {

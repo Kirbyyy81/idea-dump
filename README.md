@@ -134,6 +134,19 @@ The share target is supported by the installed Android PWA. On iPhone and iPad, 
 
 Temporary share images and batch records are removed after terminal processing and verified Storage cleanup.
 
+### Service worker development
+
+[`service-worker/sw.ts`](service-worker/sw.ts) is the editable service-worker source. It imports the shared Finance message protocol from [`lib/finance/share/protocol.ts`](lib/finance/share/protocol.ts). [`public/sw.js`](public/sw.js) is generated deployment output and must not be edited directly.
+
+After changing the worker or its shared protocol, regenerate and verify the checked-in artifact:
+
+```bash
+npm run build:service-worker
+npm run check:service-worker
+```
+
+The application build regenerates the worker before Next.js compilation. The root and Finance share test commands verify that the checked-in output has not drifted from its typed source.
+
 ## Important Routes
 
 ### App routes

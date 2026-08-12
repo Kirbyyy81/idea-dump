@@ -28,14 +28,14 @@ test('accepts an optional merchant and no payee', () => {
     assert.deepEqual(getFinanceTransactionFieldErrors(validTransaction, '2026-08-09'), {});
 });
 
-test('requires a payee name only when Has a payee is selected', () => {
+test('requires a payee name only when Is a payee is selected', () => {
     assert.deepEqual(
         getFinanceTransactionFieldErrors({ ...validTransaction, has_payee: true }, '2026-08-09'),
         { payee_name: 'Enter the payee name' }
     );
     assert.deepEqual(
         getFinanceTransactionFieldErrors({ ...validTransaction, payee_name: 'Alice Tan' }, '2026-08-09'),
-        { has_payee: 'Select "Has a payee" to save a payee name' }
+        { has_payee: 'Select "Is a payee" to save a payee name' }
     );
     assert.deepEqual(
         getFinanceTransactionFieldErrors({ ...validTransaction, has_payee: true, payee_name: 'Alice Tan' }, '2026-08-09'),

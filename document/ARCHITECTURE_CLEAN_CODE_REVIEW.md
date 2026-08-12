@@ -2,7 +2,7 @@
 
 Original review date: 2026-07-31
 
-Progress tracker last verified: 2026-08-05
+Progress tracker last verified: 2026-08-12
 
 ## Purpose
 
@@ -404,17 +404,17 @@ daily-logs/
 
 Move domain-owned top-level helpers into their domain directories.
 
-### 11. A feature-specific provider is installed globally
+### 11. Finance share-target handling crosses application boundaries
 
-[`AuthenticatedAppShell`](../components/organisms/AuthenticatedAppShell.tsx) installs `FinanceShareTargetProvider` around every route, including public authentication routes that the persistent shell later bypasses. This makes a Finance-only browser workflow part of the global application composition and increases the responsibility of the root shell.
+Accepted Finance share files are now owned by `FinanceShareTargetProvider` inside the protected Finance layout. Leaving Finance unmounts that provider and discards files that were not submitted. Durable batches that were already committed continue processing independently.
 
-The provider also owns navigation, access checks, service-worker messaging, alerts, and temporary shared files. Its placement makes the Finance share-target protocol harder to reason about independently from authentication and navigation.
+`AuthenticatedAppShell` retains only a narrow `FinanceShareRejectionBridge` inside `AccessProvider`. It listens only when the user is signed out or lacks Finance access so pending service-worker files can be acknowledged, discarded, and explained instead of waiting for expiry. `AccessProvider` remains a generic RBAC context and does not own Finance or service-worker behavior.
 
 #### Recommendation
 
-- Install the Finance share-target provider only within the protected Finance boundary, or introduce a narrowly scoped global share-target adapter that hands validated events to Finance.
+- Keep accepted file state within the protected Finance boundary and keep the global rejection bridge free of Finance file state.
 - Keep service-worker transport separate from Finance page state and presentation.
-- Add end-to-end coverage for authenticated, unauthenticated, unauthorized, expired, and successfully claimed share payloads before relocating the provider.
+- Maintain the Finance share lifecycle suite covering authenticated success, signed-out and unauthorized rejection, expired payloads, navigation disposal, and multi-tab isolation.
 
 ### 12. Database type safety stops at the Supabase client boundary
 
@@ -429,25 +429,24 @@ This concern is separate from moving queries into repositories. A repository bou
 - Keep domain models distinct when they intentionally normalize or hide database fields.
 - Regenerate and review the database type whenever a canonical migration changes the exposed contract.
 
-### 13. The PWA service worker is a separate untyped application boundary
+### 13. The PWA service worker is a distinct build boundary
 
-[`public/sw.js`](../public/sw.js) is approximately 194 lines and implements caching, lifecycle handling, a Finance share-target protocol, temporary file ownership, message delivery, acknowledgements, and expiry behavior. Because it lives under `public/`, it is copied as-is rather than passing through the main TypeScript build.
+[`service-worker/sw.ts`](../service-worker/sw.ts) implements caching, lifecycle handling, temporary Finance file ownership, message delivery, acknowledgements, and expiry behavior. It imports the environment-independent protocol from [`lib/finance/share/protocol.ts`](../lib/finance/share/protocol.ts), is checked with a Web Worker-specific TypeScript configuration, and is bundled into [`public/sw.js`](../public/sw.js).
 
-The Finance share-target flow depends on a message contract shared informally between this service worker and `FinanceShareTargetProvider`, but that contract has no shared type or focused automated test.
+The React bridge, Finance provider, and service worker now consume the same typed message contract and runtime parsers. The application build regenerates the deployable worker, while root and Finance share tests reject generated-output drift. Focused tests cover valid and invalid messages, successful claims and acknowledgements, duplicate delivery prevention, expiry, invalid file submissions, and multi-tab isolation.
 
 #### Recommendation
 
-- Move service-worker source into a typed build input and emit the deployable `public/sw.js` artifact through a documented build step.
-- Define the share-target message protocol in one environment-independent module.
-- Add focused tests for claim, acknowledge, expiry, duplicate delivery, invalid payload, and client-navigation behavior.
-- Keep generated service-worker output out of manual edits and document how it is validated.
+- Keep `service-worker/sw.ts` as the only manually edited worker implementation.
+- Regenerate `public/sw.js` with `npm run build:service-worker` whenever the worker or protocol changes.
+- Keep drift verification and lifecycle tests in the root validation workflow.
 
 ## Testing and Tooling
 
 ### Current observations
 
 - The OCR service has a normal Vitest suite.
-- The main application uses several custom Node.js test scripts.
+- The main application now has a root Vitest runner and a top-level `tests/` directory for the Finance share lifecycle suite. Several older checks remain custom Node.js scripts.
 - All Finance source modules are strict TypeScript, while `allowJs` remains enabled in the main TypeScript configuration.
 - The GitHub workflows create pull requests and releases, but do not run application validation.
 - Phase 1 removed the automatic `predev: npm install`; dependency installation remains an explicit setup step.
@@ -575,7 +574,7 @@ idea-dump/
 2. Split access control into focused panels and hooks.
 3. Split the Finance review workflow.
 4. Separate navigation shell behavior from page containers.
-5. Move the Finance share-target provider out of the global application shell.
+5. Maintain end-to-end verification of the scoped Finance share-target boundary.
 6. Move initial data loading to server components where practical.
 
 ### Phase 5: OCR service boundary
@@ -588,19 +587,19 @@ idea-dump/
 
 ### Phase 6: PWA boundary
 
-1. Define the service-worker message protocol in a shared typed module.
-2. Move service-worker source into the TypeScript build workflow.
-3. Add focused protocol and lifecycle tests.
-4. Generate and verify the deployable `public/sw.js` artifact.
+1. Maintain the shared typed service-worker message protocol.
+2. Keep service-worker source in the TypeScript build workflow.
+3. Maintain focused protocol and lifecycle tests.
+4. Generate and verify the deployable `public/sw.js` artifact on every relevant change.
 
 ## Architecture Issue Progress Tracker
 
-Summary as of 2026-08-05:
+Summary as of 2026-08-12:
 
-- Done: 7
+- Done: 9
 - In progress: 0
 - Partial: 8
-- Not started: 7
+- Not started: 5
 - Blocked: 0
 
 | ID | Issue | Status | Current evidence and completion gate | Last updated |
@@ -610,7 +609,7 @@ Summary as of 2026-08-05:
 | AC-003 | `predev` installs dependencies | **Done** | Removed the `predev` script. Setup continues to require an explicit `npm install`, and no dependency or lockfile change was needed. | 2026-08-02 |
 | AC-004 | No-op route layouts | **Done** | Removed all eleven layouts that only returned `children`. The root layout and Finance authorization layout remain. | 2026-08-02 |
 | AC-005 | Legacy redirect route noise | **Done** | Removed five unused legacy routes after verifying PWA, Auth, and Film navigation use canonical paths. Retained and documented `/api-tools` because Supabase module metadata actively supplies it to runtime navigation. | 2026-08-02 |
-| AC-006 | Main-app test organization | **Partial** | OCR has Vitest, while the main app uses custom Node.js scripts. Done when the main app has a standard test runner, consistent test placement, and CI execution. | 2026-08-02 |
+| AC-006 | Main-app test organization | **Partial** | The main app now has a root Vitest runner and top-level `tests/` placement for the Finance share lifecycle suite. Several older checks remain custom Node.js scripts, and CI does not run the suite. Done when remaining tests use consistent placement and application validation runs in CI. | 2026-08-11 |
 | AC-007 | Remaining Finance JavaScript and `allowJs` | **Partial** | Converted all four Finance source modules to strict TypeScript and updated their focused test runners. Root TypeScript still enables `allowJs`. Done when `allowJs` is disabled without breaking the build or tests. | 2026-08-05 |
 | AC-008 | Domain type monolith | **Not started** | `lib/types.ts` is about 630 lines and has 71 importers. Done when domain types and runtime configuration have clear owners and cross-domain imports no longer depend on a monolith. | 2026-08-02 |
 | AC-009 | Untyped Supabase schema boundary | **Not started** | Supabase clients have no generated `Database` generic. Done when one reviewed generated type parameterizes browser, server, and admin clients and is refreshed with schema changes. | 2026-08-02 |
@@ -624,9 +623,9 @@ Summary as of 2026-08-05:
 | AC-017 | Client-heavy initial data loading | **Not started** | 26 of 33 remaining pages are client components and 24 pages use `useEffect()`. Done when practical initial reads move to server components and interactive client islands retain only browser state. | 2026-08-02 |
 | AC-018 | Component ownership ambiguity | **Partial** | The Log Viewer was moved into `app/log-viewer/_components/`, and route-private feature sections already exist. `AppShell` now owns rendering `components/molecules/PageHeader.tsx` for shared authenticated-page titles and optional actions. Shared Sidebar and Ticket workflows remain under `components/` because they are reused across feature routes, but ownership rules are not yet applied consistently everywhere. Done when shared UI, layout, cross-feature, and feature-private ownership rules are consistently applied. | 2026-08-04 |
 | AC-019 | Inconsistent non-route naming | **Partial** | Documented a `core/` convention for domain-wide layers. Moved the Logs normalizer to `lib/logs/core/normalization.ts`, the Project-only icon map to `lib/projects/icons.ts`, Film Roll lifecycle helpers to `lib/film/rolls/`, the Film Google Drive provider to `lib/film/integrations/`, and common layers to `lib/film/core/`, `lib/finance/core/`, `lib/logs/core/`, `lib/notes/core/`, `lib/projects/core/`, and `lib/tickets/core/`. `articleCreation` and `logViewer` remain naming and ownership outliers. Done when one convention is documented and applied without compatibility regressions. | 2026-08-06 |
-| AC-020 | Global Finance share-target provider | **Not started** | `FinanceShareTargetProvider` wraps every route through `AuthenticatedAppShell`. Done when the Finance workflow is scoped appropriately and authenticated, unauthorized, expired, and successful share flows are verified. | 2026-08-02 |
+| AC-020 | Global Finance share-target provider | **Done** | Accepted file state lives under the protected Finance layout and is discarded when that layout unmounts. A narrow global rejection bridge handles signed-out and unauthorized shares without adding Finance behavior to `AccessProvider`. Automated React lifecycle and service-worker tests cover authenticated success, signed-out and unauthorized rejection, expiry, navigation disposal, and multi-tab isolation. | 2026-08-11 |
 | AC-021 | OCR service source coupling | **Not started** | The OCR TypeScript and bundler aliases point to the application root. Done when both runtimes depend on an explicit shared package and OCR builds without application-source aliases. | 2026-08-02 |
-| AC-022 | Untyped and untested service-worker workflow | **Not started** | `public/sw.js` is about 194 lines and shares an informal protocol with React code. Done when source and protocol are typed, lifecycle behavior is tested, and generated output is verified. | 2026-08-02 |
+| AC-022 | Untyped service-worker workflow | **Done** | `service-worker/sw.ts` consumes the shared Finance protocol and runtime client-message parser, passes its Web Worker-specific typecheck, and bundles reproducibly into generated `public/sw.js`. Build and test scripts verify source/output drift, the workflow is documented, and focused tests cover valid and invalid messages, acknowledgement, duplicate prevention, expiry, invalid submissions, navigation disposal, and multi-tab isolation. | 2026-08-12 |
 
 ## Final Assessment
 

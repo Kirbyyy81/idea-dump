@@ -220,7 +220,7 @@ export function getFinanceTransactionFieldErrors(
         errors.payee_name = 'Enter the payee name';
     }
     if (fields.has_payee !== true && payeeName) {
-        errors.has_payee = 'Select "Has a payee" to save a payee name';
+        errors.has_payee = 'Select "Is a payee" to save a payee name';
     }
     if (payeeName.length > MAX_FINANCE_PAYEE_LENGTH) {
         errors.payee_name = `Payee must be ${MAX_FINANCE_PAYEE_LENGTH} characters or fewer`;
