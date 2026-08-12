@@ -1,0 +1,108 @@
+name: validate
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    name: Web application
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      APP_ORIGIN: http://localhost:3000
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-anon-key
+      SUPABASE_SERVICE_ROLE_KEY: ci-service-role-key
+      NEXT_PUBLIC_FINANCE_OCR_URL: http://localhost:8080
+      FINANCE_QUEUE_WAKE_SECRET: ci-finance-queue-wake-secret-00000000
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.0
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit dependencies
+        run: |
+          npm audit
+          npm audit --omit=dev
+
+      - name: Lint and type-check
+        run: |
+          npm run lint
+          npx tsc --noEmit
+
+      - name: Run application tests
+        run: |
+          npm test
+          npm run test:log-viewer
+
+      - name: Run Finance contract tests
+        run: |
+          npm run test:finance-security
+          npm run test:finance-validation
+          npm run test:finance-payees
+          npm run test:finance-idempotency
+          npm run test:finance-ordering
+          npm run test:finance-share
+
+      - name: Run API contract tests
+        run: |
+          npm run test:logs-api
+          npm run test:notes-api
+          npm run test:projects-api
+          npm run test:api-keys
+          npm run test:tickets
+          npm run test:openapi
+
+      - name: Build application
+        run: npm run build
+
+  finance_ocr:
+    name: Finance OCR service
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: services/finance-ocr
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.0
+          cache: npm
+          cache-dependency-path: services/finance-ocr/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit dependencies
+        run: |
+          npm audit
+          npm audit --omit=dev
+
+      - name: Type-check and test
+        run: |
+          npm run typecheck
+          npm test
+
+      - name: Build service
+        run: npm run build
