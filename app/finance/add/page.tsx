@@ -47,7 +47,6 @@ import {
     MAX_FINANCE_NAME_LENGTH,
     MAX_FINANCE_NOTES_LENGTH,
     MAX_FINANCE_PAYEE_LENGTH,
-    MAX_FINANCE_RECIPIENT_REFERENCE_LENGTH,
     MAX_FINANCE_REFERENCE_LENGTH,
     toPositiveFinanceAmount,
 } from '@/lib/finance/core/values';
@@ -56,7 +55,7 @@ import { useFinanceShareTarget } from '@/app/finance/_components/FinanceShareTar
 const NEW_SOURCE = '__new__';
 const MAX_FINANCE_UPLOAD_BYTES = 4 * 1024 * 1024;
 const FINANCE_UPLOAD_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
-const initialForm = { source_id: '', category_id: '', direction: 'expense' as FinanceTransactionDirection, amount: '', merchant: '', has_payee: false, payee_name: '', reference_number: '', recipient_reference: '', transaction_date: getLocalFinanceDate(), notes: '' };
+const initialForm = { source_id: '', category_id: '', direction: 'expense' as FinanceTransactionDirection, amount: '', merchant: '', has_payee: false, payee_name: '', reference_number: '', transaction_date: getLocalFinanceDate(), notes: '' };
 
 function financeOcrErrorMessage(error: unknown) {
     if (!(error instanceof FinanceOcrClientError)) {
@@ -313,14 +312,9 @@ export default function AddFinanceTransactionPage() {
             {form.has_payee && <FinanceFormField fieldId="manual-payee" label="Payee name" error={fieldErrors.payee_name} required>
                 <Input id="manual-payee" data-finance-field="payee_name" maxLength={MAX_FINANCE_PAYEE_LENGTH} value={form.payee_name} onChange={(event) => setManualField('payee_name', event.target.value)} {...financeFieldErrorProps(fieldErrors, 'payee_name', 'manual-payee')} />
             </FinanceFormField>}
-            <div className="grid gap-4 sm:grid-cols-2">
-                <FinanceFormField fieldId="manual-reference" label="Transaction reference" error={fieldErrors.reference_number}>
-                    <Input id="manual-reference" data-finance-field="reference_number" maxLength={MAX_FINANCE_REFERENCE_LENGTH} value={form.reference_number} onChange={(event) => setManualField('reference_number', event.target.value)} {...financeFieldErrorProps(fieldErrors, 'reference_number', 'manual-reference')} />
-                </FinanceFormField>
-                <FinanceFormField fieldId="manual-recipient-reference" label="Recipient reference" error={fieldErrors.recipient_reference}>
-                    <Input id="manual-recipient-reference" data-finance-field="recipient_reference" maxLength={MAX_FINANCE_RECIPIENT_REFERENCE_LENGTH} value={form.recipient_reference} onChange={(event) => setManualField('recipient_reference', event.target.value)} {...financeFieldErrorProps(fieldErrors, 'recipient_reference', 'manual-recipient-reference')} />
-                </FinanceFormField>
-            </div>
+            <FinanceFormField fieldId="manual-reference" label="Transaction reference" error={fieldErrors.reference_number}>
+                <Input id="manual-reference" data-finance-field="reference_number" maxLength={MAX_FINANCE_REFERENCE_LENGTH} value={form.reference_number} onChange={(event) => setManualField('reference_number', event.target.value)} {...financeFieldErrorProps(fieldErrors, 'reference_number', 'manual-reference')} />
+            </FinanceFormField>
             <FinanceFormField fieldId="manual-date" label="Date" error={fieldErrors.transaction_date} required>
                 <Input id="manual-date" data-finance-field="transaction_date" type="date" max={getLocalFinanceDate()} value={form.transaction_date} onChange={(event) => setManualField('transaction_date', event.target.value)} {...financeFieldErrorProps(fieldErrors, 'transaction_date', 'manual-date')} />
             </FinanceFormField>

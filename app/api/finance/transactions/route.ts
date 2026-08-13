@@ -19,6 +19,7 @@ import {
     updateFinanceTransactionForUser,
 } from '@/lib/finance/core/service';
 import { FINANCE_TIME_ZONE_HEADER, getFinanceDateInTimeZone } from '@/lib/finance/core/values';
+import { parseFinanceTransactionFilters } from '@/lib/finance/transactions/filters';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,10 +31,13 @@ export async function GET(request: NextRequest) {
         const sourceId = request.nextUrl.searchParams.get('source_id');
         const query = request.nextUrl.searchParams.get('q')?.trim().slice(0, 100).replace(/[,()*]/g, ' ') || null;
         if (sourceId && !isFinanceUuid(sourceId)) return jsonError('Source ID must be a valid UUID');
+        const filters = parseFinanceTransactionFilters(request.nextUrl.searchParams);
+        if ('error' in filters) return jsonError(filters.error);
         const data = await getFinanceTransactions(session.user.id, {
             status: isFinanceTransactionStatus(status) ? status : 'confirmed',
             sourceId,
             query,
+            ...filters.data,
         });
         return NextResponse.json({ data });
     } catch (error) {

@@ -1,7 +1,8 @@
 'use client';
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { FormEvent, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { AppShell } from '@/components/organisms/AppShell';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
@@ -39,7 +40,6 @@ import {
     MAX_FINANCE_MERCHANT_LENGTH,
     MAX_FINANCE_NOTES_LENGTH,
     MAX_FINANCE_PAYEE_LENGTH,
-    MAX_FINANCE_RECIPIENT_REFERENCE_LENGTH,
     MAX_FINANCE_REFERENCE_LENGTH,
     toPositiveFinanceAmount,
 } from '@/lib/finance/core/values';
@@ -50,6 +50,7 @@ import {
     financeFieldErrorProps,
     focusFirstFinanceError,
 } from '../_components/FinanceFormField';
+import { FINANCE_TRANSACTION_FILTER_KEYS } from '@/lib/finance/transactions/filters';
 
 const initialForm = {
     source_id: '',
@@ -60,7 +61,6 @@ const initialForm = {
     has_payee: false,
     payee_name: '',
     reference_number: '',
-    recipient_reference: '',
     transaction_date: getLocalFinanceDate(),
     notes: '',
 };
@@ -70,7 +70,18 @@ function transactionRecipient(transaction: FinanceTransaction) {
 }
 
 export default function FinanceTransactionsPage() {
+    return (
+        <Suspense fallback={<AppShell isLoading loadingMessage="Loading ledger..." contentClassName="p-5 md:p-8"><div /></AppShell>}>
+            <FinanceTransactionsContent />
+        </Suspense>
+    );
+}
+
+function FinanceTransactionsContent() {
     const { showError, showSuccess } = useAlert();
+    const pathname = usePathname();
+    const router = useRouter();
+    const searchParams = useSearchParams();
     const [sources, setSources] = useState<FinanceSource[]>([]);
     const [categories, setCategories] = useState<FinanceCategory[]>([]);
     const [transactions, setTransactions] = useState<FinanceTransaction[]>([]);
@@ -82,13 +93,20 @@ export default function FinanceTransactionsPage() {
     const [deleting, setDeleting] = useState<FinanceTransaction | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [fieldErrors, setFieldErrors] = useState<FinanceFieldErrors>({});
+    const filterQuery = searchParams.toString();
+    const categoryFilterId = searchParams.get(FINANCE_TRANSACTION_FILTER_KEYS.categoryId);
+    const dateFilter = searchParams.get(FINANCE_TRANSACTION_FILTER_KEYS.date);
+    const hasUncategorisedFilter = searchParams.get(FINANCE_TRANSACTION_FILTER_KEYS.uncategorised) === 'true';
 
     const loadData = useCallback(async (signal?: AbortSignal) => {
         try {
             const [sourcesPayload, categoriesPayload, transactionsPayload] = await Promise.all([
                 financeApiRequest<{ data: FinanceSource[] }>('/api/finance/sources', { signal }),
                 financeApiRequest<{ data: FinanceCategory[] }>('/api/finance/categories', { signal }),
-                financeApiRequest<{ data: FinanceTransaction[] }>('/api/finance/transactions', { signal }),
+                financeApiRequest<{ data: FinanceTransaction[] }>(
+                    `/api/finance/transactions${filterQuery ? `?${filterQuery}` : ''}`,
+                    { signal }
+                ),
             ]);
             const nextSources = (sourcesPayload.data || []) as FinanceSource[];
             setSources(nextSources);
@@ -101,10 +119,12 @@ export default function FinanceTransactionsPage() {
         } finally {
             if (!signal?.aborted) setIsLoading(false);
         }
-    }, [showError]);
+    }, [filterQuery, showError]);
 
     useEffect(() => {
         const controller = new AbortController();
+        setIsLoading(true);
+        setTransactions([]);
         void loadData(controller.signal);
         return () => controller.abort();
     }, [loadData]);
@@ -139,9 +159,34 @@ export default function FinanceTransactionsPage() {
     const filteredTransactions = useMemo(() => {
         const needle = query.trim().toLowerCase();
         if (!needle) return transactions;
-        return transactions.filter((transaction) => [transaction.merchant, transaction.finance_payee?.name, transaction.reference_number, transaction.recipient_reference, transaction.notes, transaction.category?.name, transaction.finance_source?.name]
+        return transactions.filter((transaction) => [transaction.merchant, transaction.finance_payee?.name, transaction.reference_number, transaction.notes, transaction.category?.name, transaction.finance_source?.name]
             .filter(Boolean).join(' ').toLowerCase().includes(needle));
     }, [query, transactions]);
+
+    const clearFilter = (key: string) => {
+        const next = new URLSearchParams(searchParams.toString());
+        next.delete(key);
+        const nextQuery = next.toString();
+        router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname);
+    };
+
+    const categoryFilterLabel = categoryFilterId
+        ? categories.find((category) => category.id === categoryFilterId)?.name || 'Category'
+        : null;
+    const activeFilters = [
+        categoryFilterId ? {
+            key: FINANCE_TRANSACTION_FILTER_KEYS.categoryId,
+            label: `Category: ${categoryFilterLabel}`,
+        } : null,
+        hasUncategorisedFilter ? {
+            key: FINANCE_TRANSACTION_FILTER_KEYS.uncategorised,
+            label: 'Category: Uncategorised',
+        } : null,
+        dateFilter ? {
+            key: FINANCE_TRANSACTION_FILTER_KEYS.date,
+            label: `Date: ${dateFilter}`,
+        } : null,
+    ].filter((filter): filter is NonNullable<typeof filter> => filter !== null);
 
     const setTransactionField = <Key extends keyof typeof initialForm>(key: Key, value: (typeof initialForm)[Key]) => {
         setForm((current) => ({ ...current, [key]: value }));
@@ -222,7 +267,6 @@ export default function FinanceTransactionsPage() {
             has_payee: Boolean(transaction.payee_id),
             payee_name: transaction.finance_payee?.name || '',
             reference_number: transaction.reference_number || '',
-            recipient_reference: transaction.recipient_reference || '',
             transaction_date: transaction.transaction_date,
             notes: transaction.notes || '',
         });
@@ -293,10 +337,7 @@ export default function FinanceTransactionsPage() {
                                     <Toggle id="edit-has-payee" dataFinanceField="has_payee" checked={form.has_payee} label="Is a payee" ariaLabel="Is a payee" ariaDescribedBy={fieldErrors.has_payee ? 'edit-has-payee-error' : undefined} error={Boolean(fieldErrors.has_payee)} onChange={setTransactionPayeeClassification} />
                                 </FinanceFormField>
                                 {form.has_payee && <FinanceFormField fieldId="edit-payee" label="Payee name" error={fieldErrors.payee_name} required><Input id="edit-payee" data-finance-field="payee_name" {...financeFieldErrorProps(fieldErrors, 'payee_name', 'edit-payee')} maxLength={MAX_FINANCE_PAYEE_LENGTH} value={form.payee_name} onChange={(event) => setTransactionField('payee_name', event.target.value)} /></FinanceFormField>}
-                                <div className="grid gap-4 sm:grid-cols-2">
-                                    <FinanceFormField fieldId="edit-reference" label="Transaction reference" error={fieldErrors.reference_number}><Input id="edit-reference" data-finance-field="reference_number" {...financeFieldErrorProps(fieldErrors, 'reference_number', 'edit-reference')} maxLength={MAX_FINANCE_REFERENCE_LENGTH} value={form.reference_number} onChange={(event) => setTransactionField('reference_number', event.target.value)} /></FinanceFormField>
-                                    <FinanceFormField fieldId="edit-recipient-reference" label="Recipient reference" error={fieldErrors.recipient_reference}><Input id="edit-recipient-reference" data-finance-field="recipient_reference" {...financeFieldErrorProps(fieldErrors, 'recipient_reference', 'edit-recipient-reference')} maxLength={MAX_FINANCE_RECIPIENT_REFERENCE_LENGTH} value={form.recipient_reference} onChange={(event) => setTransactionField('recipient_reference', event.target.value)} /></FinanceFormField>
-                                </div>
+                                <FinanceFormField fieldId="edit-reference" label="Transaction reference" error={fieldErrors.reference_number}><Input id="edit-reference" data-finance-field="reference_number" {...financeFieldErrorProps(fieldErrors, 'reference_number', 'edit-reference')} maxLength={MAX_FINANCE_REFERENCE_LENGTH} value={form.reference_number} onChange={(event) => setTransactionField('reference_number', event.target.value)} /></FinanceFormField>
                                 <FinanceFormField fieldId="edit-date" label="Date" error={fieldErrors.transaction_date} required><Input id="edit-date" data-finance-field="transaction_date" {...financeFieldErrorProps(fieldErrors, 'transaction_date', 'edit-date')} type="date" max={getLocalFinanceDate()} value={form.transaction_date} onChange={(event) => setTransactionField('transaction_date', event.target.value)} /></FinanceFormField>
                                 <FinanceFormField fieldId="edit-notes" label="Notes" error={fieldErrors.notes}><Textarea id="edit-notes" data-finance-field="notes" {...financeFieldErrorProps(fieldErrors, 'notes', 'edit-notes')} maxLength={MAX_FINANCE_NOTES_LENGTH} value={form.notes} onChange={(event) => setTransactionField('notes', event.target.value)} /></FinanceFormField>
                             </div>
@@ -306,6 +347,7 @@ export default function FinanceTransactionsPage() {
 
                     <section className="border border-border-default bg-bg-surface">
                         <div className="flex flex-col gap-3 border-b border-border-default px-5 py-4 sm:flex-row sm:items-center sm:justify-between"><h2 className="text-base font-bold">Ledger</h2><label className="sm:w-64"><span className="sr-only">Search transactions</span><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search transactions" /></label></div>
+                        {activeFilters.length > 0 && <div className="flex flex-wrap items-center gap-2 border-b border-border-default px-5 py-3" aria-label="Active transaction filters">{activeFilters.map((filter) => <span key={filter.key} className="inline-flex min-h-8 items-center gap-1 rounded-full border border-border-subtle bg-bg-subtle py-1 pl-3 pr-1 text-xs font-bold text-text-secondary"><span>{filter.label}</span><button type="button" className="grid size-8 place-items-center rounded-full hover:bg-bg-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-border-dark" aria-label={`Clear ${filter.label} filter`} onClick={() => clearFilter(filter.key)}><CloseDoodleIcon size={14} /></button></span>)}</div>}
                         <div className="divide-y divide-border-default" aria-live="polite" aria-busy={isLoading}>
                             {filteredTransactions.map((transaction) => {
                                 const isIncome = transaction.direction === 'income';
@@ -318,7 +360,7 @@ export default function FinanceTransactionsPage() {
                                             <div className="min-w-0">
                                                 <p className="truncate font-semibold">{transactionRecipient(transaction)}</p>
                                                 {transaction.finance_payee?.name && transaction.merchant && <p className="truncate text-sm text-text-secondary">Merchant: {transaction.merchant}</p>}
-                                                <p className="text-sm text-text-muted">{transaction.finance_source?.name || 'Unknown source'} - {transaction.category?.name || 'Uncategorised'} - {transaction.transaction_date}{transaction.reference_number ? ` - Ref ${transaction.reference_number}` : ''}{transaction.recipient_reference ? ` - Recipient ref ${transaction.recipient_reference}` : ''}</p>
+                                                <p className="text-sm text-text-muted">{transaction.finance_source?.name || 'Unknown source'} - {transaction.category?.name || 'Uncategorised'} - {transaction.transaction_date}{transaction.reference_number ? ` - Ref ${transaction.reference_number}` : ''}</p>
                                             </div>
                                         </div>
                                         <div className="flex flex-wrap items-center justify-end gap-2">

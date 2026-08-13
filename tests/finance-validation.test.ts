@@ -5,7 +5,6 @@ import {
     MAX_FINANCE_MERCHANT_LENGTH,
     MAX_FINANCE_NOTES_LENGTH,
     MAX_FINANCE_PAYEE_LENGTH,
-    MAX_FINANCE_RECIPIENT_REFERENCE_LENGTH,
     MAX_FINANCE_REFERENCE_LENGTH,
 } from '@/lib/finance/core/values';
 
@@ -18,7 +17,6 @@ const validTransaction = {
     has_payee: false,
     payee_name: '',
     reference_number: '',
-    recipient_reference: '',
     transaction_date: '2026-08-08',
     notes: '',
 };
@@ -63,7 +61,6 @@ describe('Finance transaction validation', () => {
             has_payee: true,
             payee_name: 'p'.repeat(MAX_FINANCE_PAYEE_LENGTH + 1),
             reference_number: 'r'.repeat(MAX_FINANCE_REFERENCE_LENGTH + 1),
-            recipient_reference: 'x'.repeat(MAX_FINANCE_RECIPIENT_REFERENCE_LENGTH + 1),
             transaction_date: '2026-08-10',
             notes: 'n'.repeat(MAX_FINANCE_NOTES_LENGTH + 1),
         }, '2026-08-09');
@@ -74,7 +71,6 @@ describe('Finance transaction validation', () => {
             'merchant',
             'notes',
             'payee_name',
-            'recipient_reference',
             'reference_number',
             'source_id',
             'transaction_date',

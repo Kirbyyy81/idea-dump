@@ -568,7 +568,7 @@ export class SupabaseFinanceRepository implements FinanceRepository, ShareQueueR
         ) {
             return null;
         }
-        const { data, error } = await this.secretClient.rpc('finance_confirm_candidate_v2', {
+        const { data, error } = await this.secretClient.rpc('finance_confirm_candidate_v3', {
             p_user_id: input.userId,
             p_candidate_id: candidate.id,
             p_source_id: payload.source_id,
@@ -578,10 +578,9 @@ export class SupabaseFinanceRepository implements FinanceRepository, ShareQueueR
             p_merchant: payload.merchant,
             p_payee_name: payload.payee_name,
             p_transaction_date: payload.transaction_date,
-            p_notes: null,
+            p_notes: payload.notes,
             p_currency: payload.currency,
             p_reference_number: payload.reference_number ?? payload.reference ?? null,
-            p_recipient_reference: payload.recipient_reference,
             p_allow_duplicate: false,
             p_duplicate_override_reason: null,
             p_confirmation_mode: 'automatic',

@@ -456,7 +456,6 @@ export interface FinanceTransaction {
     merchant: string | null;
     payee_id: string | null;
     reference_number: string | null;
-    recipient_reference: string | null;
     transaction_date: string;
     notes: string | null;
     source: FinanceTransactionSource;
@@ -537,7 +536,7 @@ export interface FinanceCandidatePayload {
     source_id: string | null;
     category_id: string | null;
     reference_number: string | null;
-    recipient_reference: string | null;
+    notes: string | null;
     /** Compatibility key retained for candidates created before the OCR contract migration. */
     reference?: string | null;
     matched_rule_names: string[];

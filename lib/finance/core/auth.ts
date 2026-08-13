@@ -137,7 +137,6 @@ export function normalizeFinanceTransaction(transaction: FinanceTransaction) {
         currency: transaction.currency || FINANCE_V1_CURRENCY,
         payee_id: transaction.payee_id || null,
         reference_number: transaction.reference_number || null,
-        recipient_reference: transaction.recipient_reference || null,
     };
 }
 

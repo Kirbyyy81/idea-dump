@@ -45,9 +45,8 @@ describe('Finance transaction idempotency', () => {
             merchant: 'Merchant',
             payee_name: 'Alice Tan',
             reference_number: null,
-            recipient_reference: 'Dinner share',
             transaction_date: '2026-07-23',
-            notes: null,
+            notes: 'Dinner share',
         };
         const existing = {
             ...requested,
@@ -62,7 +61,7 @@ describe('Finance transaction idempotency', () => {
         expect(isManualTransactionReplay(existing, { ...requested, payee_name: 'Bob Lee' })).toBe(false);
         expect(isManualTransactionReplay(existing, {
             ...requested,
-            recipient_reference: 'Lunch share',
+            notes: 'Lunch share',
         })).toBe(false);
     });
 });

@@ -10,7 +10,10 @@ import { FINANCE_V1_CURRENCY } from '@/lib/finance/core/constants';
 import { applyLearnedReferenceRules } from '@/lib/finance/ocr/fieldLearning';
 import { normalizeFinanceMerchantKey, normalizeFinancePayeeKey } from '@/lib/finance/ocr/normalizer';
 import { extractFinanceReferenceNumber } from '@/lib/finance/ocr/reference';
-import { extractFinanceRecipientReference } from '@/lib/finance/ocr/recipientReference';
+import {
+    extractFinanceRecipientReference,
+    mergeFinanceRecipientReferenceIntoNotes,
+} from '@/lib/finance/ocr/recipientReference';
 import { detectFinanceSource } from '@/lib/finance/ocr/sourceDetection';
 
 interface ParsedCandidate {
@@ -209,6 +212,7 @@ export function parseFinanceText(
         sourceDetectionSignals.map((signal) => signal.source_id)
     ).size > 1;
     const parties = parseParties(lines, payees);
+    const recipientReference = extractFinanceRecipientReference(normalizedText);
     const payload: FinanceCandidatePayload = {
         amount: parseAmount(lines),
         currency: FINANCE_V1_CURRENCY,
@@ -220,7 +224,7 @@ export function parseFinanceText(
         source_id: sourceDetection.sourceId,
         category_id: null,
         reference_number: extractFinanceReferenceNumber(normalizedText),
-        recipient_reference: extractFinanceRecipientReference(normalizedText),
+        notes: mergeFinanceRecipientReferenceIntoNotes(recipientReference, null),
         matched_rule_names: [],
         learned_field_rule_ids: [],
         duplicate_transaction_id: null,

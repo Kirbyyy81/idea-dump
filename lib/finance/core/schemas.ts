@@ -79,7 +79,6 @@ export interface FinanceTransactionInput {
     merchant: string | null;
     payee_name: string | null;
     reference_number: string | null;
-    recipient_reference: string | null;
     transaction_date: string;
     notes: string | null;
 }
@@ -354,7 +353,6 @@ export function parseFinanceTransaction(
             merchant: toNullableFinanceText(body.merchant),
             payee_name: body.has_payee === true ? toNullableFinanceText(body.payee_name) : null,
             reference_number: normalizeFinanceReferenceNumber(body.reference_number),
-            recipient_reference: toNullableFinanceText(body.recipient_reference),
             transaction_date: transactionDate,
             notes: toNullableFinanceText(body.notes),
         },

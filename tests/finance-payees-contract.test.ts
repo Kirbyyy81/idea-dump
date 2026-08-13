@@ -9,6 +9,12 @@ const sql = fs.readFileSync(path.join(
     'migrations',
     '20260809143246_add_finance_payees.sql'
 ), 'utf8');
+const notesSql = fs.readFileSync(path.join(
+    root,
+    'supabase',
+    'migrations',
+    '20260813034905_merge_recipient_reference_into_notes.sql'
+), 'utf8');
 const duplicateSource = fs.readFileSync(path.join(
     root,
     'lib',
@@ -24,12 +30,12 @@ const repositorySource = fs.readFileSync(path.join(
     'repository.ts'
 ), 'utf8');
 
-function functionBody(name: string) {
-    const start = sql.indexOf(`create function ${name}(`);
+function functionBody(name: string, source = sql) {
+    const start = source.indexOf(`create function ${name}(`);
     expect(start, `Missing function ${name}`).not.toBe(-1);
-    const end = sql.indexOf('\n$function$;', start);
+    const end = source.indexOf('\n$function$;', start);
     expect(end, `Unterminated function ${name}`).not.toBe(-1);
-    return sql.slice(start, end);
+    return source.slice(start, end);
 }
 
 describe('Finance payee migration contract', () => {
@@ -100,7 +106,39 @@ describe('Finance payee migration contract', () => {
 
     it('keeps duplicate and repository handling aligned with payee semantics', () => {
         expect(duplicateSource).not.toMatch(/recipient_reference/);
-        expect(repositorySource).toMatch(/recipient_reference\.ilike/);
+        expect(repositorySource).not.toMatch(/recipient_reference\.ilike/);
         expect(repositorySource).toMatch(/finance_payee:dim_finance_payees/);
+    });
+
+    it('moves recipient references into notes and replaces mutation RPCs directly', () => {
+        expect(notesSql).toMatch(/update public\.finance_transactions[\s\S]*recipient_reference[\s\S]*E'\\n'/);
+        expect(notesSql).toMatch(/payload - 'recipient_reference'/);
+        expect(notesSql).toMatch(/drop column recipient_reference/);
+        expect(notesSql).toMatch(/drop function public\.finance_create_manual_transaction_v1/);
+        expect(notesSql).toMatch(/drop function public\.finance_confirm_candidate_v2/);
+        expect(notesSql).toMatch(/drop function public\.finance_update_transaction_v2/);
+        expect(notesSql).toMatch(/char_length\(notes\) <= 2500/);
+
+        for (const name of [
+            'public.finance_create_manual_transaction_v2',
+            'public.finance_confirm_candidate_v3',
+            'public.finance_update_transaction_v3',
+        ]) {
+            const escapedName = name.replaceAll('.', '[.]');
+            expect(notesSql).toMatch(new RegExp(`grant execute on function ${escapedName}`));
+            expect(notesSql).not.toMatch(new RegExp(
+                `grant execute on function ${escapedName}[\\s\\S]*?to (?:anon|authenticated)`
+            ));
+        }
+
+        const confirmV3 = functionBody('public.finance_confirm_candidate_v3', notesSql);
+        const updateV3 = functionBody('public.finance_update_transaction_v3', notesSql);
+        expect(confirmV3).toMatch(/candidate_row\.payload -> 'notes'/);
+        expect(confirmV3).not.toMatch(/recipient_reference/);
+        expect(updateV3).toMatch(/'payee_name'/);
+        expect(updateV3).not.toMatch(/recipient_reference/);
+        expect(repositorySource).toMatch(/finance_create_manual_transaction_v2/);
+        expect(repositorySource).toMatch(/finance_confirm_candidate_v3/);
+        expect(repositorySource).toMatch(/finance_update_transaction_v3/);
     });
 });

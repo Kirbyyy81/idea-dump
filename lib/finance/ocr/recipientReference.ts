@@ -37,3 +37,17 @@ export function extractFinanceRecipientReference(text: string) {
 
     return null;
 }
+
+export function mergeFinanceRecipientReferenceIntoNotes(
+    recipientReference: string | null | undefined,
+    notes: string | null | undefined,
+) {
+    const reference = recipientReference?.trim() || '';
+    const existingNotes = notes?.trim() || '';
+    if (!reference) return existingNotes || null;
+    if (!existingNotes) return reference;
+    if (existingNotes === reference || existingNotes.split(/\r?\n/).includes(reference)) {
+        return existingNotes;
+    }
+    return `${reference}\n${existingNotes}`;
+}

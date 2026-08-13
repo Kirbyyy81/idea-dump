@@ -49,7 +49,6 @@ import {
     MAX_FINANCE_NAME_LENGTH,
     MAX_FINANCE_NOTES_LENGTH,
     MAX_FINANCE_PAYEE_LENGTH,
-    MAX_FINANCE_RECIPIENT_REFERENCE_LENGTH,
     MAX_FINANCE_REFERENCE_LENGTH,
     toPositiveFinanceAmount,
 } from '@/lib/finance/core/values';
@@ -78,7 +77,6 @@ interface ReviewForm {
     has_payee: boolean;
     payee_name: string;
     reference_number: string;
-    recipient_reference: string;
     transaction_date: string;
     notes: string;
     allow_duplicate: boolean;
@@ -120,9 +118,8 @@ function formFromCandidate(candidate: FinanceCandidateTransaction): ReviewForm {
         has_payee: Boolean(payload.payee_name || payload.payee_id),
         payee_name: payload.payee_name || '',
         reference_number: payload.reference_number || payload.reference || '',
-        recipient_reference: payload.recipient_reference || '',
         transaction_date: payload.transaction_date || getLocalFinanceDate(),
-        notes: '',
+        notes: payload.notes || '',
         allow_duplicate: false,
         duplicate_override_reason: '',
     };
@@ -434,10 +431,7 @@ export default function FinanceReviewPage() {
                                     </FinanceFormField>
                                     <FinanceFormField fieldId="review-amount" label="Amount" required error={fieldErrors.amount}><Input id="review-amount" data-finance-field="amount" {...financeFieldErrorProps(fieldErrors, 'amount', 'review-amount')} type="number" min="0.01" max={MAX_FINANCE_AMOUNT} step="0.01" value={form.amount} onChange={(event) => setReviewField('amount', event.target.value)} /></FinanceFormField>
                                     <FinanceFormField fieldId="review-currency" label="Currency"><Input id="review-currency" value="MYR" readOnly aria-readonly="true" /></FinanceFormField>
-                                    <div className="grid gap-4 md:col-span-2 md:grid-cols-2">
-                                        <FinanceFormField fieldId="review-reference" label="Transaction reference" error={fieldErrors.reference_number}><Input id="review-reference" data-finance-field="reference_number" {...financeFieldErrorProps(fieldErrors, 'reference_number', 'review-reference')} maxLength={MAX_FINANCE_REFERENCE_LENGTH} value={form.reference_number} onChange={(event) => setReviewField('reference_number', event.target.value)} /></FinanceFormField>
-                                        <FinanceFormField fieldId="review-recipient-reference" label="Recipient reference" error={fieldErrors.recipient_reference}><Input id="review-recipient-reference" data-finance-field="recipient_reference" {...financeFieldErrorProps(fieldErrors, 'recipient_reference', 'review-recipient-reference')} maxLength={MAX_FINANCE_RECIPIENT_REFERENCE_LENGTH} value={form.recipient_reference} onChange={(event) => setReviewField('recipient_reference', event.target.value)} /></FinanceFormField>
-                                    </div>
+                                    <FinanceFormField className="md:col-span-2" fieldId="review-reference" label="Transaction reference" error={fieldErrors.reference_number}><Input id="review-reference" data-finance-field="reference_number" {...financeFieldErrorProps(fieldErrors, 'reference_number', 'review-reference')} maxLength={MAX_FINANCE_REFERENCE_LENGTH} value={form.reference_number} onChange={(event) => setReviewField('reference_number', event.target.value)} /></FinanceFormField>
                                     <div className="space-y-4"><FinanceFormField fieldId="review-source" label="Source" required error={fieldErrors.source_id}><Select id="review-source" dataFinanceField="source_id" error={Boolean(fieldErrors.source_id)} ariaDescribedBy={fieldErrors.source_id ? 'review-source-error' : undefined} ariaLabel="Transaction source" value={form.source_id} onChange={(source_id) => setReviewField('source_id', source_id)} placeholder="Choose a source" options={[...sources.filter((source) => !source.is_archived).map((source) => ({ value: source.id, label: source.name })), { value: NEW_SOURCE, label: '+ Add new source' }]} /></FinanceFormField>{form.source_id === NEW_SOURCE && <FinanceFormField fieldId="review-new-source" label="New source name" required error={fieldErrors.new_source_name}><Input id="review-new-source" data-finance-field="new_source_name" {...financeFieldErrorProps(fieldErrors, 'new_source_name', 'review-new-source')} maxLength={MAX_FINANCE_NAME_LENGTH} value={newSourceName} onChange={(event) => { setNewSourceName(event.target.value); setFieldErrors((current) => ({ ...current, new_source_name: undefined })); }} placeholder="e.g. Maybank" /></FinanceFormField>}</div>
                                     <div className="space-y-4"><FinanceFormField fieldId="review-category" label="Category" error={fieldErrors.category_id}><Select id="review-category" dataFinanceField="category_id" error={Boolean(fieldErrors.category_id)} ariaDescribedBy={fieldErrors.category_id ? 'review-category-error' : undefined} ariaLabel="Transaction category" value={form.category_id} onChange={(category_id) => setReviewField('category_id', category_id)} placeholder="Uncategorised" options={[{ value: '', label: 'Uncategorised' }, ...availableCategories, { value: NEW_CATEGORY, label: '+ Add new category' }]} /></FinanceFormField>{form.category_id === NEW_CATEGORY && <FinanceFormField fieldId="review-new-category" label="New category name" required error={fieldErrors.new_category_name}><Input id="review-new-category" data-finance-field="new_category_name" {...financeFieldErrorProps(fieldErrors, 'new_category_name', 'review-new-category')} maxLength={MAX_FINANCE_NAME_LENGTH} value={newCategoryName} onChange={(event) => { setNewCategoryName(event.target.value); setFieldErrors((current) => ({ ...current, new_category_name: undefined })); }} placeholder={form.direction === 'income' ? 'e.g. Salary' : 'e.g. Groceries'} /></FinanceFormField>}</div>
                                     <FinanceFormField fieldId="review-merchant" label="Merchant (optional)" error={fieldErrors.merchant}><Input id="review-merchant" data-finance-field="merchant" {...financeFieldErrorProps(fieldErrors, 'merchant', 'review-merchant')} maxLength={MAX_FINANCE_MERCHANT_LENGTH} value={form.merchant} onChange={(event) => setReviewField('merchant', event.target.value)} /></FinanceFormField>
