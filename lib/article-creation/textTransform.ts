@@ -1,7 +1,7 @@
 import {
     DEFAULT_IMAGE_SUFFIX,
     IMAGE_NAME_PREFIX,
-} from '@/lib/articleCreation/constants';
+} from '@/lib/article-creation/constants';
 
 export function toSlug(input: string): string {
     return input

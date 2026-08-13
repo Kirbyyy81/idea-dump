@@ -3,8 +3,8 @@
 import { Badge } from '@/components/atoms/Badge';
 import { Textarea } from '@/components/atoms/Textarea';
 import { cn } from '@/lib/utils';
-import { LogEvent, Transaction } from '@/lib/logViewer/types';
-import { transactionHasError } from '@/lib/logViewer/transactions';
+import { LogEvent, Transaction } from '@/lib/log-viewer/types';
+import { transactionHasError } from '@/lib/log-viewer/transactions';
 import { EventHeader } from './EventHeader';
 import { JsonOrText } from './JsonTree';
 import { AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react';

@@ -1,7 +1,7 @@
 'use client';
 
 import { Textarea } from '@/components/atoms/Textarea';
-import { LogEvent, UnparsedLogLine } from '@/lib/logViewer/types';
+import { LogEvent, UnparsedLogLine } from '@/lib/log-viewer/types';
 import { EventHeader } from './EventHeader';
 
 export function StandaloneLines({

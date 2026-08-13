@@ -1,6 +1,6 @@
 'use client';
 
-import { LogEvent } from '@/lib/logViewer/types';
+import { LogEvent } from '@/lib/log-viewer/types';
 
 export function EventHeader({ event }: { event: LogEvent }) {
   return (
