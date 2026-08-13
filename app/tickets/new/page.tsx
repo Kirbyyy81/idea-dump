@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/organisms/AppShell';
-import { TicketForm } from '@/components/organisms/TicketForm';
+import { TicketForm } from '@/app/tickets/_components/TicketForm';
 import { PageLoader } from '@/components/atoms/Loader';
 import { createTicket } from '@/lib/tickets/core/client';
 import { CreateTicketInput, Project } from '@/lib/types';
