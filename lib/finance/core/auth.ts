@@ -78,12 +78,6 @@ export function toBoundedNullableText(value: unknown, maxLength: number) {
     return text && text.length <= maxLength ? text : null;
 }
 
-export function isFinanceTextWithinLength(value: unknown, maxLength: number) {
-    return value === undefined
-        || value === null
-        || (typeof value === 'string' && value.trim().length <= maxLength);
-}
-
 export function isFinanceUuid(value: unknown): value is string {
     return typeof value === 'string'
         && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value.trim());
