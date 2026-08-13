@@ -43,11 +43,11 @@ describe('Finance amount integrity', () => {
         expect(getFinanceTransactionTextError({
             merchant: 'm'.repeat(500),
             reference_number: 'r'.repeat(200),
-            notes: 'n'.repeat(2000),
+            notes: 'n'.repeat(2500),
         })).toBeNull();
         expect(getFinanceTransactionTextError({ merchant: 'm'.repeat(501) })).toMatch(/Merchant/);
         expect(getFinanceTransactionTextError({ reference_number: 'r'.repeat(201) })).toMatch(/Reference/);
-        expect(getFinanceTransactionTextError({ notes: 'n'.repeat(2001) })).toMatch(/Notes/);
+        expect(getFinanceTransactionTextError({ notes: 'n'.repeat(2501) })).toMatch(/Notes/);
     });
 });
 

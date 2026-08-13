@@ -4,7 +4,7 @@ import {
   PairingConfidence,
   Transaction,
   UnparsedLogLine,
-} from '@/lib/logViewer/types';
+} from '@/lib/log-viewer/types';
 
 function isRequest(event: LogEvent): boolean {
   return event.lineType === 'request';

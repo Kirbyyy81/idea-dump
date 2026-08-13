@@ -35,6 +35,7 @@
 - Return JSON errors with an appropriate status and a stable user-safe message.
 - Do not expose raw database or provider errors to clients.
 - Log enough route and stage context to diagnose failures without logging secrets or private payloads.
+- Use `lib/api/` response helpers for routes migrated to the shared API contract. Preserve an external endpoint's existing contract until its consumer and OpenAPI definition are migrated together.
 
 ## Validation
 

@@ -10,8 +10,8 @@ import {
     DEFAULT_IMAGE_SUFFIX,
     IMAGE_NAME_PREFIX,
     IMAGE_SUFFIX_OPTIONS,
-} from '@/lib/articleCreation/constants';
-import { buildImageName, toSlug } from '@/lib/articleCreation/textTransform';
+} from '@/lib/article-creation/constants';
+import { buildImageName, toSlug } from '@/lib/article-creation/textTransform';
 
 export function SlugImageNameCard() {
     const [title, setTitle] = useState('');

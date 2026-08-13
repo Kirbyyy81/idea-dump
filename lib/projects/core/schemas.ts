@@ -29,17 +29,33 @@ export interface ProjectIngestCommand {
     tags: string[];
 }
 
-export type ProjectValidationResult<T> = { data: T } | { error: string };
+export interface ProjectValidationError {
+    error: {
+        message: string;
+        fieldErrors?: Record<string, string>;
+    };
+}
+
+export type ProjectValidationResult<T> = { data: T } | ProjectValidationError;
 export type ProjectUpdateValidationResult = {
     id: string;
     data: ProjectUpdateCommand;
-} | { error: string };
+} | ProjectValidationError;
+
+function validationError(message: string, fieldErrors?: Record<string, string>): ProjectValidationError {
+    return {
+        error: {
+            message,
+            ...(fieldErrors ? { fieldErrors } : {}),
+        },
+    };
+}
 
 export async function readProjectRequestBody(request: Request): Promise<ProjectValidationResult<unknown>> {
     try {
         return { data: await request.json() };
     } catch {
-        return { error: 'Request body must be valid JSON' };
+        return validationError('Request body must be valid JSON');
     }
 }
 
@@ -62,7 +78,7 @@ function isPriority(value: unknown): value is Priority {
 
 export function parseProjectId(value: unknown): ProjectValidationResult<string> {
     const id = requiredText(value);
-    return id ? { data: id } : { error: 'Project ID is required' };
+    return id ? { data: id } : validationError('Project ID is required', { id: 'Project ID is required' });
 }
 
 export function parseProjectLookupQuery(searchParams: URLSearchParams): ProjectValidationResult<{
@@ -78,17 +94,21 @@ export function parseProjectLookupQuery(searchParams: URLSearchParams): ProjectV
 }
 
 export function parseCreateProject(body: unknown): ProjectValidationResult<ProjectCreateCommand> {
-    if (!isRecord(body)) return { error: 'Request body must be an object' };
+    if (!isRecord(body)) return validationError('Request body must be an object');
 
     const title = requiredText(body.title);
-    if (!title) return { error: 'Title is required' };
+    if (!title) return validationError('Title is required', { title: 'Title is required' });
     if (body.priority !== undefined && !isPriority(body.priority)) {
-        return { error: 'Priority must be low, medium, or high' };
+        return validationError('Priority must be low, medium, or high', {
+            priority: 'Priority must be low, medium, or high',
+        });
     }
 
     for (const field of ['description', 'prd_content', 'github_url', 'deploy_url'] as const) {
         if (body[field] !== undefined && nullableText(body[field]) === undefined) {
-            return { error: `${field} must be a string or null` };
+            return validationError(`${field} must be a string or null`, {
+                [field]: `${field} must be a string or null`,
+            });
         }
     }
 
@@ -105,22 +125,28 @@ export function parseCreateProject(body: unknown): ProjectValidationResult<Proje
 }
 
 export function parseProjectIngest(body: unknown): ProjectValidationResult<ProjectIngestCommand> {
-    if (!isRecord(body)) return { error: 'Request body must be an object' };
+    if (!isRecord(body)) return validationError('Request body must be an object');
 
     const title = requiredText(body.title);
-    if (!title) return { error: 'Title is required' };
+    if (!title) return validationError('Title is required', { title: 'Title is required' });
 
     for (const field of ['description', 'prd_content'] as const) {
         if (body[field] !== undefined && nullableText(body[field]) === undefined) {
-            return { error: `${field} must be a string or null` };
+            return validationError(`${field} must be a string or null`, {
+                [field]: `${field} must be a string or null`,
+            });
         }
     }
 
     if (body.tags !== undefined && !Array.isArray(body.tags)) {
-        return { error: 'tags must be an array of strings' };
+        return validationError('tags must be an array of strings', {
+            tags: 'tags must be an array of strings',
+        });
     }
     if (Array.isArray(body.tags) && body.tags.some((tag) => typeof tag !== 'string')) {
-        return { error: 'tags must be an array of strings' };
+        return validationError('tags must be an array of strings', {
+            tags: 'tags must be an array of strings',
+        });
     }
 
     return {
@@ -136,7 +162,7 @@ export function parseProjectIngest(body: unknown): ProjectValidationResult<Proje
 }
 
 export function parseUpdateProject(body: unknown): ProjectUpdateValidationResult {
-    if (!isRecord(body)) return { error: 'Request body must be an object' };
+    if (!isRecord(body)) return validationError('Request body must be an object');
 
     const id = parseProjectId(body.id);
     if ('error' in id) return id;
@@ -144,27 +170,39 @@ export function parseUpdateProject(body: unknown): ProjectUpdateValidationResult
     const data: ProjectUpdateCommand = {};
     if (body.title !== undefined) {
         const title = requiredText(body.title);
-        if (!title) return { error: 'Title is required' };
+        if (!title) return validationError('Title is required', { title: 'Title is required' });
         data.title = title;
     }
 
     for (const field of ['description', 'prd_content', 'github_url', 'deploy_url'] as const) {
         if (body[field] === undefined) continue;
         const value = nullableText(body[field]);
-        if (value === undefined) return { error: `${field} must be a string or null` };
+        if (value === undefined) {
+            return validationError(`${field} must be a string or null`, {
+                [field]: `${field} must be a string or null`,
+            });
+        }
         data[field] = value;
     }
 
     if (body.priority !== undefined) {
-        if (!isPriority(body.priority)) return { error: 'Priority must be low, medium, or high' };
+        if (!isPriority(body.priority)) {
+            return validationError('Priority must be low, medium, or high', {
+                priority: 'Priority must be low, medium, or high',
+            });
+        }
         data.priority = body.priority;
     }
     if (body.completed !== undefined) {
-        if (typeof body.completed !== 'boolean') return { error: 'completed must be a boolean' };
+        if (typeof body.completed !== 'boolean') {
+            return validationError('completed must be a boolean', { completed: 'completed must be a boolean' });
+        }
         data.completed = body.completed;
     }
     if (body.archived !== undefined) {
-        if (typeof body.archived !== 'boolean') return { error: 'archived must be a boolean' };
+        if (typeof body.archived !== 'boolean') {
+            return validationError('archived must be a boolean', { archived: 'archived must be a boolean' });
+        }
         data.archived = body.archived;
     }
 

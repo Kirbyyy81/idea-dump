@@ -7,8 +7,7 @@ export const MAX_FINANCE_NAME_LENGTH = 120;
 export const MAX_FINANCE_MERCHANT_LENGTH = 500;
 export const MAX_FINANCE_PAYEE_LENGTH = 500;
 export const MAX_FINANCE_REFERENCE_LENGTH = 200;
-export const MAX_FINANCE_RECIPIENT_REFERENCE_LENGTH = 200;
-export const MAX_FINANCE_NOTES_LENGTH = 2000;
+export const MAX_FINANCE_NOTES_LENGTH = 2500;
 export const FINANCE_TIME_ZONE_HEADER = 'X-Finance-Time-Zone';
 
 const MAX_FINANCE_AMOUNT_MINOR_UNITS = BigInt('99999999999999');
@@ -142,7 +141,6 @@ export type FinanceTransactionField =
     | 'has_payee'
     | 'payee_name'
     | 'reference_number'
-    | 'recipient_reference'
     | 'transaction_date'
     | 'notes'
     | 'new_source_name'
@@ -161,7 +159,6 @@ export interface FinanceTransactionFields {
     has_payee?: unknown;
     payee_name?: unknown;
     reference_number?: unknown;
-    recipient_reference?: unknown;
     transaction_date?: unknown;
     notes?: unknown;
 }
@@ -189,7 +186,6 @@ export function getFinanceTransactionFieldErrors(
     const merchant = trimmedFinanceText(fields.merchant);
     const payeeName = trimmedFinanceText(fields.payee_name);
     const referenceNumber = trimmedFinanceText(fields.reference_number);
-    const recipientReference = trimmedFinanceText(fields.recipient_reference);
     const notes = trimmedFinanceText(fields.notes);
     const transactionDate = normalizeFinanceDate(fields.transaction_date);
 
@@ -220,7 +216,7 @@ export function getFinanceTransactionFieldErrors(
         errors.payee_name = 'Enter the payee name';
     }
     if (fields.has_payee !== true && payeeName) {
-        errors.has_payee = 'Select "Has a payee" to save a payee name';
+        errors.has_payee = 'Select "Is a payee" to save a payee name';
     }
     if (payeeName.length > MAX_FINANCE_PAYEE_LENGTH) {
         errors.payee_name = `Payee must be ${MAX_FINANCE_PAYEE_LENGTH} characters or fewer`;
@@ -229,9 +225,6 @@ export function getFinanceTransactionFieldErrors(
     }
     if (referenceNumber.length > MAX_FINANCE_REFERENCE_LENGTH) {
         errors.reference_number = `Reference number must be ${MAX_FINANCE_REFERENCE_LENGTH} characters or fewer`;
-    }
-    if (recipientReference.length > MAX_FINANCE_RECIPIENT_REFERENCE_LENGTH) {
-        errors.recipient_reference = `Recipient reference must be ${MAX_FINANCE_RECIPIENT_REFERENCE_LENGTH} characters or fewer`;
     }
     if (notes.length > MAX_FINANCE_NOTES_LENGTH) {
         errors.notes = `Notes must be ${MAX_FINANCE_NOTES_LENGTH.toLocaleString('en-US')} characters or fewer`;
@@ -244,7 +237,6 @@ export function getFinanceTransactionTextError(fields: {
     merchant?: unknown;
     payee_name?: unknown;
     reference_number?: unknown;
-    recipient_reference?: unknown;
     notes?: unknown;
 }) {
     const errors = getFinanceTransactionFieldErrors({
@@ -258,7 +250,6 @@ export function getFinanceTransactionTextError(fields: {
     return errors.merchant
         || errors.payee_name
         || errors.reference_number
-        || errors.recipient_reference
         || errors.notes
         || null;
 }

@@ -1,4 +1,4 @@
-import { LogBodyKind, LogEvent, LogLineType } from '@/lib/logViewer/types';
+import { LogBodyKind, LogEvent, LogLineType } from '@/lib/log-viewer/types';
 
 const HTTP_METHODS = new Set([
   'GET',

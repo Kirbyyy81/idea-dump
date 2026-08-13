@@ -8,7 +8,7 @@ import { AppShell } from '@/components/organisms/AppShell';
 import { ProjectForm } from '../../_components/ProjectForm';
 import { CreateProjectInput } from '@/lib/types';
 import { PageLoader } from '@/components/atoms/Loader';
-import { getProject, updateProject } from '@/lib/projects/core/client';
+import { getProject, ProjectClientError, updateProject } from '@/lib/projects/core/client';
 
 export default function EditProjectPage() {
     const router = useRouter();
@@ -18,6 +18,7 @@ export default function EditProjectPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
     const [initialData, setInitialData] = useState<CreateProjectInput | undefined>(undefined);
 
     // Fetch existing project
@@ -46,13 +47,19 @@ export default function EditProjectPage() {
     const handleSubmit = async (data: CreateProjectInput) => {
         setIsSubmitting(true);
         setError(null);
+        setFieldErrors({});
 
         try {
             await updateProject(projectId, data);
 
             router.push(`/projects/${projectId}`);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'An error occurred');
+            if (err instanceof ProjectClientError) {
+                setFieldErrors(err.fieldErrors ?? {});
+                setError(err.fieldErrors ? 'Please correct the highlighted fields.' : err.message);
+            } else {
+                setError(err instanceof Error ? err.message : 'An error occurred');
+            }
             setIsSubmitting(false);
         }
     };
@@ -89,6 +96,7 @@ export default function EditProjectPage() {
                         isSubmitting={isSubmitting}
                         submitLabel="Save Changes"
                         onCancel={() => router.push(`/projects/${projectId}`)}
+                        serverErrors={fieldErrors}
                     />
                 )}
             </div>

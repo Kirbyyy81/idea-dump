@@ -5,7 +5,7 @@ import { Card } from '@/components/atoms/Card';
 import { Button } from '@/components/atoms/Button';
 import { Textarea } from '@/components/atoms/Textarea';
 import { Copy, Eraser } from 'lucide-react';
-import { getReadingTime } from '@/lib/articleCreation/textTransform';
+import { getReadingTime } from '@/lib/article-creation/textTransform';
 
 export function MinuteReaderCard() {
     const [text, setText] = useState('');

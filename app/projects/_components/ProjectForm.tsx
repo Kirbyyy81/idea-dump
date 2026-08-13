@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Upload, Save } from 'lucide-react';
 import { CreateProjectInput, Priority } from '@/lib/types';
 import { Button } from '@/components/atoms/Button';
@@ -14,6 +14,7 @@ interface ProjectFormProps {
     isSubmitting?: boolean;
     submitLabel?: string;
     onCancel: () => void;
+    serverErrors?: Record<string, string>;
 }
 
 export function ProjectForm({
@@ -21,7 +22,8 @@ export function ProjectForm({
     onSubmit,
     isSubmitting = false,
     submitLabel = 'Create Project',
-    onCancel
+    onCancel,
+    serverErrors,
 }: ProjectFormProps) {
     const [title, setTitle] = useState(initialData?.title || '');
     const [description, setDescription] = useState(initialData?.description || '');
@@ -31,6 +33,19 @@ export function ProjectForm({
     const [priority, setPriority] = useState<Priority>(initialData?.priority || 'medium');
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [isDragOver, setIsDragOver] = useState(false);
+
+    useEffect(() => {
+        setErrors(serverErrors ?? {});
+    }, [serverErrors]);
+
+    const clearFieldError = (field: string) => {
+        setErrors((current) => {
+            if (!current[field]) return current;
+            const next = { ...current };
+            delete next[field];
+            return next;
+        });
+    };
 
     const extractTitle = (content: string, fileName: string) => {
         const match = content.match(/^#\s+(.+)$/m);
@@ -96,7 +111,10 @@ export function ProjectForm({
                 <FormField
                     label="Title"
                     value={title}
-                    onChange={(e) => setTitle(e.target.value)}
+                    onChange={(e) => {
+                        setTitle(e.target.value);
+                        clearFieldError('title');
+                    }}
                     placeholder="Project name"
                     required
                     error={errors.title}
@@ -106,8 +124,12 @@ export function ProjectForm({
                 <FormField
                     label="Description"
                     value={description}
-                    onChange={(e) => setDescription(e.target.value)}
+                    onChange={(e) => {
+                        setDescription(e.target.value);
+                        clearFieldError('description');
+                    }}
                     placeholder="Brief description of the project"
+                    error={errors.description}
                 />
 
                 {/* PRD Content */}
@@ -145,10 +167,14 @@ export function ProjectForm({
                                 label="PRD Content (Markdown)"
                                 multiline
                                 value={prdContent}
-                                onChange={(e) => setPrdContent(e.target.value)}
+                                onChange={(e) => {
+                                    setPrdContent(e.target.value);
+                                    clearFieldError('prd_content');
+                                }}
                                 placeholder="# Project PRD\n\nPaste, type, or drag & drop a .md file here..."
                                 className="font-mono text-sm"
                                 rows={12}
+                                error={errors.prd_content}
                             />
                         </div>
                         {isDragOver && (
@@ -164,8 +190,12 @@ export function ProjectForm({
                     label="GitHub URL"
                     type="url"
                     value={githubUrl}
-                    onChange={(e) => setGithubUrl(e.target.value)}
+                    onChange={(e) => {
+                        setGithubUrl(e.target.value);
+                        clearFieldError('github_url');
+                    }}
                     placeholder="https://github.com/user/repo"
+                    error={errors.github_url}
                 />
 
                 {/* Deploy URL */}
@@ -173,19 +203,31 @@ export function ProjectForm({
                     label="Deploy URL"
                     type="url"
                     value={deployUrl}
-                    onChange={(e) => setDeployUrl(e.target.value)}
+                    onChange={(e) => {
+                        setDeployUrl(e.target.value);
+                        clearFieldError('deploy_url');
+                    }}
                     placeholder="https://your-app.vercel.app"
+                    error={errors.deploy_url}
                 />
 
                 {/* Priority */}
                 <fieldset>
                     <legend className="mb-2 block text-sm font-medium text-text-secondary">Priority</legend>
-                    <div role="radiogroup" aria-label="Priority" className="flex gap-2">
+                    <div
+                        role="radiogroup"
+                        aria-label="Priority"
+                        aria-describedby={errors.priority ? 'project-priority-error' : undefined}
+                        className="flex gap-2"
+                    >
                         {(['low', 'medium', 'high'] as const).map((p) => (
                             <button
                                 key={p}
                                 type="button"
-                                onClick={() => setPriority(p)}
+                                onClick={() => {
+                                    setPriority(p);
+                                    clearFieldError('priority');
+                                }}
                                 role="radio"
                                 aria-checked={priority === p}
                                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${priority === p
@@ -201,6 +243,9 @@ export function ProjectForm({
                             </button>
                         ))}
                     </div>
+                    {errors.priority && (
+                        <p id="project-priority-error" className="mt-2 text-sm text-error">{errors.priority}</p>
+                    )}
                 </fieldset>
             </Card>
 

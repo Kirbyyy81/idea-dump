@@ -32,7 +32,7 @@ When updating progress:
 
 ## Current System Overview
 
-IdeaDump is primarily a strict TypeScript, React 18, and Next.js 14 App Router application backed by Supabase Auth and Postgres. It also contains a separately deployed Node.js Finance OCR service.
+IdeaDump is primarily a strict TypeScript, React 19, and Next.js 15 App Router application backed by Supabase Auth and Postgres. It also contains a separately deployed Node.js Finance OCR service.
 
 ```text
 idea-dump/
@@ -58,12 +58,12 @@ idea-dump/
 │   ├── molecules/
 │   └── organisms/
 ├── lib/
-│   ├── articleCreation/
+│   ├── article-creation/
 │   ├── auth/
 │   ├── film/
 │   ├── finance/
 │   ├── logs/
-│   ├── logViewer/
+│   ├── log-viewer/
 │   ├── projects/
 │   ├── rbac/
 │   └── supabase/
@@ -157,12 +157,12 @@ Pages should communicate through a typed feature client or server-side service r
 
 The largest application files include:
 
-- [`app/settings/access/AccessControlClient.tsx`](../app/settings/access/AccessControlClient.tsx), 738 lines
-- [`app/film/rolls/[id]/page.tsx`](../app/film/rolls/%5Bid%5D/page.tsx), 724 lines
-- [`services/finance-ocr/src/repository.ts`](../services/finance-ocr/src/repository.ts), 658 lines
-- [`lib/types.ts`](../lib/types.ts), 630 lines
-- [`components/organisms/Sidebar.tsx`](../components/organisms/Sidebar.tsx), 439 lines
-- [`app/finance/review/page.tsx`](../app/finance/review/page.tsx), 431 lines
+- [`app/film/rolls/[id]/page.tsx`](../app/film/rolls/%5Bid%5D/page.tsx), about 657 lines
+- [`app/settings/access/AccessControlClient.tsx`](../app/settings/access/AccessControlClient.tsx), about 656 lines
+- [`services/finance-ocr/src/repository.ts`](../services/finance-ocr/src/repository.ts), about 636 lines
+- [`lib/types.ts`](../lib/types.ts), about 602 lines
+- [`app/finance/review/page.tsx`](../app/finance/review/page.tsx), about 477 lines
+- [`components/organisms/Sidebar.tsx`](../components/organisms/Sidebar.tsx), about 407 lines
 
 File length alone does not prove a design problem, but these files combine multiple state machines, API operations, formatting helpers, UI sections, or persistence responsibilities.
 
@@ -364,9 +364,7 @@ Direct `createAdminClient()` calls are now concentrated in domain repositories, 
 
 ### 9. Component organization will become harder to scale
 
-The atomic design structure is documented clearly, but atoms, molecules, and organisms categorize components by abstraction level rather than feature ownership. Classification becomes subjective as the application grows.
-
-For example, `Sidebar` and ticket workflows live under shared organisms because they are reused across feature routes, while the Log Viewer now lives in `app/log-viewer/_components/` because it is route-owned.
+The atomic design structure remains for genuinely shared primitives and layout components. Feature-owned UI now lives with its route: the Log Viewer is under `app/log-viewer/_components/`, and Ticket workflow components are under `app/tickets/_components/`. The Project detail route imports the Ticket-owned components where it embeds that workflow instead of treating them as generic shared organisms.
 
 #### Recommendation
 
@@ -384,13 +382,9 @@ app/<route>/_components/
 
 Alternatively, keep the existing atomic directories but move feature-specific organisms into their owning route or feature module.
 
-### 10. Naming conventions are not fully consistent
+### 10. Naming conventions
 
-Examples include:
-
-- `articleCreation/` and `logViewer/` use camelCase.
-- Most route directories use kebab-case.
-- Other domain directories use lowercase names.
+The two camelCase domain outliers were renamed to `lib/article-creation/` and `lib/log-viewer/`. Non-route domain directories now consistently use lowercase or kebab-case names, while each domain can use its documented `core/` directory for common layers.
 
 #### Recommendation
 
@@ -446,21 +440,19 @@ The React bridge, Finance provider, and service worker now consume the same type
 ### Current observations
 
 - The OCR service has a normal Vitest suite.
-- The main application now has a root Vitest runner and a top-level `tests/` directory for the Finance share lifecycle suite. Several older checks remain custom Node.js scripts.
+- The main application has one root Vitest runner and consistently places application tests under `tests/`. The 15 legacy Node.js test runners and their Log Viewer transpilation harness have been converted into Vitest suites.
+- The root suite currently runs 19 test files and 83 tests, including API contracts, Finance contracts, Log Viewer behavior, authorization boundaries, and Finance share lifecycle coverage.
 - All Finance source modules are strict TypeScript, while `allowJs` remains enabled in the main TypeScript configuration.
-- The GitHub workflows create pull requests and releases, but do not run application validation.
+- The pull-request validation workflow runs application lint, type-checking, tests, and builds, plus Finance OCR type-checking, tests, and builds. The OCR package does not yet expose a lint command.
 - Phase 1 removed the automatic `predev: npm install`; dependency installation remains an explicit setup step.
 
 ### Recommendations
 
-1. Add a root application test runner, preferably Vitest.
-2. Convert custom script tests into normal test files.
-3. Co-locate tests with features or use a consistent top-level test directory.
-4. Add route authorization and validation tests.
-5. Add repository tests around ownership filtering.
-6. Add focused UI tests for critical forms and state transitions.
-7. Disable `allowJs` after reviewing the remaining JavaScript configuration and test files.
-8. Add a CI validation workflow.
+1. Add repository tests around ownership filtering.
+2. Add focused service tests for business operations.
+3. Add focused UI tests for critical forms and state transitions.
+4. Disable `allowJs` after reviewing the remaining JavaScript configuration files.
+5. Add an OCR lint command and include it in pull-request validation.
 
 The CI workflow should run:
 
@@ -547,7 +539,7 @@ idea-dump/
 ### Phase 1: Low-risk consistency work
 
 1. [x] Correct README and AGENTS documentation drift, including the missing scoped-guide references.
-2. [ ] Add continuous integration validation. Deferred from the current Phase 1 implementation scope.
+2. [ ] Finish continuous integration validation. Pull-request checks cover every currently configured application and OCR validation command; an OCR lint command is still required by the completion gate.
 3. [x] Remove `predev: npm install`.
 4. [x] Remove unnecessary no-op layouts.
 5. [x] Remove unused legacy routes after checking PWA, Auth, database metadata, and internal navigation consumers. Retain only the database-backed `/api-tools` adapter.
@@ -596,24 +588,24 @@ idea-dump/
 
 Summary as of 2026-08-12:
 
-- Done: 9
+- Done: 12
 - In progress: 0
-- Partial: 8
-- Not started: 5
+- Partial: 6
+- Not started: 4
 - Blocked: 0
 
 | ID | Issue | Status | Current evidence and completion gate | Last updated |
 | --- | --- | --- | --- | --- |
-| AC-001 | Documentation and scoped guidance drift | **Done** | Added the four referenced scoped guides, aligned README routes and module ownership, documented current boundaries, and verified local document links. | 2026-08-02 |
-| AC-002 | Missing CI validation workflow | **Not started** | Existing workflows only create pull requests and releases. CI was explicitly deferred from this Phase 1 pass. Done when main-app and OCR lint, typecheck, tests, and builds run on pull requests. | 2026-08-02 |
+| AC-001 | Documentation and scoped guidance drift | **Done** | Added the four referenced scoped guides, aligned README routes and module ownership, documented current boundaries, and refreshed framework versions, test organization, naming, file-size evidence, and CI status after later cleanup. | 2026-08-12 |
+| AC-002 | Missing CI validation workflow | **Partial** | `.github/workflows/validate.yml` runs application audit, lint, typecheck, the complete Vitest suite, and build on pull requests. It also runs OCR audit, typecheck, tests, and build. Done when the OCR package has a lint command and CI runs it, satisfying the full documented gate. | 2026-08-12 |
 | AC-003 | `predev` installs dependencies | **Done** | Removed the `predev` script. Setup continues to require an explicit `npm install`, and no dependency or lockfile change was needed. | 2026-08-02 |
 | AC-004 | No-op route layouts | **Done** | Removed all eleven layouts that only returned `children`. The root layout and Finance authorization layout remain. | 2026-08-02 |
 | AC-005 | Legacy redirect route noise | **Done** | Removed five unused legacy routes after verifying PWA, Auth, and Film navigation use canonical paths. Retained and documented `/api-tools` because Supabase module metadata actively supplies it to runtime navigation. | 2026-08-02 |
-| AC-006 | Main-app test organization | **Partial** | The main app now has a root Vitest runner and top-level `tests/` placement for the Finance share lifecycle suite. Several older checks remain custom Node.js scripts, and CI does not run the suite. Done when remaining tests use consistent placement and application validation runs in CI. | 2026-08-11 |
+| AC-006 | Main-app test organization | **Done** | Converted all 15 legacy `scripts/test-*.js` runners and the Log Viewer transpilation harness into top-level Vitest suites, removed the obsolete runners, and simplified CI to execute the complete suite once through `npm test`. The suite passes 19 files and 83 tests, and `npx tsc --noEmit` passes. | 2026-08-12 |
 | AC-007 | Remaining Finance JavaScript and `allowJs` | **Partial** | Converted all four Finance source modules to strict TypeScript and updated their focused test runners. Root TypeScript still enables `allowJs`. Done when `allowJs` is disabled without breaking the build or tests. | 2026-08-05 |
-| AC-008 | Domain type monolith | **Not started** | `lib/types.ts` is about 630 lines and has 71 importers. Done when domain types and runtime configuration have clear owners and cross-domain imports no longer depend on a monolith. | 2026-08-02 |
+| AC-008 | Domain type monolith | **Not started** | `lib/types.ts` is about 602 lines and has about 81 direct importers. Done when domain types and runtime configuration have clear owners and cross-domain imports no longer depend on a monolith. | 2026-08-12 |
 | AC-009 | Untyped Supabase schema boundary | **Not started** | Supabase clients have no generated `Database` generic. Done when one reviewed generated type parameterizes browser, server, and admin clients and is refreshed with schema changes. | 2026-08-02 |
-| AC-010 | Inconsistent API errors and validation | **Partial** | Domain request parsers now cover Finance, Film, Tickets, Projects, Logs, Notes, API keys, and Project ingestion. Error response bodies, pagination conventions, and operational logging still vary by feature. Done when those transport contracts are documented and standardized with tests. | 2026-08-05 |
+| AC-010 | Inconsistent API errors and validation | **Partial** | Domain request parsers now cover Finance, Film, Tickets, Projects, Logs, Notes, API keys, and Project ingestion. Projects are the shared-contract pilot: `lib/api/` defines typed success and error envelopes, `/api/projects` returns stable error codes and optional field errors, and the Project client and forms consume them. Other features, pagination conventions, and operational logging still vary. Done when those transport contracts are documented and standardized with tests. | 2026-08-06 |
 | AC-011 | Missing typed feature clients | **Done** | Finance and Tickets already had reusable client APIs. Film, Projects, Logs, Notes, and API keys now use domain-owned browser clients; the Log export action also uses the Logs client. `npm run lint`, `npx tsc --noEmit`, and `npm run build` pass. | 2026-08-05 |
 | AC-012 | Direct data access in route handlers | **Done** | A repository-wide route scan finds no `createAdminClient()`, `.from()`, `.rpc()`, or `.storage` calls in `app/api/`. Service-role queries now live in owned repositories, and routes act as HTTP adapters. `npm run lint`, `npx tsc --noEmit`, and `npm run build` pass. | 2026-08-05 |
 | AC-013 | Inconsistent business-service layer | **Partial** | Finance, Film, Tickets, Notes, and API keys now use explicit services for non-trivial operations. Projects remain deliberately repository-only for simple CRUD, and Logs retain their authorization-aware access layer. Focused service behavior coverage is still uneven. Done when business operations have focused service tests. | 2026-08-05 |
@@ -621,8 +613,8 @@ Summary as of 2026-08-12:
 | AC-015 | Large page and client-component responsibilities | **Partial** | Some Film sections are extracted, but Film roll detail, Access Control, and Finance review remain large stateful files. Done when state, mutations, dialogs, and sections have focused ownership and regression coverage. | 2026-08-02 |
 | AC-016 | Overloaded application shell | **Partial** | Extracted canonical module route mapping and matching into client-safe `lib/rbac/routes.ts`, used by `AppShell` authorization and Sidebar navigation activity. `AppShell` still owns project loading, navigation, responsive behavior, spacing, and loading UI. Done when protected layout, page container, loading state, and mobile navigation responsibilities are explicit. | 2026-08-02 |
 | AC-017 | Client-heavy initial data loading | **Not started** | 26 of 33 remaining pages are client components and 24 pages use `useEffect()`. Done when practical initial reads move to server components and interactive client islands retain only browser state. | 2026-08-02 |
-| AC-018 | Component ownership ambiguity | **Partial** | The Log Viewer was moved into `app/log-viewer/_components/`, and route-private feature sections already exist. `AppShell` now owns rendering `components/molecules/PageHeader.tsx` for shared authenticated-page titles and optional actions. Shared Sidebar and Ticket workflows remain under `components/` because they are reused across feature routes, but ownership rules are not yet applied consistently everywhere. Done when shared UI, layout, cross-feature, and feature-private ownership rules are consistently applied. | 2026-08-04 |
-| AC-019 | Inconsistent non-route naming | **Partial** | Documented a `core/` convention for domain-wide layers. Moved the Logs normalizer to `lib/logs/core/normalization.ts`, the Project-only icon map to `lib/projects/icons.ts`, Film Roll lifecycle helpers to `lib/film/rolls/`, the Film Google Drive provider to `lib/film/integrations/`, and common layers to `lib/film/core/`, `lib/finance/core/`, `lib/logs/core/`, `lib/notes/core/`, `lib/projects/core/`, and `lib/tickets/core/`. `articleCreation` and `logViewer` remain naming and ownership outliers. Done when one convention is documented and applied without compatibility regressions. | 2026-08-06 |
+| AC-018 | Component ownership ambiguity | **Done** | Shared atoms, molecules, and layout organisms remain under `components/`; route-owned sections live in route `_components/` directories. Ticket workflows moved from shared organisms into `app/tickets/_components/`, with the Project detail route consuming the Ticket-owned implementation where needed. Focused ESLint validation passes and the moved implementations are unchanged. | 2026-08-12 |
+| AC-019 | Inconsistent non-route naming | **Done** | Renamed the remaining camelCase domain directories to `lib/article-creation/` and `lib/log-viewer/`, updated application, library, test, and PRD references, and retained the documented lowercase, kebab-case, and domain `core/` conventions. Focused ESLint and `git diff --check` pass with no active stale imports. | 2026-08-12 |
 | AC-020 | Global Finance share-target provider | **Done** | Accepted file state lives under the protected Finance layout and is discarded when that layout unmounts. A narrow global rejection bridge handles signed-out and unauthorized shares without adding Finance behavior to `AccessProvider`. Automated React lifecycle and service-worker tests cover authenticated success, signed-out and unauthorized rejection, expiry, navigation disposal, and multi-tab isolation. | 2026-08-11 |
 | AC-021 | OCR service source coupling | **Not started** | The OCR TypeScript and bundler aliases point to the application root. Done when both runtimes depend on an explicit shared package and OCR builds without application-source aliases. | 2026-08-02 |
 | AC-022 | Untyped service-worker workflow | **Done** | `service-worker/sw.ts` consumes the shared Finance protocol and runtime client-message parser, passes its Web Worker-specific typecheck, and bundles reproducibly into generated `public/sw.js`. Build and test scripts verify source/output drift, the workflow is documented, and focused tests cover valid and invalid messages, acknowledgement, duplicate prevention, expiry, invalid submissions, navigation disposal, and multi-tab isolation. | 2026-08-12 |
@@ -638,4 +630,4 @@ The repository does not need a complete rewrite or a single large restructuring 
 - Make the OCR service dependency boundary explicit.
 - Use automated tests and CI to protect each refactoring step.
 
-Phase 1 documentation and low-risk structure cleanup is complete except for the explicitly deferred CI workflow. The next work should be CI, followed by type ownership and data-access boundaries. Large UI decomposition and OCR package extraction should come afterward because they carry more integration risk.
+Phase 1 documentation and low-risk structure cleanup is complete except for adding OCR lint to the existing CI workflow. The next work should be type ownership, generated Supabase types, API contract consistency, and focused service tests. Large UI decomposition, protected-shell separation, server-loaded page reads, and OCR package extraction should come afterward because they carry more integration risk.

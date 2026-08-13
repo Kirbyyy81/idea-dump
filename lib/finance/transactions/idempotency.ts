@@ -21,7 +21,6 @@ type ManualTransactionReplayRequest = Pick<
     | 'notes'
 > & {
     payee_name: string | null;
-    recipient_reference: string | null;
 };
 
 export function isFinanceIdempotencyKey(value: unknown) {
@@ -57,7 +56,6 @@ export function isManualTransactionReplay(
         && (existing.merchant || null) === (requested.merchant || null)
         && (existing.finance_payee?.name || null) === (requested.payee_name || null)
         && (existing.reference_number || null) === (requested.reference_number || null)
-        && (existing.recipient_reference || null) === (requested.recipient_reference || null)
         && existing.transaction_date === requested.transaction_date
         && (existing.notes || null) === (requested.notes || null)
         && existing.source === 'manual'

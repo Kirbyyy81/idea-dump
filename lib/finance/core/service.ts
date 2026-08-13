@@ -417,7 +417,14 @@ async function validateFinanceTransactionReferences(
 
 export async function getFinanceTransactions(
     userId: string,
-    options: { status: string; sourceId: string | null; query: string | null }
+    options: {
+        status: string;
+        sourceId: string | null;
+        query: string | null;
+        categoryId: string | null;
+        date: string | null;
+        uncategorised: boolean;
+    }
 ) {
     const transactions = await listFinanceTransactions(userId, {
         ...options,
@@ -451,7 +458,6 @@ export async function createManualFinanceTransactionForUser(
         p_notes: input.notes,
         p_currency: input.currency,
         p_reference_number: input.reference_number,
-        p_recipient_reference: input.recipient_reference,
         p_manual_idempotency_key: input.idempotency_key,
     });
     if (error) {
@@ -490,7 +496,6 @@ function transactionRpcError(error: { code?: string; message?: string }) {
 }
 
 function financeRpcFieldErrors(message: string): FinanceFieldErrors {
-    if (/recipient reference/i.test(message)) return { recipient_reference: message };
     if (/payee/i.test(message)) return { payee_name: message };
     if (/amount/i.test(message)) return { amount: message };
     if (/date/i.test(message)) return { transaction_date: message };
@@ -526,7 +531,6 @@ export async function updateFinanceTransactionForUser(
         p_notes: input.notes,
         p_currency: input.currency,
         p_reference_number: input.reference_number,
-        p_recipient_reference: input.recipient_reference,
     });
     if (error) transactionRpcError(error);
     const { data, error: reloadError } = await findFinanceTransaction(userId, transactionId, '*, finance_source:dim_finance_sources(*), category:dim_finance_categories(*), finance_payee:dim_finance_payees(*)');
@@ -654,7 +658,6 @@ function confirmationParams(userId: string, input: FinanceReviewConfirmInput) {
         p_notes: input.notes,
         p_currency: input.currency,
         p_reference_number: input.reference_number,
-        p_recipient_reference: input.recipient_reference,
         p_allow_duplicate: input.allow_duplicate,
         p_duplicate_override_reason: input.duplicate_override_reason,
         p_confirmation_mode: 'manual',

@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { parseFinanceText } from '@/lib/finance/ocr/parser';
 import { extractFinanceReferenceNumber } from '@/lib/finance/ocr/reference';
-import { extractFinanceRecipientReference } from '@/lib/finance/ocr/recipientReference';
+import {
+    extractFinanceRecipientReference,
+    mergeFinanceRecipientReferenceIntoNotes,
+} from '@/lib/finance/ocr/recipientReference';
 
 describe('Finance reference extraction', () => {
     it.each(['9', '&', '@', '>', '&®', '('])(
@@ -96,7 +99,16 @@ describe('Finance reference extraction', () => {
             'Reference ID 9 TXN-123456',
             'Paid RM 12.50',
         ].join('\n'), [], [], 'Screenshot.png');
-        expect(parsed.payload.recipient_reference).toBe('Dinner share');
+        expect(parsed.payload.notes).toBe('Dinner share');
         expect(parsed.payload.reference_number).toBe('TXN-123456');
+    });
+
+    it('places recipient reference before notes without duplicating it', () => {
+        expect(mergeFinanceRecipientReferenceIntoNotes('Dinner share', 'Bring receipt')).toBe(
+            'Dinner share\nBring receipt',
+        );
+        expect(mergeFinanceRecipientReferenceIntoNotes('Dinner share', 'Dinner share\nBring receipt')).toBe(
+            'Dinner share\nBring receipt',
+        );
     });
 });
