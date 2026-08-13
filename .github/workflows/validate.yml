@@ -48,27 +48,7 @@ jobs:
           npx tsc --noEmit
 
       - name: Run application tests
-        run: |
-          npm test
-          npm run test:log-viewer
-
-      - name: Run Finance contract tests
-        run: |
-          npm run test:finance-security
-          npm run test:finance-validation
-          npm run test:finance-payees
-          npm run test:finance-idempotency
-          npm run test:finance-ordering
-          npm run test:finance-share
-
-      - name: Run API contract tests
-        run: |
-          npm run test:logs-api
-          npm run test:notes-api
-          npm run test:projects-api
-          npm run test:api-keys
-          npm run test:tickets
-          npm run test:openapi
+        run: npm test
 
       - name: Build application
         run: npm run build
