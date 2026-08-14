@@ -22,6 +22,8 @@ describe('InputField', () => {
         expect(input.required).toBe(true);
         expect(input.getAttribute('aria-invalid')).toBe('true');
         expect(input.getAttribute('aria-describedby')).toBe('amount-help amount-error');
+        expect(input.className).toContain('input');
+        expect(input.className).toContain('border-error');
         expect(error.id).toBe('amount-error');
     });
 

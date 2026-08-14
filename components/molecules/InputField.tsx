@@ -1,13 +1,14 @@
 import {
     ChangeEventHandler,
+    InputHTMLAttributes,
     ReactNode,
     forwardRef,
 } from 'react';
-import { Input, InputProps } from '@/components/atoms/Input';
 import { cn } from '@/lib/utils';
 
-export interface InputFieldProps extends InputProps {
+export interface InputFieldProps extends InputHTMLAttributes<HTMLInputElement> {
     containerClassName?: string;
+    error?: boolean;
     errorMessage?: string;
     id: string;
     label: ReactNode;
@@ -24,6 +25,7 @@ function mergeDescribedBy(...values: Array<string | undefined>) {
 export const InputField = forwardRef<HTMLInputElement, InputFieldProps>(
     ({
         'aria-describedby': ariaDescribedBy,
+        className,
         containerClassName,
         error,
         errorMessage,
@@ -36,6 +38,7 @@ export const InputField = forwardRef<HTMLInputElement, InputFieldProps>(
     }, ref) => {
         const errorId = errorMessage ? `${id}-error` : undefined;
         const describedBy = mergeDescribedBy(ariaDescribedBy, errorId);
+        const hasError = error || Boolean(errorMessage);
         const handleChange: ChangeEventHandler<HTMLInputElement> = (event) => {
             onChange?.(event);
             onValueChange?.(event.currentTarget.value);
@@ -47,13 +50,18 @@ export const InputField = forwardRef<HTMLInputElement, InputFieldProps>(
                     {label}{required ? ' (required)' : ''}
                 </label>
                 <div className="mt-2">
-                    <Input
+                    <input
                         {...inputProps}
                         ref={ref}
                         id={id}
                         required={required}
-                        error={error || Boolean(errorMessage)}
+                        aria-invalid={hasError || undefined}
                         aria-describedby={describedBy}
+                        className={cn(
+                            'input',
+                            hasError && 'border-error focus:border-error',
+                            className
+                        )}
                         onChange={handleChange}
                     />
                 </div>
