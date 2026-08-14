@@ -298,7 +298,11 @@ export default function AddFinanceTransactionPage() {
                 <Select id="manual-category" dataFinanceField="category_id" ariaLabel="Transaction category" ariaDescribedBy={fieldErrors.category_id ? 'manual-category-error' : undefined} error={Boolean(fieldErrors.category_id)} value={form.category_id} onChange={(categoryId) => setManualField('category_id', categoryId)} placeholder="Uncategorised" options={[{ value: '', label: 'Uncategorised' }, ...availableCategories]} />
             </FinanceFormField>
             <div className="grid gap-4 sm:grid-cols-2">
-                <FinanceFormField fieldId="manual-amount" label="Amount" error={fieldErrors.amount} required>
+                <FinanceFormField
+                    fieldId="manual-amount"
+                    label="Amount"
+                    error={fieldErrors.amount} required
+                >
                     <Input id="manual-amount" data-finance-field="amount" type="number" inputMode="decimal" min="0.01" max={MAX_FINANCE_AMOUNT} step="0.01" value={form.amount} onChange={(event) => setManualField('amount', event.target.value)} placeholder="0.00" {...financeFieldErrorProps(fieldErrors, 'amount', 'manual-amount')} />
                 </FinanceFormField>
                 <FinanceFormField fieldId="manual-currency" label="Currency"><Input id="manual-currency" value="MYR" readOnly aria-readonly="true" /></FinanceFormField>
