@@ -395,7 +395,6 @@ export const filmTypes: FilmType[] = ['NEGATIVE', 'REVERSAL', 'BW_NEGATIVE'];
 
 export const filmProcessTypes: FilmProcessType[] = ['C41', 'E6', 'BW', 'ECN2'];
 
-export type FinanceCategoryType = 'expense' | 'income';
 export type FinanceTransactionDirection = 'expense' | 'income';
 export type FinanceTransactionSource = 'manual' | 'screenshot';
 export type FinanceTransactionStatus = 'confirmed' | 'review' | 'duplicate' | 'rejected';
@@ -425,9 +424,6 @@ export interface FinanceCategory {
     id: string;
     user_id: string;
     name: string;
-    type: FinanceCategoryType;
-    color: string | null;
-    icon: string | null;
     is_archived: boolean;
     created_at: string;
     updated_at: string;

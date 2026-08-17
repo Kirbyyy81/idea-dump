@@ -1,12 +1,13 @@
-import { FINANCE_DEFAULT_EXPENSE_CATEGORIES } from '@/lib/finance/core/constants';
-import { FinanceCategory, FinanceCategoryType } from '@/lib/types';
+import { FINANCE_DEFAULT_CATEGORIES } from '@/lib/finance/core/constants';
+import { FinanceCategory } from '@/lib/types';
 
-const VIRTUAL_DEFAULT_PREFIX = '__virtual_default_expense_category__:';
+const VIRTUAL_DEFAULT_PREFIX = '__virtual_default_category__:';
 
 export interface FinanceCategoryOption {
     value: string;
     label: string;
     isVirtualDefault: boolean;
+    disabled?: boolean;
 }
 
 export function canonicalFinanceCategoryName(name: string) {
@@ -18,7 +19,7 @@ function virtualDefaultValue(name: string) {
 }
 
 const virtualDefaultNamesByValue = new Map(
-    FINANCE_DEFAULT_EXPENSE_CATEGORIES.map((name) => [virtualDefaultValue(name), name])
+    FINANCE_DEFAULT_CATEGORIES.map((name) => [virtualDefaultValue(name), name])
 );
 
 export function getVirtualDefaultCategoryName(value: string) {
@@ -29,26 +30,33 @@ export function isVirtualDefaultCategoryValue(value: string) {
     return getVirtualDefaultCategoryName(value) !== null;
 }
 
-export function getMissingDefaultExpenseCategories(categories: FinanceCategory[]) {
+export function sortFinanceCategories(categories: FinanceCategory[]) {
+    return [...categories].sort((left, right) => {
+        if (left.is_archived !== right.is_archived) return left.is_archived ? 1 : -1;
+        return left.name.localeCompare(right.name, 'en', { sensitivity: 'base' });
+    });
+}
+
+export function getMissingDefaultCategories(categories: FinanceCategory[]) {
     const persistedNames = new Set(
         categories
-            .filter((category) => category.type === 'expense')
             .map((category) => canonicalFinanceCategoryName(category.name))
     );
 
-    return FINANCE_DEFAULT_EXPENSE_CATEGORIES.filter(
+    return FINANCE_DEFAULT_CATEGORIES.filter(
         (name) => !persistedNames.has(canonicalFinanceCategoryName(name))
     );
 }
 
 export function getFinanceCategoryOptions(
     categories: FinanceCategory[],
-    type: FinanceCategoryType,
-    options: { includeTypeLabel?: boolean } = {}
+    options: { currentCategoryId?: string } = {}
 ): FinanceCategoryOption[] {
     const seenNames = new Set<string>();
-    const persistedOptions = categories.flatMap((category) => {
-        if (category.is_archived || category.type !== type) return [];
+    const persistedOptions = sortFinanceCategories(categories).flatMap((category) => {
+        const isCurrentArchivedCategory = category.is_archived
+            && category.id === options.currentCategoryId;
+        if (category.is_archived && !isCurrentArchivedCategory) return [];
 
         const canonicalName = canonicalFinanceCategoryName(category.name);
         if (seenNames.has(canonicalName)) return [];
@@ -56,22 +64,21 @@ export function getFinanceCategoryOptions(
 
         return [{
             value: category.id,
-            label: options.includeTypeLabel ? `${category.name} (${category.type})` : category.name,
+            label: isCurrentArchivedCategory ? `${category.name} (archived)` : category.name,
             isVirtualDefault: false,
+            disabled: isCurrentArchivedCategory,
         }];
     });
 
-    if (type !== 'expense') return persistedOptions;
-
-    const virtualOptions = getMissingDefaultExpenseCategories(categories).map((name) => ({
+    const virtualOptions = getMissingDefaultCategories(categories).map((name) => ({
         value: virtualDefaultValue(name),
-        label: options.includeTypeLabel
-            ? `${name} (expense)`
-            : name,
+        label: name,
         isVirtualDefault: true,
     }));
 
-    return [...persistedOptions, ...virtualOptions];
+    return [...persistedOptions, ...virtualOptions].sort((left, right) => (
+        left.label.localeCompare(right.label, 'en', { sensitivity: 'base' })
+    ));
 }
 
 export function mergeFinanceCategory(
@@ -81,7 +88,7 @@ export function mergeFinanceCategory(
     const canonicalName = canonicalFinanceCategoryName(category.name);
     const withoutSameCategory = categories.filter((item) => (
         item.id !== category.id
-        && !(item.type === category.type && canonicalFinanceCategoryName(item.name) === canonicalName)
+        && canonicalFinanceCategoryName(item.name) !== canonicalName
     ));
-    return [...withoutSameCategory, category];
+    return sortFinanceCategories([...withoutSameCategory, category]);
 }

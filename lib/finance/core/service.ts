@@ -27,9 +27,7 @@ import {
     getManualFinanceTransactionByIdempotencyKey,
     getOwnedFinanceCategory,
     getOwnedFinanceSource,
-    isFinanceCategoryReferenced,
     listFinanceCategories,
-    listFinanceCategoriesByType,
     listFinanceDashboardMonthTransactions,
     listFinanceIntakeHistory,
     listFinanceRuleSuggestions,
@@ -132,7 +130,7 @@ export async function getFinanceCategories(userId: string) {
 
 export async function createFinanceCategoryForUser(userId: string, input: FinanceCategoryCreateInput) {
     const findCanonicalCategory = async () => {
-        const { data, error } = await listFinanceCategoriesByType(userId, input.type);
+        const { data, error } = await listFinanceCategories(userId);
         if (error) throw error;
         const canonicalName = canonicalFinanceCategoryName(input.name);
         return ((data || []) as FinanceCategory[]).find(
@@ -157,11 +155,6 @@ export async function createFinanceCategoryForUser(userId: string, input: Financ
 export async function updateFinanceCategoryForUser(userId: string, input: FinanceCategoryUpdateInput) {
     const existing = await getOwnedFinanceCategory(userId, input.id);
     if (!existing) fail('Category not found', 404);
-    if (input.updates.type !== undefined && input.updates.type !== existing.type) {
-        if (await isFinanceCategoryReferenced(userId, input.id)) {
-            fail('A referenced category cannot change between expense and income', 409);
-        }
-    }
     if (input.archiveRequested) {
         const { data, error } = await setFinanceCategoryArchived(
             userId,
@@ -178,7 +171,6 @@ export async function updateFinanceCategoryForUser(userId: string, input: Financ
     const { data, error } = await updateFinanceCategory(userId, input.id, input.updates);
     if (error) {
         if (error.code === '23505') fail('A category with this name already exists', 409);
-        if (error.code === '23514') fail('A referenced category cannot change between expense and income', 409);
         throw error;
     }
     return data;
@@ -244,7 +236,6 @@ async function validateFinanceRuleTargets(
     userId: string,
     sourceId: string | null,
     categoryId: string | null,
-    direction: FinanceRuleInput['direction'],
     requireActive: boolean
 ) {
     if (sourceId) {
@@ -256,7 +247,6 @@ async function validateFinanceRuleTargets(
         const category = await getOwnedFinanceCategory(userId, categoryId);
         if (!category) fail('Choose a category you own', 404);
         if (requireActive && category.is_archived) fail('Choose an active category', 404);
-        if (direction && category.type !== direction) fail('Category type must match the rule direction');
     }
 }
 
@@ -274,7 +264,7 @@ export async function getFinanceRules(userId: string) {
 
 export async function createFinanceRuleForUser(userId: string, input: FinanceRuleInput) {
     requireFinanceRuleOutput(input);
-    await validateFinanceRuleTargets(userId, input.source_id, input.category_id, input.direction, true);
+    await validateFinanceRuleTargets(userId, input.source_id, input.category_id, true);
     const { data, error } = await createFinanceRule(userId, {
         ...input,
         is_active: true,
@@ -308,7 +298,6 @@ export async function updateFinanceRuleForUser(userId: string, input: FinanceRul
         userId,
         effective.source_id,
         effective.category_id,
-        effective.direction,
         effective.is_active
     );
     const { data, error } = await updateFinanceRule(userId, input.id, input.updates);
@@ -334,12 +323,10 @@ export async function getFinanceRuleSuggestions(userId: string) {
 async function validateFinanceSuggestionTargets(
     userId: string,
     categoryId: string,
-    sourceId: string | null,
-    direction: FinanceRuleInput['direction']
+    sourceId: string | null
 ) {
     const category = await getOwnedFinanceCategory(userId, categoryId);
     if (!category || category.is_archived) fail('Choose an active category', 404);
-    if (category.type !== direction) fail('Category type must match the rule direction');
     if (sourceId) {
         const source = await getOwnedFinanceSource(userId, sourceId);
         if (!source || source.is_archived) fail('Choose an active source', 404);
@@ -347,7 +334,7 @@ async function validateFinanceSuggestionTargets(
 }
 
 export async function updateFinanceRuleSuggestionForUser(userId: string, input: FinanceRuleSuggestionEditInput) {
-    await validateFinanceSuggestionTargets(userId, input.category_id as string, input.source_id, input.direction);
+    await validateFinanceSuggestionTargets(userId, input.category_id as string, input.source_id);
     const { data, error } = await updateFinanceRuleSuggestion(userId, input.id, {
         name: input.name,
         pattern: input.pattern,
@@ -375,8 +362,7 @@ export async function resolveFinanceRuleSuggestionForUser(
         await validateFinanceSuggestionTargets(
             userId,
             suggestion.category_id,
-            suggestion.source_id,
-            suggestion.direction
+            suggestion.source_id
         );
         const { data, error } = await acceptFinanceRuleSuggestion(userId, suggestionId);
         if (error) throw error;
@@ -406,8 +392,6 @@ async function validateFinanceTransactionReferences(
         if (!category) fieldErrors.category_id = 'Choose a valid category';
         else if (category.is_archived && existing?.category_id !== input.category_id) {
             fieldErrors.category_id = 'Archived categories cannot be used';
-        } else if (category.type !== input.direction) {
-            fieldErrors.category_id = 'Category must match the transaction direction';
         }
     }
     if (Object.keys(fieldErrors).length > 0) {
@@ -626,8 +610,7 @@ export async function getFinanceReviewQueueForUser(userId: string) {
 async function validateFinanceReviewReferences(
     userId: string,
     sourceId: string,
-    categoryId: string | null,
-    direction: FinanceTransactionInput['direction']
+    categoryId: string | null
 ) {
     const [source, category] = await Promise.all([
         getOwnedFinanceSource(userId, sourceId),
@@ -637,7 +620,6 @@ async function validateFinanceReviewReferences(
     if (!source || source.is_archived) fieldErrors.source_id = 'Choose an active source';
     if (categoryId) {
         if (!category || category.is_archived) fieldErrors.category_id = 'Choose an active category';
-        else if (category.type !== direction) fieldErrors.category_id = 'Category must match the transaction direction';
     }
     if (Object.keys(fieldErrors).length > 0) {
         fail('Check the highlighted fields', 422, { field_errors: fieldErrors });
@@ -759,7 +741,7 @@ export async function resolveFinanceReviewCandidateForUser(
         return { kind: 'transaction' as const, data: normalizeFinanceTransaction(replay.transaction) };
     }
     if (candidate.status !== 'pending') fail('Review item cannot be confirmed from its current state', 409);
-    await validateFinanceReviewReferences(userId, input.source_id, input.category_id, input.direction);
+    await validateFinanceReviewReferences(userId, input.source_id, input.category_id);
 
     const original = candidate.payload as FinanceCandidatePayload;
     const latestAssessment = await assessFinanceDuplicate({

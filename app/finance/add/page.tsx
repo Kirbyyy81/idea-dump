@@ -109,8 +109,8 @@ export default function AddFinanceTransactionPage() {
     }, [mode]);
 
     const availableCategories = useMemo(
-        () => getFinanceCategoryOptions(categories, form.direction === 'income' ? 'income' : 'expense'),
-        [categories, form.direction]
+        () => getFinanceCategoryOptions(categories),
+        [categories]
     );
 
     const setManualField = <Key extends keyof typeof initialForm>(key: Key, value: (typeof initialForm)[Key]) => {
@@ -277,7 +277,6 @@ export default function AddFinanceTransactionPage() {
             <FinanceFormField fieldId="manual-direction" label="Type" error={fieldErrors.direction} required>
                 <Select id="manual-direction" dataFinanceField="direction" ariaLabel="Transaction type" ariaDescribedBy={fieldErrors.direction ? 'manual-direction-error' : undefined} error={Boolean(fieldErrors.direction)} value={form.direction} onChange={(direction) => {
                     setManualField('direction', direction as FinanceTransactionDirection);
-                    setManualField('category_id', '');
                 }} options={[{ value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }]} />
             </FinanceFormField>
             <FinanceFormField fieldId="manual-source" label="Source" error={fieldErrors.source_id} required>

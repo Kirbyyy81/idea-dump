@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authorizeSessionModule } from '@/lib/rbac/guards';
 import {
-    FinanceCategoryType,
     FinanceTransaction,
     FinanceTransactionDirection,
     FinanceTransactionSource,
@@ -14,7 +13,6 @@ import {
 } from '@/lib/finance/core/values';
 import { getFinanceMutationRequestError } from '@/lib/finance/core/requestSecurity';
 
-const categoryTypes: FinanceCategoryType[] = ['expense', 'income'];
 const transactionDirections: FinanceTransactionDirection[] = ['expense', 'income'];
 const transactionSources: FinanceTransactionSource[] = ['manual', 'screenshot'];
 const transactionStatuses: FinanceTransactionStatus[] = ['confirmed', 'review', 'duplicate', 'rejected'];
@@ -106,10 +104,6 @@ export function toPositiveNumber(value: unknown) {
 
 export function normalizeDate(value: unknown) {
     return normalizeFinanceDate(value);
-}
-
-export function isFinanceCategoryType(value: unknown): value is FinanceCategoryType {
-    return categoryTypes.includes(value as FinanceCategoryType);
 }
 
 export function isFinanceTransactionDirection(value: unknown): value is FinanceTransactionDirection {

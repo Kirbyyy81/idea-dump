@@ -139,23 +139,10 @@ function FinanceTransactionsContent() {
             : []
     )), [form.source_id, sources]);
     const categoryOptions = useMemo(() => {
-        const activeOptions = getFinanceCategoryOptions(
-            categories,
-            form.direction === 'income' ? 'income' : 'expense'
-        );
-        const currentCategory = categories.find((category) => (
-            category.id === form.category_id
-            && category.type === form.direction
-            && category.is_archived
-        ));
-        if (!currentCategory) return activeOptions;
-        return [{
-            value: currentCategory.id,
-            label: `${currentCategory.name} (archived)`,
-            isVirtualDefault: false,
-            disabled: true,
-        }, ...activeOptions];
-    }, [categories, form.category_id, form.direction]);
+        return getFinanceCategoryOptions(categories, {
+            currentCategoryId: form.category_id,
+        });
+    }, [categories, form.category_id]);
     const filteredTransactions = useMemo(() => {
         const needle = query.trim().toLowerCase();
         if (!needle) return transactions;
@@ -319,7 +306,6 @@ function FinanceTransactionsContent() {
                                 <FinanceFormField fieldId="edit-direction" label="Direction" error={fieldErrors.direction} required>
                                     <Select id="edit-direction" dataFinanceField="direction" error={Boolean(fieldErrors.direction)} ariaDescribedBy={fieldErrors.direction ? 'edit-direction-error' : undefined} ariaLabel="Transaction direction" value={form.direction} onChange={(direction) => {
                                         setTransactionField('direction', direction as FinanceTransactionDirection);
-                                        setTransactionField('category_id', '');
                                     }} options={[{ value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }]} />
                                 </FinanceFormField>
                                 <FinanceFormField fieldId="edit-source" label="Source" error={fieldErrors.source_id} required>

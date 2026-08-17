@@ -20,7 +20,6 @@ import { FinanceCategory, FinanceRule, FinanceRuleSuggestion, FinanceSource, Fin
 import { useAlert } from '@/lib/contexts/AlertContext';
 import {
     getFinanceCategoryOptions,
-    isVirtualDefaultCategoryValue,
     mergeFinanceCategory,
 } from '@/lib/finance/catalog';
 import { persistVirtualDefaultCategory } from '@/lib/finance/catalogClient';
@@ -92,9 +91,6 @@ export function RulesSettingsPanel() {
         setIsSaving(true);
         try {
             let categoryId = form.category_id;
-            if (form.direction === 'income' && isVirtualDefaultCategoryValue(categoryId)) {
-                throw new Error('Suggested default categories are expense categories');
-            }
             const persistedCategory = await persistVirtualDefaultCategory(categoryId);
             if (persistedCategory) {
                 categoryId = persistedCategory.id;
@@ -213,9 +209,9 @@ export function RulesSettingsPanel() {
                                         <label className="space-y-2"><span className="text-sm text-text-secondary">Rule name</span><Input required value={editingSuggestion.name} onChange={(event) => setEditingSuggestion({ ...editingSuggestion, name: event.target.value })} /></label>
                                         <label className="space-y-2"><span className="text-sm text-text-secondary">Match type</span><Select ariaLabel="Suggestion match type" value={editingSuggestion.match_type} onChange={(match_type) => setEditingSuggestion({ ...editingSuggestion, match_type: match_type as MatchType })} options={matchTypeOptions} /></label>
                                         <label className="space-y-2"><span className="text-sm text-text-secondary">Exact pattern</span><Input required value={editingSuggestion.pattern} onChange={(event) => setEditingSuggestion({ ...editingSuggestion, pattern: event.target.value })} /></label>
-                                        <label className="space-y-2"><span className="text-sm text-text-secondary">Direction</span><Select ariaLabel="Suggestion direction" value={editingSuggestion.direction} onChange={(direction) => setEditingSuggestion({ ...editingSuggestion, direction: direction as FinanceTransactionDirection, category_id: '' })} options={[{ value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }]} /></label>
+                                        <label className="space-y-2"><span className="text-sm text-text-secondary">Direction</span><Select ariaLabel="Suggestion direction" value={editingSuggestion.direction} onChange={(direction) => setEditingSuggestion({ ...editingSuggestion, direction: direction as FinanceTransactionDirection })} options={[{ value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }]} /></label>
                                         <label className="space-y-2"><span className="text-sm text-text-secondary">Source</span><Select ariaLabel="Suggestion source" value={editingSuggestion.source_id || ''} onChange={(source_id) => setEditingSuggestion({ ...editingSuggestion, source_id: source_id || null })} options={[{ value: '', label: 'Any source' }, ...sources.filter((source) => !source.is_archived).map((source) => ({ value: source.id, label: source.name }))]} /></label>
-                                        <label className="space-y-2"><span className="text-sm text-text-secondary">Category</span><Select ariaLabel="Suggestion category" value={editingSuggestion.category_id} onChange={(category_id) => setEditingSuggestion({ ...editingSuggestion, category_id })} placeholder="Choose a category" options={getFinanceCategoryOptions(categories, editingSuggestion.direction)} /></label>
+                                        <label className="space-y-2"><span className="text-sm text-text-secondary">Category</span><Select ariaLabel="Suggestion category" value={editingSuggestion.category_id} onChange={(category_id) => setEditingSuggestion({ ...editingSuggestion, category_id })} placeholder="Choose a category" options={getFinanceCategoryOptions(categories)} /></label>
                                         <label className="space-y-2"><span className="text-sm text-text-secondary">Priority</span><Input type="number" step="1" value={editingSuggestion.priority} onChange={(event) => setEditingSuggestion({ ...editingSuggestion, priority: Number(event.target.value) })} /></label>
                                     </div>
                                     <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><Button type="button" variant="ghost" icon={<CloseDoodleIcon size={15} />} onClick={() => setEditingSuggestion(null)}>Cancel</Button><Button type="submit" isLoading={isSaving}>Save suggestion</Button></div>
@@ -239,7 +235,7 @@ export function RulesSettingsPanel() {
                                 <label className="block space-y-2"><span className="text-sm text-text-secondary">Match type</span><Select ariaLabel="Rule match type" value={form.match_type} onChange={(match_type) => setForm({ ...form, match_type: match_type as MatchType })} options={matchTypeOptions} /></label>
                                 <label className="block space-y-2"><span className="text-sm text-text-secondary">Text to match</span><Input required value={form.pattern} onChange={(event) => setForm({ ...form, pattern: event.target.value })} placeholder="JAYA GROCER" /></label>
                             <label className="block space-y-2"><span className="text-sm text-text-secondary">Set source</span><Select ariaLabel="Rule source" value={form.source_id} onChange={(source_id) => setForm({ ...form, source_id })} options={[{ value: '', label: 'Do not change' }, ...sources.filter((source) => !source.is_archived).map((source) => ({ value: source.id, label: source.name }))]} /></label>
-                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Set category</span><Select ariaLabel="Rule category" value={form.category_id} onChange={(category_id) => setForm({ ...form, category_id })} options={[{ value: '', label: 'Do not change' }, ...getFinanceCategoryOptions(categories, 'expense', { includeTypeLabel: true }), ...getFinanceCategoryOptions(categories, 'income', { includeTypeLabel: true })]} /></label>
+                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Set category</span><Select ariaLabel="Rule category" value={form.category_id} onChange={(category_id) => setForm({ ...form, category_id })} options={[{ value: '', label: 'Do not change' }, ...getFinanceCategoryOptions(categories)]} /></label>
                             <label className="block space-y-2"><span className="text-sm text-text-secondary">Set direction</span><Select ariaLabel="Rule direction" value={form.direction} onChange={(direction) => setForm({ ...form, direction: direction as FinanceTransactionDirection | '' })} options={[{ value: '', label: 'Do not change' }, { value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }]} /></label>
                                 <label className="block space-y-2"><span className="text-sm text-text-secondary">Priority</span><Input type="number" step="1" value={form.priority} onChange={(event) => setForm({ ...form, priority: event.target.value })} /></label>
                             </div>

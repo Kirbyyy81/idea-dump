@@ -1,7 +1,6 @@
 import type {
     FinanceCandidatePayload,
     FinanceCandidateTransaction,
-    FinanceCategory,
     FinanceDuplicateOutcome,
     FinanceDuplicateSignal,
     FinanceFieldLearningRule,
@@ -22,7 +21,6 @@ export interface FinanceContext {
     rules: FinanceRule[];
     fieldLearningRules: FinanceFieldLearningRule[];
     payees: FinancePayee[];
-    categories: Pick<FinanceCategory, 'id' | 'type'>[];
 }
 
 export interface BeginIntakeResult {
