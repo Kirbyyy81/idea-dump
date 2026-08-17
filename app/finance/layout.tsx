@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { FinanceShareTargetProvider } from '@/app/finance/_components/FinanceShareTargetProvider';
+import { FinanceReferenceDataProvider } from '@/app/finance/_components/FinanceReferenceDataProvider';
 import { canAccessModule, getSessionUserAppAccess } from '@/lib/rbac/access';
 
 export default async function FinanceLayout({
@@ -17,5 +18,9 @@ export default async function FinanceLayout({
         redirect('/dashboard');
     }
 
-    return <FinanceShareTargetProvider>{children}</FinanceShareTargetProvider>;
+    return (
+        <FinanceShareTargetProvider>
+            <FinanceReferenceDataProvider>{children}</FinanceReferenceDataProvider>
+        </FinanceShareTargetProvider>
+    );
 }

@@ -92,7 +92,7 @@ describe('Finance share target contracts', () => {
         expect(shell).toMatch(/<FinanceShareRejectionBridge\s*\/>/);
         expect(shell).not.toMatch(/<FinanceShareTargetProvider>/);
         expect(financeLayout).toMatch(
-            /<FinanceShareTargetProvider>\{children\}<\/FinanceShareTargetProvider>/
+            /<FinanceShareTargetProvider>[\s\S]*<FinanceReferenceDataProvider>\{children\}<\/FinanceReferenceDataProvider>[\s\S]*<\/FinanceShareTargetProvider>/
         );
         expect(provider).not.toMatch(/useAccess/);
         expect(provider).toMatch(/parseFinanceShareWorkerMessage/);

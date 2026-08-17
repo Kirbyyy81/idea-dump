@@ -19,12 +19,13 @@ import { FinanceLoadingState } from '@/app/finance/_components/FinanceLoadingSta
 import { FinanceCategory, FinanceRule, FinanceRuleSuggestion, FinanceSource, FinanceTransactionDirection } from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
 import {
-    getFinanceCategoryOptions,
-    mergeFinanceCategory,
+    getFinanceReferenceCategoryOptions,
 } from '@/lib/finance/catalog';
 import { persistVirtualDefaultCategory } from '@/lib/finance/catalogClient';
 import { financeApiRequest } from '@/lib/finance/core/client';
 import { sortFinanceRules } from '@/lib/finance/rules';
+import { useFinanceReferenceData } from '@/app/finance/_components/FinanceReferenceDataProvider';
+import { FinanceReferenceDataState } from '@/app/finance/_components/FinanceReferenceDataState';
 
 type MatchType = FinanceRule['match_type'];
 type RuleWithRelations = FinanceRule & { finance_source?: FinanceSource | null; category?: FinanceCategory | null };
@@ -48,9 +49,15 @@ const matchTypeOptions = [
 
 export function RulesSettingsPanel() {
     const { showError, showSuccess } = useAlert();
+    const {
+        sources,
+        categories,
+        status: referenceStatus,
+        error: referenceError,
+        refresh: refreshReferenceData,
+        upsertCategory,
+    } = useFinanceReferenceData();
     const [rules, setRules] = useState<RuleWithRelations[]>([]);
-    const [sources, setSources] = useState<FinanceSource[]>([]);
-    const [categories, setCategories] = useState<FinanceCategory[]>([]);
     const [suggestions, setSuggestions] = useState<FinanceRuleSuggestion[]>([]);
     const [editingSuggestion, setEditingSuggestion] = useState<FinanceRuleSuggestion | null>(null);
     const [form, setForm] = useState(initialForm);
@@ -63,15 +70,11 @@ export function RulesSettingsPanel() {
     const loadData = useCallback(async (signal?: AbortSignal) => {
         setIsLoading(true);
         try {
-            const [rulesPayload, sourcesPayload, categoriesPayload, suggestionsPayload] = await Promise.all([
+            const [rulesPayload, suggestionsPayload] = await Promise.all([
                 financeApiRequest<{ data: RuleWithRelations[] }>('/api/finance/rules', { signal }),
-                financeApiRequest<{ data: FinanceSource[] }>('/api/finance/sources', { signal }),
-                financeApiRequest<{ data: FinanceCategory[] }>('/api/finance/categories', { signal }),
                 financeApiRequest<{ data: FinanceRuleSuggestion[] }>('/api/finance/rule-suggestions', { signal }),
             ]);
             setRules(sortFinanceRules(rulesPayload.data || []));
-            setSources(sourcesPayload.data || []);
-            setCategories(categoriesPayload.data || []);
             setSuggestions(suggestionsPayload.data || []);
         } catch (error) {
             if (signal?.aborted) return;
@@ -94,7 +97,7 @@ export function RulesSettingsPanel() {
             const persistedCategory = await persistVirtualDefaultCategory(categoryId);
             if (persistedCategory) {
                 categoryId = persistedCategory.id;
-                setCategories((current) => mergeFinanceCategory(current, persistedCategory));
+                upsertCategory(persistedCategory);
             }
             const payload = await financeApiRequest<{ data: RuleWithRelations }>('/api/finance/rules', {
                 method: 'POST',
@@ -177,7 +180,7 @@ export function RulesSettingsPanel() {
             const persistedCategory = await persistVirtualDefaultCategory(categoryId);
             if (persistedCategory) {
                 categoryId = persistedCategory.id;
-                setCategories((current) => mergeFinanceCategory(current, persistedCategory));
+                upsertCategory(persistedCategory);
             }
             const payload = await financeApiRequest<{ data: FinanceRuleSuggestion }>('/api/finance/rule-suggestions', {
                 method: 'PATCH',
@@ -199,6 +202,16 @@ export function RulesSettingsPanel() {
             <div className="mx-auto max-w-7xl">
                 <p className="text-sm text-text-muted">Active rules are applied by priority during screenshot processing.</p>
 
+                {referenceStatus !== 'ready' && (
+                    <div className="mt-5">
+                        <FinanceReferenceDataState
+                            status={referenceStatus}
+                            error={referenceError}
+                            retry={refreshReferenceData}
+                        />
+                    </div>
+                )}
+
                 {!isLoading && suggestions.length > 0 && (
                     <section className="mt-5 border border-border-default bg-bg-subtle">
                         <div className="flex items-center gap-2 border-b border-border-default px-5 py-4"><SparkleDoodleIcon size={17} className="text-accent-apricot" /><h2 className="text-base font-bold">Learning suggestions</h2></div>
@@ -210,16 +223,16 @@ export function RulesSettingsPanel() {
                                         <label className="space-y-2"><span className="text-sm text-text-secondary">Match type</span><Select ariaLabel="Suggestion match type" value={editingSuggestion.match_type} onChange={(match_type) => setEditingSuggestion({ ...editingSuggestion, match_type: match_type as MatchType })} options={matchTypeOptions} /></label>
                                         <label className="space-y-2"><span className="text-sm text-text-secondary">Exact pattern</span><Input required value={editingSuggestion.pattern} onChange={(event) => setEditingSuggestion({ ...editingSuggestion, pattern: event.target.value })} /></label>
                                         <label className="space-y-2"><span className="text-sm text-text-secondary">Direction</span><Select ariaLabel="Suggestion direction" value={editingSuggestion.direction} onChange={(direction) => setEditingSuggestion({ ...editingSuggestion, direction: direction as FinanceTransactionDirection })} options={[{ value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }]} /></label>
-                                        <label className="space-y-2"><span className="text-sm text-text-secondary">Source</span><Select ariaLabel="Suggestion source" value={editingSuggestion.source_id || ''} onChange={(source_id) => setEditingSuggestion({ ...editingSuggestion, source_id: source_id || null })} options={[{ value: '', label: 'Any source' }, ...sources.filter((source) => !source.is_archived).map((source) => ({ value: source.id, label: source.name }))]} /></label>
-                                        <label className="space-y-2"><span className="text-sm text-text-secondary">Category</span><Select ariaLabel="Suggestion category" value={editingSuggestion.category_id} onChange={(category_id) => setEditingSuggestion({ ...editingSuggestion, category_id })} placeholder="Choose a category" options={getFinanceCategoryOptions(categories)} /></label>
+                                        <label className="space-y-2"><span className="text-sm text-text-secondary">Source</span><Select disabled={referenceStatus !== 'ready'} ariaLabel="Suggestion source" value={editingSuggestion.source_id || ''} onChange={(source_id) => setEditingSuggestion({ ...editingSuggestion, source_id: source_id || null })} options={[{ value: '', label: 'Any source' }, ...sources.map((source) => ({ value: source.id, label: source.name }))]} /></label>
+                                        <label className="space-y-2"><span className="text-sm text-text-secondary">Category</span><Select disabled={referenceStatus !== 'ready'} ariaLabel="Suggestion category" value={editingSuggestion.category_id} onChange={(category_id) => setEditingSuggestion({ ...editingSuggestion, category_id })} placeholder="Choose a category" options={getFinanceReferenceCategoryOptions(categories)} /></label>
                                         <label className="space-y-2"><span className="text-sm text-text-secondary">Priority</span><Input type="number" step="1" value={editingSuggestion.priority} onChange={(event) => setEditingSuggestion({ ...editingSuggestion, priority: Number(event.target.value) })} /></label>
                                     </div>
-                                    <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><Button type="button" variant="ghost" icon={<CloseDoodleIcon size={15} />} onClick={() => setEditingSuggestion(null)}>Cancel</Button><Button type="submit" isLoading={isSaving}>Save suggestion</Button></div>
+                                    <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><Button type="button" variant="ghost" icon={<CloseDoodleIcon size={15} />} onClick={() => setEditingSuggestion(null)}>Cancel</Button><Button type="submit" isLoading={isSaving} disabled={referenceStatus !== 'ready'}>Save suggestion</Button></div>
                                 </form>
                             ) : (
                                 <div key={suggestion.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
                                     <div><p className="font-semibold">{suggestion.name} to {suggestion.category?.name || 'category'}</p><p className="text-sm text-text-muted">Seen in {suggestion.evidence_count} corrections · {suggestion.finance_source?.name || 'Any source'} · {suggestion.match_type?.replace('_', ' ') || 'merchant alias'}</p></div>
-                                    <div className="flex flex-wrap gap-2"><Button variant="ghost" aria-label={`Edit suggestion ${suggestion.name}`} disabled={pendingItemId !== null} onClick={() => setEditingSuggestion({ ...suggestion, match_type: suggestion.match_type || 'merchant_alias', priority: suggestion.priority ?? 100 })}>Edit</Button><Button variant="ghost" aria-label={`Dismiss suggestion ${suggestion.name}`} disabled={pendingItemId !== null} isLoading={pendingItemId === suggestion.id} icon={<CloseDoodleIcon size={15} />} onClick={() => void resolveSuggestion(suggestion, 'reject')}>Dismiss</Button><Button aria-label={`Activate suggestion ${suggestion.name}`} disabled={pendingItemId !== null} isLoading={pendingItemId === suggestion.id} icon={<CheckDoodleIcon size={15} />} onClick={() => void resolveSuggestion(suggestion, 'accept')}>Activate</Button></div>
+                                    <div className="flex flex-wrap gap-2"><Button variant="ghost" aria-label={`Edit suggestion ${suggestion.name}`} disabled={pendingItemId !== null || referenceStatus !== 'ready'} onClick={() => setEditingSuggestion({ ...suggestion, match_type: suggestion.match_type || 'merchant_alias', priority: suggestion.priority ?? 100 })}>Edit</Button><Button variant="ghost" aria-label={`Dismiss suggestion ${suggestion.name}`} disabled={pendingItemId !== null} isLoading={pendingItemId === suggestion.id} icon={<CloseDoodleIcon size={15} />} onClick={() => void resolveSuggestion(suggestion, 'reject')}>Dismiss</Button><Button aria-label={`Activate suggestion ${suggestion.name}`} disabled={pendingItemId !== null} isLoading={pendingItemId === suggestion.id} icon={<CheckDoodleIcon size={15} />} onClick={() => void resolveSuggestion(suggestion, 'accept')}>Activate</Button></div>
                                 </div>
                             ))}
                         </div>
@@ -234,12 +247,12 @@ export function RulesSettingsPanel() {
                                 <label className="block space-y-2"><span className="text-sm text-text-secondary">Rule name</span><Input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Jaya Grocer" /></label>
                                 <label className="block space-y-2"><span className="text-sm text-text-secondary">Match type</span><Select ariaLabel="Rule match type" value={form.match_type} onChange={(match_type) => setForm({ ...form, match_type: match_type as MatchType })} options={matchTypeOptions} /></label>
                                 <label className="block space-y-2"><span className="text-sm text-text-secondary">Text to match</span><Input required value={form.pattern} onChange={(event) => setForm({ ...form, pattern: event.target.value })} placeholder="JAYA GROCER" /></label>
-                            <label className="block space-y-2"><span className="text-sm text-text-secondary">Set source</span><Select ariaLabel="Rule source" value={form.source_id} onChange={(source_id) => setForm({ ...form, source_id })} options={[{ value: '', label: 'Do not change' }, ...sources.filter((source) => !source.is_archived).map((source) => ({ value: source.id, label: source.name }))]} /></label>
-                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Set category</span><Select ariaLabel="Rule category" value={form.category_id} onChange={(category_id) => setForm({ ...form, category_id })} options={[{ value: '', label: 'Do not change' }, ...getFinanceCategoryOptions(categories)]} /></label>
+                            <label className="block space-y-2"><span className="text-sm text-text-secondary">Set source</span><Select disabled={referenceStatus !== 'ready'} ariaLabel="Rule source" value={form.source_id} onChange={(source_id) => setForm({ ...form, source_id })} options={[{ value: '', label: 'Do not change' }, ...sources.map((source) => ({ value: source.id, label: source.name }))]} /></label>
+                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Set category</span><Select disabled={referenceStatus !== 'ready'} ariaLabel="Rule category" value={form.category_id} onChange={(category_id) => setForm({ ...form, category_id })} options={[{ value: '', label: 'Do not change' }, ...getFinanceReferenceCategoryOptions(categories)]} /></label>
                             <label className="block space-y-2"><span className="text-sm text-text-secondary">Set direction</span><Select ariaLabel="Rule direction" value={form.direction} onChange={(direction) => setForm({ ...form, direction: direction as FinanceTransactionDirection | '' })} options={[{ value: '', label: 'Do not change' }, { value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }]} /></label>
                                 <label className="block space-y-2"><span className="text-sm text-text-secondary">Priority</span><Input type="number" step="1" value={form.priority} onChange={(event) => setForm({ ...form, priority: event.target.value })} /></label>
                             </div>
-                            <Button type="submit" className="mt-5 w-full" isLoading={isSaving}>Add rule</Button>
+                            <Button type="submit" className="mt-5 w-full" isLoading={isSaving} disabled={referenceStatus !== 'ready'}>Add rule</Button>
                         </Card>
                     </form>
 

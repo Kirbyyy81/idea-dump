@@ -35,10 +35,12 @@ import {
     listFinanceReviewQueue,
     listFinanceSources,
     listFinanceTransactionsByIds,
+    listActiveFinanceCategoryReferences,
     listActiveFinanceRules,
     listActiveFinanceFieldLearningRules,
     listActiveFinancePayees,
     listActiveFinanceSources,
+    listActiveFinanceSourceReferences,
     markFinanceReviewCandidateDuplicate,
     rejectFinanceReviewCandidate,
     updateFinanceIntakeSourceEvidence,
@@ -90,9 +92,13 @@ import {
     FinanceFieldLearningRule,
     FinanceIntakeItem,
     FinanceCategory,
+    FinanceCategoryDetail,
     FinancePayee,
+    FinanceReferenceData,
+    FinanceReferenceOption,
     FinanceRule,
     FinanceSource,
+    FinanceSourceDetail,
     FinanceTransaction,
 } from '@/lib/types';
 
@@ -114,6 +120,39 @@ export function isFinanceServiceError(error: unknown): error is FinanceServiceEr
     return error instanceof FinanceServiceError;
 }
 
+function toFinanceReferenceOption(value: Pick<FinanceReferenceOption, 'id' | 'name'>): FinanceReferenceOption {
+    return { id: value.id, name: value.name };
+}
+
+function toFinanceCategoryDetail(value: FinanceCategoryDetail): FinanceCategoryDetail {
+    return {
+        ...toFinanceReferenceOption(value),
+        is_archived: Boolean(value.is_archived),
+    };
+}
+
+function toFinanceSourceDetail(value: FinanceSourceDetail): FinanceSourceDetail {
+    return {
+        ...toFinanceReferenceOption(value),
+        filename_aliases: value.filename_aliases || [],
+        ocr_aliases: value.ocr_aliases || [],
+        is_archived: Boolean(value.is_archived),
+    };
+}
+
+export async function getFinanceReferenceData(userId: string): Promise<FinanceReferenceData> {
+    const [sourcesResult, categoriesResult] = await Promise.all([
+        listActiveFinanceSourceReferences(userId),
+        listActiveFinanceCategoryReferences(userId),
+    ]);
+    if (sourcesResult.error) throw sourcesResult.error;
+    if (categoriesResult.error) throw categoriesResult.error;
+    return {
+        sources: (sourcesResult.data || []).map(toFinanceReferenceOption),
+        categories: (categoriesResult.data || []).map(toFinanceReferenceOption),
+    };
+}
+
 function fail(message: string, status = 400, details?: Record<string, unknown>): never {
     throw new FinanceServiceError(message, status, details);
 }
@@ -125,7 +164,7 @@ function isPostgrestError(error: unknown): error is PostgrestError {
 export async function getFinanceCategories(userId: string) {
     const { data, error } = await listFinanceCategories(userId);
     if (error) throw error;
-    return data || [];
+    return (data || []).map(toFinanceCategoryDetail);
 }
 
 export async function createFinanceCategoryForUser(userId: string, input: FinanceCategoryCreateInput) {
@@ -133,7 +172,7 @@ export async function createFinanceCategoryForUser(userId: string, input: Financ
         const { data, error } = await listFinanceCategories(userId);
         if (error) throw error;
         const canonicalName = canonicalFinanceCategoryName(input.name);
-        return ((data || []) as FinanceCategory[]).find(
+        return ((data || []) as FinanceCategoryDetail[]).find(
             (category) => canonicalFinanceCategoryName(category.name) === canonicalName
         ) ?? null;
     };
@@ -149,7 +188,7 @@ export async function createFinanceCategoryForUser(userId: string, input: Financ
         }
         throw error;
     }
-    return { data, created: true, status: 201 };
+    return { data: toFinanceCategoryDetail(data as FinanceCategoryDetail), created: true, status: 201 };
 }
 
 export async function updateFinanceCategoryForUser(userId: string, input: FinanceCategoryUpdateInput) {
@@ -166,14 +205,14 @@ export async function updateFinanceCategoryForUser(userId: string, input: Financ
             if (error.code === '23514' || error.code === '40001') fail('Category changed concurrently. Reload and retry.', 409);
             throw error;
         }
-        return data;
+        return toFinanceCategoryDetail(data as FinanceCategoryDetail);
     }
     const { data, error } = await updateFinanceCategory(userId, input.id, input.updates);
     if (error) {
         if (error.code === '23505') fail('A category with this name already exists', 409);
         throw error;
     }
-    return data;
+    return toFinanceCategoryDetail(data as FinanceCategoryDetail);
 }
 
 export async function deleteFinanceCategoryForUser(userId: string, categoryId: string) {
@@ -188,7 +227,7 @@ export async function deleteFinanceCategoryForUser(userId: string, categoryId: s
 export async function getFinanceSources(userId: string) {
     const { data, error } = await listFinanceSources(userId);
     if (error) throw error;
-    return data || [];
+    return (data || []).map(toFinanceSourceDetail);
 }
 
 export async function createFinanceSourceForUser(userId: string, input: FinanceSourceCreateInput) {
@@ -197,7 +236,7 @@ export async function createFinanceSourceForUser(userId: string, input: FinanceS
         if (error.code === '23505') fail('This source already exists. Restore it if it is archived.', 409);
         throw error;
     }
-    return data;
+    return toFinanceSourceDetail(data as FinanceSourceDetail);
 }
 
 export async function updateFinanceSourceForUser(userId: string, input: FinanceSourceUpdateInput) {
@@ -212,7 +251,7 @@ export async function updateFinanceSourceForUser(userId: string, input: FinanceS
             if (error.code === '23514' || error.code === '40001') fail('Source changed concurrently. Reload and retry.', 409);
             throw error;
         }
-        return data;
+        return toFinanceSourceDetail(data as FinanceSourceDetail);
     }
     const { data, error } = await updateFinanceSource(userId, input.id, input.updates);
     if (error) {
@@ -220,7 +259,7 @@ export async function updateFinanceSourceForUser(userId: string, input: FinanceS
         throw error;
     }
     if (!data) fail('Source not found', 404);
-    return data;
+    return toFinanceSourceDetail(data as FinanceSourceDetail);
 }
 
 export async function deleteFinanceSourceForUser(userId: string, sourceId: string) {

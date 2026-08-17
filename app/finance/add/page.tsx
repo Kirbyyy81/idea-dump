@@ -9,11 +9,10 @@ import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
 import { FileUpload } from '@/components/molecules/FileUpload';
-import { FinanceCategory, FinanceSource, FinanceTransactionDirection } from '@/lib/types';
+import { FinanceSourceDetail, FinanceTransactionDirection } from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
 import {
-    getFinanceCategoryOptions,
-    mergeFinanceCategory,
+    getFinanceReferenceCategoryOptions,
 } from '@/lib/finance/catalog';
 import { persistVirtualDefaultCategory } from '@/lib/finance/catalogClient';
 import {
@@ -24,7 +23,6 @@ import {
 } from '@/lib/finance/ocr/client';
 import { OcrProgress } from './_components/OcrProgress';
 import { FinanceShareExperience } from './_components/FinanceShareExperience';
-import { FinanceLoadingState } from '../_components/FinanceLoadingState';
 import {
     FinanceFormErrorSummary,
     FinanceFormField,
@@ -51,6 +49,8 @@ import {
     toPositiveFinanceAmount,
 } from '@/lib/finance/core/values';
 import { useFinanceShareTarget } from '@/app/finance/_components/FinanceShareTargetProvider';
+import { useFinanceReferenceData } from '@/app/finance/_components/FinanceReferenceDataProvider';
+import { FinanceReferenceDataState } from '@/app/finance/_components/FinanceReferenceDataState';
 
 const NEW_SOURCE = '__new__';
 const MAX_FINANCE_UPLOAD_BYTES = 4 * 1024 * 1024;
@@ -69,10 +69,17 @@ function financeOcrErrorMessage(error: unknown) {
 export default function AddFinanceTransactionPage() {
     const router = useRouter();
     const { files: sharedFiles } = useFinanceShareTarget();
+    const {
+        sources,
+        categories,
+        status: referenceStatus,
+        error: referenceError,
+        refresh: refreshReferenceData,
+        upsertSource,
+        upsertCategory,
+    } = useFinanceReferenceData();
     const { showAlert, showError, showSuccess } = useAlert();
     const [mode, setMode] = useState<'manual' | 'screenshot'>('screenshot');
-    const [sources, setSources] = useState<FinanceSource[]>([]);
-    const [categories, setCategories] = useState<FinanceCategory[]>([]);
     const [form, setForm] = useState(initialForm);
     const [newSource, setNewSource] = useState('');
     const [file, setFile] = useState<File | null>(null);
@@ -80,36 +87,17 @@ export default function AddFinanceTransactionPage() {
     const [fieldErrors, setFieldErrors] = useState<FinanceFieldErrors>({});
     const [ocrPhase, setOcrPhase] = useState<FinanceOcrPhase>('idle');
     const [uploadProgress, setUploadProgress] = useState(0);
-    const [isOptionsLoading, setIsOptionsLoading] = useState(true);
     const uploadControllerRef = useRef<AbortController | null>(null);
     const manualAttemptRef = useRef<{ fingerprint: string; key: string } | null>(null);
 
     useEffect(() => () => uploadControllerRef.current?.abort(), []);
 
     useEffect(() => {
-        const controller = new AbortController();
-        Promise.all([
-            financeApiRequest<{ data: FinanceSource[] }>('/api/finance/sources', { signal: controller.signal }),
-            financeApiRequest<{ data: FinanceCategory[] }>('/api/finance/categories', { signal: controller.signal }),
-        ]).then(([sourcePayload, categoryPayload]) => {
-            setSources(sourcePayload.data || []);
-            setCategories(categoryPayload.data || []);
-        }).catch((error) => {
-            if (error instanceof DOMException && error.name === 'AbortError') return;
-            showError(error instanceof Error ? error.message : 'Could not load transaction options');
-        })
-            .finally(() => {
-                if (!controller.signal.aborted) setIsOptionsLoading(false);
-            });
-        return () => controller.abort();
-    }, [showError]);
-
-    useEffect(() => {
         if (mode === 'screenshot') void warmFinanceOcr();
     }, [mode]);
 
     const availableCategories = useMemo(
-        () => getFinanceCategoryOptions(categories),
+        () => getFinanceReferenceCategoryOptions(categories),
         [categories]
     );
 
@@ -157,16 +145,16 @@ export default function AddFinanceTransactionPage() {
             let sourceId = form.source_id;
             let categoryId = form.category_id;
             if (sourceId === NEW_SOURCE) {
-                const sourcePayload = await financeApiRequest<{ data: FinanceSource }>('/api/finance/sources', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newSource }) }, { fallbackMessage: 'Could not create source' });
+                const sourcePayload = await financeApiRequest<{ data: FinanceSourceDetail }>('/api/finance/sources', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newSource }) }, { fallbackMessage: 'Could not create source' });
                 sourceId = sourcePayload.data.id;
-                setSources((current) => [...current, sourcePayload.data]);
+                upsertSource(sourcePayload.data);
                 setForm((current) => ({ ...current, source_id: sourcePayload.data.id }));
                 setNewSource('');
             }
             const persistedCategory = await persistVirtualDefaultCategory(categoryId);
             if (persistedCategory) {
                 categoryId = persistedCategory.id;
-                setCategories((current) => mergeFinanceCategory(current, persistedCategory));
+                upsertCategory(persistedCategory);
             }
             const requestBody = { ...form, amount, source_id: sourceId, category_id: categoryId };
             const requestFingerprint = JSON.stringify(requestBody);
@@ -270,8 +258,12 @@ export default function AddFinanceTransactionPage() {
         {sharedFiles.length === 0 && <>
         <div className="grid grid-cols-2 border border-border-default p-1" role="group" aria-label="Transaction entry method"><button type="button" aria-pressed={mode === 'manual'} disabled={isSaving} onClick={() => setMode('manual')} className={`flex h-10 items-center justify-center gap-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${mode === 'manual' ? 'bg-action-primary text-action-primary-text' : 'text-text-secondary hover:bg-bg-hover'}`}><DocumentDoodleIcon size={16} />Manual</button><button type="button" aria-pressed={mode === 'screenshot'} disabled={isSaving} onClick={() => setMode('screenshot')} className={`flex h-10 items-center justify-center gap-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${mode === 'screenshot' ? 'bg-action-primary text-action-primary-text' : 'text-text-secondary hover:bg-bg-hover'}`}><ScanDoodleIcon size={16} />Screenshot</button></div>
 
-        {mode === 'manual' ? isOptionsLoading ? (
-            <FinanceLoadingState label="Loading transaction options..." />
+        {mode === 'manual' ? referenceStatus !== 'ready' ? (
+            <FinanceReferenceDataState
+                status={referenceStatus}
+                error={referenceError}
+                retry={refreshReferenceData}
+            />
         ) : <form onSubmit={submitManual} className="mt-6 space-y-4" noValidate>
             <FinanceFormErrorSummary errors={fieldErrors} />
             <FinanceFormField fieldId="manual-direction" label="Type" error={fieldErrors.direction} required>
@@ -280,7 +272,7 @@ export default function AddFinanceTransactionPage() {
                 }} options={[{ value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }]} />
             </FinanceFormField>
             <FinanceFormField fieldId="manual-source" label="Source" error={fieldErrors.source_id} required>
-                <Select id="manual-source" dataFinanceField="source_id" ariaLabel="Transaction source" ariaDescribedBy={fieldErrors.source_id ? 'manual-source-error' : undefined} error={Boolean(fieldErrors.source_id)} value={form.source_id} onChange={(sourceId) => setManualField('source_id', sourceId)} placeholder="Choose or add a source" options={[...sources.filter((source) => !source.is_archived).map((source) => ({ value: source.id, label: source.name })), { value: NEW_SOURCE, label: '+ Add new source' }]} />
+                <Select id="manual-source" dataFinanceField="source_id" ariaLabel="Transaction source" ariaDescribedBy={fieldErrors.source_id ? 'manual-source-error' : undefined} error={Boolean(fieldErrors.source_id)} value={form.source_id} onChange={(sourceId) => setManualField('source_id', sourceId)} placeholder="Choose or add a source" options={[...sources.map((source) => ({ value: source.id, label: source.name })), { value: NEW_SOURCE, label: '+ Add new source' }]} />
             </FinanceFormField>
             {form.source_id === NEW_SOURCE && <FinanceFormField fieldId="manual-new-source" label="New source name" error={fieldErrors.new_source_name} required>
                 <Input id="manual-new-source" data-finance-field="new_source_name" maxLength={MAX_FINANCE_NAME_LENGTH} value={newSource} onChange={(event) => {

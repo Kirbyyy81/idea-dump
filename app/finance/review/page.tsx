@@ -17,10 +17,10 @@ import { Textarea } from '@/components/atoms/Textarea';
 import { Toggle } from '@/components/atoms/Toggle';
 import {
     FinanceCandidateTransaction,
-    FinanceCategory,
+    FinanceCategoryDetail,
     FinanceDuplicateSignal,
     FinanceIntakeItem,
-    FinanceSource,
+    FinanceSourceDetail,
     FinanceTransactionDirection,
 } from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
@@ -33,8 +33,7 @@ import {
 } from '../_components/FinanceFormField';
 import { cn, formatCurrency } from '@/lib/utils';
 import {
-    getFinanceCategoryOptions,
-    mergeFinanceCategory,
+    getFinanceReferenceCategoryOptions,
 } from '@/lib/finance/catalog';
 import { persistVirtualDefaultCategory } from '@/lib/finance/catalogClient';
 import {
@@ -54,6 +53,8 @@ import {
 } from '@/lib/finance/core/values';
 import { FinanceApiError, financeApiRequest } from '@/lib/finance/core/client';
 import { setFinancePayeeClassification } from '@/lib/finance/transactions/payeeClassification';
+import { useFinanceReferenceData } from '@/app/finance/_components/FinanceReferenceDataProvider';
+import { FinanceReferenceDataState } from '@/app/finance/_components/FinanceReferenceDataState';
 
 const NEW_SOURCE = '__new_source__';
 const NEW_CATEGORY = '__new_category__';
@@ -132,10 +133,17 @@ function duplicateOutcome(candidate: FinanceCandidateTransaction) {
 
 export default function FinanceReviewPage() {
     const { showError, showSuccess } = useAlert();
+    const {
+        sources,
+        categories,
+        status: referenceStatus,
+        error: referenceError,
+        refresh: refreshReferenceData,
+        upsertSource,
+        upsertCategory,
+    } = useFinanceReferenceData();
     const [candidates, setCandidates] = useState<FinanceCandidateTransaction[]>([]);
     const [failedIntakes, setFailedIntakes] = useState<FailedFinanceIntake[]>([]);
-    const [sources, setSources] = useState<FinanceSource[]>([]);
-    const [categories, setCategories] = useState<FinanceCategory[]>([]);
     const [selectedId, setSelectedId] = useState('');
     const [form, setForm] = useState<ReviewForm | null>(null);
     const [newSourceName, setNewSourceName] = useState('');
@@ -151,22 +159,16 @@ export default function FinanceReviewPage() {
     const loadQueue = useCallback(async (signal?: AbortSignal) => {
         setIsLoading(true);
         try {
-            const [reviewPayload, sourcesPayload, categoriesPayload] = await Promise.all([
-                financeApiRequest<{
-                    data: FinanceCandidateTransaction[];
-                    failed_intakes?: FailedFinanceIntake[];
-                }>('/api/finance/review', { signal }),
-                financeApiRequest<{ data: FinanceSource[] }>('/api/finance/sources', { signal }),
-                financeApiRequest<{ data: FinanceCategory[] }>('/api/finance/categories', { signal }),
-            ]);
+            const reviewPayload = await financeApiRequest<{
+                data: FinanceCandidateTransaction[];
+                failed_intakes?: FailedFinanceIntake[];
+            }>('/api/finance/review', { signal });
             const nextCandidates = (reviewPayload.data || []) as FinanceCandidateTransaction[];
             const requestedCandidateId = typeof window === 'undefined'
                 ? null
                 : new URLSearchParams(window.location.search).get('candidate');
             setCandidates(nextCandidates);
             setFailedIntakes(reviewPayload.failed_intakes || []);
-            setSources(sourcesPayload.data || []);
-            setCategories(categoriesPayload.data || []);
             setSelectedId((current) => nextCandidates.some((item) => item.id === current)
                 ? current
                 : requestedCandidateId && nextCandidates.some((item) => item.id === requestedCandidateId)
@@ -205,7 +207,7 @@ export default function FinanceReviewPage() {
     }, [selected]);
 
     const availableCategories = useMemo(
-        () => getFinanceCategoryOptions(categories),
+        () => getFinanceReferenceCategoryOptions(categories),
         [categories]
     );
 
@@ -274,30 +276,33 @@ export default function FinanceReviewPage() {
             let sourceId = form.source_id;
             let categoryId = form.category_id;
             if (action === 'confirm' && sourceId === NEW_SOURCE) {
-                const sourcePayload = await financeApiRequest<{ data: FinanceSource }>('/api/finance/sources', {
+                const sourcePayload = await financeApiRequest<{ data: FinanceSourceDetail }>('/api/finance/sources', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name: newSourceName }),
                 }, { fallbackMessage: 'Could not create source' });
                 sourceId = sourcePayload.data.id;
-                setSources((current) => [...current, sourcePayload.data]);
+                upsertSource(sourcePayload.data);
             }
             if (action === 'confirm' && categoryId === NEW_CATEGORY) {
-                const categoryPayload = await financeApiRequest<{ data: FinanceCategory }>('/api/finance/categories', {
+                const categoryPayload = await financeApiRequest<{ data: FinanceCategoryDetail }>('/api/finance/categories', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         name: newCategoryName,
                     }),
                 }, { fallbackMessage: 'Could not create category' });
+                if (categoryPayload.data.is_archived) {
+                    throw new Error(`Restore the ${categoryPayload.data.name} category in Finance settings before using it`);
+                }
                 categoryId = categoryPayload.data.id;
-                setCategories((current) => mergeFinanceCategory(current, categoryPayload.data));
+                upsertCategory(categoryPayload.data);
             }
             if (action === 'confirm') {
                 const persistedCategory = await persistVirtualDefaultCategory(categoryId);
                 if (persistedCategory) {
                     categoryId = persistedCategory.id;
-                    setCategories((current) => mergeFinanceCategory(current, persistedCategory));
+                    upsertCategory(persistedCategory);
                 }
             }
             attemptedForm = {
@@ -383,6 +388,14 @@ export default function FinanceReviewPage() {
                         <div className="grid min-h-72 place-items-center border border-dashed border-border-default">
                             <FinanceLoadingState label="Loading candidate details..." />
                         </div>
+                    ) : referenceStatus !== 'ready' ? (
+                        <div className="min-h-72 border border-dashed border-border-default">
+                            <FinanceReferenceDataState
+                                status={referenceStatus}
+                                error={referenceError}
+                                retry={refreshReferenceData}
+                            />
+                        </div>
                     ) : selected && form ? (
                         <form onSubmit={(event) => void resolveItem('confirm', event)}>
                             <Card className="p-5">
@@ -430,7 +443,7 @@ export default function FinanceReviewPage() {
                                     <FinanceFormField fieldId="review-amount" label="Amount" required error={fieldErrors.amount}><Input id="review-amount" data-finance-field="amount" {...financeFieldErrorProps(fieldErrors, 'amount', 'review-amount')} type="number" min="0.01" max={MAX_FINANCE_AMOUNT} step="0.01" value={form.amount} onChange={(event) => setReviewField('amount', event.target.value)} /></FinanceFormField>
                                     <FinanceFormField fieldId="review-currency" label="Currency"><Input id="review-currency" value="MYR" readOnly aria-readonly="true" /></FinanceFormField>
                                     <FinanceFormField className="md:col-span-2" fieldId="review-reference" label="Transaction reference" error={fieldErrors.reference_number}><Input id="review-reference" data-finance-field="reference_number" {...financeFieldErrorProps(fieldErrors, 'reference_number', 'review-reference')} maxLength={MAX_FINANCE_REFERENCE_LENGTH} value={form.reference_number} onChange={(event) => setReviewField('reference_number', event.target.value)} /></FinanceFormField>
-                                    <div className="space-y-4"><FinanceFormField fieldId="review-source" label="Source" required error={fieldErrors.source_id}><Select id="review-source" dataFinanceField="source_id" error={Boolean(fieldErrors.source_id)} ariaDescribedBy={fieldErrors.source_id ? 'review-source-error' : undefined} ariaLabel="Transaction source" value={form.source_id} onChange={(source_id) => setReviewField('source_id', source_id)} placeholder="Choose a source" options={[...sources.filter((source) => !source.is_archived).map((source) => ({ value: source.id, label: source.name })), { value: NEW_SOURCE, label: '+ Add new source' }]} /></FinanceFormField>{form.source_id === NEW_SOURCE && <FinanceFormField fieldId="review-new-source" label="New source name" required error={fieldErrors.new_source_name}><Input id="review-new-source" data-finance-field="new_source_name" {...financeFieldErrorProps(fieldErrors, 'new_source_name', 'review-new-source')} maxLength={MAX_FINANCE_NAME_LENGTH} value={newSourceName} onChange={(event) => { setNewSourceName(event.target.value); setFieldErrors((current) => ({ ...current, new_source_name: undefined })); }} placeholder="e.g. Maybank" /></FinanceFormField>}</div>
+                                    <div className="space-y-4"><FinanceFormField fieldId="review-source" label="Source" required error={fieldErrors.source_id}><Select id="review-source" dataFinanceField="source_id" error={Boolean(fieldErrors.source_id)} ariaDescribedBy={fieldErrors.source_id ? 'review-source-error' : undefined} ariaLabel="Transaction source" value={form.source_id} onChange={(source_id) => setReviewField('source_id', source_id)} placeholder="Choose a source" options={[...sources.map((source) => ({ value: source.id, label: source.name })), { value: NEW_SOURCE, label: '+ Add new source' }]} /></FinanceFormField>{form.source_id === NEW_SOURCE && <FinanceFormField fieldId="review-new-source" label="New source name" required error={fieldErrors.new_source_name}><Input id="review-new-source" data-finance-field="new_source_name" {...financeFieldErrorProps(fieldErrors, 'new_source_name', 'review-new-source')} maxLength={MAX_FINANCE_NAME_LENGTH} value={newSourceName} onChange={(event) => { setNewSourceName(event.target.value); setFieldErrors((current) => ({ ...current, new_source_name: undefined })); }} placeholder="e.g. Maybank" /></FinanceFormField>}</div>
                                     <div className="space-y-4"><FinanceFormField fieldId="review-category" label="Category" error={fieldErrors.category_id}><Select id="review-category" dataFinanceField="category_id" error={Boolean(fieldErrors.category_id)} ariaDescribedBy={fieldErrors.category_id ? 'review-category-error' : undefined} ariaLabel="Transaction category" value={form.category_id} onChange={(category_id) => setReviewField('category_id', category_id)} placeholder="Uncategorised" options={[{ value: '', label: 'Uncategorised' }, ...availableCategories, { value: NEW_CATEGORY, label: '+ Add new category' }]} /></FinanceFormField>{form.category_id === NEW_CATEGORY && <FinanceFormField fieldId="review-new-category" label="New category name" required error={fieldErrors.new_category_name}><Input id="review-new-category" data-finance-field="new_category_name" {...financeFieldErrorProps(fieldErrors, 'new_category_name', 'review-new-category')} maxLength={MAX_FINANCE_NAME_LENGTH} value={newCategoryName} onChange={(event) => { setNewCategoryName(event.target.value); setFieldErrors((current) => ({ ...current, new_category_name: undefined })); }} placeholder="e.g. Groceries" /></FinanceFormField>}</div>
                                     <FinanceFormField fieldId="review-merchant" label="Merchant (optional)" error={fieldErrors.merchant}><Input id="review-merchant" data-finance-field="merchant" {...financeFieldErrorProps(fieldErrors, 'merchant', 'review-merchant')} maxLength={MAX_FINANCE_MERCHANT_LENGTH} value={form.merchant} onChange={(event) => setReviewField('merchant', event.target.value)} /></FinanceFormField>
                                     <FinanceFormField fieldId="review-has-payee" label="Payee" error={fieldErrors.has_payee}><Toggle id="review-has-payee" dataFinanceField="has_payee" checked={form.has_payee} onChange={setReviewPayeeClassification} label="Is a payee" ariaLabel="Is a payee" error={Boolean(fieldErrors.has_payee)} ariaDescribedBy={fieldErrors.has_payee ? 'review-has-payee-error' : undefined} /></FinanceFormField>

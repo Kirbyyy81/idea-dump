@@ -409,6 +409,26 @@ export type FinanceDuplicateSignal =
     | 'source'
     | 'merchant';
 
+export interface FinanceReferenceOption {
+    id: string;
+    name: string;
+}
+
+export interface FinanceReferenceData {
+    sources: FinanceReferenceOption[];
+    categories: FinanceReferenceOption[];
+}
+
+export interface FinanceSourceDetail extends FinanceReferenceOption {
+    filename_aliases: string[];
+    ocr_aliases: string[];
+    is_archived: boolean;
+}
+
+export interface FinanceCategoryDetail extends FinanceReferenceOption {
+    is_archived: boolean;
+}
+
 export interface FinanceSource {
     id: string;
     user_id: string;

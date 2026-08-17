@@ -6,13 +6,15 @@ import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
 import { FinanceLoadingState } from '@/app/finance/_components/FinanceLoadingState';
-import { FinanceSource } from '@/lib/types';
+import { useFinanceReferenceData } from '@/app/finance/_components/FinanceReferenceDataProvider';
+import { FinanceSourceDetail } from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
 import { financeApiRequest } from '@/lib/finance/core/client';
 
 export function SourcesSettingsPanel() {
     const { showError, showSuccess } = useAlert();
-    const [sources, setSources] = useState<FinanceSource[]>([]);
+    const { upsertSource, removeSource } = useFinanceReferenceData();
+    const [sources, setSources] = useState<FinanceSourceDetail[]>([]);
     const [name, setName] = useState('');
     const [filenameAliases, setFilenameAliases] = useState('');
     const [ocrAliases, setOcrAliases] = useState('');
@@ -20,7 +22,7 @@ export function SourcesSettingsPanel() {
     const [editingName, setEditingName] = useState('');
     const [editingFilenameAliases, setEditingFilenameAliases] = useState('');
     const [editingOcrAliases, setEditingOcrAliases] = useState('');
-    const [deleting, setDeleting] = useState<FinanceSource | null>(null);
+    const [deleting, setDeleting] = useState<FinanceSourceDetail | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -29,7 +31,7 @@ export function SourcesSettingsPanel() {
     const loadSources = useCallback(async (signal?: AbortSignal) => {
         setIsLoading(true);
         try {
-            const payload = await financeApiRequest<{ data: FinanceSource[] }>(
+            const payload = await financeApiRequest<{ data: FinanceSourceDetail[] }>(
                 '/api/finance/sources',
                 { signal },
                 { fallbackMessage: 'Could not load sources' }
@@ -58,7 +60,7 @@ export function SourcesSettingsPanel() {
         event.preventDefault();
         setIsSaving(true);
         try {
-            const payload = await financeApiRequest<{ data: FinanceSource }>('/api/finance/sources', {
+            const payload = await financeApiRequest<{ data: FinanceSourceDetail }>('/api/finance/sources', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -68,6 +70,7 @@ export function SourcesSettingsPanel() {
                 }),
             }, { fallbackMessage: 'Could not create source' });
             setSources((current) => [...current, payload.data]);
+            upsertSource(payload.data);
             setName('');
             setFilenameAliases('');
             setOcrAliases('');
@@ -80,18 +83,20 @@ export function SourcesSettingsPanel() {
     };
 
     const updateSource = async (
-        source: FinanceSource,
-        updates: Partial<Pick<FinanceSource, 'name' | 'filename_aliases' | 'ocr_aliases' | 'is_archived'>>
+        source: FinanceSourceDetail,
+        updates: Partial<Pick<FinanceSourceDetail, 'name' | 'filename_aliases' | 'ocr_aliases' | 'is_archived'>>
     ) => {
         if (pendingSourceId) return;
         setPendingSourceId(source.id);
         try {
-            const payload = await financeApiRequest<{ data: FinanceSource }>('/api/finance/sources', {
+            const payload = await financeApiRequest<{ data: FinanceSourceDetail }>('/api/finance/sources', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: source.id, ...updates }),
             }, { fallbackMessage: 'Could not update source' });
             setSources((current) => current.map((item) => item.id === source.id ? payload.data : item));
+            if (payload.data.is_archived) removeSource(payload.data.id);
+            else upsertSource(payload.data);
             setEditingId(null);
             showSuccess(updates.is_archived === true
                 ? 'Source archived'
@@ -113,6 +118,7 @@ export function SourcesSettingsPanel() {
                 method: 'DELETE',
             }, { fallbackMessage: 'Could not delete source' });
             setSources((current) => current.filter((source) => source.id !== deleting.id));
+            removeSource(deleting.id);
             setDeleting(null);
             showSuccess('Unused source permanently deleted');
         } catch (error) {

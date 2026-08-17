@@ -6,7 +6,8 @@ import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
 import { FinanceLoadingState } from '@/app/finance/_components/FinanceLoadingState';
-import { FinanceCategory } from '@/lib/types';
+import { useFinanceReferenceData } from '@/app/finance/_components/FinanceReferenceDataProvider';
+import { FinanceCategoryDetail } from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
 import {
     getMissingDefaultCategories,
@@ -23,11 +24,12 @@ type CategoryForm = typeof initialForm;
 
 export function CategoriesSettingsPanel() {
     const { showError, showSuccess } = useAlert();
-    const [categories, setCategories] = useState<FinanceCategory[]>([]);
+    const { upsertCategory, removeCategory } = useFinanceReferenceData();
+    const [categories, setCategories] = useState<FinanceCategoryDetail[]>([]);
     const [form, setForm] = useState<CategoryForm>(initialForm);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editingForm, setEditingForm] = useState<CategoryForm>(initialForm);
-    const [deleting, setDeleting] = useState<FinanceCategory | null>(null);
+    const [deleting, setDeleting] = useState<FinanceCategoryDetail | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [addingSuggestedName, setAddingSuggestedName] = useState<string | null>(null);
@@ -37,7 +39,7 @@ export function CategoriesSettingsPanel() {
     const loadCategories = useCallback(async (signal?: AbortSignal) => {
         setIsLoading(true);
         try {
-            const payload = await financeApiRequest<{ data: FinanceCategory[] }>(
+            const payload = await financeApiRequest<{ data: FinanceCategoryDetail[] }>(
                 '/api/finance/categories',
                 { signal },
                 { fallbackMessage: 'Could not load categories' }
@@ -61,12 +63,14 @@ export function CategoriesSettingsPanel() {
         event.preventDefault();
         setIsSaving(true);
         try {
-            const payload = await financeApiRequest<{ data: FinanceCategory; created?: boolean }>('/api/finance/categories', {
+            const payload = await financeApiRequest<{ data: FinanceCategoryDetail; created?: boolean }>('/api/finance/categories', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(form),
             }, { fallbackMessage: 'Could not add category' });
             setCategories((current) => mergeFinanceCategory(current, payload.data));
+            if (payload.data.is_archived) removeCategory(payload.data.id);
+            else upsertCategory(payload.data);
             setForm(initialForm);
             showSuccess(payload.created === false ? 'That category already exists' : 'Category added');
         } catch (error) {
@@ -79,12 +83,14 @@ export function CategoriesSettingsPanel() {
     const addSuggestedCategory = async (name: string) => {
         setAddingSuggestedName(name);
         try {
-            const payload = await financeApiRequest<{ data: FinanceCategory; created?: boolean }>('/api/finance/categories', {
+            const payload = await financeApiRequest<{ data: FinanceCategoryDetail; created?: boolean }>('/api/finance/categories', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name }),
             }, { fallbackMessage: `Could not add ${name}` });
             setCategories((current) => mergeFinanceCategory(current, payload.data));
+            if (payload.data.is_archived) removeCategory(payload.data.id);
+            else upsertCategory(payload.data);
             showSuccess(payload.created === false ? `${name} already exists` : `${name} category added`);
         } catch (error) {
             showError(error instanceof Error ? error.message : `Could not add ${name}`);
@@ -94,13 +100,13 @@ export function CategoriesSettingsPanel() {
     };
 
     const updateCategory = async (
-        category: FinanceCategory,
-        updates: Partial<Pick<FinanceCategory, 'name' | 'is_archived'>>
+        category: FinanceCategoryDetail,
+        updates: Partial<Pick<FinanceCategoryDetail, 'name' | 'is_archived'>>
     ) => {
         if (pendingCategoryId) return;
         setPendingCategoryId(category.id);
         try {
-            const payload = await financeApiRequest<{ data: FinanceCategory }>('/api/finance/categories', {
+            const payload = await financeApiRequest<{ data: FinanceCategoryDetail }>('/api/finance/categories', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: category.id, ...updates }),
@@ -109,6 +115,8 @@ export function CategoriesSettingsPanel() {
                 current.filter((item) => item.id !== category.id),
                 payload.data
             ));
+            if (payload.data.is_archived) removeCategory(payload.data.id);
+            else upsertCategory(payload.data);
             setEditingId(null);
             showSuccess(updates.is_archived === true
                 ? 'Category archived'
@@ -130,6 +138,7 @@ export function CategoriesSettingsPanel() {
                 method: 'DELETE',
             }, { fallbackMessage: 'Could not delete category' });
             setCategories((current) => current.filter((category) => category.id !== deleting.id));
+            removeCategory(deleting.id);
             setDeleting(null);
             showSuccess('Unused category permanently deleted');
         } catch (error) {
@@ -139,7 +148,7 @@ export function CategoriesSettingsPanel() {
         }
     };
 
-    const beginEditing = (category: FinanceCategory) => {
+    const beginEditing = (category: FinanceCategoryDetail) => {
         setEditingId(category.id);
         setEditingForm({
             name: category.name,

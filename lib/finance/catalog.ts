@@ -1,5 +1,8 @@
 import { FINANCE_DEFAULT_CATEGORIES } from '@/lib/finance/core/constants';
-import { FinanceCategory } from '@/lib/types';
+import {
+    FinanceCategoryDetail,
+    FinanceReferenceOption,
+} from '@/lib/types';
 
 const VIRTUAL_DEFAULT_PREFIX = '__virtual_default_category__:';
 
@@ -9,6 +12,8 @@ export interface FinanceCategoryOption {
     isVirtualDefault: boolean;
     disabled?: boolean;
 }
+
+type FinanceCategoryCatalogEntry = Pick<FinanceCategoryDetail, 'id' | 'name' | 'is_archived'>;
 
 export function canonicalFinanceCategoryName(name: string) {
     return name.trim().toLocaleLowerCase('en');
@@ -30,14 +35,14 @@ export function isVirtualDefaultCategoryValue(value: string) {
     return getVirtualDefaultCategoryName(value) !== null;
 }
 
-export function sortFinanceCategories(categories: FinanceCategory[]) {
+export function sortFinanceCategories<Category extends FinanceCategoryCatalogEntry>(categories: Category[]) {
     return [...categories].sort((left, right) => {
         if (left.is_archived !== right.is_archived) return left.is_archived ? 1 : -1;
         return left.name.localeCompare(right.name, 'en', { sensitivity: 'base' });
     });
 }
 
-export function getMissingDefaultCategories(categories: FinanceCategory[]) {
+export function getMissingDefaultCategories(categories: Array<Pick<FinanceReferenceOption, 'name'>>) {
     const persistedNames = new Set(
         categories
             .map((category) => canonicalFinanceCategoryName(category.name))
@@ -49,7 +54,7 @@ export function getMissingDefaultCategories(categories: FinanceCategory[]) {
 }
 
 export function getFinanceCategoryOptions(
-    categories: FinanceCategory[],
+    categories: FinanceCategoryCatalogEntry[],
     options: { currentCategoryId?: string } = {}
 ): FinanceCategoryOption[] {
     const seenNames = new Set<string>();
@@ -81,9 +86,25 @@ export function getFinanceCategoryOptions(
     ));
 }
 
-export function mergeFinanceCategory(
-    categories: FinanceCategory[],
-    category: FinanceCategory
+export function getFinanceReferenceCategoryOptions(
+    categories: FinanceReferenceOption[],
+    currentCategory: FinanceCategoryCatalogEntry | null = null
+) {
+    const entries: FinanceCategoryCatalogEntry[] = categories.map((category) => ({
+        ...category,
+        is_archived: false,
+    }));
+    if (currentCategory && !entries.some((category) => category.id === currentCategory.id)) {
+        entries.push(currentCategory);
+    }
+    return getFinanceCategoryOptions(entries, {
+        currentCategoryId: currentCategory?.id,
+    });
+}
+
+export function mergeFinanceCategory<Category extends FinanceCategoryCatalogEntry>(
+    categories: Category[],
+    category: Category
 ) {
     const canonicalName = canonicalFinanceCategoryName(category.name);
     const withoutSameCategory = categories.filter((item) => (
