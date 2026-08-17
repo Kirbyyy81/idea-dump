@@ -18,6 +18,7 @@ import {
     MAX_FINANCE_SHARE_FILE_BYTES,
     MAX_FINANCE_SHARE_FILES,
 } from '@/lib/finance/share/server';
+import { isTextWithinLength } from '@/shared/validation';
 
 const CATEGORY_TYPES: FinanceCategoryType[] = ['expense', 'income'];
 const TRANSACTION_DIRECTIONS: FinanceTransactionDirection[] = ['expense', 'income'];
@@ -114,12 +115,6 @@ export function toBoundedNullableFinanceText(value: unknown, maxLength: number) 
     return text && text.length <= maxLength ? text : null;
 }
 
-export function isFinanceTextWithinLength(value: unknown, maxLength: number) {
-    return value === undefined
-        || value === null
-        || (typeof value === 'string' && value.trim().length <= maxLength);
-}
-
 export function toFinanceInteger(value: unknown) {
     const parsed = typeof value === 'number' ? value : Number(value);
     return Number.isInteger(parsed) && parsed >= -2_147_483_648 && parsed <= 2_147_483_647
@@ -151,9 +146,15 @@ function isFinanceRuleMatchType(value: unknown): value is (typeof RULE_MATCH_TYP
 export function parseFinanceCategoryCreate(body: Record<string, unknown>): FinanceValidationResult<FinanceCategoryCreateInput> {
     const name = toRequiredFinanceText(body.name);
     if (!name) return { error: 'Category name is required' };
-    if (!isFinanceTextWithinLength(body.name, 120)) return { error: 'Category name must be 120 characters or fewer' };
-    if (!isFinanceTextWithinLength(body.color, 50)) return { error: 'Category color must be 50 characters or fewer' };
-    if (!isFinanceTextWithinLength(body.icon, 100)) return { error: 'Category icon must be 100 characters or fewer' };
+    if (!isTextWithinLength(name, 120)) {
+        return { error: 'Category name must be 120 characters or fewer' };
+    }
+    if (body.color != null && (typeof body.color !== 'string' || !isTextWithinLength(body.color, 50))) {
+        return { error: 'Category color must be 50 characters or fewer' };
+    }
+    if (body.icon != null && (typeof body.icon !== 'string' || !isTextWithinLength(body.icon, 100))) {
+        return { error: 'Category icon must be 100 characters or fewer' };
+    }
     if (!hasValidCategoryType(body.type)) return { error: 'Select a valid category type' };
     return {
         data: {
@@ -173,7 +174,9 @@ export function parseFinanceCategoryUpdate(body: Record<string, unknown>): Finan
     if (body.name !== undefined) {
         const name = toRequiredFinanceText(body.name);
         if (!name) return { error: 'Category name is required' };
-        if (!isFinanceTextWithinLength(body.name, 120)) return { error: 'Category name must be 120 characters or fewer' };
+        if (!isTextWithinLength(name, 120)) {
+            return { error: 'Category name must be 120 characters or fewer' };
+        }
         updates.name = name;
     }
     if (body.type !== undefined) {
@@ -181,11 +184,15 @@ export function parseFinanceCategoryUpdate(body: Record<string, unknown>): Finan
         updates.type = body.type;
     }
     if (body.color !== undefined) {
-        if (!isFinanceTextWithinLength(body.color, 50)) return { error: 'Category color must be 50 characters or fewer' };
+        if (body.color !== null && (typeof body.color !== 'string' || !isTextWithinLength(body.color, 50))) {
+            return { error: 'Category color must be 50 characters or fewer' };
+        }
         updates.color = toNullableFinanceText(body.color);
     }
     if (body.icon !== undefined) {
-        if (!isFinanceTextWithinLength(body.icon, 100)) return { error: 'Category icon must be 100 characters or fewer' };
+        if (body.icon !== null && (typeof body.icon !== 'string' || !isTextWithinLength(body.icon, 100))) {
+            return { error: 'Category icon must be 100 characters or fewer' };
+        }
         updates.icon = toNullableFinanceText(body.icon);
     }
     if (body.is_archived !== undefined) {
@@ -203,7 +210,9 @@ export function parseFinanceCategoryUpdate(body: Record<string, unknown>): Finan
 export function parseFinanceSourceCreate(body: Record<string, unknown>): FinanceValidationResult<FinanceSourceCreateInput> {
     const name = toRequiredFinanceText(body.name);
     if (!name) return { error: 'Source name is required' };
-    if (!isFinanceTextWithinLength(body.name, 120)) return { error: 'Source name must be 120 characters or fewer' };
+    if (!isTextWithinLength(name, 120)) {
+        return { error: 'Source name must be 120 characters or fewer' };
+    }
     const preset = getFinanceSourcePreset(name);
     const filenameAliases = body.filename_aliases === undefined
         ? preset.filenameAliases
@@ -224,7 +233,9 @@ export function parseFinanceSourceUpdate(body: Record<string, unknown>): Finance
     if (body.name !== undefined) {
         const name = toRequiredFinanceText(body.name);
         if (!name) return { error: 'Source name is required' };
-        if (!isFinanceTextWithinLength(body.name, 120)) return { error: 'Source name must be 120 characters or fewer' };
+        if (!isTextWithinLength(name, 120)) {
+            return { error: 'Source name must be 120 characters or fewer' };
+        }
         updates.name = name;
     }
     if (body.is_archived !== undefined) {
@@ -258,13 +269,17 @@ function parseFinanceRuleValues(
     if (!options.partial || body.name !== undefined) {
         const name = toRequiredFinanceText(body.name);
         if (!name) return { error: 'Rule name is required' };
-        if (!isFinanceTextWithinLength(body.name, 120)) return { error: 'Rule name must be 120 characters or fewer' };
+        if (!isTextWithinLength(name, 120)) {
+            return { error: 'Rule name must be 120 characters or fewer' };
+        }
         values.name = name;
     }
     if (!options.partial || body.pattern !== undefined) {
         const pattern = toRequiredFinanceText(body.pattern);
         if (!pattern) return { error: 'Match pattern is required' };
-        if (!isFinanceTextWithinLength(body.pattern, 500)) return { error: 'Match pattern must be 500 characters or fewer' };
+        if (!isTextWithinLength(pattern, 500)) {
+            return { error: 'Match pattern must be 500 characters or fewer' };
+        }
         values.pattern = pattern;
     }
     if (!options.partial || body.match_type !== undefined) {
@@ -389,7 +404,10 @@ export function parseFinanceReviewConfirm(
     }
     const parsed = parseFinanceTransaction(body, today);
     if ('error' in parsed) return parsed;
-    if (!isFinanceTextWithinLength(body.duplicate_override_reason, 500)) {
+    if (body.duplicate_override_reason != null && (
+        typeof body.duplicate_override_reason !== 'string'
+        || !isTextWithinLength(body.duplicate_override_reason, 500)
+    )) {
         return {
             error: 'Check the highlighted fields',
             field_errors: { duplicate_override_reason: 'Duplicate override reason must be 500 characters or fewer' },
