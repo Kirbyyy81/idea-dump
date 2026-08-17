@@ -4,22 +4,19 @@ import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
-import { Select } from '@/components/atoms/Select';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
 import { FinanceLoadingState } from '@/app/finance/_components/FinanceLoadingState';
-import { FinanceCategory, FinanceCategoryType } from '@/lib/types';
+import { FinanceCategory } from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
 import {
-    getMissingDefaultExpenseCategories,
+    getMissingDefaultCategories,
     mergeFinanceCategory,
+    sortFinanceCategories,
 } from '@/lib/finance/catalog';
 import { financeApiRequest } from '@/lib/finance/core/client';
 
 const initialForm = {
     name: '',
-    type: 'expense' as FinanceCategoryType,
-    color: '',
-    icon: '',
 };
 
 type CategoryForm = typeof initialForm;
@@ -45,7 +42,7 @@ export function CategoriesSettingsPanel() {
                 { signal },
                 { fallbackMessage: 'Could not load categories' }
             );
-            setCategories(payload.data || []);
+            setCategories(sortFinanceCategories(payload.data || []));
         } catch (error) {
             if (signal?.aborted) return;
             showError(error instanceof Error ? error.message : 'Could not load categories');
@@ -85,7 +82,7 @@ export function CategoriesSettingsPanel() {
             const payload = await financeApiRequest<{ data: FinanceCategory; created?: boolean }>('/api/finance/categories', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, type: 'expense' }),
+                body: JSON.stringify({ name }),
             }, { fallbackMessage: `Could not add ${name}` });
             setCategories((current) => mergeFinanceCategory(current, payload.data));
             showSuccess(payload.created === false ? `${name} already exists` : `${name} category added`);
@@ -98,7 +95,7 @@ export function CategoriesSettingsPanel() {
 
     const updateCategory = async (
         category: FinanceCategory,
-        updates: Partial<Pick<FinanceCategory, 'name' | 'type' | 'color' | 'icon' | 'is_archived'>>
+        updates: Partial<Pick<FinanceCategory, 'name' | 'is_archived'>>
     ) => {
         if (pendingCategoryId) return;
         setPendingCategoryId(category.id);
@@ -108,7 +105,10 @@ export function CategoriesSettingsPanel() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: category.id, ...updates }),
             }, { fallbackMessage: 'Could not update category' });
-            setCategories((current) => current.map((item) => item.id === category.id ? payload.data : item));
+            setCategories((current) => mergeFinanceCategory(
+                current.filter((item) => item.id !== category.id),
+                payload.data
+            ));
             setEditingId(null);
             showSuccess(updates.is_archived === true
                 ? 'Category archived'
@@ -143,17 +143,10 @@ export function CategoriesSettingsPanel() {
         setEditingId(category.id);
         setEditingForm({
             name: category.name,
-            type: category.type,
-            color: category.color || '',
-            icon: category.icon || '',
         });
     };
 
-    const groups: Array<{ title: string; type: FinanceCategoryType }> = [
-        { title: 'Expense categories', type: 'expense' },
-        { title: 'Income categories', type: 'income' },
-    ];
-    const missingDefaultExpenseCategories = getMissingDefaultExpenseCategories(categories);
+    const missingDefaultCategories = getMissingDefaultCategories(categories);
 
     return (
         <>
@@ -162,11 +155,8 @@ export function CategoriesSettingsPanel() {
                     <form onSubmit={addCategory}>
                         <Card className="p-5">
                             <h2 className="text-base font-bold">New category</h2>
-                            <div className="mt-5 space-y-4">
+                            <div className="mt-5">
                                 <label className="block space-y-2"><span className="text-sm text-text-secondary">Name</span><Input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Groceries" /></label>
-                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Type</span><Select ariaLabel="Category type" value={form.type} onChange={(type) => setForm({ ...form, type: type as FinanceCategoryType })} options={[{ value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }]} /></label>
-                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Colour label (optional)</span><Input value={form.color} onChange={(event) => setForm({ ...form, color: event.target.value })} placeholder="#e76f51" /></label>
-                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Icon label (optional)</span><Input value={form.icon} onChange={(event) => setForm({ ...form, icon: event.target.value })} placeholder="utensils" /></label>
                             </div>
                             <Button type="submit" className="mt-5 w-full" isLoading={isSaving}>Add category</Button>
                         </Card>
@@ -178,11 +168,10 @@ export function CategoriesSettingsPanel() {
                                 <FinanceLoadingState label="Loading categories..." />
                             </section>
                         ) : <>
-                        {groups.map((group) => (
-                            <section key={group.type} className="border border-border-default bg-bg-surface">
-                                <div className="border-b border-border-default px-5 py-4"><h2 className="text-base font-bold">{group.title}</h2></div>
+                            <section className="border border-border-default bg-bg-surface">
+                                <div className="border-b border-border-default px-5 py-4"><h2 className="text-base font-bold">Categories</h2></div>
                                 <div className="divide-y divide-border-default">
-                                    {group.type === 'expense' && missingDefaultExpenseCategories.map((name) => (
+                                    {missingDefaultCategories.map((name) => (
                                         <div key={`suggested-${name}`} className="flex items-center justify-between gap-4 bg-bg-subtle px-5 py-4">
                                             <div className="min-w-0">
                                                 <p className="truncate font-semibold">{name}</p>
@@ -199,7 +188,7 @@ export function CategoriesSettingsPanel() {
                                             </Button>
                                         </div>
                                     ))}
-                                    {categories.filter((category) => category.type === group.type).map((category) => (
+                                    {categories.map((category) => (
                                         <div key={category.id} className="px-5 py-4">
                                             {editingId === category.id ? (
                                                 <form
@@ -209,13 +198,9 @@ export function CategoriesSettingsPanel() {
                                                         void updateCategory(category, editingForm);
                                                     }}
                                                 >
-                                                    <div className="grid gap-3 sm:grid-cols-2">
+                                                    <div>
                                                         <Input required value={editingForm.name} onChange={(event) => setEditingForm({ ...editingForm, name: event.target.value })} aria-label="Category name" />
-                                                        <Select value={editingForm.type} onChange={(type) => setEditingForm({ ...editingForm, type: type as FinanceCategoryType })} options={[{ value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }]} ariaLabel="Category type" />
-                                                        <Input value={editingForm.color} onChange={(event) => setEditingForm({ ...editingForm, color: event.target.value })} placeholder="Colour label" aria-label="Category colour label" />
-                                                        <Input value={editingForm.icon} onChange={(event) => setEditingForm({ ...editingForm, icon: event.target.value })} placeholder="Icon label" aria-label="Category icon label" />
                                                     </div>
-                                                    <p className="text-xs text-text-muted">Type changes are accepted only while the category is completely unreferenced.</p>
                                                     <div className="flex gap-2 sm:justify-end">
                                                         <Button type="button" variant="ghost" disabled={pendingCategoryId !== null} onClick={() => setEditingId(null)}>Cancel</Button>
                                                         <Button type="submit" isLoading={pendingCategoryId === category.id} disabled={pendingCategoryId !== null}>Save changes</Button>
@@ -223,10 +208,7 @@ export function CategoriesSettingsPanel() {
                                                 </form>
                                             ) : (
                                                 <div className="flex items-center justify-between gap-4">
-                                                    <div className="flex min-w-0 items-center gap-3">
-                                                        <span className="size-3 shrink-0 rounded-full border border-border-default bg-bg-subtle" style={category.color ? { backgroundColor: category.color } : undefined} aria-hidden="true" />
-                                                        <div className="min-w-0"><p className="truncate font-semibold">{category.name}</p>{category.is_archived && <p className="text-sm text-text-muted">Archived - retained for history</p>}</div>
-                                                    </div>
+                                                    <div className="min-w-0"><p className="truncate font-semibold">{category.name}</p>{category.is_archived && <p className="text-sm text-text-muted">Archived - retained for history</p>}</div>
                                                     <div className="flex flex-wrap items-center justify-end gap-1">
                                                         <Button type="button" variant="ghost" aria-label={`Edit category ${category.name}`} disabled={pendingCategoryId !== null} onClick={() => beginEditing(category)}>Edit</Button>
                                                         <Button type="button" variant="ghost" aria-label={`${category.is_archived ? 'Restore' : 'Archive'} category ${category.name}`} isLoading={pendingCategoryId === category.id} disabled={pendingCategoryId !== null} onClick={() => void updateCategory(category, { is_archived: !category.is_archived })}>{category.is_archived ? 'Restore' : 'Archive'}</Button>
@@ -236,12 +218,10 @@ export function CategoriesSettingsPanel() {
                                             )}
                                         </div>
                                     ))}
-                                    {!categories.some((category) => category.type === group.type)
-                                        && !(group.type === 'expense' && missingDefaultExpenseCategories.length > 0)
+                                    {!categories.length && !missingDefaultCategories.length
                                         && <p className="px-5 py-8 text-center text-sm text-text-muted">No categories yet.</p>}
                                 </div>
                             </section>
-                        ))}
                         </>}
                     </div>
                 </div>

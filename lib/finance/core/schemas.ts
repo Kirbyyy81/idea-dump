@@ -1,5 +1,4 @@
 import {
-    FinanceCategoryType,
     FinanceTransactionDirection,
     FinanceTransactionStatus,
 } from '@/lib/types';
@@ -20,7 +19,6 @@ import {
 } from '@/lib/finance/share/server';
 import { isTextWithinLength } from '@/shared/validation';
 
-const CATEGORY_TYPES: FinanceCategoryType[] = ['expense', 'income'];
 const TRANSACTION_DIRECTIONS: FinanceTransactionDirection[] = ['expense', 'income'];
 const TRANSACTION_STATUSES: FinanceTransactionStatus[] = ['confirmed', 'review', 'duplicate', 'rejected'];
 const RULE_MATCH_TYPES = ['exact_phrase', 'merchant_alias', 'keyword', 'account_hint'] as const;
@@ -29,9 +27,6 @@ export type FinanceValidationResult<T> = { data: T } | { error: string; field_er
 
 export interface FinanceCategoryCreateInput {
     name: string;
-    type: FinanceCategoryType;
-    color: string | null;
-    icon: string | null;
 }
 
 export interface FinanceCategoryUpdateInput {
@@ -127,10 +122,6 @@ export function normalizeFinanceReferenceNumber(value: unknown) {
     return text ? text.normalize('NFKC').toUpperCase() : null;
 }
 
-function hasValidCategoryType(value: unknown): value is FinanceCategoryType {
-    return CATEGORY_TYPES.includes(value as FinanceCategoryType);
-}
-
 export function isFinanceTransactionDirection(value: unknown): value is FinanceTransactionDirection {
     return TRANSACTION_DIRECTIONS.includes(value as FinanceTransactionDirection);
 }
@@ -149,21 +140,7 @@ export function parseFinanceCategoryCreate(body: Record<string, unknown>): Finan
     if (!isTextWithinLength(name, 120)) {
         return { error: 'Category name must be 120 characters or fewer' };
     }
-    if (body.color != null && (typeof body.color !== 'string' || !isTextWithinLength(body.color, 50))) {
-        return { error: 'Category color must be 50 characters or fewer' };
-    }
-    if (body.icon != null && (typeof body.icon !== 'string' || !isTextWithinLength(body.icon, 100))) {
-        return { error: 'Category icon must be 100 characters or fewer' };
-    }
-    if (!hasValidCategoryType(body.type)) return { error: 'Select a valid category type' };
-    return {
-        data: {
-            name,
-            type: body.type,
-            color: toNullableFinanceText(body.color),
-            icon: toNullableFinanceText(body.icon),
-        },
-    };
+    return { data: { name } };
 }
 
 export function parseFinanceCategoryUpdate(body: Record<string, unknown>): FinanceValidationResult<FinanceCategoryUpdateInput> {
@@ -179,26 +156,11 @@ export function parseFinanceCategoryUpdate(body: Record<string, unknown>): Finan
         }
         updates.name = name;
     }
-    if (body.type !== undefined) {
-        if (!hasValidCategoryType(body.type)) return { error: 'Select a valid category type' };
-        updates.type = body.type;
-    }
-    if (body.color !== undefined) {
-        if (body.color !== null && (typeof body.color !== 'string' || !isTextWithinLength(body.color, 50))) {
-            return { error: 'Category color must be 50 characters or fewer' };
-        }
-        updates.color = toNullableFinanceText(body.color);
-    }
-    if (body.icon !== undefined) {
-        if (body.icon !== null && (typeof body.icon !== 'string' || !isTextWithinLength(body.icon, 100))) {
-            return { error: 'Category icon must be 100 characters or fewer' };
-        }
-        updates.icon = toNullableFinanceText(body.icon);
-    }
     if (body.is_archived !== undefined) {
         if (typeof body.is_archived !== 'boolean') return { error: 'Archived state must be true or false' };
         updates.is_archived = body.is_archived;
     }
+    if (Object.keys(updates).length === 1) return { error: 'No category changes were provided' };
     const archiveRequested = body.is_archived !== undefined;
     if (archiveRequested) {
         const combinedFields = Object.keys(updates).filter((key) => !['updated_at', 'is_archived'].includes(key));

@@ -13,16 +13,8 @@ export async function listFinanceCategories(userId: string) {
         .from('dim_finance_categories')
         .select('*')
         .eq('user_id', userId)
-        .order('type')
+        .order('is_archived')
         .order('name');
-}
-
-export async function listFinanceCategoriesByType(userId: string, type: FinanceCategory['type']) {
-    return createAdminClient()
-        .from('dim_finance_categories')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('type', type);
 }
 
 export async function getOwnedFinanceCategory(userId: string, categoryId: string) {
@@ -38,31 +30,13 @@ export async function getOwnedFinanceCategory(userId: string, categoryId: string
 
 export async function createFinanceCategory(
     userId: string,
-    input: {
-        name: string;
-        type: FinanceCategory['type'];
-        color: string | null;
-        icon: string | null;
-    }
+    input: { name: string }
 ) {
     return createAdminClient()
         .from('dim_finance_categories')
         .insert({ user_id: userId, ...input })
         .select('*')
         .single();
-}
-
-export async function isFinanceCategoryReferenced(userId: string, categoryId: string) {
-    const admin = createAdminClient();
-    const results = await Promise.all([
-        admin.from('finance_transactions').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('category_id', categoryId),
-        admin.from('finance_rules').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('category_id', categoryId),
-        admin.from('finance_rule_suggestions').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('category_id', categoryId),
-        admin.from('finance_candidate_transactions').select('id', { count: 'exact', head: true }).eq('user_id', userId).contains('payload', { category_id: categoryId }),
-    ]);
-    const error = results.find((result) => result.error)?.error;
-    if (error) throw error;
-    return results.some((result) => (result.count || 0) > 0);
 }
 
 export async function setFinanceCategoryArchived(

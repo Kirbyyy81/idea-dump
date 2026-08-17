@@ -88,7 +88,7 @@ flowchart LR
 | `/finance/transactions` | Confirmed transaction ledger, search, filters, edit, and delete. |
 | `/finance/review` | Pending OCR candidates, failed intakes, duplicate decisions, retry rules, confirmation, and rejection. |
 | `/finance/settings?section=sources` | Source names, filename aliases, OCR aliases, archive, restore, and safe deletion. |
-| `/finance/settings?section=categories` | Expense and income categories, default suggestions, archive, restore, and safe deletion. |
+| `/finance/settings?section=categories` | Shared categories, default suggestions, archive, restore, and safe deletion. |
 | `/finance/settings?section=rules` | Manual rules, learned rules, and pending learning suggestions. |
 
 `/finance/sources`, `/finance/categories`, and `/finance/rules` are compatibility redirects to the matching Finance Settings section.
@@ -111,6 +111,8 @@ The cash-flow and category panels have equal layout height. Their charts are nav
 - Selecting a category segment or category row opens the ledger filtered to that category.
 - Selecting Uncategorised filters for transactions whose `category_id` is null.
 - Chart interactions include keyboard activation and accessible labels.
+
+Chart colors come from the dashboard presentation palette. Categories do not store color or icon metadata.
 
 ### Transaction ledger behavior
 
@@ -190,7 +192,7 @@ A confirmed Finance transaction contains:
 | --- | --- |
 | `user_id` | Required tenant owner. |
 | `source_id` | Required user-owned source. |
-| `category_id` | Optional. When present, its category type must match transaction direction. |
+| `category_id` | Optional user-owned category. The same category may be used for expense and income transactions. |
 | `intake_item_id` | Optional link to screenshot lineage. Manual transactions have no intake item. |
 | `manual_idempotency_key` | Present on manual entries so request retries cannot create a second ledger row. |
 | `direction` | `expense` or `income`. |
@@ -217,9 +219,9 @@ Archived sources remain available to historical transactions. New transactions a
 
 ### Category
 
-Categories are user-owned and typed as either expense or income. An optional color and icon label can be stored. Food, Drinks, Transport, and Gifts are virtual default expense suggestions until the user first selects or creates them.
+Categories form one user-owned library shared by expense and income transactions and rules. Category records store a name and archive state, not direction, color, or icon metadata. Food, Drinks, Transport, and Gifts are virtual shared suggestions until the user first selects or creates them.
 
-Archived categories remain available to historical transactions. A transaction may be uncategorised. Deletion is allowed only for categories with no transaction, rule, candidate, correction, or suggestion dependencies.
+Category names are unique per user after case-insensitive trimming. Archived categories remain available to historical transactions. A transaction may be uncategorised. Deletion is allowed only for categories with no transaction, rule, candidate, correction, or suggestion dependencies.
 
 ### Merchant and payee
 
@@ -278,7 +280,7 @@ The manual, review, and edit workflows share Finance transaction validation from
 Important validation rules include:
 
 - Source is required and must belong to the user.
-- Category is optional, but must belong to the user and match direction.
+- Category is optional and must belong to the user. Category selection is independent of direction.
 - Direction must be expense or income.
 - Amount must be positive, exact to no more than two decimal places, and within the maximum.
 - Transaction date must be a real `YYYY-MM-DD` date and cannot be in the future.
@@ -598,7 +600,7 @@ A queued Android share item may auto-confirm only when all of the following are 
 - A matched rule exists.
 - Duplicate outcome is none.
 - Source, category, direction, amount, and transaction date are present.
-- The confirmation RPC verifies that the matched rule is active, user-owned, category-compatible, and a strong `exact_phrase` or `merchant_alias` rule.
+- The confirmation RPC verifies that the matched rule is active, user-owned, consistent with the candidate's selected category and direction, and a strong `exact_phrase` or `merchant_alias` rule.
 - The database's final duplicate recheck still returns none.
 
 If any gate fails, the result goes to Finance Review.
@@ -697,7 +699,7 @@ Share batch items move from queued to processing and then to one terminal state:
 | Table | Purpose |
 | --- | --- |
 | `dim_finance_sources` | User-owned transaction sources and OCR aliases. |
-| `dim_finance_categories` | User-owned expense and income categories. |
+| `dim_finance_categories` | Shared user-owned categories with normalized name uniqueness and archive state. |
 | `dim_finance_payees` | Canonical user-owned payees with normalized uniqueness and archive state. |
 | `finance_transactions` | Confirmed ledger rows and manual or screenshot lineage. |
 | `finance_intake_items` | OCR intake lifecycle, hashes, text, source evidence, leases, and failures. |
