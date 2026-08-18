@@ -1,12 +1,13 @@
 import { FinanceTransactionDirection } from '@/lib/types';
 import {
     financeMinorUnitsToNumber,
+    FINANCE_TIME_ZONE,
     getFinanceDateInTimeZone,
     getFinanceMonthRange,
     toFinanceAmountMinorUnits,
 } from '@/lib/finance/core/values';
 
-export const FINANCE_DASHBOARD_TIME_ZONE = 'Asia/Kuala_Lumpur';
+export const FINANCE_DASHBOARD_TIME_ZONE = FINANCE_TIME_ZONE;
 
 export function resolveFinanceDashboardMonth(
     value: string | string[] | undefined,

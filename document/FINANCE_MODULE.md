@@ -734,13 +734,17 @@ The `finance_private` schema owns share upload reservations, reservation items, 
 - Candidate payloads and transaction text fields have database constraints matching application limits.
 - Current transaction mutation RPCs are `finance_create_manual_transaction_v2`, `finance_confirm_candidate_v3`, and `finance_update_transaction_v3`.
 
-## Server-rendered dashboard
+## Server-rendered Finance reads
 
 - `/finance?month=YYYY-MM` authenticates the user and calls the Finance dashboard service during the server render.
+- `/finance/transactions` parses its URL filters and loads the tenant-scoped ledger during the server render.
+- `/finance/review` loads pending candidates and failed intake summaries during the server render. A valid `candidate` query selects the initial review item.
 - The browser receives the minimal `FinanceDashboardSummary` in the React Server Component payload, without a follow-up dashboard API request.
+- The transaction ledger and review queue receive their existing browser-safe view contracts through the React Server Component payload, without follow-up GET requests.
 - Month changes update the URL and request a fresh server-rendered payload. The selected month defaults to the current month in `Asia/Kuala_Lumpur`.
+- Transaction filter changes request a fresh server-rendered payload. Mutation endpoints remain client-called so edits, deletes, confirmations, retries, and rejections stay interactive.
 - Recharts and dashboard navigation remain client-side for responsive sizing, keyboard interaction, and filtered transaction links.
-- Dashboard data is tenant-scoped and dynamically rendered. It is not persisted in a cross-request cache.
+- Finance page data is tenant-scoped and dynamically rendered. It is not persisted in a cross-request cache.
 
 ## Next.js API surface
 
@@ -749,8 +753,8 @@ All Finance API handlers are dynamic and return JSON.
 | Route | Methods | Purpose |
 | --- | --- | --- |
 | `/api/finance/reference-data` | GET | Active source and category options with only `id` and `name`. |
-| `/api/finance/transactions` | GET, POST, PUT, DELETE | Ledger read, manual create, edit, and delete. |
-| `/api/finance/review` | GET, POST | Review queue plus confirm, retry, duplicate, and reject actions. |
+| `/api/finance/transactions` | POST, PUT, DELETE | Manual create, edit, and delete mutations. Ledger reads are server-rendered. |
+| `/api/finance/review` | POST | Confirm, retry, duplicate, and reject mutations. Queue reads are server-rendered. |
 | `/api/finance/sources` | GET, POST, PATCH or PUT, DELETE | Source library management. |
 | `/api/finance/categories` | GET, POST, PUT or PATCH, DELETE | Category library management. |
 | `/api/finance/rules` | GET, POST, PUT, DELETE | Rule library management. GET also returns pending suggestions so Settings needs one read. |

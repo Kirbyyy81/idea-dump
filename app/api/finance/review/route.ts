@@ -7,24 +7,12 @@ import {
 } from '@/lib/finance/core/auth';
 import { parseFinanceReviewAction } from '@/lib/finance/core/schemas';
 import {
-    getFinanceReviewQueueForUser,
     isFinanceServiceError,
     resolveFinanceReviewCandidateForUser,
 } from '@/lib/finance/core/service';
 import { FINANCE_TIME_ZONE_HEADER, getFinanceDateInTimeZone } from '@/lib/finance/core/values';
 
 export const dynamic = 'force-dynamic';
-
-export async function GET() {
-    try {
-        const session = await authorizeFinance();
-        if ('response' in session) return session.response;
-        return NextResponse.json(await getFinanceReviewQueueForUser(session.user.id));
-    } catch (error) {
-        console.error('Error fetching finance review queue:', error);
-        return jsonError('Failed to fetch review queue', 500);
-    }
-}
 
 export async function POST(request: NextRequest) {
     try {

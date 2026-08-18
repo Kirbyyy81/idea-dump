@@ -29,6 +29,7 @@ export const MAX_FINANCE_PAYEE_LENGTH = 500;
 export const MAX_FINANCE_REFERENCE_LENGTH = 200;
 export const MAX_FINANCE_NOTES_LENGTH = 2500;
 export const FINANCE_TIME_ZONE_HEADER = 'X-Finance-Time-Zone';
+export const FINANCE_TIME_ZONE = 'Asia/Kuala_Lumpur';
 
 const MAX_FINANCE_AMOUNT_MINOR_UNITS = BigInt('99999999999999');
 const ONE_HUNDRED = BigInt(100);

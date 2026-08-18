@@ -1,4 +1,5 @@
-import { isFinanceUuid } from '@/lib/finance/core/schemas';
+import type { FinanceTransactionStatus } from '@/lib/types';
+import { isFinanceTransactionStatus, isFinanceUuid } from '@/lib/finance/core/schemas';
 import { normalizeFinanceDate } from '@/lib/finance/core/values';
 
 export const FINANCE_TRANSACTION_FILTER_KEYS = {
@@ -11,6 +12,12 @@ export interface FinanceTransactionFilters {
     categoryId: string | null;
     date: string | null;
     uncategorised: boolean;
+}
+
+export interface FinanceTransactionListFilters extends FinanceTransactionFilters {
+    status: FinanceTransactionStatus;
+    sourceId: string | null;
+    query: string | null;
 }
 
 type FinanceTransactionFilterResult =
@@ -42,6 +49,39 @@ export function parseFinanceTransactionFilters(
             categoryId,
             date: rawDate === null ? null : normalizeFinanceDate(rawDate),
             uncategorised: rawUncategorised === 'true',
+        },
+    };
+}
+
+type FinanceTransactionListFilterResult =
+    | { data: FinanceTransactionListFilters }
+    | { error: string };
+
+export function parseFinanceTransactionListFilters(
+    searchParams: Pick<URLSearchParams, 'get'>
+): FinanceTransactionListFilterResult {
+    const financeFilters = parseFinanceTransactionFilters(searchParams);
+    if ('error' in financeFilters) return financeFilters;
+
+    const sourceId = searchParams.get('source_id');
+    if (sourceId && !isFinanceUuid(sourceId)) {
+        return { error: 'Source ID must be a valid UUID' };
+    }
+
+    const status = searchParams.get('status');
+    const query = searchParams.get('q')
+        ?.trim()
+        .slice(0, 100)
+        .replace(/[,()*]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim() || null;
+
+    return {
+        data: {
+            status: isFinanceTransactionStatus(status) ? status : 'confirmed',
+            sourceId,
+            query,
+            ...financeFilters.data,
         },
     };
 }

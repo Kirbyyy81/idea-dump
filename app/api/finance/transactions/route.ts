@@ -6,7 +6,6 @@ import {
     readFinanceJsonObject,
 } from '@/lib/finance/core/auth';
 import {
-    isFinanceTransactionStatus,
     isFinanceUuid,
     parseManualFinanceTransactionCreate,
     toRequiredFinanceText,
@@ -14,37 +13,12 @@ import {
 import {
     createManualFinanceTransactionForUser,
     deleteFinanceTransactionForUser,
-    getFinanceTransactions,
     isFinanceServiceError,
     updateFinanceTransactionForUser,
 } from '@/lib/finance/core/service';
 import { FINANCE_TIME_ZONE_HEADER, getFinanceDateInTimeZone } from '@/lib/finance/core/values';
-import { parseFinanceTransactionFilters } from '@/lib/finance/transactions/filters';
 
 export const dynamic = 'force-dynamic';
-
-export async function GET(request: NextRequest) {
-    try {
-        const session = await authorizeFinance();
-        if ('response' in session) return session.response;
-        const status = request.nextUrl.searchParams.get('status');
-        const sourceId = request.nextUrl.searchParams.get('source_id');
-        const query = request.nextUrl.searchParams.get('q')?.trim().slice(0, 100).replace(/[,()*]/g, ' ') || null;
-        if (sourceId && !isFinanceUuid(sourceId)) return jsonError('Source ID must be a valid UUID');
-        const filters = parseFinanceTransactionFilters(request.nextUrl.searchParams);
-        if ('error' in filters) return jsonError(filters.error);
-        const data = await getFinanceTransactions(session.user.id, {
-            status: isFinanceTransactionStatus(status) ? status : 'confirmed',
-            sourceId,
-            query,
-            ...filters.data,
-        });
-        return NextResponse.json({ data });
-    } catch (error) {
-        console.error('Error fetching finance transactions:', error);
-        return jsonError('Failed to fetch finance transactions', 500);
-    }
-}
 
 export async function POST(request: NextRequest) {
     try {
