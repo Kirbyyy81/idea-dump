@@ -15,6 +15,7 @@ import {
     mergeFinanceRecipientReferenceIntoNotes,
 } from '@/lib/finance/ocr/recipientReference';
 import { detectFinanceSource } from '@/lib/finance/ocr/sourceDetection';
+import { toIsoDate } from '@/shared/date';
 
 interface ParsedCandidate {
     confidence: number;
@@ -51,12 +52,6 @@ function parseAmount(lines: string[]) {
     }
 
     return candidates.sort((a, b) => b.score - a.score)[0]?.amount ?? null;
-}
-
-function toIsoDate(year: number, month: number, day: number) {
-    const date = new Date(Date.UTC(year, month - 1, day));
-    if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null;
-    return `${year.toString().padStart(4, '0')}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
 }
 
 function parseTransactionDate(text: string) {
