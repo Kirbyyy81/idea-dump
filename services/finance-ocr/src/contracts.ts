@@ -3,11 +3,11 @@ import type {
     FinanceCandidateTransaction,
     FinanceDuplicateOutcome,
     FinanceDuplicateSignal,
-    FinanceFieldLearningRule,
+    FinanceOcrFieldLearningRule,
+    FinanceOcrPayee,
+    FinanceOcrRule,
+    FinanceOcrSource,
     FinanceIntakeItem,
-    FinancePayee,
-    FinanceRule,
-    FinanceSource,
     FinanceSourceDetectionSignal,
     FinanceTransaction,
 } from '@/lib/types';
@@ -17,10 +17,10 @@ export interface AuthenticatedUser {
 }
 
 export interface FinanceContext {
-    sources: FinanceSource[];
-    rules: FinanceRule[];
-    fieldLearningRules: FinanceFieldLearningRule[];
-    payees: FinancePayee[];
+    sources: FinanceOcrSource[];
+    rules: FinanceOcrRule[];
+    fieldLearningRules: FinanceOcrFieldLearningRule[];
+    payees: FinanceOcrPayee[];
 }
 
 export interface BeginIntakeResult {

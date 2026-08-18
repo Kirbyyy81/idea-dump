@@ -297,7 +297,16 @@ export async function buildApp(
                 recovered: result.data.recovered === true,
                 duration_ms: Math.round(performance.now() - startedAt),
             }, 'Finance OCR request completed');
-            return reply.code(result.statusCode).send({ data: result.data });
+            return reply.code(result.statusCode).send({
+                data: {
+                    candidate: { id: result.data.candidate.id },
+                    transaction: result.data.transaction
+                        ? { id: result.data.transaction.id }
+                        : null,
+                    auto_confirmed: result.data.auto_confirmed,
+                    ...(result.data.recovered === true ? { recovered: true } : {}),
+                },
+            });
         } finally {
             release();
         }

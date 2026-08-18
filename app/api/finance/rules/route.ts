@@ -4,7 +4,7 @@ import { isFinanceUuid, parseFinanceRuleCreate, parseFinanceRuleUpdate } from '@
 import {
     createFinanceRuleForUser,
     deleteFinanceRuleForUser,
-    getFinanceRules,
+    getFinanceRuleSettings,
     isFinanceServiceError,
     updateFinanceRuleForUser,
 } from '@/lib/finance/core/service';
@@ -15,7 +15,8 @@ export async function GET() {
     try {
         const session = await authorizeFinance();
         if ('response' in session) return session.response;
-        return NextResponse.json({ data: await getFinanceRules(session.user.id) });
+        const settings = await getFinanceRuleSettings(session.user.id);
+        return NextResponse.json({ data: settings.rules, suggestions: settings.suggestions });
     } catch (error) {
         console.error('Error fetching finance rules:', error);
         return jsonError('Failed to fetch finance rules', 500);

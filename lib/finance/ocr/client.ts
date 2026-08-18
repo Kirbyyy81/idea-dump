@@ -14,7 +14,6 @@ export interface FinanceOcrEntity {
 
 export interface FinanceOcrSuccess {
     data: {
-        intake: FinanceOcrEntity;
         candidate: FinanceOcrEntity;
         transaction: FinanceOcrEntity | null;
         auto_confirmed: boolean;
@@ -237,13 +236,10 @@ function parseSuccessResponse(response: OcrHttpResponse): FinanceOcrSuccess {
     }
 
     const { data } = parsed;
-    const intake = data.intake;
     const candidate = data.candidate;
     const transaction = data.transaction;
     if (
-        !isRecord(intake)
-        || !optionalString(intake.id)
-        || !isRecord(candidate)
+        !isRecord(candidate)
         || !optionalString(candidate.id)
         || (transaction !== null && !isRecord(transaction))
         || (isRecord(transaction) && !optionalString(transaction.id))
@@ -258,7 +254,6 @@ function parseSuccessResponse(response: OcrHttpResponse): FinanceOcrSuccess {
 
     return {
         data: {
-            intake: intake as FinanceOcrEntity,
             candidate: candidate as FinanceOcrEntity,
             transaction: transaction as FinanceOcrEntity | null,
             auto_confirmed: data.auto_confirmed,

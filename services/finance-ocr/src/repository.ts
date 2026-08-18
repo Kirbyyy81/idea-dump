@@ -301,17 +301,29 @@ export class SupabaseFinanceRepository implements FinanceRepository, ShareQueueR
 
     async loadContext(userId: string): Promise<FinanceContext> {
         const [sources, rules, fieldLearningRules, payees] = await Promise.all([
-            this.secretClient.from('dim_finance_sources').select('*').eq('user_id', userId).eq('is_archived', false),
-            this.secretClient.from('finance_rules').select('*').eq('user_id', userId).eq('is_active', true),
+            this.secretClient
+                .from('dim_finance_sources')
+                .select('id, name, filename_aliases, ocr_aliases, is_archived')
+                .eq('user_id', userId)
+                .eq('is_archived', false),
+            this.secretClient
+                .from('finance_rules')
+                .select('id, name, match_type, pattern, category_id, source_id, direction, priority, is_active, source, auto_created_at, created_at')
+                .eq('user_id', userId)
+                .eq('is_active', true),
             this.secretClient
                 .from('finance_field_learning_rules')
-                .select('*')
+                .select('id, source_id, field_name, transform_type, transform_value, evidence_count, is_active, created_at')
                 .eq('user_id', userId)
                 .eq('is_active', true)
                 .order('evidence_count', { ascending: false })
                 .order('created_at')
                 .order('id'),
-            this.secretClient.from('dim_finance_payees').select('*').eq('user_id', userId).eq('is_archived', false),
+            this.secretClient
+                .from('dim_finance_payees')
+                .select('id, name, normalized_name, is_archived')
+                .eq('user_id', userId)
+                .eq('is_archived', false),
         ]);
         if (sources.error) throw new RepositoryError('load_sources', sources.error);
         if (rules.error) throw new RepositoryError('load_rules', rules.error);
@@ -505,7 +517,7 @@ export class SupabaseFinanceRepository implements FinanceRepository, ShareQueueR
     async findShareImageDuplicate(job: ShareQueueJob, imageHash: string) {
         const { data, error } = await this.secretClient
             .from('finance_intake_items')
-            .select('*')
+            .select('id, processing_attempt_id')
             .eq('user_id', job.userId)
             .eq('image_hash', imageHash)
             .maybeSingle();

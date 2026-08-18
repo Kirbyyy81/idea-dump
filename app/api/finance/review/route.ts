@@ -42,8 +42,8 @@ export async function POST(request: NextRequest) {
             getFinanceDateInTimeZone(request.headers.get(FINANCE_TIME_ZONE_HEADER))
         );
         if (result.kind === 'success') return NextResponse.json({ success: true });
-        if (result.kind === 'duplicate') return NextResponse.json({ success: true, data: result.data });
-        return NextResponse.json({ data: result.data });
+        if (result.kind === 'candidate') return NextResponse.json({ data: result.data });
+        return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Error resolving finance review item:', error);
         if (isFinanceServiceError(error)) {

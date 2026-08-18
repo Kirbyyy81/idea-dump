@@ -1,4 +1,9 @@
 import { getOwnedActiveFinanceShareBatch as getOwnedActiveFinanceShareBatchFromRepository } from '@/lib/finance/core/repository';
+import type {
+    FinanceShareBatch,
+    FinanceShareBatchItemStatus,
+    FinanceShareBatchStatus,
+} from '@/lib/types';
 
 export const FINANCE_SHARE_BUCKET = 'finance-share-batches';
 export const FINANCE_SHARE_PROCESSING_VERSION = 3;
@@ -139,4 +144,63 @@ export async function wakeFinanceShareQueue() {
 
 export async function getOwnedActiveFinanceShareBatch(userId: string) {
     return getOwnedActiveFinanceShareBatchFromRepository(userId);
+}
+
+const financeShareBatchStatuses = new Set<FinanceShareBatchStatus>([
+    'QUEUED',
+    'PROCESSING',
+    'CLEANING_UP',
+]);
+const financeShareItemStatuses = new Set<FinanceShareBatchItemStatus>([
+    'QUEUED',
+    'PROCESSING',
+    'AUTO_CONFIRMED',
+    'REVIEW_REQUIRED',
+    'DUPLICATE',
+    'FAILED',
+]);
+
+function nonNegativeNumber(value: unknown) {
+    const number = Number(value);
+    return Number.isFinite(number) && number >= 0 ? number : 0;
+}
+
+export function toFinanceShareBatch(value: unknown): FinanceShareBatch | null {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+    const record = value as Record<string, unknown>;
+    if (
+        typeof record.id !== 'string'
+        || typeof record.status !== 'string'
+        || !financeShareBatchStatuses.has(record.status as FinanceShareBatchStatus)
+    ) return null;
+
+    const items = Array.isArray(record.items) ? record.items.flatMap((valueItem) => {
+        if (!valueItem || typeof valueItem !== 'object' || Array.isArray(valueItem)) return [];
+        const item = valueItem as Record<string, unknown>;
+        if (
+            typeof item.id !== 'string'
+            || typeof item.status !== 'string'
+            || !financeShareItemStatuses.has(item.status as FinanceShareBatchItemStatus)
+        ) return [];
+        return [{
+            id: item.id,
+            original_filename: typeof item.original_filename === 'string'
+                ? item.original_filename
+                : null,
+            status: item.status as FinanceShareBatchItemStatus,
+        }];
+    }) : [];
+
+    return {
+        id: record.id,
+        status: record.status as FinanceShareBatchStatus,
+        total_files: nonNegativeNumber(record.total_files),
+        queued_files: nonNegativeNumber(record.queued_files),
+        processing_files: nonNegativeNumber(record.processing_files),
+        completed_files: nonNegativeNumber(record.completed_files),
+        review_files: nonNegativeNumber(record.review_files),
+        duplicate_files: nonNegativeNumber(record.duplicate_files),
+        failed_files: nonNegativeNumber(record.failed_files),
+        items,
+    };
 }

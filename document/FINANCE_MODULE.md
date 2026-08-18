@@ -83,7 +83,7 @@ flowchart LR
 
 | Route | Purpose |
 | --- | --- |
-| `/finance` | Monthly dashboard, cash-flow chart, category spending chart, review count, and recent transactions. |
+| `/finance` | Monthly dashboard, cash-flow chart, category spending chart, and recent transactions. |
 | `/finance/add` | Manual transaction entry, direct screenshot upload, and accepted PWA share files. |
 | `/finance/transactions` | Confirmed transaction ledger, search, filters, edit, and delete. |
 | `/finance/review` | Pending OCR candidates, failed intakes, duplicate decisions, retry rules, confirmation, and rejection. |
@@ -148,7 +148,7 @@ Pending, unsubmitted shared files are discarded when the user leaves the Finance
 
 Add, Review, Transactions, and Rules consume this shared state instead of independently loading the same option lists. Dashboard and ledger results remain page-owned and are not blocked by reference-data loading. Controls that need a source or category show a local loading or retry state. Concurrent refresh calls share one request, a failed refresh preserves the last successful options, and pending responses are aborted and ignored after unmounting.
 
-Settings remains intentionally separate from the minimal payload. Only the active Settings section is rendered. Sources then loads aliases and archive state, Categories loads archive state, and Rules loads rules and suggestions while reusing the provider options. Successful create, rename, archive, restore, and delete operations update both the detailed Settings list and the active provider options.
+Settings remains intentionally separate from the minimal payload. Only the active Settings section is rendered. Sources then loads aliases and archive state, Categories loads archive state, and Rules loads rules and suggestions together in one authenticated request while reusing the provider options. Successful create, rename, archive, restore, and delete operations update both the detailed Settings list and the active provider options.
 
 ### API authorization
 
@@ -740,19 +740,26 @@ All Finance API handlers are dynamic and return JSON.
 
 | Route | Methods | Purpose |
 | --- | --- | --- |
-| `/api/finance/dashboard` | GET | Monthly totals, chart data, review count, and recent transactions. |
+| `/api/finance/dashboard` | GET | Monthly totals, chart data, and six minimal recent-transaction summaries. |
 | `/api/finance/reference-data` | GET | Active source and category options with only `id` and `name`. |
 | `/api/finance/transactions` | GET, POST, PUT, DELETE | Ledger read, manual create, edit, and delete. |
 | `/api/finance/review` | GET, POST | Review queue plus confirm, retry, duplicate, and reject actions. |
 | `/api/finance/sources` | GET, POST, PATCH or PUT, DELETE | Source library management. |
 | `/api/finance/categories` | GET, POST, PUT or PATCH, DELETE | Category library management. |
-| `/api/finance/rules` | GET, POST, PUT, DELETE | Rule library management. |
-| `/api/finance/rule-suggestions` | GET, PATCH, POST | List, edit, activate, or dismiss learning suggestions. |
+| `/api/finance/rules` | GET, POST, PUT, DELETE | Rule library management. GET also returns pending suggestions so Settings needs one read. |
+| `/api/finance/rule-suggestions` | PATCH, POST | Edit, activate, or dismiss learning suggestions. |
 | `/api/finance/share-batches/prepare` | POST | Reserve a batch and return signed upload details. |
 | `/api/finance/share-batches/commit` | POST | Verify uploads, queue them, and return 202. |
 | `/api/finance/share-batches/active` | GET | Return the verified user's current active transient batch. |
-| `/api/finance/upload` | GET | Return recent intake history. |
 | `/api/finance/upload` | POST | Retired. Returns 410 because direct OCR is handled by Render. |
+
+### Browser payload policy
+
+- Browser responses expose view contracts instead of database rows. Tenant IDs, persistence lineage, idempotency keys, internal statuses, and unused timestamps are omitted.
+- Ledger rows include only editable and displayed transaction fields plus minimal source, category, and payee relations.
+- Review queue rows include the candidate payload, duplicate display fields, and only the OCR text needed by the review page. Failed intake rows contain only displayed failure fields.
+- Share-batch polling omits processing lineage, attempts, failure metadata, and timestamps that are not displayed.
+- Direct OCR returns the candidate ID, optional transaction ID, auto-confirmation state, and recovery state. Full intake, candidate, and transaction records remain server-side.
 
 ### Transaction GET filters
 

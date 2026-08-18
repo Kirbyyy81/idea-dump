@@ -1,12 +1,53 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { FinanceCategory, FinanceSource, FinanceTransaction } from '@/lib/types';
 
-const FINANCE_TRANSACTION_SELECT =
-    '*, finance_source:dim_finance_sources(*), category:dim_finance_categories(*), finance_payee:dim_finance_payees(*)';
-const FINANCE_RULE_SELECT =
-    '*, finance_source:dim_finance_sources(*), category:dim_finance_categories(*)';
-const FINANCE_RULE_SUGGESTION_SELECT =
-    '*, category:dim_finance_categories(*), finance_source:dim_finance_sources(*)';
+export const FINANCE_TRANSACTION_VIEW_SELECT = [
+    'id, source_id, category_id, direction, amount, currency, merchant, payee_id',
+    'reference_number, transaction_date, notes, created_at',
+    'finance_source:dim_finance_sources(id,name)',
+    'category:dim_finance_categories(id,name,is_archived)',
+    'finance_payee:dim_finance_payees(id,name)',
+].join(', ');
+const FINANCE_TRANSACTION_REPLAY_SELECT = [
+    'id, source_id, category_id, direction, amount, currency, merchant, payee_id',
+    'reference_number, transaction_date, notes, source, status, created_at',
+    'finance_source:dim_finance_sources(id,name)',
+    'category:dim_finance_categories(id,name,is_archived)',
+    'finance_payee:dim_finance_payees(id,name)',
+].join(', ');
+const FINANCE_TRANSACTION_INTERNAL_SELECT =
+    'id, source_id, category_id, direction, amount, currency, merchant, payee_id, reference_number, transaction_date, notes, source, status';
+const FINANCE_DASHBOARD_RECENT_SELECT = [
+    'id, direction, amount, merchant, transaction_date',
+    'finance_source:dim_finance_sources(name)',
+    'finance_payee:dim_finance_payees(name)',
+].join(', ');
+const FINANCE_REVIEW_DUPLICATE_SELECT = [
+    'id, amount, currency, merchant, transaction_date',
+    'finance_source:dim_finance_sources(name)',
+    'finance_payee:dim_finance_payees(name)',
+].join(', ');
+const FINANCE_RULE_SELECT = [
+    'id, name, match_type, pattern, category_id, source_id, direction, priority, is_active',
+    'source, auto_created_at, learning_evidence_count, created_at',
+    'finance_source:dim_finance_sources(name)',
+    'category:dim_finance_categories(name)',
+].join(', ');
+const FINANCE_RULE_INTERNAL_SELECT =
+    'id, source_id, category_id, direction, is_active, source';
+const FINANCE_RULE_SUGGESTION_SELECT = [
+    'id, name, pattern, match_type, category_id, source_id, direction, priority, evidence_count',
+    'category:dim_finance_categories(name)',
+    'finance_source:dim_finance_sources(name)',
+].join(', ');
+const FINANCE_REVIEW_QUEUE_SELECT = [
+    'id, payload, confidence, duplicate_outcome, duplicate_signals, duplicate_explanation',
+    'intake:finance_intake_items(ocr_text,ocr_raw_text,ocr_normalized_text,ocr_confidence,normalizer_version)',
+].join(', ');
+const FINANCE_REVIEW_INTERNAL_SELECT = [
+    'id, intake_item_id, payload, status',
+    'intake:finance_intake_items(ocr_text,ocr_normalized_text,original_filename,ocr_text_hash)',
+].join(', ');
 
 export async function listFinanceCategories(userId: string) {
     return createAdminClient()
@@ -29,7 +70,7 @@ export async function listActiveFinanceCategoryReferences(userId: string) {
 export async function getOwnedFinanceCategory(userId: string, categoryId: string) {
     const { data, error } = await createAdminClient()
         .from('dim_finance_categories')
-        .select('*')
+        .select('id, is_archived')
         .eq('id', categoryId)
         .eq('user_id', userId)
         .maybeSingle();
@@ -44,7 +85,7 @@ export async function createFinanceCategory(
     return createAdminClient()
         .from('dim_finance_categories')
         .insert({ user_id: userId, ...input })
-        .select('*')
+        .select('id, name, is_archived')
         .single();
 }
 
@@ -70,7 +111,7 @@ export async function updateFinanceCategory(
         .update(updates)
         .eq('id', categoryId)
         .eq('user_id', userId)
-        .select('*')
+        .select('id, name, is_archived')
         .single();
 }
 
@@ -102,7 +143,7 @@ export async function listActiveFinanceSourceReferences(userId: string) {
 export async function getOwnedFinanceSource(userId: string, sourceId: string) {
     const { data, error } = await createAdminClient()
         .from('dim_finance_sources')
-        .select('*')
+        .select('id, is_archived')
         .eq('id', sourceId)
         .eq('user_id', userId)
         .maybeSingle();
@@ -113,7 +154,7 @@ export async function getOwnedFinanceSource(userId: string, sourceId: string) {
 export async function listActiveFinanceSources(userId: string) {
     return createAdminClient()
         .from('dim_finance_sources')
-        .select('*')
+        .select('id, name, filename_aliases, ocr_aliases, is_archived')
         .eq('user_id', userId)
         .eq('is_archived', false);
 }
@@ -129,7 +170,7 @@ export async function createFinanceSource(
     return createAdminClient()
         .from('dim_finance_sources')
         .insert({ user_id: userId, ...input })
-        .select('*')
+        .select('id, name, filename_aliases, ocr_aliases, is_archived')
         .single();
 }
 
@@ -151,7 +192,7 @@ export async function updateFinanceSource(
         .update(updates)
         .eq('id', sourceId)
         .eq('user_id', userId)
-        .select('*')
+        .select('id, name, filename_aliases, ocr_aliases, is_archived')
         .maybeSingle();
 }
 
@@ -175,7 +216,7 @@ export async function listFinanceRules(userId: string) {
 export async function listActiveFinanceRules(userId: string) {
     return createAdminClient()
         .from('finance_rules')
-        .select('*')
+        .select('id, name, match_type, pattern, category_id, source_id, direction, priority, is_active, source, auto_created_at, created_at')
         .eq('user_id', userId)
         .eq('is_active', true);
 }
@@ -183,7 +224,7 @@ export async function listActiveFinanceRules(userId: string) {
 export async function listActiveFinancePayees(userId: string) {
     return createAdminClient()
         .from('dim_finance_payees')
-        .select('*')
+        .select('id, name, normalized_name, is_archived')
         .eq('user_id', userId)
         .eq('is_archived', false)
         .order('name');
@@ -192,7 +233,7 @@ export async function listActiveFinancePayees(userId: string) {
 export async function listActiveFinanceFieldLearningRules(userId: string) {
     return createAdminClient()
         .from('finance_field_learning_rules')
-        .select('*')
+        .select('id, source_id, field_name, transform_type, transform_value, evidence_count, is_active, created_at')
         .eq('user_id', userId)
         .eq('is_active', true)
         .order('evidence_count', { ascending: false })
@@ -200,7 +241,7 @@ export async function listActiveFinanceFieldLearningRules(userId: string) {
         .order('id');
 }
 
-export async function findFinanceRule(userId: string, ruleId: string, select = '*') {
+export async function findFinanceRule(userId: string, ruleId: string, select = FINANCE_RULE_INTERNAL_SELECT) {
     return createAdminClient()
         .from('finance_rules')
         .select(select)
@@ -248,7 +289,7 @@ export async function listFinanceRuleSuggestions(userId: string) {
 export async function findPendingFinanceRuleSuggestion(userId: string, suggestionId: string) {
     return createAdminClient()
         .from('finance_rule_suggestions')
-        .select('*')
+        .select('id, category_id, source_id')
         .eq('id', suggestionId)
         .eq('user_id', userId)
         .eq('status', 'pending')
@@ -316,7 +357,7 @@ export async function listFinanceTransactions(
     for (let from = 0; ; from += options.pageSize) {
         let query = admin
             .from('finance_transactions')
-            .select(FINANCE_TRANSACTION_SELECT)
+            .select(FINANCE_TRANSACTION_VIEW_SELECT)
             .eq('user_id', userId)
             .eq('status', options.status)
             .order('transaction_date', { ascending: false })
@@ -340,7 +381,7 @@ export async function listFinanceTransactions(
         }
         const { data, error } = await query;
         if (error) throw error;
-        const page = (data || []) as FinanceTransaction[];
+        const page = (data || []) as unknown as FinanceTransaction[];
         transactions.push(...page);
         if (page.length < options.pageSize) break;
     }
@@ -350,7 +391,7 @@ export async function listFinanceTransactions(
 export async function getManualFinanceTransactionByIdempotencyKey(userId: string, idempotencyKey: string) {
     return createAdminClient()
         .from('finance_transactions')
-        .select(FINANCE_TRANSACTION_SELECT)
+        .select(FINANCE_TRANSACTION_REPLAY_SELECT)
         .eq('user_id', userId)
         .eq('manual_idempotency_key', idempotencyKey)
         .maybeSingle();
@@ -363,7 +404,7 @@ export async function createManualFinanceTransaction(userId: string, input: Reco
     }).single();
 }
 
-export async function findFinanceTransaction(userId: string, transactionId: string, select = '*') {
+export async function findFinanceTransaction(userId: string, transactionId: string, select = FINANCE_TRANSACTION_INTERNAL_SELECT) {
     return createAdminClient()
         .from('finance_transactions')
         .select(select)
@@ -391,15 +432,6 @@ export async function deleteFinanceTransaction(userId: string, transactionId: st
     });
 }
 
-export async function listFinanceIntakeHistory(userId: string) {
-    return createAdminClient()
-        .from('finance_intake_items')
-        .select('id, source, status, received_at, processed_at, error_message')
-        .eq('user_id', userId)
-        .order('received_at', { ascending: false })
-        .limit(20);
-}
-
 export async function listFinanceDashboardMonthTransactions(
     userId: string,
     monthStart: string,
@@ -411,7 +443,7 @@ export async function listFinanceDashboardMonthTransactions(
     for (let from = 0; ; from += pageSize) {
         const { data, error } = await admin
             .from('finance_transactions')
-            .select('id, amount, direction, transaction_date, category_id, category:dim_finance_categories(name)')
+            .select('amount, direction, transaction_date, category_id, category:dim_finance_categories(name)')
             .eq('user_id', userId)
             .eq('status', 'confirmed')
             .gte('transaction_date', monthStart)
@@ -426,26 +458,15 @@ export async function listFinanceDashboardMonthTransactions(
     return rows;
 }
 
-export async function getFinanceDashboardSummary(userId: string) {
-    const admin = createAdminClient();
-    const [recentResult, intakeResult] = await Promise.all([
-        admin
-            .from('finance_transactions')
-            .select(FINANCE_TRANSACTION_SELECT)
-            .eq('user_id', userId)
-            .eq('status', 'confirmed')
-            .order('transaction_date', { ascending: false })
-            .order('created_at', { ascending: false })
-            .limit(6),
-        admin
-            .from('finance_intake_items')
-            .select('id', { count: 'exact', head: true })
-            .eq('user_id', userId)
-            .eq('status', 'review'),
-    ]);
-    if (recentResult.error) throw recentResult.error;
-    if (intakeResult.error) throw intakeResult.error;
-    return { recentTransactions: recentResult.data || [], reviewCount: intakeResult.count || 0 };
+export async function listFinanceDashboardRecentTransactions(userId: string) {
+    return createAdminClient()
+        .from('finance_transactions')
+        .select(FINANCE_DASHBOARD_RECENT_SELECT)
+        .eq('user_id', userId)
+        .eq('status', 'confirmed')
+        .order('transaction_date', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(6);
 }
 
 export async function listFinanceReviewQueue(userId: string) {
@@ -453,13 +474,13 @@ export async function listFinanceReviewQueue(userId: string) {
     const [candidateResult, failedResult] = await Promise.all([
         admin
             .from('finance_candidate_transactions')
-            .select('*, intake:finance_intake_items(*)')
+            .select(FINANCE_REVIEW_QUEUE_SELECT)
             .eq('user_id', userId)
             .eq('status', 'pending')
             .order('created_at', { ascending: false }),
         admin
             .from('finance_intake_items')
-            .select('id, source, status, original_filename, ocr_confidence, processing_attempt_count, failure_code, failure_stage, error_message, received_at, processed_at, created_at, updated_at')
+            .select('id, original_filename, processing_attempt_count, failure_code, failure_stage, error_message')
             .eq('user_id', userId)
             .eq('status', 'failed')
             .order('updated_at', { ascending: false }),
@@ -469,11 +490,11 @@ export async function listFinanceReviewQueue(userId: string) {
     return { candidates: candidateResult.data || [], failedIntakes: failedResult.data || [] };
 }
 
-export async function listFinanceTransactionsByIds(userId: string, transactionIds: string[]) {
+export async function listFinanceReviewDuplicateTransactionsByIds(userId: string, transactionIds: string[]) {
     if (!transactionIds.length) return [];
     const { data, error } = await createAdminClient()
         .from('finance_transactions')
-        .select(FINANCE_TRANSACTION_SELECT)
+        .select(FINANCE_REVIEW_DUPLICATE_SELECT)
         .eq('user_id', userId)
         .in('id', transactionIds);
     if (error) throw error;
@@ -483,7 +504,7 @@ export async function listFinanceTransactionsByIds(userId: string, transactionId
 export async function findFinanceReviewCandidate(userId: string, candidateId: string) {
     return createAdminClient()
         .from('finance_candidate_transactions')
-        .select('*, intake:finance_intake_items(*)')
+        .select(FINANCE_REVIEW_INTERNAL_SELECT)
         .eq('id', candidateId)
         .eq('user_id', userId)
         .maybeSingle();
@@ -536,7 +557,7 @@ export async function updateFinanceReviewCandidate(
         .eq('id', candidateId)
         .eq('user_id', userId)
         .eq('status', 'pending')
-        .select('*, intake:finance_intake_items(*)')
+        .select(FINANCE_REVIEW_QUEUE_SELECT)
         .single();
 }
 

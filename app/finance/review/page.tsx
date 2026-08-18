@@ -16,10 +16,10 @@ import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
 import { Toggle } from '@/components/atoms/Toggle';
 import {
-    FinanceCandidateTransaction,
     FinanceCategoryDetail,
     FinanceDuplicateSignal,
-    FinanceIntakeItem,
+    FinanceFailedIntake,
+    FinanceReviewCandidate,
     FinanceSourceDetail,
     FinanceTransactionDirection,
 } from '@/lib/types';
@@ -91,24 +91,7 @@ interface PendingReviewDraft {
     isDateProposalPending: boolean;
 }
 
-type FailedFinanceIntake = Pick<
-    FinanceIntakeItem,
-    | 'id'
-    | 'source'
-    | 'status'
-    | 'original_filename'
-    | 'ocr_confidence'
-    | 'processing_attempt_count'
-    | 'failure_code'
-    | 'failure_stage'
-    | 'error_message'
-    | 'received_at'
-    | 'processed_at'
-    | 'created_at'
-    | 'updated_at'
->;
-
-function formFromCandidate(candidate: FinanceCandidateTransaction): ReviewForm {
+function formFromCandidate(candidate: FinanceReviewCandidate): ReviewForm {
     const payload = candidate.payload;
     return {
         source_id: payload.source_id || '',
@@ -126,7 +109,7 @@ function formFromCandidate(candidate: FinanceCandidateTransaction): ReviewForm {
     };
 }
 
-function duplicateOutcome(candidate: FinanceCandidateTransaction) {
+function duplicateOutcome(candidate: FinanceReviewCandidate) {
     return candidate.duplicate_outcome
         || (candidate.payload.duplicate_transaction_id ? 'possible' : 'none');
 }
@@ -142,8 +125,8 @@ export default function FinanceReviewPage() {
         upsertSource,
         upsertCategory,
     } = useFinanceReferenceData();
-    const [candidates, setCandidates] = useState<FinanceCandidateTransaction[]>([]);
-    const [failedIntakes, setFailedIntakes] = useState<FailedFinanceIntake[]>([]);
+    const [candidates, setCandidates] = useState<FinanceReviewCandidate[]>([]);
+    const [failedIntakes, setFailedIntakes] = useState<FinanceFailedIntake[]>([]);
     const [selectedId, setSelectedId] = useState('');
     const [form, setForm] = useState<ReviewForm | null>(null);
     const [newSourceName, setNewSourceName] = useState('');
@@ -160,10 +143,10 @@ export default function FinanceReviewPage() {
         setIsLoading(true);
         try {
             const reviewPayload = await financeApiRequest<{
-                data: FinanceCandidateTransaction[];
-                failed_intakes?: FailedFinanceIntake[];
+                data: FinanceReviewCandidate[];
+                failed_intakes?: FinanceFailedIntake[];
             }>('/api/finance/review', { signal });
-            const nextCandidates = (reviewPayload.data || []) as FinanceCandidateTransaction[];
+            const nextCandidates = reviewPayload.data || [];
             const requestedCandidateId = typeof window === 'undefined'
                 ? null
                 : new URLSearchParams(window.location.search).get('candidate');
@@ -310,18 +293,27 @@ export default function FinanceReviewPage() {
                 source_id: sourceId,
                 category_id: categoryId,
             };
-            const payload = await financeApiRequest<{ data?: FinanceCandidateTransaction }>('/api/finance/review', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', [FINANCE_TIME_ZONE_HEADER]: getFinanceTimeZone() },
-                body: JSON.stringify({
+            const requestBody = action === 'confirm'
+                ? {
                     candidate_id: selected.id,
                     action,
                     ...form,
-                    amount: normalizedAmount ?? form.amount,
+                    amount: normalizedAmount,
                     source_id: sourceId,
                     category_id: categoryId,
                     matched_transaction_id: selected.payload.duplicate_transaction_id,
-                }),
+                }
+                : action === 'mark_duplicate'
+                    ? {
+                        candidate_id: selected.id,
+                        action,
+                        matched_transaction_id: selected.payload.duplicate_transaction_id,
+                    }
+                    : { candidate_id: selected.id, action };
+            const payload = await financeApiRequest<{ data?: FinanceReviewCandidate }>('/api/finance/review', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', [FINANCE_TIME_ZONE_HEADER]: getFinanceTimeZone() },
+                body: JSON.stringify(requestBody),
             }, { fallbackMessage: 'Could not update review item' });
             if (action === 'retry' && payload.data) {
                 const retriedCandidate = payload.data;

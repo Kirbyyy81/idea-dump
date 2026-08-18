@@ -16,7 +16,12 @@ import { Select } from '@/components/atoms/Select';
 import { Toggle } from '@/components/atoms/Toggle';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
 import { FinanceLoadingState } from '@/app/finance/_components/FinanceLoadingState';
-import { FinanceCategory, FinanceRule, FinanceRuleSuggestion, FinanceSource, FinanceTransactionDirection } from '@/lib/types';
+import {
+    FinanceRule,
+    FinanceRuleSuggestionView,
+    FinanceRuleView,
+    FinanceTransactionDirection,
+} from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
 import {
     getFinanceReferenceCategoryOptions,
@@ -28,7 +33,6 @@ import { useFinanceReferenceData } from '@/app/finance/_components/FinanceRefere
 import { FinanceReferenceDataState } from '@/app/finance/_components/FinanceReferenceDataState';
 
 type MatchType = FinanceRule['match_type'];
-type RuleWithRelations = FinanceRule & { finance_source?: FinanceSource | null; category?: FinanceCategory | null };
 
 const initialForm = {
     name: '',
@@ -57,12 +61,12 @@ export function RulesSettingsPanel() {
         refresh: refreshReferenceData,
         upsertCategory,
     } = useFinanceReferenceData();
-    const [rules, setRules] = useState<RuleWithRelations[]>([]);
-    const [suggestions, setSuggestions] = useState<FinanceRuleSuggestion[]>([]);
-    const [editingSuggestion, setEditingSuggestion] = useState<FinanceRuleSuggestion | null>(null);
+    const [rules, setRules] = useState<FinanceRuleView[]>([]);
+    const [suggestions, setSuggestions] = useState<FinanceRuleSuggestionView[]>([]);
+    const [editingSuggestion, setEditingSuggestion] = useState<FinanceRuleSuggestionView | null>(null);
     const [form, setForm] = useState(initialForm);
     const [isSaving, setIsSaving] = useState(false);
-    const [deleting, setDeleting] = useState<RuleWithRelations | null>(null);
+    const [deleting, setDeleting] = useState<FinanceRuleView | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [pendingItemId, setPendingItemId] = useState<string | null>(null);
@@ -70,12 +74,12 @@ export function RulesSettingsPanel() {
     const loadData = useCallback(async (signal?: AbortSignal) => {
         setIsLoading(true);
         try {
-            const [rulesPayload, suggestionsPayload] = await Promise.all([
-                financeApiRequest<{ data: RuleWithRelations[] }>('/api/finance/rules', { signal }),
-                financeApiRequest<{ data: FinanceRuleSuggestion[] }>('/api/finance/rule-suggestions', { signal }),
-            ]);
+            const rulesPayload = await financeApiRequest<{
+                data: FinanceRuleView[];
+                suggestions: FinanceRuleSuggestionView[];
+            }>('/api/finance/rules', { signal });
             setRules(sortFinanceRules(rulesPayload.data || []));
-            setSuggestions(suggestionsPayload.data || []);
+            setSuggestions(rulesPayload.suggestions || []);
         } catch (error) {
             if (signal?.aborted) return;
             showError(error instanceof Error ? error.message : 'Could not load finance rules');
@@ -99,7 +103,7 @@ export function RulesSettingsPanel() {
                 categoryId = persistedCategory.id;
                 upsertCategory(persistedCategory);
             }
-            const payload = await financeApiRequest<{ data: RuleWithRelations }>('/api/finance/rules', {
+            const payload = await financeApiRequest<{ data: FinanceRuleView }>('/api/finance/rules', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ...form, category_id: categoryId }),
@@ -114,11 +118,11 @@ export function RulesSettingsPanel() {
         }
     };
 
-    const toggleRule = async (rule: RuleWithRelations) => {
+    const toggleRule = async (rule: FinanceRuleView) => {
         if (pendingItemId) return;
         setPendingItemId(rule.id);
         try {
-            const payload = await financeApiRequest<{ data: RuleWithRelations }>('/api/finance/rules', {
+            const payload = await financeApiRequest<{ data: FinanceRuleView }>('/api/finance/rules', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: rule.id, is_active: !rule.is_active }),
@@ -152,11 +156,11 @@ export function RulesSettingsPanel() {
         }
     };
 
-    const resolveSuggestion = async (suggestion: FinanceRuleSuggestion, action: 'accept' | 'reject') => {
+    const resolveSuggestion = async (suggestion: FinanceRuleSuggestionView, action: 'accept' | 'reject') => {
         if (pendingItemId) return;
         setPendingItemId(suggestion.id);
         try {
-            await financeApiRequest<{ data?: FinanceRuleSuggestion }>('/api/finance/rule-suggestions', {
+            await financeApiRequest<{ success: true }>('/api/finance/rule-suggestions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: suggestion.id, action }),
@@ -182,10 +186,19 @@ export function RulesSettingsPanel() {
                 categoryId = persistedCategory.id;
                 upsertCategory(persistedCategory);
             }
-            const payload = await financeApiRequest<{ data: FinanceRuleSuggestion }>('/api/finance/rule-suggestions', {
+            const payload = await financeApiRequest<{ data: FinanceRuleSuggestionView }>('/api/finance/rule-suggestions', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...editingSuggestion, category_id: categoryId }),
+                body: JSON.stringify({
+                    id: editingSuggestion.id,
+                    name: editingSuggestion.name,
+                    pattern: editingSuggestion.pattern,
+                    match_type: editingSuggestion.match_type,
+                    category_id: categoryId,
+                    source_id: editingSuggestion.source_id,
+                    direction: editingSuggestion.direction,
+                    priority: editingSuggestion.priority,
+                }),
             }, { fallbackMessage: 'Could not edit suggestion' });
             setSuggestions((current) => current.map((item) => item.id === payload.data.id ? payload.data : item));
             setEditingSuggestion(null);

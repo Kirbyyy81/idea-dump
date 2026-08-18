@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
         }
         const result = await createManualFinanceTransactionForUser(session.user.id, parsed.data);
         return NextResponse.json(
-            { data: result.data, ...(result.recovered ? { recovered: true } : {}) },
+            { data: { id: result.data.id }, ...(result.recovered ? { recovered: true } : {}) },
             { status: result.status }
         );
     } catch (error) {

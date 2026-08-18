@@ -1,21 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
-import { authorizeFinance, jsonError } from '@/lib/finance/core/auth';
-import { getFinanceIntakeHistory } from '@/lib/finance/core/service';
+import { authorizeFinance } from '@/lib/finance/core/auth';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
-
-export async function GET() {
-    try {
-        const session = await authorizeFinance();
-        if ('response' in session) return session.response;
-        return NextResponse.json({ data: await getFinanceIntakeHistory(session.user.id) });
-    } catch (error) {
-        console.error('Error fetching finance intake history:', error);
-        return jsonError('Failed to fetch screenshot history', 500);
-    }
-}
 
 export async function POST(request: NextRequest) {
     const session = await authorizeFinance(request);

@@ -1,4 +1,4 @@
-import { FinanceSource, FinanceSourceDetectionSignal } from '@/lib/types';
+import { FinanceOcrSource, FinanceSourceDetectionSignal } from '@/lib/types';
 
 const MAX_SOURCE_ALIASES = 20;
 const MAX_SOURCE_ALIAS_LENGTH = 120;
@@ -46,7 +46,7 @@ function containsSignal(haystack: string, alias: string) {
     return normalizedAlias.length >= 3 && (` ${haystack} `).includes(` ${normalizedAlias} `);
 }
 
-export function detectFinanceSource(text: string, filename: string | null, sources: FinanceSource[]) {
+export function detectFinanceSource(text: string, filename: string | null, sources: FinanceOcrSource[]) {
     const normalizedText = normalizeFinanceSourceSignal(text);
     const normalizedFilename = normalizeFinanceSourceSignal(filename ?? '');
     const signals: FinanceSourceDetectionSignal[] = [];

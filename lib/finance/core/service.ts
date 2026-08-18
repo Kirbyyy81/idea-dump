@@ -20,7 +20,7 @@ import {
     findFinanceReviewCandidate,
     findFinanceTransaction,
     findPendingFinanceRuleSuggestion,
-    getFinanceDashboardSummary,
+    FINANCE_TRANSACTION_VIEW_SELECT,
     getFinanceShareObjectInfo,
     getFinanceShareUploadReservation,
     getOwnedActiveFinanceShareBatch,
@@ -29,12 +29,12 @@ import {
     getOwnedFinanceSource,
     listFinanceCategories,
     listFinanceDashboardMonthTransactions,
-    listFinanceIntakeHistory,
+    listFinanceDashboardRecentTransactions,
     listFinanceRuleSuggestions,
     listFinanceRules,
     listFinanceReviewQueue,
     listFinanceSources,
-    listFinanceTransactionsByIds,
+    listFinanceReviewDuplicateTransactionsByIds,
     listActiveFinanceCategoryReferences,
     listActiveFinanceRules,
     listActiveFinanceFieldLearningRules,
@@ -59,6 +59,13 @@ import {
     updateFinanceSource,
     updateFinanceTransaction,
 } from '@/lib/finance/core/repository';
+import {
+    toFinanceDashboardRecentTransaction,
+    toFinanceReviewCandidate,
+    toFinanceRuleSuggestionView,
+    toFinanceRuleView,
+    toFinanceTransactionView,
+} from '@/lib/finance/core/payloads';
 import {
     FinanceCategoryCreateInput,
     FinanceCategoryUpdateInput,
@@ -89,15 +96,16 @@ import {
 import {
     FinanceCandidatePayload,
     FinanceCandidateTransaction,
-    FinanceFieldLearningRule,
     FinanceIntakeItem,
-    FinanceCategory,
     FinanceCategoryDetail,
-    FinancePayee,
+    FinanceOcrFieldLearningRule,
+    FinanceOcrPayee,
+    FinanceOcrRule,
+    FinanceOcrSource,
     FinanceReferenceData,
     FinanceReferenceOption,
+    FinanceRuleSuggestion,
     FinanceRule,
-    FinanceSource,
     FinanceSourceDetail,
     FinanceTransaction,
 } from '@/lib/types';
@@ -295,10 +303,21 @@ function requireFinanceRuleOutput(input: Pick<FinanceRuleInput, 'source_id' | 'c
     }
 }
 
-export async function getFinanceRules(userId: string) {
-    const { data, error } = await listFinanceRules(userId);
-    if (error) throw error;
-    return data || [];
+export async function getFinanceRuleSettings(userId: string) {
+    const [rulesResult, suggestionsResult] = await Promise.all([
+        listFinanceRules(userId),
+        listFinanceRuleSuggestions(userId),
+    ]);
+    if (rulesResult.error) throw rulesResult.error;
+    if (suggestionsResult.error) throw suggestionsResult.error;
+    return {
+        rules: (rulesResult.data || []).map((rule) => (
+            toFinanceRuleView(rule as unknown as FinanceRule)
+        )),
+        suggestions: (suggestionsResult.data || []).map((suggestion) => (
+            toFinanceRuleSuggestionView(suggestion as unknown as FinanceRuleSuggestion)
+        )),
+    };
 }
 
 export async function createFinanceRuleForUser(userId: string, input: FinanceRuleInput) {
@@ -310,7 +329,7 @@ export async function createFinanceRuleForUser(userId: string, input: FinanceRul
         source: 'manual',
     });
     if (error) throw error;
-    return data;
+    return toFinanceRuleView(data as unknown as FinanceRule);
 }
 
 export async function updateFinanceRuleForUser(userId: string, input: FinanceRuleUpdateInput) {
@@ -341,7 +360,7 @@ export async function updateFinanceRuleForUser(userId: string, input: FinanceRul
     );
     const { data, error } = await updateFinanceRule(userId, input.id, input.updates);
     if (error) throw error;
-    return data;
+    return toFinanceRuleView(data as unknown as FinanceRule);
 }
 
 export async function deleteFinanceRuleForUser(userId: string, ruleId: string) {
@@ -351,12 +370,6 @@ export async function deleteFinanceRuleForUser(userId: string, ruleId: string) {
     if ((existing as unknown as FinanceRule).source === 'learning') fail('Learned rules can be paused but not permanently deleted', 409);
     const { error } = await deleteFinanceRule(userId, ruleId);
     if (error) throw error;
-}
-
-export async function getFinanceRuleSuggestions(userId: string) {
-    const { data, error } = await listFinanceRuleSuggestions(userId);
-    if (error) throw error;
-    return data || [];
 }
 
 async function validateFinanceSuggestionTargets(
@@ -386,7 +399,7 @@ export async function updateFinanceRuleSuggestionForUser(userId: string, input: 
     });
     if (error) throw error;
     if (!data) fail('Rule suggestion not found', 404);
-    return data;
+    return toFinanceRuleSuggestionView(data as unknown as FinanceRuleSuggestion);
 }
 
 export async function resolveFinanceRuleSuggestionForUser(
@@ -453,7 +466,7 @@ export async function getFinanceTransactions(
         ...options,
         pageSize: TRANSACTION_PAGE_SIZE,
     });
-    return transactions.map(normalizeFinanceTransaction);
+    return transactions.map(toFinanceTransactionView);
 }
 
 export async function createManualFinanceTransactionForUser(
@@ -462,12 +475,14 @@ export async function createManualFinanceTransactionForUser(
 ) {
     const { data: replayRow, error: replayError } = await getManualFinanceTransactionByIdempotencyKey(userId, input.idempotency_key);
     if (replayError) throw replayError;
-    const replay = replayRow ? normalizeFinanceTransaction(replayRow as FinanceTransaction) : null;
+    const replay = replayRow
+        ? normalizeFinanceTransaction(replayRow as unknown as FinanceTransaction)
+        : null;
     if (replay) {
         if (!isManualTransactionReplay(replay, input)) {
             fail('Transaction request ID was already used for different details', 409);
         }
-        return { data: replay, recovered: true, status: 200 };
+        return { data: toFinanceTransactionView(replay), recovered: true, status: 200 };
     }
     await validateFinanceTransactionReferences(userId, input);
     const { data, error } = await createManualFinanceTransaction(userId, {
@@ -487,9 +502,11 @@ export async function createManualFinanceTransactionForUser(
         if (error.code === '23505') {
             const { data: concurrentRow, error: concurrentError } = await getManualFinanceTransactionByIdempotencyKey(userId, input.idempotency_key);
             if (concurrentError) throw concurrentError;
-            const concurrent = concurrentRow ? normalizeFinanceTransaction(concurrentRow as FinanceTransaction) : null;
+            const concurrent = concurrentRow
+                ? normalizeFinanceTransaction(concurrentRow as unknown as FinanceTransaction)
+                : null;
             if (concurrent && isManualTransactionReplay(concurrent, input)) {
-                return { data: concurrent, recovered: true, status: 200 };
+                return { data: toFinanceTransactionView(concurrent), recovered: true, status: 200 };
             }
             if (concurrent) fail('Transaction request ID was already used for different details', 409);
         }
@@ -500,10 +517,10 @@ export async function createManualFinanceTransactionForUser(
     const { data: reloaded, error: reloadError } = await findFinanceTransaction(
         userId,
         created.id,
-        '*, finance_source:dim_finance_sources(*), category:dim_finance_categories(*), finance_payee:dim_finance_payees(*)'
+        FINANCE_TRANSACTION_VIEW_SELECT
     );
     if (reloadError) throw reloadError;
-    return { data: normalizeFinanceTransaction(reloaded as unknown as FinanceTransaction), recovered: false, status: 201 };
+    return { data: toFinanceTransactionView(reloaded as unknown as FinanceTransaction), recovered: false, status: 201 };
 }
 
 function transactionRpcError(error: { code?: string; message?: string }) {
@@ -556,9 +573,13 @@ export async function updateFinanceTransactionForUser(
         p_reference_number: input.reference_number,
     });
     if (error) transactionRpcError(error);
-    const { data, error: reloadError } = await findFinanceTransaction(userId, transactionId, '*, finance_source:dim_finance_sources(*), category:dim_finance_categories(*), finance_payee:dim_finance_payees(*)');
+    const { data, error: reloadError } = await findFinanceTransaction(
+        userId,
+        transactionId,
+        FINANCE_TRANSACTION_VIEW_SELECT
+    );
     if (reloadError) throw reloadError;
-    return normalizeFinanceTransaction(data as unknown as FinanceTransaction);
+    return toFinanceTransactionView(data as unknown as FinanceTransaction);
 }
 
 export async function deleteFinanceTransactionForUser(userId: string, transactionId: string) {
@@ -573,27 +594,22 @@ export async function deleteFinanceTransactionForUser(userId: string, transactio
 export async function getFinanceDashboard(userId: string, requestedMonth: string | null) {
     const monthRange = getFinanceMonthRange(requestedMonth || getLocalFinanceMonth());
     if (!monthRange) fail('Month must use YYYY-MM format');
-    const [monthRows, summary] = await Promise.all([
+    const [monthRows, recentResult] = await Promise.all([
         listFinanceDashboardMonthTransactions(userId, monthRange.monthStart, monthRange.nextMonthStart, DASHBOARD_PAGE_SIZE),
-        getFinanceDashboardSummary(userId),
+        listFinanceDashboardRecentTransactions(userId),
     ]);
+    if (recentResult.error) throw recentResult.error;
     const aggregate = aggregateFinanceDashboard(monthRows as FinanceDashboardRow[]);
     return {
-        month: monthRange.month,
         total_expense: aggregate.total_expense,
         total_income: aggregate.total_income,
         net_cash_flow: aggregate.net_cash_flow,
-        review_count: summary.reviewCount,
-        recent_transactions: summary.recentTransactions.map((transaction) => normalizeFinanceTransaction(transaction as FinanceTransaction)),
+        recent_transactions: (recentResult.data || []).map((transaction) => (
+            toFinanceDashboardRecentTransaction(transaction as unknown as FinanceTransaction)
+        )),
         expense_by_category: aggregate.expense_by_category,
         daily_cash_flow: aggregate.daily_cash_flow,
     };
-}
-
-export async function getFinanceIntakeHistory(userId: string) {
-    const { data, error } = await listFinanceIntakeHistory(userId);
-    if (error) throw error;
-    return data || [];
 }
 
 interface ConfirmFinanceCandidateResult {
@@ -627,10 +643,10 @@ async function attachDuplicateTransactions(
         .map((candidate) => candidate.payload?.duplicate_transaction_id)
         .filter((id): id is string => Boolean(id))));
     if (!duplicateIds.length) return candidates;
-    const transactions = await listFinanceTransactionsByIds(userId, duplicateIds);
+    const transactions = await listFinanceReviewDuplicateTransactionsByIds(userId, duplicateIds) as unknown as FinanceTransaction[];
     const byId = new Map(transactions.map((transaction) => [
         transaction.id,
-        normalizeFinanceTransaction(transaction as FinanceTransaction),
+        transaction as unknown as FinanceTransaction,
     ]));
     return candidates.map((candidate) => ({
         ...candidate,
@@ -641,7 +657,10 @@ async function attachDuplicateTransactions(
 export async function getFinanceReviewQueueForUser(userId: string) {
     const { candidates, failedIntakes } = await listFinanceReviewQueue(userId);
     return {
-        data: await attachDuplicateTransactions(userId, candidates as FinanceCandidateTransaction[]),
+        data: (await attachDuplicateTransactions(
+            userId,
+            candidates as unknown as FinanceCandidateTransaction[]
+        )).map(toFinanceReviewCandidate),
         failed_intakes: failedIntakes,
     };
 }
@@ -729,11 +748,11 @@ export async function resolveFinanceReviewCandidateForUser(
         const normalizedText = candidate.intake?.ocr_normalized_text || candidate.intake?.ocr_text || '';
         const parsed = parseFinanceText(
             normalizedText,
-            (rulesResult.data || []) as FinanceRule[],
-            (sourcesResult.data || []) as FinanceSource[],
+            (rulesResult.data || []) as FinanceOcrRule[],
+            (sourcesResult.data || []) as FinanceOcrSource[],
             candidate.intake?.original_filename || null,
-            (fieldLearningRulesResult.data || []) as FinanceFieldLearningRule[],
-            (payeesResult.data || []) as FinancePayee[],
+            (fieldLearningRulesResult.data || []) as FinanceOcrFieldLearningRule[],
+            (payeesResult.data || []) as FinanceOcrPayee[],
         );
         const { error: sourceEvidenceError } = await updateFinanceIntakeSourceEvidence(
             userId,
@@ -763,7 +782,7 @@ export async function resolveFinanceReviewCandidateForUser(
         });
         if (error) throw error;
         const [withDuplicate] = await attachDuplicateTransactions(userId, [data as unknown as FinanceCandidateTransaction]);
-        return { kind: 'candidate' as const, data: withDuplicate };
+        return { kind: 'candidate' as const, data: toFinanceReviewCandidate(withDuplicate) };
     }
 
     if (action !== 'confirm') fail('Invalid review action');
@@ -814,13 +833,7 @@ export async function resolveFinanceReviewCandidateForUser(
         const message = confirmation?.reason === 'strong_duplicate_reason_required'
             ? 'Explain why this strong duplicate should still be confirmed'
             : 'Resolve the latest duplicate warning before confirming this transaction';
-        fail(message, 409, {
-            data: {
-                candidate: confirmation?.candidate,
-                intake: confirmation?.intake,
-                duplicate: confirmation?.duplicate,
-            },
-        });
+        fail(message, 409);
     }
     return { kind: 'transaction' as const, data: normalizeFinanceTransaction(confirmation.transaction) };
 }
@@ -853,7 +866,6 @@ export async function prepareFinanceShareBatchForUser(
         if (signedError || !signed?.token) throw signedError || new Error('Missing signed upload token');
         return {
             client_id: item.client_id,
-            item_id: item.id,
             path: item.storage_path,
             token: signed.token,
         };

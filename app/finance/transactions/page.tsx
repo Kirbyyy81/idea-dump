@@ -19,7 +19,7 @@ import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
 import { Toggle } from '@/components/atoms/Toggle';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
-import { FinanceTransaction, FinanceTransactionDirection } from '@/lib/types';
+import { FinanceTransactionDirection, FinanceTransactionView } from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
 import { formatCurrency } from '@/lib/utils';
 import {
@@ -66,7 +66,7 @@ const initialForm = {
     notes: '',
 };
 
-function transactionRecipient(transaction: FinanceTransaction) {
+function transactionRecipient(transaction: FinanceTransactionView) {
     return transaction.finance_payee?.name || transaction.merchant || 'Untitled transaction';
 }
 
@@ -91,13 +91,13 @@ function FinanceTransactionsContent() {
     const pathname = usePathname();
     const router = useRouter();
     const searchParams = useSearchParams();
-    const [transactions, setTransactions] = useState<FinanceTransaction[]>([]);
+    const [transactions, setTransactions] = useState<FinanceTransactionView[]>([]);
     const [form, setForm] = useState(initialForm);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [query, setQuery] = useState('');
     const [editingId, setEditingId] = useState<string | null>(null);
-    const [deleting, setDeleting] = useState<FinanceTransaction | null>(null);
+    const [deleting, setDeleting] = useState<FinanceTransactionView | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [fieldErrors, setFieldErrors] = useState<FinanceFieldErrors>({});
     const filterQuery = searchParams.toString();
@@ -107,7 +107,7 @@ function FinanceTransactionsContent() {
 
     const loadData = useCallback(async (signal?: AbortSignal) => {
         try {
-            const transactionsPayload = await financeApiRequest<{ data: FinanceTransaction[] }>(
+            const transactionsPayload = await financeApiRequest<{ data: FinanceTransactionView[] }>(
                 `/api/finance/transactions${filterQuery ? `?${filterQuery}` : ''}`,
                 { signal }
             );
@@ -226,12 +226,11 @@ function FinanceTransactionsContent() {
                 categoryId = persistedCategory.id;
                 upsertCategory(persistedCategory);
             }
-            const payload = await financeApiRequest<{ data: FinanceTransaction }>('/api/finance/transactions', {
-                method: editingId ? 'PUT' : 'POST',
+            if (!editingId) throw new Error('Choose a transaction to edit');
+            const payload = await financeApiRequest<{ data: FinanceTransactionView }>('/api/finance/transactions', {
+                method: 'PUT',
                 headers: { 'Content-Type': 'application/json', [FINANCE_TIME_ZONE_HEADER]: getFinanceTimeZone() },
-                body: JSON.stringify(editingId
-                    ? { ...form, amount, category_id: categoryId, id: editingId }
-                    : { ...form, amount, category_id: categoryId }),
+                body: JSON.stringify({ ...form, amount, category_id: categoryId, id: editingId }),
             }, { fallbackMessage: 'Could not save transaction' });
             setTransactions((current) => sortFinanceTransactions(editingId
                 ? current.map((transaction) => transaction.id === editingId ? payload.data : transaction)
@@ -251,7 +250,7 @@ function FinanceTransactionsContent() {
         }
     };
 
-    const editTransaction = (transaction: FinanceTransaction) => {
+    const editTransaction = (transaction: FinanceTransactionView) => {
         setEditingId(transaction.id);
         setForm({
             source_id: transaction.source_id,
