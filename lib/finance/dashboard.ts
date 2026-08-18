@@ -1,8 +1,26 @@
 import { FinanceTransactionDirection } from '@/lib/types';
 import {
     financeMinorUnitsToNumber,
+    getFinanceDateInTimeZone,
+    getFinanceMonthRange,
     toFinanceAmountMinorUnits,
 } from '@/lib/finance/core/values';
+
+export const FINANCE_DASHBOARD_TIME_ZONE = 'Asia/Kuala_Lumpur';
+
+export function resolveFinanceDashboardMonth(
+    value: string | string[] | undefined,
+    date = new Date()
+) {
+    const defaultMonth = getFinanceDateInTimeZone(FINANCE_DASHBOARD_TIME_ZONE, date).slice(0, 7);
+    const requestedMonth = Array.isArray(value) ? value[0] : value;
+    const monthRange = getFinanceMonthRange(requestedMonth || defaultMonth);
+
+    return {
+        defaultMonth,
+        month: monthRange?.month ?? null,
+    };
+}
 
 export interface FinanceDashboardRow {
     amount: unknown;
