@@ -19,12 +19,11 @@ import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
 import { Toggle } from '@/components/atoms/Toggle';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
-import { FinanceCategory, FinanceSource, FinanceTransaction, FinanceTransactionDirection } from '@/lib/types';
+import { FinanceTransaction, FinanceTransactionDirection } from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
 import { formatCurrency } from '@/lib/utils';
 import {
-    getFinanceCategoryOptions,
-    mergeFinanceCategory,
+    getFinanceReferenceCategoryOptions,
 } from '@/lib/finance/catalog';
 import { persistVirtualDefaultCategory } from '@/lib/finance/catalogClient';
 import { sortFinanceTransactions } from '@/lib/finance/transactions/ordering';
@@ -51,6 +50,8 @@ import {
     focusFirstFinanceError,
 } from '../_components/FinanceFormField';
 import { FINANCE_TRANSACTION_FILTER_KEYS } from '@/lib/finance/transactions/filters';
+import { useFinanceReferenceData } from '@/app/finance/_components/FinanceReferenceDataProvider';
+import { FinanceReferenceDataState } from '@/app/finance/_components/FinanceReferenceDataState';
 
 const initialForm = {
     source_id: '',
@@ -79,11 +80,17 @@ export default function FinanceTransactionsPage() {
 
 function FinanceTransactionsContent() {
     const { showError, showSuccess } = useAlert();
+    const {
+        sources,
+        categories,
+        status: referenceStatus,
+        error: referenceError,
+        refresh: refreshReferenceData,
+        upsertCategory,
+    } = useFinanceReferenceData();
     const pathname = usePathname();
     const router = useRouter();
     const searchParams = useSearchParams();
-    const [sources, setSources] = useState<FinanceSource[]>([]);
-    const [categories, setCategories] = useState<FinanceCategory[]>([]);
     const [transactions, setTransactions] = useState<FinanceTransaction[]>([]);
     const [form, setForm] = useState(initialForm);
     const [isLoading, setIsLoading] = useState(true);
@@ -100,19 +107,11 @@ function FinanceTransactionsContent() {
 
     const loadData = useCallback(async (signal?: AbortSignal) => {
         try {
-            const [sourcesPayload, categoriesPayload, transactionsPayload] = await Promise.all([
-                financeApiRequest<{ data: FinanceSource[] }>('/api/finance/sources', { signal }),
-                financeApiRequest<{ data: FinanceCategory[] }>('/api/finance/categories', { signal }),
-                financeApiRequest<{ data: FinanceTransaction[] }>(
-                    `/api/finance/transactions${filterQuery ? `?${filterQuery}` : ''}`,
-                    { signal }
-                ),
-            ]);
-            const nextSources = (sourcesPayload.data || []) as FinanceSource[];
-            setSources(nextSources);
-            setCategories(categoriesPayload.data || []);
+            const transactionsPayload = await financeApiRequest<{ data: FinanceTransaction[] }>(
+                `/api/finance/transactions${filterQuery ? `?${filterQuery}` : ''}`,
+                { signal }
+            );
             setTransactions(transactionsPayload.data || []);
-            setForm((current) => current.source_id || !nextSources.length ? current : { ...current, source_id: nextSources[0].id });
         } catch (error) {
             if (signal?.aborted) return;
             showError(error instanceof Error ? error.message : 'Could not load finance records');
@@ -129,20 +128,27 @@ function FinanceTransactionsContent() {
         return () => controller.abort();
     }, [loadData]);
 
-    const sourceOptions = useMemo(() => sources.flatMap((source) => (
-        !source.is_archived || source.id === form.source_id
-            ? [{
-                value: source.id,
-                label: source.is_archived ? `${source.name} (archived)` : source.name,
-                disabled: source.is_archived,
-            }]
-            : []
-    )), [form.source_id, sources]);
-    const categoryOptions = useMemo(() => {
-        return getFinanceCategoryOptions(categories, {
-            currentCategoryId: form.category_id,
-        });
-    }, [categories, form.category_id]);
+    const editingTransaction = editingId
+        ? transactions.find((transaction) => transaction.id === editingId) || null
+        : null;
+    const sourceOptions = useMemo(() => {
+        const options: Array<{ value: string; label: string; disabled?: boolean }> = sources.map(
+            (source) => ({ value: source.id, label: source.name })
+        );
+        const currentSource = editingTransaction?.finance_source;
+        if (currentSource && !sources.some((source) => source.id === currentSource.id)) {
+            options.push({
+                value: currentSource.id,
+                label: `${currentSource.name} (archived)`,
+                disabled: true,
+            });
+        }
+        return options;
+    }, [editingTransaction, sources]);
+    const categoryOptions = useMemo(() => getFinanceReferenceCategoryOptions(
+        categories,
+        editingTransaction?.category || null
+    ), [categories, editingTransaction]);
     const filteredTransactions = useMemo(() => {
         const needle = query.trim().toLowerCase();
         if (!needle) return transactions;
@@ -158,7 +164,9 @@ function FinanceTransactionsContent() {
     };
 
     const categoryFilterLabel = categoryFilterId
-        ? categories.find((category) => category.id === categoryFilterId)?.name || 'Category'
+        ? categories.find((category) => category.id === categoryFilterId)?.name
+            || transactions.find((transaction) => transaction.category_id === categoryFilterId)?.category?.name
+            || 'Category'
         : null;
     const activeFilters = [
         categoryFilterId ? {
@@ -216,7 +224,7 @@ function FinanceTransactionsContent() {
             const persistedCategory = await persistVirtualDefaultCategory(categoryId);
             if (persistedCategory) {
                 categoryId = persistedCategory.id;
-                setCategories((current) => mergeFinanceCategory(current, persistedCategory));
+                upsertCategory(persistedCategory);
             }
             const payload = await financeApiRequest<{ data: FinanceTransaction }>('/api/finance/transactions', {
                 method: editingId ? 'PUT' : 'POST',
@@ -298,7 +306,15 @@ function FinanceTransactionsContent() {
         >
             <div className="mx-auto max-w-7xl">
                 <div className="space-y-5">
-                    {editingId && <form onSubmit={saveTransaction} className="max-w-xl" noValidate>
+                    {editingId && (referenceStatus !== 'ready' ? (
+                        <div className="max-w-xl">
+                            <FinanceReferenceDataState
+                                status={referenceStatus}
+                                error={referenceError}
+                                retry={refreshReferenceData}
+                            />
+                        </div>
+                    ) : <form onSubmit={saveTransaction} className="max-w-xl" noValidate>
                         <Card className="p-5">
                             <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2">{editingId ? <EditDoodleIcon size={18} className="text-accent-blue" /> : <AddDoodleIcon size={18} className="text-accent-blue" />}<h2 className="text-base font-bold">{editingId ? 'Edit transaction' : 'New transaction'}</h2></div>{editingId && <button type="button" title="Cancel editing" aria-label="Cancel editing" onClick={cancelEditing} className="grid size-10 place-items-center text-text-muted hover:text-text-primary"><CloseDoodleIcon size={16} /></button>}</div>
                             <FinanceFormErrorSummary errors={fieldErrors} />
@@ -329,7 +345,7 @@ function FinanceTransactionsContent() {
                             </div>
                             <Button type="submit" className="mt-5 w-full" isLoading={isSaving} disabled={isSaving}>Save changes</Button>
                         </Card>
-                    </form>}
+                    </form>)}
 
                     <section className="border border-border-default bg-bg-surface">
                         <div className="flex flex-col gap-3 border-b border-border-default px-5 py-4 sm:flex-row sm:items-center sm:justify-between"><h2 className="text-base font-bold">Ledger</h2><label className="sm:w-64"><span className="sr-only">Search transactions</span><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search transactions" /></label></div>

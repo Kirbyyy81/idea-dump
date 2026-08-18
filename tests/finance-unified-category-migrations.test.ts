@@ -13,7 +13,7 @@ const phaseTwoSql = fs.readFileSync(path.join(
     root,
     'supabase',
     'migrations',
-    '20260817084730_remove_finance_category_metadata.sql'
+    '20260817085640_remove_finance_category_metadata.sql'
 ), 'utf8');
 
 describe('unified Finance category migrations', () => {

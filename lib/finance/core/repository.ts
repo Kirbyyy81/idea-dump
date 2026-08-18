@@ -11,9 +11,18 @@ const FINANCE_RULE_SUGGESTION_SELECT =
 export async function listFinanceCategories(userId: string) {
     return createAdminClient()
         .from('dim_finance_categories')
-        .select('*')
+        .select('id, name, is_archived')
         .eq('user_id', userId)
         .order('is_archived')
+        .order('name');
+}
+
+export async function listActiveFinanceCategoryReferences(userId: string) {
+    return createAdminClient()
+        .from('dim_finance_categories')
+        .select('id, name')
+        .eq('user_id', userId)
+        .eq('is_archived', false)
         .order('name');
 }
 
@@ -75,9 +84,18 @@ export async function deleteFinanceCategory(userId: string, categoryId: string) 
 export async function listFinanceSources(userId: string) {
     return createAdminClient()
         .from('dim_finance_sources')
-        .select('*')
+        .select('id, name, filename_aliases, ocr_aliases, is_archived')
         .eq('user_id', userId)
         .order('is_archived')
+        .order('name');
+}
+
+export async function listActiveFinanceSourceReferences(userId: string) {
+    return createAdminClient()
+        .from('dim_finance_sources')
+        .select('id, name')
+        .eq('user_id', userId)
+        .eq('is_archived', false)
         .order('name');
 }
 

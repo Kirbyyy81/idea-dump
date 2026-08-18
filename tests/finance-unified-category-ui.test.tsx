@@ -5,28 +5,28 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CategoriesSettingsPanel } from '@/app/finance/settings/_components/CategoriesSettingsPanel';
 import { AlertProvider } from '@/lib/contexts/AlertContext';
 import { financeApiRequest } from '@/lib/finance/core/client';
-import { FinanceCategory } from '@/lib/types';
+import { FinanceCategoryDetail } from '@/lib/types';
 
 vi.mock('@/lib/finance/core/client', () => ({
     financeApiRequest: vi.fn(),
 }));
+vi.mock('@/app/finance/_components/FinanceReferenceDataProvider', () => ({
+    useFinanceReferenceData: () => ({
+        upsertCategory: vi.fn(),
+        removeCategory: vi.fn(),
+    }),
+}));
 
-const categories: FinanceCategory[] = [
+const categories: FinanceCategoryDetail[] = [
     {
         id: '20000000-0000-4000-8000-000000000002',
-        user_id: '10000000-0000-4000-8000-000000000001',
         name: 'Legacy',
         is_archived: true,
-        created_at: '2026-08-17T00:00:00.000Z',
-        updated_at: '2026-08-17T00:00:00.000Z',
     },
     ...['Food', 'Drinks', 'Transport', 'Gifts', 'Salary'].map((name, index) => ({
         id: `20000000-0000-4000-8000-00000000000${index + 3}`,
-        user_id: '10000000-0000-4000-8000-000000000001',
         name,
         is_archived: false,
-        created_at: '2026-08-17T00:00:00.000Z',
-        updated_at: '2026-08-17T00:00:00.000Z',
     })),
 ];
 

@@ -2,7 +2,7 @@
 
 ## Document purpose
 
-This document describes the Finance module as implemented in the repository on 2026-08-14. It is intended for engineers, reviewers, operators, and future maintainers who need to understand the module without reconstructing its behavior from individual pages, route handlers, migrations, and OCR service files.
+This document describes the Finance module as implemented in the repository on 2026-08-17. It is intended for engineers, reviewers, operators, and future maintainers who need to understand the module without reconstructing its behavior from individual pages, route handlers, migrations, and OCR service files.
 
 The code and forward database migrations remain the source of truth. When behavior changes, update this document in the same change.
 
@@ -138,8 +138,17 @@ Results are sorted by transaction date descending, creation time descending, the
 2. Redirects signed-out users to `/login`.
 3. Redirects authenticated users without Finance access to `/dashboard`.
 4. Mounts the Finance share-target provider only inside the authorized Finance route tree.
+5. Mounts the Finance reference-data provider at the same module boundary.
 
 Pending, unsubmitted shared files are discarded when the user leaves the Finance layout. They are not forwarded to another module.
+
+### Module-scoped reference data
+
+[`FinanceReferenceDataProvider`](../app/finance/_components/FinanceReferenceDataProvider.tsx) loads the active source and category options once when the authorized Finance layout mounts. The consolidated payload contains only `id` and `name`, and the provider reuses it while the user navigates among Finance pages. Leaving Finance unmounts the provider; returning creates a fresh request.
+
+Add, Review, Transactions, and Rules consume this shared state instead of independently loading the same option lists. Dashboard and ledger results remain page-owned and are not blocked by reference-data loading. Controls that need a source or category show a local loading or retry state. Concurrent refresh calls share one request, a failed refresh preserves the last successful options, and pending responses are aborted and ignored after unmounting.
+
+Settings remains intentionally separate from the minimal payload. Only the active Settings section is rendered. Sources then loads aliases and archive state, Categories loads archive state, and Rules loads rules and suggestions while reusing the provider options. Successful create, rename, archive, restore, and delete operations update both the detailed Settings list and the active provider options.
 
 ### API authorization
 
@@ -732,6 +741,7 @@ All Finance API handlers are dynamic and return JSON.
 | Route | Methods | Purpose |
 | --- | --- | --- |
 | `/api/finance/dashboard` | GET | Monthly totals, chart data, review count, and recent transactions. |
+| `/api/finance/reference-data` | GET | Active source and category options with only `id` and `name`. |
 | `/api/finance/transactions` | GET, POST, PUT, DELETE | Ledger read, manual create, edit, and delete. |
 | `/api/finance/review` | GET, POST | Review queue plus confirm, retry, duplicate, and reject actions. |
 | `/api/finance/sources` | GET, POST, PATCH or PUT, DELETE | Source library management. |
@@ -969,6 +979,7 @@ See [`ARCHITECTURE_CLEAN_CODE_REVIEW.md`](./ARCHITECTURE_CLEAN_CODE_REVIEW.md) f
 - Request parsing: [`lib/finance/core/schemas.ts`](../lib/finance/core/schemas.ts)
 - Business workflows: [`lib/finance/core/service.ts`](../lib/finance/core/service.ts)
 - Tenant-scoped persistence: [`lib/finance/core/repository.ts`](../lib/finance/core/repository.ts)
+- Module reference-data provider: [`app/finance/_components/FinanceReferenceDataProvider.tsx`](../app/finance/_components/FinanceReferenceDataProvider.tsx)
 - OCR parser: [`lib/finance/ocr/parser.ts`](../lib/finance/ocr/parser.ts)
 - Source detection: [`lib/finance/ocr/sourceDetection.ts`](../lib/finance/ocr/sourceDetection.ts)
 - Transaction reference extraction: [`lib/finance/ocr/reference.ts`](../lib/finance/ocr/reference.ts)
