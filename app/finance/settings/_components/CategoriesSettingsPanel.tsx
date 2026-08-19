@@ -5,7 +5,7 @@ import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
-import { FinanceLoadingState } from '@/app/finance/_components/FinanceLoadingState';
+import { InlineLoadingState } from '@/components/molecules/InlineLoadingState';
 import { useFinanceReferenceData } from '@/app/finance/_components/FinanceReferenceDataProvider';
 import { FinanceCategoryDetail } from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
@@ -174,7 +174,7 @@ export function CategoriesSettingsPanel() {
                     <div className="space-y-5">
                         {isLoading ? (
                             <section className="border border-border-default bg-bg-surface">
-                                <FinanceLoadingState label="Loading categories..." />
+                                <InlineLoadingState label="Loading categories..." />
                             </section>
                         ) : <>
                             <section className="border border-border-default bg-bg-surface">

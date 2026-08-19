@@ -24,7 +24,7 @@ import {
     FinanceTransactionDirection,
 } from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
-import { FinanceLoadingState } from '../_components/FinanceLoadingState';
+import { InlineLoadingState } from '@/components/molecules/InlineLoadingState';
 import {
     FinanceFormErrorSummary,
     FinanceFormField,
@@ -365,7 +365,7 @@ export default function FinanceReviewPage() {
                         <div className="border-b border-border-default px-5 py-4"><h2 className="text-base font-bold">Awaiting review <span className="text-text-muted">({isLoading ? '…' : candidates.length})</span></h2></div>
                         <div className="divide-y divide-border-default" aria-live="polite" aria-busy={isLoading}>
                             {isLoading ? (
-                                <FinanceLoadingState label="Loading review queue..." />
+                                <InlineLoadingState label="Loading review queue..." />
                             ) : <>
                             {candidates.map((candidate) => {
                                 const outcome = duplicateOutcome(candidate);
@@ -386,7 +386,7 @@ export default function FinanceReviewPage() {
 
                     {isLoading ? (
                         <div className="grid min-h-72 place-items-center border border-dashed border-border-default">
-                            <FinanceLoadingState label="Loading candidate details..." />
+                            <InlineLoadingState label="Loading candidate details..." />
                         </div>
                     ) : referenceStatus !== 'ready' ? (
                         <div className="min-h-72 border border-dashed border-border-default">

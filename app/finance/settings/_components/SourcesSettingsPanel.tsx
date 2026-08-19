@@ -5,7 +5,7 @@ import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
-import { FinanceLoadingState } from '@/app/finance/_components/FinanceLoadingState';
+import { InlineLoadingState } from '@/components/molecules/InlineLoadingState';
 import { useFinanceReferenceData } from '@/app/finance/_components/FinanceReferenceDataProvider';
 import { FinanceSourceDetail } from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
@@ -162,7 +162,7 @@ export function SourcesSettingsPanel() {
                         </div>
                         <div className="divide-y divide-border-default">
                             {isLoading ? (
-                                <FinanceLoadingState label="Loading sources..." />
+                                <InlineLoadingState label="Loading sources..." />
                             ) : <>
                             {sortedSources.map((source) => (
                                 <div key={source.id} className="px-5 py-4">

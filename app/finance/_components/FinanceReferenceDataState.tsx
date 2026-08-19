@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from '@/components/atoms/Button';
-import { FinanceLoadingState } from '@/app/finance/_components/FinanceLoadingState';
+import { InlineLoadingState } from '@/components/molecules/InlineLoadingState';
 import { FinanceReferenceDataStatus } from '@/app/finance/_components/FinanceReferenceDataProvider';
 
 interface FinanceReferenceDataStateProps {
@@ -16,7 +16,7 @@ export function FinanceReferenceDataState({
     retry,
 }: FinanceReferenceDataStateProps) {
     if (status === 'loading') {
-        return <FinanceLoadingState label="Loading Finance options..." />;
+        return <InlineLoadingState label="Loading Finance options..." />;
     }
 
     return (

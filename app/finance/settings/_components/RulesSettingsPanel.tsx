@@ -15,7 +15,7 @@ import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { Toggle } from '@/components/atoms/Toggle';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
-import { FinanceLoadingState } from '@/app/finance/_components/FinanceLoadingState';
+import { InlineLoadingState } from '@/components/molecules/InlineLoadingState';
 import { FinanceCategory, FinanceRule, FinanceRuleSuggestion, FinanceSource, FinanceTransactionDirection } from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
 import {
@@ -260,7 +260,7 @@ export function RulesSettingsPanel() {
                         <div className="border-b border-border-default px-5 py-4"><h2 className="text-base font-bold">Rule library</h2></div>
                         <div className="divide-y divide-border-default">
                             {isLoading ? (
-                                <FinanceLoadingState label="Loading rules..." />
+                                <InlineLoadingState label="Loading rules..." />
                             ) : <>
                             {rules.map((rule) => (
                                 <div key={rule.id} className="px-5 py-4">
