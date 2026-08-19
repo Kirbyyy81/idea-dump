@@ -462,6 +462,7 @@ export async function listFinanceReviewQueue(userId: string) {
             .select('id, source, status, original_filename, ocr_confidence, processing_attempt_count, failure_code, failure_stage, error_message, received_at, processed_at, created_at, updated_at')
             .eq('user_id', userId)
             .eq('status', 'failed')
+            .or('failure_code.is.null,failure_code.neq.share_batch_replaced')
             .order('updated_at', { ascending: false }),
     ]);
     if (candidateResult.error) throw candidateResult.error;
