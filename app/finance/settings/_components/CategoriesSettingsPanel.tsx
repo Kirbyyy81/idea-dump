@@ -2,11 +2,15 @@
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/atoms/Button';
-import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
-import { InlineLoadingState } from '@/components/molecules/InlineLoadingState';
 import { useFinanceReferenceData } from '@/app/finance/_components/FinanceReferenceDataProvider';
+import {
+    FinanceSettingsColumns,
+    FinanceSettingsFormCard,
+    FinanceSettingsLibrary,
+    FinanceSettingsPanelLayout,
+} from '@/app/finance/settings/_components/FinanceSettingsPanelLayout';
 import { FinanceCategoryDetail } from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
 import {
@@ -159,82 +163,72 @@ export function CategoriesSettingsPanel() {
 
     return (
         <>
-            <div className="mx-auto max-w-7xl">
-                <div className="grid grid-cols-1 gap-5 lg:grid-cols-[360px_minmax(0,1fr)]">
+            <FinanceSettingsPanelLayout>
+                <FinanceSettingsColumns>
                     <form onSubmit={addCategory}>
-                        <Card className="p-5">
-                            <h2 className="text-base font-bold">New category</h2>
-                            <div className="mt-5">
-                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Name</span><Input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Groceries" /></label>
-                            </div>
-                            <Button type="submit" className="mt-5 w-full" isLoading={isSaving}>Add category</Button>
-                        </Card>
+                        <FinanceSettingsFormCard
+                            title="New category"
+                            action={<Button type="submit" className="w-full" isLoading={isSaving}>Add category</Button>}
+                        >
+                            <label className="block space-y-2"><span className="text-sm text-text-secondary">Name</span><Input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Groceries" /></label>
+                        </FinanceSettingsFormCard>
                     </form>
-
-                    <div className="space-y-5">
-                        {isLoading ? (
-                            <section className="border border-border-default bg-bg-surface">
-                                <InlineLoadingState label="Loading categories..." />
-                            </section>
-                        ) : <>
-                            <section className="border border-border-default bg-bg-surface">
-                                <div className="border-b border-border-default px-5 py-4"><h2 className="text-base font-bold">Categories</h2></div>
-                                <div className="divide-y divide-border-default">
-                                    {missingDefaultCategories.map((name) => (
-                                        <div key={`suggested-${name}`} className="flex items-center justify-between gap-4 bg-bg-subtle px-5 py-4">
-                                            <div className="min-w-0">
-                                                <p className="truncate font-semibold">{name}</p>
-                                                <p className="text-sm text-text-muted">Suggested default - not saved yet</p>
-                                            </div>
-                                            <Button
-                                                type="button"
-                                                variant="secondary"
-                                                isLoading={addingSuggestedName === name}
-                                                disabled={addingSuggestedName !== null && addingSuggestedName !== name}
-                                                onClick={() => void addSuggestedCategory(name)}
-                                            >
-                                                Add category
-                                            </Button>
-                                        </div>
-                                    ))}
-                                    {categories.map((category) => (
-                                        <div key={category.id} className="px-5 py-4">
-                                            {editingId === category.id ? (
-                                                <form
-                                                    className="space-y-3"
-                                                    onSubmit={(event) => {
-                                                        event.preventDefault();
-                                                        void updateCategory(category, editingForm);
-                                                    }}
-                                                >
-                                                    <div>
-                                                        <Input required value={editingForm.name} onChange={(event) => setEditingForm({ ...editingForm, name: event.target.value })} aria-label="Category name" />
-                                                    </div>
-                                                    <div className="flex gap-2 sm:justify-end">
-                                                        <Button type="button" variant="ghost" disabled={pendingCategoryId !== null} onClick={() => setEditingId(null)}>Cancel</Button>
-                                                        <Button type="submit" isLoading={pendingCategoryId === category.id} disabled={pendingCategoryId !== null}>Save changes</Button>
-                                                    </div>
-                                                </form>
-                                            ) : (
-                                                <div className="flex items-center justify-between gap-4">
-                                                    <div className="min-w-0"><p className="truncate font-semibold">{category.name}</p>{category.is_archived && <p className="text-sm text-text-muted">Archived - retained for history</p>}</div>
-                                                    <div className="flex flex-wrap items-center justify-end gap-1">
-                                                        <Button type="button" variant="ghost" aria-label={`Edit category ${category.name}`} disabled={pendingCategoryId !== null} onClick={() => beginEditing(category)}>Edit</Button>
-                                                        <Button type="button" variant="ghost" aria-label={`${category.is_archived ? 'Restore' : 'Archive'} category ${category.name}`} isLoading={pendingCategoryId === category.id} disabled={pendingCategoryId !== null} onClick={() => void updateCategory(category, { is_archived: !category.is_archived })}>{category.is_archived ? 'Restore' : 'Archive'}</Button>
-                                                        <Button type="button" variant="ghost" aria-label={`Delete category ${category.name}`} disabled={pendingCategoryId !== null} className="text-error hover:text-error" onClick={() => setDeleting(category)}>Delete</Button>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
-                                    {!categories.length && !missingDefaultCategories.length
-                                        && <p className="px-5 py-8 text-center text-sm text-text-muted">No categories yet.</p>}
+                    <FinanceSettingsLibrary
+                        title="Categories"
+                        headingId="finance-category-library-heading"
+                        isLoading={isLoading}
+                        loadingLabel="Loading categories..."
+                        isEmpty={!categories.length && !missingDefaultCategories.length}
+                        emptyMessage="No categories yet."
+                    >
+                        {missingDefaultCategories.map((name) => (
+                        <div key={`suggested-${name}`} className="flex items-center justify-between gap-4 bg-bg-subtle px-5 py-4">
+                            <div className="min-w-0">
+                                <p className="truncate font-semibold">{name}</p>
+                                <p className="text-sm text-text-muted">Suggested default - not saved yet</p>
+                            </div>
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                isLoading={addingSuggestedName === name}
+                                disabled={addingSuggestedName !== null && addingSuggestedName !== name}
+                                onClick={() => void addSuggestedCategory(name)}
+                            >
+                                Add category
+                            </Button>
+                        </div>
+                        ))}
+                        {categories.map((category) => (
+                        <div key={category.id} className="px-5 py-4">
+                            {editingId === category.id ? (
+                                <form
+                                    className="space-y-3"
+                                    onSubmit={(event) => {
+                                        event.preventDefault();
+                                        void updateCategory(category, editingForm);
+                                    }}
+                                >
+                                    <Input required value={editingForm.name} onChange={(event) => setEditingForm({ ...editingForm, name: event.target.value })} aria-label="Category name" />
+                                    <div className="flex gap-2 sm:justify-end">
+                                        <Button type="button" variant="ghost" disabled={pendingCategoryId !== null} onClick={() => setEditingId(null)}>Cancel</Button>
+                                        <Button type="submit" isLoading={pendingCategoryId === category.id} disabled={pendingCategoryId !== null}>Save changes</Button>
+                                    </div>
+                                </form>
+                            ) : (
+                                <div className="flex items-center justify-between gap-4">
+                                    <div className="min-w-0"><p className="truncate font-semibold">{category.name}</p>{category.is_archived ? <p className="text-sm text-text-muted">Archived - retained for history</p> : null}</div>
+                                    <div className="flex flex-wrap items-center justify-end gap-1">
+                                        <Button type="button" variant="ghost" aria-label={`Edit category ${category.name}`} disabled={pendingCategoryId !== null} onClick={() => beginEditing(category)}>Edit</Button>
+                                        <Button type="button" variant="ghost" aria-label={`${category.is_archived ? 'Restore' : 'Archive'} category ${category.name}`} isLoading={pendingCategoryId === category.id} disabled={pendingCategoryId !== null} onClick={() => void updateCategory(category, { is_archived: !category.is_archived })}>{category.is_archived ? 'Restore' : 'Archive'}</Button>
+                                        <Button type="button" variant="ghost" aria-label={`Delete category ${category.name}`} disabled={pendingCategoryId !== null} className="text-error hover:text-error" onClick={() => setDeleting(category)}>Delete</Button>
+                                    </div>
                                 </div>
-                            </section>
-                        </>}
-                    </div>
-                </div>
-            </div>
+                            )}
+                        </div>
+                        ))}
+                    </FinanceSettingsLibrary>
+                </FinanceSettingsColumns>
+            </FinanceSettingsPanelLayout>
             <ConfirmDialog
                 isOpen={Boolean(deleting)}
                 title="Permanently delete this category?"

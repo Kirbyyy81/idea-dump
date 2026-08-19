@@ -2,9 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/atoms/Button';
-import { Card } from '@/components/atoms/Card';
 import {
-    AddDoodleIcon,
     CheckDoodleIcon,
     CloseDoodleIcon,
     DeleteDoodleIcon,
@@ -15,7 +13,6 @@ import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { Toggle } from '@/components/atoms/Toggle';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
-import { InlineLoadingState } from '@/components/molecules/InlineLoadingState';
 import { FinanceCategory, FinanceRule, FinanceRuleSuggestion, FinanceSource, FinanceTransactionDirection } from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
 import {
@@ -26,6 +23,12 @@ import { financeApiRequest } from '@/lib/finance/core/client';
 import { sortFinanceRules } from '@/lib/finance/rules';
 import { useFinanceReferenceData } from '@/app/finance/_components/FinanceReferenceDataProvider';
 import { FinanceReferenceDataState } from '@/app/finance/_components/FinanceReferenceDataState';
+import {
+    FinanceSettingsColumns,
+    FinanceSettingsFormCard,
+    FinanceSettingsLibrary,
+    FinanceSettingsPanelLayout,
+} from '@/app/finance/settings/_components/FinanceSettingsPanelLayout';
 
 type MatchType = FinanceRule['match_type'];
 type RuleWithRelations = FinanceRule & { finance_source?: FinanceSource | null; category?: FinanceCategory | null };
@@ -199,21 +202,17 @@ export function RulesSettingsPanel() {
 
     return (
         <>
-            <div className="mx-auto max-w-7xl">
-                <p className="text-sm text-text-muted">Active rules are applied by priority during screenshot processing.</p>
+            <FinanceSettingsPanelLayout description="Active rules are applied by priority during screenshot processing.">
+                {referenceStatus !== 'ready' ? (
+                    <FinanceReferenceDataState
+                        status={referenceStatus}
+                        error={referenceError}
+                        retry={refreshReferenceData}
+                    />
+                ) : null}
 
-                {referenceStatus !== 'ready' && (
-                    <div className="mt-5">
-                        <FinanceReferenceDataState
-                            status={referenceStatus}
-                            error={referenceError}
-                            retry={refreshReferenceData}
-                        />
-                    </div>
-                )}
-
-                {!isLoading && suggestions.length > 0 && (
-                    <section className="mt-5 border border-border-default bg-bg-subtle">
+                {!isLoading && suggestions.length > 0 ? (
+                    <section className="border border-border-default bg-bg-subtle">
                         <div className="flex items-center gap-2 border-b border-border-default px-5 py-4"><SparkleDoodleIcon size={17} className="text-accent-apricot" /><h2 className="text-base font-bold">Learning suggestions</h2></div>
                         <div className="divide-y divide-border-default">
                             {suggestions.map((suggestion) => editingSuggestion?.id === suggestion.id ? (
@@ -237,32 +236,33 @@ export function RulesSettingsPanel() {
                             ))}
                         </div>
                     </section>
-                )}
+                ) : null}
 
-                <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[380px_minmax(0,1fr)]">
+                <FinanceSettingsColumns>
                     <form onSubmit={addRule}>
-                        <Card className="p-5">
-                            <div className="flex items-center gap-2"><AddDoodleIcon size={18} className="text-accent-blue" /><h2 className="text-base font-bold">New rule</h2></div>
-                            <div className="mt-5 space-y-4">
-                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Rule name</span><Input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Jaya Grocer" /></label>
-                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Match type</span><Select ariaLabel="Rule match type" value={form.match_type} onChange={(match_type) => setForm({ ...form, match_type: match_type as MatchType })} options={matchTypeOptions} /></label>
-                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Text to match</span><Input required value={form.pattern} onChange={(event) => setForm({ ...form, pattern: event.target.value })} placeholder="JAYA GROCER" /></label>
+                        <FinanceSettingsFormCard
+                            title="New rule"
+                            action={<Button type="submit" className="w-full" isLoading={isSaving} disabled={referenceStatus !== 'ready'}>Add rule</Button>}
+                        >
+                            <label className="block space-y-2"><span className="text-sm text-text-secondary">Rule name</span><Input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Jaya Grocer" /></label>
+                            <label className="block space-y-2"><span className="text-sm text-text-secondary">Match type</span><Select ariaLabel="Rule match type" value={form.match_type} onChange={(match_type) => setForm({ ...form, match_type: match_type as MatchType })} options={matchTypeOptions} /></label>
+                            <label className="block space-y-2"><span className="text-sm text-text-secondary">Text to match</span><Input required value={form.pattern} onChange={(event) => setForm({ ...form, pattern: event.target.value })} placeholder="JAYA GROCER" /></label>
                             <label className="block space-y-2"><span className="text-sm text-text-secondary">Set source</span><Select disabled={referenceStatus !== 'ready'} ariaLabel="Rule source" value={form.source_id} onChange={(source_id) => setForm({ ...form, source_id })} options={[{ value: '', label: 'Do not change' }, ...sources.map((source) => ({ value: source.id, label: source.name }))]} /></label>
-                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Set category</span><Select disabled={referenceStatus !== 'ready'} ariaLabel="Rule category" value={form.category_id} onChange={(category_id) => setForm({ ...form, category_id })} options={[{ value: '', label: 'Do not change' }, ...getFinanceReferenceCategoryOptions(categories)]} /></label>
+                            <label className="block space-y-2"><span className="text-sm text-text-secondary">Set category</span><Select disabled={referenceStatus !== 'ready'} ariaLabel="Rule category" value={form.category_id} onChange={(category_id) => setForm({ ...form, category_id })} options={[{ value: '', label: 'Do not change' }, ...getFinanceReferenceCategoryOptions(categories)]} /></label>
                             <label className="block space-y-2"><span className="text-sm text-text-secondary">Set direction</span><Select ariaLabel="Rule direction" value={form.direction} onChange={(direction) => setForm({ ...form, direction: direction as FinanceTransactionDirection | '' })} options={[{ value: '', label: 'Do not change' }, { value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }]} /></label>
-                                <label className="block space-y-2"><span className="text-sm text-text-secondary">Priority</span><Input type="number" step="1" value={form.priority} onChange={(event) => setForm({ ...form, priority: event.target.value })} /></label>
-                            </div>
-                            <Button type="submit" className="mt-5 w-full" isLoading={isSaving} disabled={referenceStatus !== 'ready'}>Add rule</Button>
-                        </Card>
+                            <label className="block space-y-2"><span className="text-sm text-text-secondary">Priority</span><Input type="number" step="1" value={form.priority} onChange={(event) => setForm({ ...form, priority: event.target.value })} /></label>
+                        </FinanceSettingsFormCard>
                     </form>
 
-                    <section className="border border-border-default bg-bg-surface">
-                        <div className="border-b border-border-default px-5 py-4"><h2 className="text-base font-bold">Rule library</h2></div>
-                        <div className="divide-y divide-border-default">
-                            {isLoading ? (
-                                <InlineLoadingState label="Loading rules..." />
-                            ) : <>
-                            {rules.map((rule) => (
+                    <FinanceSettingsLibrary
+                        title="Rule library"
+                        headingId="finance-rule-library-heading"
+                        isLoading={isLoading}
+                        loadingLabel="Loading rules..."
+                        isEmpty={!rules.length}
+                        emptyMessage="No rules yet."
+                    >
+                        {rules.map((rule) => (
                                 <div key={rule.id} className="px-5 py-4">
                                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                         <div className="min-w-0">
@@ -278,13 +278,10 @@ export function RulesSettingsPanel() {
                                         </div>
                                     </div>
                                 </div>
-                            ))}
-                            {!rules.length && <p className="px-5 py-12 text-center text-sm text-text-muted">No rules yet.</p>}
-                            </>}
-                        </div>
-                    </section>
-                </div>
-            </div>
+                        ))}
+                    </FinanceSettingsLibrary>
+                </FinanceSettingsColumns>
+            </FinanceSettingsPanelLayout>
             <ConfirmDialog
                 isOpen={Boolean(deleting)}
                 title="Permanently delete this rule?"
