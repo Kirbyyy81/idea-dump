@@ -57,7 +57,14 @@ describe('unified Finance category settings', () => {
 
     it('preserves category selections when direction changes', () => {
         const root = path.resolve(import.meta.dirname, '..');
-        const addSource = fs.readFileSync(path.join(root, 'app', 'finance', 'add', 'page.tsx'), 'utf8');
+        const addSource = fs.readFileSync(path.join(
+            root,
+            'app',
+            'finance',
+            'add',
+            '_components',
+            'FinanceTransactionEntry.tsx'
+        ), 'utf8');
         const reviewSource = fs.readFileSync(path.join(root, 'app', 'finance', 'review', 'page.tsx'), 'utf8');
         const transactionSource = fs.readFileSync(path.join(root, 'app', 'finance', 'transactions', 'page.tsx'), 'utf8');
         const ruleSource = fs.readFileSync(path.join(

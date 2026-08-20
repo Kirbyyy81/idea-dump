@@ -3,12 +3,12 @@
 import { LoaderOne } from '@/components/atoms/Loader';
 import { cn } from '@/lib/utils';
 
-interface FinanceLoadingStateProps {
+interface InlineLoadingStateProps {
     label: string;
     className?: string;
 }
 
-export function FinanceLoadingState({ label, className }: FinanceLoadingStateProps) {
+export function InlineLoadingState({ label, className }: InlineLoadingStateProps) {
     return (
         <div
             className={cn('flex items-center justify-center gap-3 px-5 py-12 text-sm text-text-muted', className)}
