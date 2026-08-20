@@ -47,7 +47,13 @@ export const InputField = forwardRef<HTMLInputElement, InputFieldProps>(
         return (
             <div className={cn(containerClassName)}>
                 <label htmlFor={id} className="block text-sm text-text-secondary">
-                    {label}{required ? ' (required)' : ''}
+                    {label}
+                    {required && (
+                        <>
+                            <span aria-hidden="true" className="text-error"> *</span>
+                            <span className="sr-only">, required</span>
+                        </>
+                    )}
                 </label>
                 <div className="mt-2">
                     <input

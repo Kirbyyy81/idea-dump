@@ -21,7 +21,13 @@ export function FinanceFormField({
     return (
         <div className={className}>
             <label htmlFor={fieldId} className="block text-sm text-text-secondary">
-                {label}{required ? ' (required)' : ''}
+                {label}
+                {required && (
+                    <>
+                        <span aria-hidden="true" className="text-error"> *</span>
+                            <span className="sr-only">, required</span>
+                    </>
+                )}
             </label>
             <div className="mt-2">{children}</div>
             {error && <p id={`${fieldId}-error`} className="mt-1 text-xs font-semibold text-error">{error}</p>}

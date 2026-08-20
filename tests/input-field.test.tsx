@@ -15,11 +15,13 @@ describe('InputField', () => {
             />
         );
 
-        const input = screen.getByLabelText('Amount (required)') as HTMLInputElement;
+        const input = screen.getByRole('textbox', { name: 'Amount, required' }) as HTMLInputElement;
         const error = screen.getByText('Enter a valid amount');
+        const requiredIndicator = screen.getByText('*');
 
         expect(input.id).toBe('amount');
         expect(input.required).toBe(true);
+        expect(requiredIndicator.getAttribute('aria-hidden')).toBe('true');
         expect(input.getAttribute('aria-invalid')).toBe('true');
         expect(input.getAttribute('aria-describedby')).toBe('amount-help amount-error');
         expect(input.className).toContain('input');
