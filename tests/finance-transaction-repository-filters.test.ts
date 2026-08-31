@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+    findFinanceTransaction,
     listFinanceReviewQueue,
     listFinanceTransactions,
 } from '@/lib/finance/core/repository';
@@ -12,6 +13,7 @@ const database = vi.hoisted(() => {
         gte: vi.fn(),
         is: vi.fn(),
         lte: vi.fn(),
+        maybeSingle: vi.fn(),
         or: vi.fn(),
         order: vi.fn(),
         range: vi.fn(),
@@ -21,6 +23,7 @@ const database = vi.hoisted(() => {
     for (const method of ['eq', 'from', 'gte', 'is', 'lte', 'or', 'order', 'range', 'select'] as const) {
         query[method].mockReturnValue(query);
     }
+    query.maybeSingle.mockResolvedValue(result);
     return query;
 });
 
@@ -33,6 +36,20 @@ beforeEach(() => {
 });
 
 describe('Finance transaction repository filters', () => {
+    it('scopes single-transaction reads to both the transaction and user', async () => {
+        await findFinanceTransaction(
+            'user-4',
+            '00000000-0000-4000-8000-000000000004'
+        );
+
+        expect(database.eq.mock.calls).toContainEqual([
+            'id',
+            '00000000-0000-4000-8000-000000000004',
+        ]);
+        expect(database.eq.mock.calls).toContainEqual(['user_id', 'user-4']);
+        expect(database.maybeSingle).toHaveBeenCalledOnce();
+    });
+
     it('keeps tenant scope while filtering a category and exact date', async () => {
         await listFinanceTransactions('user-1', {
             status: 'confirmed',

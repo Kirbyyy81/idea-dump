@@ -371,7 +371,11 @@ export async function createManualFinanceTransaction(userId: string, input: Reco
     }).single();
 }
 
-export async function findFinanceTransaction(userId: string, transactionId: string, select = '*') {
+export async function findFinanceTransaction(
+    userId: string,
+    transactionId: string,
+    select = FINANCE_TRANSACTION_SELECT
+) {
     return createAdminClient()
         .from('finance_transactions')
         .select(select)

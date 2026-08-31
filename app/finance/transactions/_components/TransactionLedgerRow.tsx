@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useId, useRef, useState } from 'react';
+import Link from 'next/link';
 import {
     CategoryDoodleIcon,
     DeleteDoodleIcon,
@@ -24,7 +25,6 @@ import type { FinanceLedgerCategoryIcon } from './transactionLedger';
 
 interface TransactionLedgerRowProps {
     transaction: FinanceTransaction;
-    onEdit: (transaction: FinanceTransaction) => void;
     onDelete: (transaction: FinanceTransaction) => void;
 }
 
@@ -45,7 +45,6 @@ function LedgerCategoryIcon({ kind }: { kind: FinanceLedgerCategoryIcon }) {
 
 export function TransactionLedgerRow({
     transaction,
-    onEdit,
     onDelete,
 }: TransactionLedgerRowProps) {
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
@@ -143,17 +142,14 @@ export function TransactionLedgerRow({
                             aria-label={`Actions for ${recipient}`}
                             className="absolute right-0 top-full z-20 mt-1.5 min-w-36 rounded-md border border-border-default bg-bg-surface p-1 shadow-subtle"
                         >
-                            <button
-                                type="button"
+                            <Link
+                                href={`/finance/transactions/edit?id=${encodeURIComponent(transaction.id)}`}
                                 className="flex min-h-10 w-full items-center gap-2 rounded-sm px-3 py-2 text-left text-sm font-semibold text-text-secondary hover:bg-bg-hover hover:text-text-primary focus-visible:bg-bg-hover focus-visible:text-text-primary focus-visible:outline-none"
-                                onClick={() => {
-                                    closeMenu(true);
-                                    onEdit(transaction);
-                                }}
+                                onClick={() => closeMenu(false)}
                             >
                                 <EditDoodleIcon size={16} />
                                 Edit
-                            </button>
+                            </Link>
                             <button
                                 type="button"
                                 className="flex min-h-10 w-full items-center gap-2 rounded-sm px-3 py-2 text-left text-sm font-semibold text-error hover:bg-error-bg focus-visible:bg-error-bg focus-visible:outline-none"

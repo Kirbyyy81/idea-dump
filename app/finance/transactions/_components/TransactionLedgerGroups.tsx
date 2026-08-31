@@ -12,14 +12,12 @@ import {
 interface TransactionLedgerGroupsProps {
     isLoading: boolean;
     onDelete: (transaction: FinanceTransaction) => void;
-    onEdit: (transaction: FinanceTransaction) => void;
     transactions: FinanceTransaction[];
 }
 
 export function TransactionLedgerGroups({
     isLoading,
     onDelete,
-    onEdit,
     transactions,
 }: TransactionLedgerGroupsProps) {
     const groups = useMemo(
@@ -61,7 +59,6 @@ export function TransactionLedgerGroups({
                                 <TransactionLedgerRow
                                     key={transaction.id}
                                     transaction={transaction}
-                                    onEdit={onEdit}
                                     onDelete={onDelete}
                                 />
                             ))}

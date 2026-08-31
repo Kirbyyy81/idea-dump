@@ -45,7 +45,7 @@ const transaction: FinanceTransaction = {
 describe('TransactionLedgerRow', () => {
     it('shows source and category tags without repeating the group date or reference number', () => {
         const view = render(
-            <TransactionLedgerRow transaction={transaction} onEdit={vi.fn()} onDelete={vi.fn()} />
+            <TransactionLedgerRow transaction={transaction} onDelete={vi.fn()} />
         );
 
         expect(screen.getByText('Ryt Bank')).toBeTruthy();
@@ -67,7 +67,6 @@ describe('TransactionLedgerRow', () => {
                         ? { ...transaction.category, name: 'Hackathon' }
                         : null,
                 }}
-                onEdit={vi.fn()}
                 onDelete={vi.fn()}
             />
         );
@@ -78,33 +77,28 @@ describe('TransactionLedgerRow', () => {
     });
 
     it('keeps edit and delete inside the transaction action popover', () => {
-        const onEdit = vi.fn();
         const onDelete = vi.fn();
         render(
             <TransactionLedgerRow
                 transaction={transaction}
-                onEdit={onEdit}
                 onDelete={onDelete}
             />
         );
 
-        expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull();
+        expect(screen.queryByRole('link', { name: 'Edit' })).toBeNull();
         expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
 
         const trigger = screen.getByRole('button', {
             name: 'Actions for BD LUCKYCUP KEPONG SDN BHD',
         });
         fireEvent.click(trigger);
-        const editButton = screen.getByRole('button', { name: 'Edit' });
+        const editLink = screen.getByRole('link', { name: 'Edit' });
         const deleteButton = screen.getByRole('button', { name: 'Delete' });
-        expect(editButton.tabIndex).toBe(0);
+        expect(editLink.tabIndex).toBe(0);
+        expect(editLink.getAttribute('href')).toBe(
+            '/finance/transactions/edit?id=transaction-1'
+        );
         expect(deleteButton.tabIndex).toBe(0);
-        fireEvent.click(editButton);
-        expect(onEdit).toHaveBeenCalledWith(transaction);
-        expect(screen.queryByRole('group', { name: 'Actions for BD LUCKYCUP KEPONG SDN BHD' })).toBeNull();
-        expect(document.activeElement).toBe(trigger);
-
-        fireEvent.click(trigger);
         fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
         expect(onDelete).toHaveBeenCalledWith(transaction);
         expect(screen.queryByRole('group', { name: 'Actions for BD LUCKYCUP KEPONG SDN BHD' })).toBeNull();
@@ -112,12 +106,10 @@ describe('TransactionLedgerRow', () => {
     });
 
     it('closes on Escape or an outside interaction without activating an action', () => {
-        const onEdit = vi.fn();
         const onDelete = vi.fn();
         render(
             <TransactionLedgerRow
                 transaction={transaction}
-                onEdit={onEdit}
                 onDelete={onDelete}
             />
         );
@@ -133,7 +125,6 @@ describe('TransactionLedgerRow', () => {
         fireEvent.click(trigger);
         fireEvent.pointerDown(document.body);
         expect(screen.queryByRole('group', { name: 'Actions for BD LUCKYCUP KEPONG SDN BHD' })).toBeNull();
-        expect(onEdit).not.toHaveBeenCalled();
         expect(onDelete).not.toHaveBeenCalled();
     });
 
@@ -141,7 +132,6 @@ describe('TransactionLedgerRow', () => {
         render(
             <TransactionLedgerRow
                 transaction={{ ...transaction, finance_source: null, category: null }}
-                onEdit={vi.fn()}
                 onDelete={vi.fn()}
             />
         );

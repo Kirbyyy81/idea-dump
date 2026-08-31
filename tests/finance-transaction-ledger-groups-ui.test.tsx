@@ -60,7 +60,6 @@ describe('TransactionLedgerGroups', () => {
             <TransactionLedgerGroups
                 isLoading={false}
                 transactions={transactions}
-                onEdit={vi.fn()}
                 onDelete={vi.fn()}
             />
         );
@@ -84,7 +83,6 @@ describe('TransactionLedgerGroups', () => {
                     transaction('salary', '2026-08-31', 'income', 100),
                     visibleExpense,
                 ]}
-                onEdit={vi.fn()}
                 onDelete={vi.fn()}
             />
         );
@@ -93,7 +91,6 @@ describe('TransactionLedgerGroups', () => {
             <TransactionLedgerGroups
                 isLoading={false}
                 transactions={[visibleExpense]}
-                onEdit={vi.fn()}
                 onDelete={vi.fn()}
             />
         );

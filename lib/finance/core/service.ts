@@ -460,6 +460,20 @@ export async function getFinanceTransactions(
     return transactions.map(normalizeFinanceTransaction);
 }
 
+export async function getFinanceTransactionForUser(
+    userId: string,
+    transactionId: string
+) {
+    const { data, error } = await findFinanceTransaction(userId, transactionId);
+    if (error) throw error;
+    if (!data) fail('Transaction not found', 404);
+    const transaction = normalizeFinanceTransaction(data as unknown as FinanceTransaction);
+    if (transaction.status !== 'confirmed') {
+        fail('Only confirmed ledger transactions can be edited', 409);
+    }
+    return transaction;
+}
+
 export async function createManualFinanceTransactionForUser(
     userId: string,
     input: FinanceTransactionInput & { idempotency_key: string }
