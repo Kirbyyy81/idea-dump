@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { listFinanceTransactions } from '@/lib/finance/core/repository';
+import {
+    listFinanceReviewQueue,
+    listFinanceTransactions,
+} from '@/lib/finance/core/repository';
 
 const database = vi.hoisted(() => {
     const result = { data: [], error: null };
@@ -7,12 +10,13 @@ const database = vi.hoisted(() => {
         eq: vi.fn(),
         from: vi.fn(),
         is: vi.fn(),
+        or: vi.fn(),
         order: vi.fn(),
         range: vi.fn(),
         select: vi.fn(),
         then: (resolve: (value: typeof result) => unknown) => Promise.resolve(resolve(result)),
     };
-    for (const method of ['eq', 'from', 'is', 'order', 'range', 'select'] as const) {
+    for (const method of ['eq', 'from', 'is', 'or', 'order', 'range', 'select'] as const) {
         query[method].mockReturnValue(query);
     }
     return query;
@@ -59,5 +63,15 @@ describe('Finance transaction repository filters', () => {
 
         expect(database.eq.mock.calls).toContainEqual(['user_id', 'user-2']);
         expect(database.is).toHaveBeenCalledWith('category_id', null);
+    });
+
+    it('excludes superseded shares from review failures without dropping uncoded failures', async () => {
+        await listFinanceReviewQueue('user-3');
+
+        expect(database.eq.mock.calls).toContainEqual(['user_id', 'user-3']);
+        expect(database.eq.mock.calls).toContainEqual(['status', 'failed']);
+        expect(database.or).toHaveBeenCalledWith(
+            'failure_code.is.null,failure_code.neq.share_batch_replaced'
+        );
     });
 });

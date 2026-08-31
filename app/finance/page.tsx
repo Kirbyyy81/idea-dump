@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { AppShell } from '@/components/organisms/AppShell';
 import { MonthPicker } from '@/components/atoms/MonthPicker';
-import { FinanceLoadingState } from './_components/FinanceLoadingState';
+import { InlineLoadingState } from '@/components/molecules/InlineLoadingState';
 import {
     AddDoodleIcon,
     ExpenseDoodleIcon,
@@ -110,7 +110,7 @@ export default function FinancePage() {
                 {error && <div role="alert" className="mt-5 rounded-md border border-error bg-error-bg px-4 py-3 text-sm text-error">{error}</div>}
 
                 {isLoading ? (
-                    <FinanceLoadingState label="Loading finance overview..." />
+                    <InlineLoadingState label="Loading finance overview..." />
                 ) : summary ? (
                     <>
                 <section aria-labelledby="monthly-summary-heading" className="mt-5 grid grid-cols-1 divide-y divide-border-default border-y border-border-default py-2 text-center sm:grid-cols-3 sm:divide-x sm:divide-y-0 sm:py-4">
