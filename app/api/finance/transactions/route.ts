@@ -28,14 +28,11 @@ export async function GET(request: NextRequest) {
         const session = await authorizeFinance();
         if ('response' in session) return session.response;
         const status = request.nextUrl.searchParams.get('status');
-        const sourceId = request.nextUrl.searchParams.get('source_id');
         const query = request.nextUrl.searchParams.get('q')?.trim().slice(0, 100).replace(/[,()*]/g, ' ') || null;
-        if (sourceId && !isFinanceUuid(sourceId)) return jsonError('Source ID must be a valid UUID');
         const filters = parseFinanceTransactionFilters(request.nextUrl.searchParams);
         if ('error' in filters) return jsonError(filters.error);
         const data = await getFinanceTransactions(session.user.id, {
             status: isFinanceTransactionStatus(status) ? status : 'confirmed',
-            sourceId,
             query,
             ...filters.data,
         });
