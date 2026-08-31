@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/organisms/AppShell';
@@ -11,7 +11,6 @@ import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
 import { Toggle } from '@/components/atoms/Toggle';
-import { InlineLoadingState } from '@/components/molecules/InlineLoadingState';
 import { useFinanceReferenceData } from '@/app/finance/_components/FinanceReferenceDataProvider';
 import { FinanceReferenceDataState } from '@/app/finance/_components/FinanceReferenceDataState';
 import {
@@ -47,13 +46,17 @@ import {
 } from './transactionEditForm';
 import type { FinanceTransactionEditFormState } from './transactionEditForm';
 
-interface FinanceTransactionEditPageProps {
-    transactionId: string | null;
+interface FinanceTransactionEditorProps {
+    canRetry: boolean;
+    initialTransaction: FinanceTransaction | null;
+    loadError: string | null;
 }
 
-export function FinanceTransactionEditPage({
-    transactionId,
-}: FinanceTransactionEditPageProps) {
+export function FinanceTransactionEditor({
+    canRetry,
+    initialTransaction,
+    loadError,
+}: FinanceTransactionEditorProps) {
     const router = useRouter();
     const { showError, showSuccess } = useAlert();
     const {
@@ -64,43 +67,20 @@ export function FinanceTransactionEditPage({
         status: referenceStatus,
         upsertCategory,
     } = useFinanceReferenceData();
-    const [transaction, setTransaction] = useState<FinanceTransaction | null>(null);
-    const [form, setForm] = useState<FinanceTransactionEditFormState | null>(null);
+    const [form, setForm] = useState<FinanceTransactionEditFormState | null>(() => (
+        initialTransaction
+            ? createFinanceTransactionEditForm(initialTransaction)
+            : null
+    ));
     const [fieldErrors, setFieldErrors] = useState<FinanceFieldErrors>({});
-    const [isLoading, setIsLoading] = useState(Boolean(transactionId));
     const [isSaving, setIsSaving] = useState(false);
-    const [loadError, setLoadError] = useState<string | null>(null);
-    const [requestVersion, setRequestVersion] = useState(0);
-
-    useEffect(() => {
-        if (!transactionId) return;
-        const controller = new AbortController();
-        setIsLoading(true);
-        setLoadError(null);
-        setTransaction(null);
-        setForm(null);
-        void financeApiRequest<{ data: FinanceTransaction }>(
-            `/api/finance/transactions/${encodeURIComponent(transactionId)}`,
-            { signal: controller.signal },
-            { fallbackMessage: 'Could not load transaction' }
-        ).then((payload) => {
-            if (controller.signal.aborted) return;
-            setTransaction(payload.data);
-            setForm(createFinanceTransactionEditForm(payload.data));
-        }).catch((error) => {
-            if (controller.signal.aborted) return;
-            setLoadError(error instanceof Error ? error.message : 'Could not load transaction');
-        }).finally(() => {
-            if (!controller.signal.aborted) setIsLoading(false);
-        });
-        return () => controller.abort();
-    }, [requestVersion, transactionId]);
+    const [isRetrying, startRetryTransition] = useTransition();
 
     const sourceOptions = useMemo(() => {
         const options: Array<{ value: string; label: string; disabled?: boolean }> = sources.map(
             (source) => ({ value: source.id, label: source.name })
         );
-        const currentSource = transaction?.finance_source;
+        const currentSource = initialTransaction?.finance_source;
         if (currentSource && !sources.some((source) => source.id === currentSource.id)) {
             options.push({
                 value: currentSource.id,
@@ -109,11 +89,11 @@ export function FinanceTransactionEditPage({
             });
         }
         return options;
-    }, [sources, transaction]);
+    }, [initialTransaction, sources]);
     const categoryOptions = useMemo(() => getFinanceReferenceCategoryOptions(
         categories,
-        transaction?.category || null
-    ), [categories, transaction]);
+        initialTransaction?.category || null
+    ), [categories, initialTransaction]);
 
     const setTransactionField = <Key extends keyof FinanceTransactionEditFormState>(
         key: Key,
@@ -144,7 +124,7 @@ export function FinanceTransactionEditPage({
 
     const saveTransaction = async (event: FormEvent) => {
         event.preventDefault();
-        if (!form || !transactionId) return;
+        if (!form || !initialTransaction) return;
         const nextErrors = getFinanceTransactionFieldErrors(form);
         if (Object.keys(nextErrors).length > 0) {
             setFieldErrors(nextErrors);
@@ -172,7 +152,7 @@ export function FinanceTransactionEditPage({
                     ...form,
                     amount,
                     category_id: categoryId,
-                    id: transactionId,
+                    id: initialTransaction.id,
                 }),
             }, { fallbackMessage: 'Could not save transaction' });
             showSuccess('Transaction updated');
@@ -207,22 +187,23 @@ export function FinanceTransactionEditPage({
             headerAction={backAction}
         >
             <div className="mx-auto max-w-xl">
-                {!transactionId ? (
+                {loadError || !initialTransaction ? (
                     <Card role="alert" className="border-error bg-error-bg p-5">
-                        <p className="font-semibold text-error">Transaction not found.</p>
-                        <Link href="/finance/transactions" className="btn-secondary mt-4">
-                            Back to transactions
-                        </Link>
-                    </Card>
-                ) : isLoading ? (
-                    <InlineLoadingState label="Loading transaction..." />
-                ) : loadError ? (
-                    <Card role="alert" className="border-error bg-error-bg p-5">
-                        <p className="font-semibold text-error">{loadError}</p>
+                        <p className="font-semibold text-error">
+                            {loadError || 'Transaction not found.'}
+                        </p>
                         <div className="mt-4 flex flex-wrap gap-2">
-                            <Button type="button" variant="secondary" onClick={() => setRequestVersion((value) => value + 1)}>
-                                Retry
-                            </Button>
+                            {canRetry && (
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    isLoading={isRetrying}
+                                    disabled={isRetrying}
+                                    onClick={() => startRetryTransition(() => router.refresh())}
+                                >
+                                    Retry
+                                </Button>
+                            )}
                             <Link href="/finance/transactions" className="btn-secondary">
                                 Back to transactions
                             </Link>

@@ -1,7 +1,23 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createFinanceTransactionEditForm } from '@/app/finance/transactions/edit/_components/transactionEditForm';
-import { getFinanceTransactionEditId } from '@/app/finance/transactions/edit/transactionEditRoute';
 import type { FinanceTransaction } from '@/lib/types';
+
+const server = vi.hoisted(() => ({
+    getFinanceTransactionForUser: vi.fn(),
+    getSessionUser: vi.fn(),
+    isFinanceServiceError: vi.fn(),
+}));
+
+vi.mock('@/lib/rbac/access', () => ({
+    getSessionUser: server.getSessionUser,
+}));
+
+vi.mock('@/lib/finance/core/service', () => ({
+    getFinanceTransactionForUser: server.getFinanceTransactionForUser,
+    isFinanceServiceError: server.isFinanceServiceError,
+}));
+
+import FinanceTransactionEditRoute from '@/app/finance/transactions/edit/page';
 
 const transaction: FinanceTransaction = {
     id: '00000000-0000-4000-8000-000000000001',
@@ -33,9 +49,40 @@ const transaction: FinanceTransaction = {
     },
 };
 
+interface EditorProps {
+    canRetry: boolean;
+    initialTransaction: FinanceTransaction | null;
+    loadError: string | null;
+}
+
+async function getEditorProps(id?: string | string[]) {
+    const element = await FinanceTransactionEditRoute({
+        searchParams: Promise.resolve(id === undefined ? {} : { id }),
+    });
+    return element.props as EditorProps;
+}
+
+beforeEach(() => {
+    vi.clearAllMocks();
+    server.getSessionUser.mockResolvedValue({ id: 'user-1' });
+    server.isFinanceServiceError.mockReturnValue(false);
+});
+
 describe('Finance transaction edit route', () => {
-    it('accepts one valid transaction ID', () => {
-        expect(getFinanceTransactionEditId(transaction.id)).toBe(transaction.id);
+    it('loads one valid transaction for the authenticated user on the server', async () => {
+        server.getFinanceTransactionForUser.mockResolvedValue(transaction);
+
+        const props = await getEditorProps(transaction.id);
+
+        expect(server.getFinanceTransactionForUser).toHaveBeenCalledWith(
+            'user-1',
+            transaction.id
+        );
+        expect(props).toMatchObject({
+            canRetry: false,
+            initialTransaction: transaction,
+            loadError: null,
+        });
     });
 
     it.each([
@@ -43,8 +90,52 @@ describe('Finance transaction edit route', () => {
         ['invalid', 'not-a-uuid'],
         ['empty repeated', []],
         ['repeated', [transaction.id, transaction.id]],
-    ])('rejects a %s transaction ID', (_label, value) => {
-        expect(getFinanceTransactionEditId(value)).toBeNull();
+    ])('rejects a %s transaction ID before loading data', async (_label, value) => {
+        const props = await getEditorProps(value);
+
+        expect(server.getSessionUser).not.toHaveBeenCalled();
+        expect(server.getFinanceTransactionForUser).not.toHaveBeenCalled();
+        expect(props).toMatchObject({
+            canRetry: false,
+            initialTransaction: null,
+            loadError: 'Transaction not found.',
+        });
+    });
+
+    it('shows a safe domain error without offering an ineffective retry', async () => {
+        const serviceError = new Error('Transaction not found');
+        server.getFinanceTransactionForUser.mockRejectedValue(serviceError);
+        server.isFinanceServiceError.mockImplementation(
+            (error) => error === serviceError
+        );
+
+        const props = await getEditorProps(transaction.id);
+
+        expect(props).toMatchObject({
+            canRetry: false,
+            initialTransaction: null,
+            loadError: 'Transaction not found',
+        });
+    });
+
+    it('keeps unexpected server failures retryable without exposing details', async () => {
+        server.getFinanceTransactionForUser.mockRejectedValue(
+            new Error('private database detail')
+        );
+        const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+        const props = await getEditorProps(transaction.id);
+
+        expect(props).toMatchObject({
+            canRetry: true,
+            initialTransaction: null,
+            loadError: 'Could not load transaction.',
+        });
+        expect(consoleError).toHaveBeenCalledWith(
+            'Could not load the Finance transaction editor',
+            expect.objectContaining({ transactionId: transaction.id })
+        );
+        consoleError.mockRestore();
     });
 
     it('creates the editable form from the loaded transaction', () => {
