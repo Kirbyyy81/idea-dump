@@ -160,6 +160,81 @@ export function CloseDoodleIcon(props: DoodleIconProps) {
     );
 }
 
+export function FoodDoodleIcon(props: DoodleIconProps) {
+    return (
+        <DoodleIcon {...props}>
+            <path d="M5.2 4.1v5.4c0 1.5 1 2.5 2.4 2.5s2.5-1 2.5-2.5V4.2M7.7 4.1v15.7" />
+            <path d="M15.8 4.1c-2 0-3.2 1.7-3.2 4.1s1.2 4 3.2 4 3.1-1.6 3.1-4-1.2-4.1-3.1-4.1ZM15.8 12.2v7.6" />
+        </DoodleIcon>
+    );
+}
+
+export function TransportDoodleIcon(props: DoodleIconProps) {
+    return (
+        <DoodleIcon {...props}>
+            <path d="m4.1 10.1 2-4.2c.3-.7.9-1.1 1.7-1.1h8.5c.8 0 1.4.4 1.8 1.1l2 4.2" />
+            <path d="M4.6 9.9h14.8c.8 0 1.4.6 1.4 1.4v4.9H3.2v-4.9c0-.8.6-1.4 1.4-1.4Z" />
+            <path d="M6 16.4v2.1M18 16.4v2.1M6.5 13h.1M17.4 13h.1" />
+        </DoodleIcon>
+    );
+}
+
+export function ShoppingDoodleIcon(props: DoodleIconProps) {
+    return (
+        <DoodleIcon {...props}>
+            <path d="m5.2 8.3 13.5-.2.9 11.5H4.3Z" />
+            <path d="M8.4 9V6.5c0-1.6 1.4-2.8 3.4-2.8s3.7 1.2 3.7 2.8v2.1" />
+        </DoodleIcon>
+    );
+}
+
+export function HomeDoodleIcon(props: DoodleIconProps) {
+    return (
+        <DoodleIcon {...props}>
+            <path d="m3.7 11.1 8.1-7.2 8.5 7.3" />
+            <path d="M5.6 9.8v9.8h12.8v-9.5M10 19.4v-5.8h4.2v5.8" />
+        </DoodleIcon>
+    );
+}
+
+export function HealthDoodleIcon(props: DoodleIconProps) {
+    return (
+        <DoodleIcon {...props}>
+            <path d="M12 19.7S4.2 15.3 4.2 9.2c0-2.7 1.8-4.4 4-4.4 1.6 0 3 1 3.8 2.3.8-1.3 2.2-2.3 3.8-2.3 2.2 0 4 1.7 4 4.4 0 6.1-7.8 10.5-7.8 10.5Z" />
+            <path d="M8.4 12h7.2M12 8.4v7.2" />
+        </DoodleIcon>
+    );
+}
+
+export function MoneyDoodleIcon(props: DoodleIconProps) {
+    return (
+        <DoodleIcon {...props}>
+            <path d="M4.1 6.1c4.8-.5 10.5-.4 15.8.1v11.7c-5.2.4-10.6.4-15.8-.1Z" />
+            <path d="M7.2 9.1c-.4 1-1.1 1.6-2.1 1.8M16.8 9.1c.4 1 1.1 1.6 2.1 1.8M7.2 14.9c-.4-1-1.1-1.6-2.1-1.8M16.8 14.9c.4-1 1.1-1.6 2.1-1.8" />
+            <path d="M12 9.2c1.4 0 2.2 1 2.2 2.8s-.8 2.8-2.2 2.8-2.2-1-2.2-2.8.8-2.8 2.2-2.8Z" />
+        </DoodleIcon>
+    );
+}
+
+export function MoreDoodleIcon(props: DoodleIconProps) {
+    return (
+        <DoodleIcon {...props}>
+            <circle cx="5.1" cy="12.1" r="1.15" fill="currentColor" stroke="none" />
+            <circle cx="12" cy="11.8" r="1.2" fill="currentColor" stroke="none" />
+            <circle cx="18.9" cy="12.2" r="1.1" fill="currentColor" stroke="none" />
+        </DoodleIcon>
+    );
+}
+
+export function FilterDoodleIcon(props: DoodleIconProps) {
+    return (
+        <DoodleIcon {...props}>
+            <path d="M4 5.2c4.8-.2 10.2-.2 16 .1M6.7 11.9c3.5-.2 7-.2 10.6.1M9.5 18.7c1.7-.2 3.4-.2 5.1 0" />
+            <path d="M7.2 3.6c-.7 1-.7 2.4 0 3.5M15.8 10.2c-.7 1-.7 2.4 0 3.5M11.1 17c-.7 1-.7 2.4 0 3.4" />
+        </DoodleIcon>
+    );
+}
+
 export function WarningDoodleIcon(props: DoodleIconProps) {
     return (
         <DoodleIcon {...props}>
