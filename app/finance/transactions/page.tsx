@@ -2,17 +2,14 @@
 
 import { FormEvent, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { AppShell } from '@/components/organisms/AppShell';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import {
     AddDoodleIcon,
     CloseDoodleIcon,
-    DeleteDoodleIcon,
     EditDoodleIcon,
-    ExpenseDoodleIcon,
-    IncomeDoodleIcon,
 } from '@/components/atoms/DoodleIcons';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
@@ -21,7 +18,6 @@ import { Toggle } from '@/components/atoms/Toggle';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
 import { FinanceTransaction, FinanceTransactionDirection } from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
-import { formatCurrency } from '@/lib/utils';
 import {
     getFinanceReferenceCategoryOptions,
 } from '@/lib/finance/catalog';
@@ -49,9 +45,13 @@ import {
     financeFieldErrorProps,
     focusFirstFinanceError,
 } from '../_components/FinanceFormField';
-import { FINANCE_TRANSACTION_FILTER_KEYS } from '@/lib/finance/transactions/filters';
 import { useFinanceReferenceData } from '@/app/finance/_components/FinanceReferenceDataProvider';
 import { FinanceReferenceDataState } from '@/app/finance/_components/FinanceReferenceDataState';
+import {
+    getFinanceTransactionRecipient,
+} from './_components/TransactionLedgerRow';
+import { TransactionLedgerFilters } from './_components/TransactionLedgerFilters';
+import { TransactionLedgerGroups } from './_components/TransactionLedgerGroups';
 
 const initialForm = {
     source_id: '',
@@ -65,10 +65,6 @@ const initialForm = {
     transaction_date: getLocalFinanceDate(),
     notes: '',
 };
-
-function transactionRecipient(transaction: FinanceTransaction) {
-    return transaction.finance_payee?.name || transaction.merchant || 'Untitled transaction';
-}
 
 export default function FinanceTransactionsPage() {
     return (
@@ -88,8 +84,6 @@ function FinanceTransactionsContent() {
         refresh: refreshReferenceData,
         upsertCategory,
     } = useFinanceReferenceData();
-    const pathname = usePathname();
-    const router = useRouter();
     const searchParams = useSearchParams();
     const [transactions, setTransactions] = useState<FinanceTransaction[]>([]);
     const [form, setForm] = useState(initialForm);
@@ -101,9 +95,6 @@ function FinanceTransactionsContent() {
     const [isDeleting, setIsDeleting] = useState(false);
     const [fieldErrors, setFieldErrors] = useState<FinanceFieldErrors>({});
     const filterQuery = searchParams.toString();
-    const categoryFilterId = searchParams.get(FINANCE_TRANSACTION_FILTER_KEYS.categoryId);
-    const dateFilter = searchParams.get(FINANCE_TRANSACTION_FILTER_KEYS.date);
-    const hasUncategorisedFilter = searchParams.get(FINANCE_TRANSACTION_FILTER_KEYS.uncategorised) === 'true';
 
     const loadData = useCallback(async (signal?: AbortSignal) => {
         try {
@@ -155,33 +146,6 @@ function FinanceTransactionsContent() {
         return transactions.filter((transaction) => [transaction.merchant, transaction.finance_payee?.name, transaction.reference_number, transaction.notes, transaction.category?.name, transaction.finance_source?.name]
             .filter(Boolean).join(' ').toLowerCase().includes(needle));
     }, [query, transactions]);
-
-    const clearFilter = (key: string) => {
-        const next = new URLSearchParams(searchParams.toString());
-        next.delete(key);
-        const nextQuery = next.toString();
-        router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname);
-    };
-
-    const categoryFilterLabel = categoryFilterId
-        ? categories.find((category) => category.id === categoryFilterId)?.name
-            || transactions.find((transaction) => transaction.category_id === categoryFilterId)?.category?.name
-            || 'Category'
-        : null;
-    const activeFilters = [
-        categoryFilterId ? {
-            key: FINANCE_TRANSACTION_FILTER_KEYS.categoryId,
-            label: `Category: ${categoryFilterLabel}`,
-        } : null,
-        hasUncategorisedFilter ? {
-            key: FINANCE_TRANSACTION_FILTER_KEYS.uncategorised,
-            label: 'Category: Uncategorised',
-        } : null,
-        dateFilter ? {
-            key: FINANCE_TRANSACTION_FILTER_KEYS.date,
-            label: `Date: ${dateFilter}`,
-        } : null,
-    ].filter((filter): filter is NonNullable<typeof filter> => filter !== null);
 
     const setTransactionField = <Key extends keyof typeof initialForm>(key: Key, value: (typeof initialForm)[Key]) => {
         setForm((current) => ({ ...current, [key]: value }));
@@ -347,42 +311,30 @@ function FinanceTransactionsContent() {
                         </Card>
                     </form>)}
 
-                    <section className="border border-border-default bg-bg-surface">
-                        <div className="flex flex-col gap-3 border-b border-border-default px-5 py-4 sm:flex-row sm:items-center sm:justify-between"><h2 className="text-base font-bold">Ledger</h2><label className="sm:w-64"><span className="sr-only">Search transactions</span><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search transactions" /></label></div>
-                        {activeFilters.length > 0 && <div className="flex flex-wrap items-center gap-2 border-b border-border-default px-5 py-3" aria-label="Active transaction filters">{activeFilters.map((filter) => <span key={filter.key} className="inline-flex min-h-8 items-center gap-1 rounded-full border border-border-subtle bg-bg-subtle py-1 pl-3 pr-1 text-xs font-bold text-text-secondary"><span>{filter.label}</span><button type="button" className="grid size-8 place-items-center rounded-full hover:bg-bg-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-border-dark" aria-label={`Clear ${filter.label} filter`} onClick={() => clearFilter(filter.key)}><CloseDoodleIcon size={14} /></button></span>)}</div>}
-                        <div className="divide-y divide-border-default" aria-live="polite" aria-busy={isLoading}>
-                            {filteredTransactions.map((transaction) => {
-                                const isIncome = transaction.direction === 'income';
-                                return (
-                                    <div key={transaction.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-                                        <div className="flex min-w-0 items-center gap-3">
-                                            {isIncome
-                                                ? <IncomeDoodleIcon size={18} className="shrink-0 text-success" />
-                                                : <ExpenseDoodleIcon size={18} className="shrink-0 text-error" />}
-                                            <div className="min-w-0">
-                                                <p className="truncate font-semibold">{transactionRecipient(transaction)}</p>
-                                                {transaction.finance_payee?.name && transaction.merchant && <p className="truncate text-sm text-text-secondary">Merchant: {transaction.merchant}</p>}
-                                                <p className="text-sm text-text-muted">{transaction.finance_source?.name || 'Unknown source'} - {transaction.category?.name || 'Uncategorised'} - {transaction.transaction_date}{transaction.reference_number ? ` - Ref ${transaction.reference_number}` : ''}</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex flex-wrap items-center justify-end gap-2">
-                                            <p className={isIncome ? 'mr-1 font-bold text-success' : 'mr-1 font-bold text-error'}>{isIncome ? '+' : '-'}{formatCurrency(transaction.amount, transaction.currency || 'MYR')}</p>
-                                            <Button type="button" variant="ghost" aria-label={`Edit transaction ${transactionRecipient(transaction)}`} icon={<EditDoodleIcon size={15} />} onClick={() => editTransaction(transaction)}>Edit</Button>
-                                            <Button type="button" variant="ghost" aria-label={`Delete transaction ${transactionRecipient(transaction)}`} className="text-error hover:text-error" icon={<DeleteDoodleIcon size={15} />} onClick={() => setDeleting(transaction)}>Delete</Button>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                            {!isLoading && !filteredTransactions.length && <p className="px-5 py-12 text-center text-sm text-text-muted">No transactions found.</p>}
-                            {isLoading && <p role="status" className="px-5 py-12 text-center text-sm text-text-muted">Loading ledger...</p>}
-                        </div>
+                    <section className="border border-border-default bg-bg-surface" aria-label="Transactions list">
+                        <TransactionLedgerFilters
+                            categories={categories}
+                            error={referenceError}
+                            onQueryChange={setQuery}
+                            query={query}
+                            refresh={refreshReferenceData}
+                            sources={sources}
+                            status={referenceStatus}
+                            transactions={transactions}
+                        />
+                        <TransactionLedgerGroups
+                            isLoading={isLoading}
+                            transactions={filteredTransactions}
+                            onEdit={editTransaction}
+                            onDelete={setDeleting}
+                        />
                     </section>
                 </div>
             </div>
             <ConfirmDialog
                 isOpen={Boolean(deleting)}
                 title="Permanently delete this transaction?"
-                description={`The ${deleting ? transactionRecipient(deleting) : 'selected'} transaction will be removed from the ledger. This cannot be undone.`}
+                description={`The ${deleting ? getFinanceTransactionRecipient(deleting) : 'selected'} transaction will be removed from the ledger. This cannot be undone.`}
                 confirmLabel="Delete transaction"
                 isConfirming={isDeleting}
                 onCancel={() => setDeleting(null)}
