@@ -296,6 +296,9 @@ export async function listFinanceTransactions(
         query: string | null;
         categoryId: string | null;
         date: string | null;
+        dateFrom: string | null;
+        dateTo: string | null;
+        direction: FinanceTransaction['direction'] | null;
         uncategorised: boolean;
         pageSize: number;
     }
@@ -327,6 +330,11 @@ export async function listFinanceTransactions(
         if (options.categoryId) query = query.eq('category_id', options.categoryId);
         else if (options.uncategorised) query = query.is('category_id', null);
         if (options.date) query = query.eq('transaction_date', options.date);
+        else {
+            if (options.dateFrom) query = query.gte('transaction_date', options.dateFrom);
+            if (options.dateTo) query = query.lte('transaction_date', options.dateTo);
+        }
+        if (options.direction) query = query.eq('direction', options.direction);
         if (options.query) {
             const filters = [
                 `merchant.ilike.%${options.query}%`,

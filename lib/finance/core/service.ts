@@ -100,6 +100,7 @@ import {
     FinanceSource,
     FinanceSourceDetail,
     FinanceTransaction,
+    FinanceTransactionDirection,
 } from '@/lib/types';
 
 const TRANSACTION_PAGE_SIZE = 500;
@@ -446,6 +447,9 @@ export async function getFinanceTransactions(
         query: string | null;
         categoryId: string | null;
         date: string | null;
+        dateFrom: string | null;
+        dateTo: string | null;
+        direction: FinanceTransactionDirection | null;
         uncategorised: boolean;
     }
 ) {
