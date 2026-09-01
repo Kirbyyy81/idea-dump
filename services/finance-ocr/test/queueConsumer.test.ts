@@ -69,6 +69,7 @@ function repository(overrides: Record<string, unknown> = {}) {
         loadContext: vi.fn().mockResolvedValue({
             sources: [],
             sourceTemplates: [],
+            fieldTemplates: [],
             rules: [],
             fieldLearningRules: [],
             payees: [],

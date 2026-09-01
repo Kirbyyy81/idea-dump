@@ -1,6 +1,7 @@
 import {
     FinanceCandidatePayload,
     FinanceOcrFieldLearningRule,
+    FinanceOcrFieldTemplate,
     FinanceOcrPayee,
     FinanceOcrRule,
     FinanceOcrSource,
@@ -9,6 +10,7 @@ import {
 } from '@/lib/types';
 import { FINANCE_V1_CURRENCY } from '@/lib/finance/core/constants';
 import { applyLearnedReferenceRules } from '@/lib/finance/ocr/fieldLearning';
+import { applyFinanceCriticalFieldTemplates } from '@/lib/finance/ocr/fieldTemplates';
 import { normalizeFinanceMerchantKey, normalizeFinancePayeeKey } from '@/lib/finance/ocr/normalizer';
 import { extractFinanceReferenceNumber } from '@/lib/finance/ocr/reference';
 import {
@@ -196,6 +198,7 @@ export function parseFinanceText(
     fieldLearningRules: FinanceOcrFieldLearningRule[] = [],
     payees: FinanceOcrPayee[] = [],
     sourceTemplates: FinanceOcrSourceTemplate[] = [],
+    fieldTemplates: FinanceOcrFieldTemplate[] = [],
 ): ParsedCandidate {
     const lines = normalizedText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
     const normalized = lines.join('\n').toLowerCase();
@@ -285,6 +288,20 @@ export function parseFinanceText(
     );
     payload.reference_number = learnedReference.referenceNumber;
     payload.learned_field_rule_ids = learnedReference.matchedRuleIds;
+
+    const fieldTemplateResult = applyFinanceCriticalFieldTemplates(
+        normalizedText,
+        payload,
+        payload.source_id,
+        fieldTemplates,
+    );
+    Object.assign(payload, fieldTemplateResult.payload);
+    if (fieldTemplateResult.evaluations.length > 0) {
+        payload.parser_template_evaluations = fieldTemplateResult.evaluations;
+        payload.matched_parser_template_ids = fieldTemplateResult.evaluations
+            .filter((evaluation) => evaluation.outcome === 'applied')
+            .map((evaluation) => evaluation.template_id);
+    }
 
     let confidence = 0;
     if (payload.amount) confidence += 0.35;

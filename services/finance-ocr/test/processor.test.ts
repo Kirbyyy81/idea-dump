@@ -26,6 +26,7 @@ function repository(overrides: Partial<FinanceRepository> = {}) {
         loadContext: vi.fn().mockResolvedValue({
             sources: [],
             sourceTemplates: [],
+            fieldTemplates: [],
             rules: [],
             fieldLearningRules: [],
             payees: [],
@@ -110,6 +111,7 @@ describe('fenced screenshot processing', () => {
     it('passes active source-template matches through parsing and durable source evidence', async () => {
         const sourceId = '11111111-1111-4111-8111-111111111111';
         const templateId = '33333333-3333-4333-8333-333333333333';
+        const fieldTemplateId = '44444444-4444-4444-8444-444444444444';
         const repo = repository({
             beginIntake: vi.fn().mockResolvedValue({
                 state: 'started',
@@ -151,6 +153,30 @@ describe('fenced screenshot processing', () => {
                     disabled_at: null,
                     updated_at: '2026-01-03T00:00:00Z',
                 }],
+                fieldTemplates: [{
+                    id: fieldTemplateId,
+                    user_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+                    target_source_id: null,
+                    scope_source_id: sourceId,
+                    field_name: 'reference_number',
+                    template_type: 'same_line_label',
+                    configuration: { type: 'same_line_label', label: 'Reference' },
+                    algorithm_version: 1,
+                    template_version: 1,
+                    status: 'active',
+                    evidence_count: 5,
+                    contradiction_count: 0,
+                    evaluation_count: 5,
+                    precision: 1,
+                    coverage: 0.8,
+                    predecessor_template_id: null,
+                    status_reason: null,
+                    created_at: '2026-01-01T00:00:00Z',
+                    evaluated_at: '2026-01-02T00:00:00Z',
+                    activated_at: '2026-01-03T00:00:00Z',
+                    disabled_at: null,
+                    updated_at: '2026-01-03T00:00:00Z',
+                }],
                 rules: [],
                 fieldLearningRules: [],
                 payees: [],
@@ -166,7 +192,7 @@ describe('fenced screenshot processing', () => {
         await processScreenshot('user-1', { ...image, originalFilename: 'Screenshot.png' }, config, {
             repository: repo,
             recognize: vi.fn().mockResolvedValue({
-                rawText: 'Wallet Transfer Complete\nPaid RM 12.50\n15/07/2026',
+                rawText: 'Wallet Transfer Complete\nPaid RM 12.50\n15/07/2026\nReference: syn-12345',
                 confidence: 91,
             }),
         });
@@ -179,6 +205,14 @@ describe('fenced screenshot processing', () => {
                     template_id: templateId,
                 }),
             ]),
+            candidatePayload: expect.objectContaining({
+                reference_number: 'SYN-12345',
+                matched_parser_template_ids: [fieldTemplateId],
+                parser_template_evaluations: [expect.objectContaining({
+                    template_id: fieldTemplateId,
+                    outcome: 'applied',
+                })],
+            }),
         }));
     });
 

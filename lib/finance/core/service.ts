@@ -42,6 +42,7 @@ import {
     listActiveFinancePayees,
     listActiveFinanceSources,
     listRuntimeFinanceSourceTemplates,
+    listRuntimeFinanceFieldTemplates,
     listActiveFinanceSourceReferences,
     markFinanceReviewCandidateDuplicate,
     rejectFinanceReviewCandidate,
@@ -103,6 +104,7 @@ import {
     FinanceCategoryDetail,
     FinanceLearningSummary,
     FinanceOcrFieldLearningRule,
+    FinanceOcrFieldTemplate,
     FinanceOcrPayee,
     FinanceOcrRule,
     FinanceOcrSource,
@@ -771,9 +773,10 @@ export async function resolveFinanceReviewCandidateForUser(
 
     if (action === 'retry') {
         if (candidate.status !== 'pending') fail('Only pending review items can be retried', 409);
-        const [sourcesResult, sourceTemplatesResult, rulesResult, fieldLearningRulesResult, payeesResult] = await Promise.all([
+        const [sourcesResult, sourceTemplatesResult, fieldTemplatesResult, rulesResult, fieldLearningRulesResult, payeesResult] = await Promise.all([
             listActiveFinanceSources(userId),
             listRuntimeFinanceSourceTemplates(userId),
+            listRuntimeFinanceFieldTemplates(userId),
             listActiveFinanceRules(userId),
             listActiveFinanceFieldLearningRules(userId),
             listActiveFinancePayees(userId),
@@ -793,6 +796,9 @@ export async function resolveFinanceReviewCandidateForUser(
             sourceTemplatesResult.error
                 ? []
                 : (sourceTemplatesResult.data || []) as unknown as FinanceOcrSourceTemplate[],
+            fieldTemplatesResult.error
+                ? []
+                : (fieldTemplatesResult.data || []) as unknown as FinanceOcrFieldTemplate[],
         );
         const { error: sourceEvidenceError } = await updateFinanceIntakeSourceEvidence(
             userId,

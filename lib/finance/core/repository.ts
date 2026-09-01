@@ -178,6 +178,25 @@ export async function listRuntimeFinanceSourceTemplates(userId: string) {
         .limit(400);
 }
 
+export async function listRuntimeFinanceFieldTemplates(userId: string) {
+    return createAdminClient()
+        .from('finance_parser_templates')
+        .select([
+            'id, user_id, target_source_id, scope_source_id, field_name, template_type, configuration',
+            'algorithm_version, template_version, status, evidence_count, contradiction_count',
+            'evaluation_count, precision, coverage, predecessor_template_id, status_reason',
+            'created_at, evaluated_at, activated_at, disabled_at, updated_at',
+        ].join(', '))
+        .eq('user_id', userId)
+        .in('field_name', ['reference_number', 'merchant', 'transaction_date'])
+        .in('status', ['active', 'shadow'])
+        .eq('algorithm_version', 1)
+        .order('status')
+        .order('activated_at')
+        .order('id')
+        .limit(1200);
+}
+
 export async function createFinanceSource(
     userId: string,
     input: {

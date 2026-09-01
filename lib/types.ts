@@ -583,6 +583,8 @@ export interface FinanceCandidatePayload {
     reference?: string | null;
     matched_rule_names: string[];
     learned_field_rule_ids?: string[];
+    matched_parser_template_ids?: string[];
+    parser_template_evaluations?: FinanceParserTemplateEvaluation[];
     duplicate_transaction_id: string | null;
 }
 
@@ -917,6 +919,20 @@ export interface FinanceParserTemplateContract {
     updated_at: string;
 }
 
+export type FinanceParserTemplateEvaluationOutcome =
+    | 'applied'
+    | 'shadow'
+    | 'conflict'
+    | 'not_applicable'
+    | 'invalid_output';
+
+export interface FinanceParserTemplateEvaluation {
+    template_id: string;
+    field_name: FinanceParserTemplateField;
+    status: Extract<FinanceParserTemplateStatus, 'active' | 'shadow'>;
+    outcome: FinanceParserTemplateEvaluationOutcome;
+}
+
 export interface FinanceRuleSuggestion {
     id: string;
     user_id: string;
@@ -990,6 +1006,7 @@ export type FinanceOcrPayee = Pick<
 >;
 
 export type FinanceOcrSourceTemplate = FinanceParserTemplateContract;
+export type FinanceOcrFieldTemplate = FinanceParserTemplateContract;
 
 export interface FinanceSourceDetectionSignal {
     source_id: string;
