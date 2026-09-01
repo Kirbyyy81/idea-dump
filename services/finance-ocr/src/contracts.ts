@@ -7,6 +7,7 @@ import type {
     FinanceOcrPayee,
     FinanceOcrRule,
     FinanceOcrSource,
+    FinanceOcrSourceTemplate,
     FinanceIntakeItem,
     FinanceSourceDetectionSignal,
     FinanceTransaction,
@@ -18,6 +19,7 @@ export interface AuthenticatedUser {
 
 export interface FinanceContext {
     sources: FinanceOcrSource[];
+    sourceTemplates: FinanceOcrSourceTemplate[];
     rules: FinanceOcrRule[];
     fieldLearningRules: FinanceOcrFieldLearningRule[];
     payees: FinanceOcrPayee[];

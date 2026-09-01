@@ -66,7 +66,13 @@ function repository(overrides: Record<string, unknown> = {}) {
             transaction: null,
             attemptId: randomUUID(),
         }),
-        loadContext: vi.fn().mockResolvedValue({ sources: [], rules: [], fieldLearningRules: [], payees: [] }),
+        loadContext: vi.fn().mockResolvedValue({
+            sources: [],
+            sourceTemplates: [],
+            rules: [],
+            fieldLearningRules: [],
+            payees: [],
+        }),
         assessDuplicate: vi.fn().mockResolvedValue({
             outcome: 'none',
             matchedTransactionId: null,

@@ -989,12 +989,21 @@ export type FinanceOcrPayee = Pick<
     'id' | 'name' | 'normalized_name' | 'is_archived'
 >;
 
+export type FinanceOcrSourceTemplate = FinanceParserTemplateContract;
+
 export interface FinanceSourceDetectionSignal {
     source_id: string;
     source_name: string;
-    kind: 'filename_alias' | 'ocr_alias' | 'rule_match';
+    kind:
+        | 'filename_alias'
+        | 'ocr_alias'
+        | 'learned_source_active'
+        | 'learned_source_shadow'
+        | 'rule_match';
     alias: string;
     score: number;
+    template_id?: string;
+    template_status?: Extract<FinanceParserTemplateStatus, 'active' | 'shadow'>;
 }
 
 export type FinanceShareBatchStatus = 'QUEUED' | 'PROCESSING' | 'CLEANING_UP';
