@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { applicationErrorResponse } from '@/lib/api/responses';
 import { authorizeSessionModule } from '@/lib/rbac/guards';
 import {
     parseCreateTicket,
@@ -7,20 +8,8 @@ import {
 } from '@/lib/tickets/core/schemas';
 import {
     createTicketForActor,
-    isTicketServiceError,
     listTicketsForActor,
 } from '@/lib/tickets/core/service';
-
-function serviceErrorResponse(error: unknown) {
-    if (!isTicketServiceError(error)) return null;
-
-    return NextResponse.json(
-        error.responseMessage
-            ? { error: error.error, message: error.responseMessage }
-            : { error: error.error },
-        { status: error.status }
-    );
-}
 
 export async function GET(request: NextRequest) {
     try {
@@ -36,7 +25,7 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ data: await listTicketsForActor(actor, query.data) });
     } catch (error) {
-        const serviceError = serviceErrorResponse(error);
+        const serviceError = applicationErrorResponse(error);
         if (serviceError) return serviceError;
 
         console.error('Error fetching tickets:', error);
@@ -63,7 +52,7 @@ export async function POST(request: NextRequest) {
             { status: 201 }
         );
     } catch (error) {
-        const serviceError = serviceErrorResponse(error);
+        const serviceError = applicationErrorResponse(error);
         if (serviceError) return serviceError;
 
         console.error('Error creating ticket:', error);

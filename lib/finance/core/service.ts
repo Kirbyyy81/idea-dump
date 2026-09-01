@@ -1,4 +1,5 @@
 import { PostgrestError } from '@supabase/supabase-js';
+import { ApplicationError } from '@/lib/api/applicationError';
 import { canonicalFinanceCategoryName } from '@/lib/finance/catalog';
 import { aggregateFinanceDashboard, FinanceDashboardRow } from '@/lib/finance/dashboard';
 import { assessFinanceDuplicate, financeDuplicateColumns } from '@/lib/finance/transactions/duplicates';
@@ -114,21 +115,6 @@ import {
 const TRANSACTION_PAGE_SIZE = 500;
 const DASHBOARD_PAGE_SIZE = 500;
 
-export class FinanceServiceError extends Error {
-    constructor(
-        message: string,
-        readonly status = 400,
-        readonly details?: Record<string, unknown>
-    ) {
-        super(message);
-        this.name = 'FinanceServiceError';
-    }
-}
-
-export function isFinanceServiceError(error: unknown): error is FinanceServiceError {
-    return error instanceof FinanceServiceError;
-}
-
 function toFinanceReferenceOption(value: Pick<FinanceReferenceOption, 'id' | 'name'>): FinanceReferenceOption {
     return { id: value.id, name: value.name };
 }
@@ -163,7 +149,7 @@ export async function getFinanceReferenceData(userId: string): Promise<FinanceRe
 }
 
 function fail(message: string, status = 400, details?: Record<string, unknown>): never {
-    throw new FinanceServiceError(message, status, details);
+    throw new ApplicationError(message, { status, details });
 }
 
 function isPostgrestError(error: unknown): error is PostgrestError {

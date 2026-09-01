@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { applicationErrorResponse } from '@/lib/api/responses';
 import { authorizeFinance, jsonError, readFinanceJsonObject } from '@/lib/finance/core/auth';
 import { isFinanceUuid, parseFinanceRuleCreate, parseFinanceRuleUpdate } from '@/lib/finance/core/schemas';
 import {
     createFinanceRuleForUser,
     deleteFinanceRuleForUser,
     getFinanceRuleSettings,
-    isFinanceServiceError,
     updateFinanceRuleForUser,
 } from '@/lib/finance/core/service';
 
@@ -34,7 +34,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ data: await createFinanceRuleForUser(session.user.id, parsed.data) }, { status: 201 });
     } catch (error) {
         console.error('Error creating finance rule:', error);
-        if (isFinanceServiceError(error)) return jsonError(error.message, error.status);
+        const serviceError = applicationErrorResponse(error);
+        if (serviceError) return serviceError;
         return jsonError('Failed to create finance rule', 500);
     }
 }
@@ -50,7 +51,8 @@ export async function PUT(request: NextRequest) {
         return NextResponse.json({ data: await updateFinanceRuleForUser(session.user.id, parsed.data) });
     } catch (error) {
         console.error('Error updating finance rule:', error);
-        if (isFinanceServiceError(error)) return jsonError(error.message, error.status);
+        const serviceError = applicationErrorResponse(error);
+        if (serviceError) return serviceError;
         return jsonError('Failed to update finance rule', 500);
     }
 }
@@ -66,7 +68,8 @@ export async function DELETE(request: NextRequest) {
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Error deleting finance rule:', error);
-        if (isFinanceServiceError(error)) return jsonError(error.message, error.status);
+        const serviceError = applicationErrorResponse(error);
+        if (serviceError) return serviceError;
         return jsonError('Failed to delete finance rule', 500);
     }
 }

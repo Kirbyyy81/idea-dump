@@ -1,3 +1,4 @@
+import { ApplicationError } from '@/lib/api/applicationError';
 import type { Ticket } from '@/lib/types';
 import type { TicketCreateCommand, TicketListQuery, TicketUpdateCommand } from './schemas';
 import {
@@ -21,26 +22,12 @@ interface TicketServiceFailure {
     message?: string;
 }
 
-export class TicketServiceError extends Error {
-    readonly error: string;
-    readonly status: number;
-    readonly responseMessage?: string;
-
-    constructor({ error, status, message }: TicketServiceFailure) {
-        super(message ?? error);
-        this.name = 'TicketServiceError';
-        this.error = error;
-        this.status = status;
-        this.responseMessage = message;
-    }
-}
-
-export function isTicketServiceError(error: unknown): error is TicketServiceError {
-    return error instanceof TicketServiceError;
+function toTicketApplicationError({ error, status, message }: TicketServiceFailure) {
+    return new ApplicationError(message ?? error, { code: error, status });
 }
 
 function ticketNotFoundError() {
-    return new TicketServiceError({
+    return toTicketApplicationError({
         error: 'Not found',
         message: 'Ticket not found',
         status: 404,
@@ -52,7 +39,7 @@ async function getMutableTicket(actor: TicketActor, ticketId: string) {
     if (!ticket) throw ticketNotFoundError();
 
     if (!await ticketHasMatchingProjectOwner(ticket)) {
-        throw new TicketServiceError({
+        throw toTicketApplicationError({
             error: 'Conflict',
             message: 'Ticket project ownership is inconsistent',
             status: 409,
@@ -65,7 +52,7 @@ async function getMutableTicket(actor: TicketActor, ticketId: string) {
 export async function listTicketsForActor(actor: TicketActor, query: TicketListQuery): Promise<Ticket[]> {
     if (query.scope === 'manage') {
         if (!actor.canManageAccess) {
-            throw new TicketServiceError({
+            throw toTicketApplicationError({
                 error: 'Forbidden',
                 message: 'You do not have access to manage tickets',
                 status: 403,
@@ -80,7 +67,7 @@ export async function listTicketsForActor(actor: TicketActor, query: TicketListQ
 
 export async function createTicketForActor(actor: TicketActor, input: TicketCreateCommand): Promise<Ticket> {
     if (!await projectExistsForUser(input.projectId, actor.userId)) {
-        throw new TicketServiceError({ error: 'Project not found', status: 404 });
+        throw toTicketApplicationError({ error: 'Project not found', status: 404 });
     }
 
     return createTicket(actor.userId, input);

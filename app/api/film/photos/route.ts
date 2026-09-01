@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authorizeFilmJournal, filmServiceErrorResponse, jsonError } from '@/lib/film/core/api';
+import { applicationErrorResponse } from '@/lib/api/responses';
+import { authorizeFilmJournal, jsonError } from '@/lib/film/core/api';
 import {
     parseFilmPhotoUpdate,
     parseFilmQueryId,
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
         if ('error' in rollId) return jsonError(rollId.error);
         return NextResponse.json({ data: await listFilmPhotosForUser(session.user.id, rollId.data) });
     } catch (error) {
-        const serviceError = filmServiceErrorResponse(error);
+        const serviceError = applicationErrorResponse(error);
         if (serviceError) return serviceError;
         console.error('Error fetching film photos:', error);
         return jsonError('Failed to fetch film photos', 500);
@@ -35,7 +36,7 @@ export async function PUT(request: NextRequest) {
         const result = await updateFilmPhotoForUser(session.user.id, input.data);
         return NextResponse.json(result.roll ? { data: result.photo, roll: result.roll } : { data: result.photo });
     } catch (error) {
-        const serviceError = filmServiceErrorResponse(error);
+        const serviceError = applicationErrorResponse(error);
         if (serviceError) return serviceError;
         console.error('Error updating film photo:', error);
         return jsonError('Failed to update film photo', 500);
