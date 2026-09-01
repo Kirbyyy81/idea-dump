@@ -4,10 +4,12 @@ import {
     ReactNode,
     forwardRef,
 } from 'react';
-import { cn } from '@/lib/utils';
+import { Input } from '@/components/atoms/Input';
+import { FieldShell } from '@/components/molecules/FieldShell';
 
 export interface InputFieldProps extends InputHTMLAttributes<HTMLInputElement> {
     containerClassName?: string;
+    description?: ReactNode;
     error?: boolean;
     errorMessage?: string;
     id: string;
@@ -15,18 +17,12 @@ export interface InputFieldProps extends InputHTMLAttributes<HTMLInputElement> {
     onValueChange?: (value: string) => void;
 }
 
-function mergeDescribedBy(...values: Array<string | undefined>) {
-    const ids = values
-        .flatMap((value) => value?.split(/\s+/) ?? [])
-        .filter(Boolean);
-    return Array.from(new Set(ids)).join(' ') || undefined;
-}
-
 export const InputField = forwardRef<HTMLInputElement, InputFieldProps>(
     ({
         'aria-describedby': ariaDescribedBy,
         className,
         containerClassName,
+        description,
         error,
         errorMessage,
         id,
@@ -36,47 +32,34 @@ export const InputField = forwardRef<HTMLInputElement, InputFieldProps>(
         required,
         ...inputProps
     }, ref) => {
-        const errorId = errorMessage ? `${id}-error` : undefined;
-        const describedBy = mergeDescribedBy(ariaDescribedBy, errorId);
-        const hasError = error || Boolean(errorMessage);
         const handleChange: ChangeEventHandler<HTMLInputElement> = (event) => {
             onChange?.(event);
             onValueChange?.(event.currentTarget.value);
         };
 
         return (
-            <div className={cn(containerClassName)}>
-                <label htmlFor={id} className="block text-sm text-text-secondary">
-                    {label}
-                    {required && (
-                        <>
-                            <span aria-hidden="true" className="text-error"> *</span>
-                            <span className="sr-only">, required</span>
-                        </>
-                    )}
-                </label>
-                <div className="mt-2">
-                    <input
+            <FieldShell
+                id={id}
+                label={label}
+                required={required}
+                description={description}
+                errorMessage={errorMessage}
+                ariaDescribedBy={ariaDescribedBy}
+                className={containerClassName}
+            >
+                {({ controlId, describedBy, hasError }) => (
+                    <Input
                         {...inputProps}
                         ref={ref}
-                        id={id}
+                        id={controlId}
                         required={required}
-                        aria-invalid={hasError || undefined}
+                        error={error || hasError}
                         aria-describedby={describedBy}
-                        className={cn(
-                            'input',
-                            hasError && 'border-error focus:border-error',
-                            className
-                        )}
+                        className={className}
                         onChange={handleChange}
                     />
-                </div>
-                {errorMessage && (
-                    <p id={errorId} className="mt-1 text-xs font-semibold text-error">
-                        {errorMessage}
-                    </p>
                 )}
-            </div>
+            </FieldShell>
         );
     }
 );

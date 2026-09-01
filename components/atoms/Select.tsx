@@ -25,6 +25,7 @@ export interface SelectProps {
     dataFinanceField?: string;
     ariaLabel?: string;
     ariaDescribedBy?: string;
+    required?: boolean;
 }
 
 export function Select({
@@ -41,6 +42,7 @@ export function Select({
     dataFinanceField,
     ariaLabel,
     ariaDescribedBy,
+    required,
 }: SelectProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
@@ -191,6 +193,7 @@ export function Select({
                 aria-label={ariaLabel}
                 aria-describedby={ariaDescribedBy}
                 aria-invalid={error || undefined}
+                aria-required={required || undefined}
                 data-finance-field={dataFinanceField}
                 onClick={() => setIsOpen((current) => !current)}
                 onKeyDown={handleButtonKeyDown}

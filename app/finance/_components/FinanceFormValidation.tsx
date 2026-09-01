@@ -1,39 +1,4 @@
-import { ReactNode } from 'react';
 import type { FinanceFieldErrors, FinanceTransactionField } from '@/lib/finance/core/values';
-
-interface FinanceFormFieldProps {
-    children: ReactNode;
-    error?: string;
-    fieldId: string;
-    label: string;
-    required?: boolean;
-    className?: string;
-}
-
-export function FinanceFormField({
-    children,
-    error,
-    fieldId,
-    label,
-    required,
-    className = '',
-}: FinanceFormFieldProps) {
-    return (
-        <div className={className}>
-            <label htmlFor={fieldId} className="block text-sm text-text-secondary">
-                {label}
-                {required && (
-                    <>
-                        <span aria-hidden="true" className="text-error"> *</span>
-                            <span className="sr-only">, required</span>
-                    </>
-                )}
-            </label>
-            <div className="mt-2">{children}</div>
-            {error && <p id={`${fieldId}-error`} className="mt-1 text-xs font-semibold text-error">{error}</p>}
-        </div>
-    );
-}
 
 export function FinanceFormErrorSummary({ errors }: { errors: FinanceFieldErrors }) {
     const messages = Array.from(new Set(
@@ -48,18 +13,6 @@ export function FinanceFormErrorSummary({ errors }: { errors: FinanceFieldErrors
             </ul>
         </div>
     );
-}
-
-export function financeFieldErrorProps(
-    errors: FinanceFieldErrors,
-    field: FinanceTransactionField,
-    fieldId: string,
-) {
-    const error = errors[field];
-    return {
-        error: Boolean(error),
-        'aria-describedby': error ? `${fieldId}-error` : undefined,
-    };
 }
 
 export function focusFirstFinanceError(errors: FinanceFieldErrors, order: FinanceTransactionField[]) {

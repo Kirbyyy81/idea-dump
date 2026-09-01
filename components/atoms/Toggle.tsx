@@ -13,9 +13,10 @@ export interface ToggleProps {
   dataFinanceField?: string;
   className?: string;
   disabled?: boolean;
+  required?: boolean;
 }
 
-export function Toggle({ checked, onChange, label, ariaLabel, ariaDescribedBy, error, id, dataFinanceField, className, disabled }: ToggleProps) {
+export function Toggle({ checked, onChange, label, ariaLabel, ariaDescribedBy, error, id, dataFinanceField, className, disabled, required }: ToggleProps) {
   return (
     <button
       type="button"
@@ -24,6 +25,7 @@ export function Toggle({ checked, onChange, label, ariaLabel, ariaDescribedBy, e
       aria-label={ariaLabel}
       aria-describedby={ariaDescribedBy}
       aria-invalid={error || undefined}
+      aria-required={required || undefined}
       data-finance-field={dataFinanceField}
       id={id}
       disabled={disabled}

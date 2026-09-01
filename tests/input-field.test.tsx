@@ -11,6 +11,7 @@ describe('InputField', () => {
                 label="Amount"
                 required
                 errorMessage="Enter a valid amount"
+                description="Use numbers only"
                 aria-describedby="amount-help"
             />
         );
@@ -23,10 +24,13 @@ describe('InputField', () => {
         expect(input.required).toBe(true);
         expect(requiredIndicator.getAttribute('aria-hidden')).toBe('true');
         expect(input.getAttribute('aria-invalid')).toBe('true');
-        expect(input.getAttribute('aria-describedby')).toBe('amount-help amount-error');
+        expect(input.getAttribute('aria-describedby')).toBe(
+            'amount-help amount-description amount-error'
+        );
         expect(input.className).toContain('input');
         expect(input.className).toContain('border-error');
         expect(error.id).toBe('amount-error');
+        expect(screen.getByText('Use numbers only').id).toBe('amount-description');
     });
 
     it('provides the string value while preserving a native change handler', () => {
