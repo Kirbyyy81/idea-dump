@@ -704,6 +704,171 @@ export interface FinanceFieldLearningRule {
     updated_at: string;
 }
 
+export type FinanceParserTemplateField =
+    | 'source_id'
+    | 'reference_number'
+    | 'merchant'
+    | 'transaction_date'
+    | 'direction'
+    | 'payee_name'
+    | 'notes'
+    | 'recipient_reference'
+    | 'amount';
+
+export type FinanceParserTemplateStatus =
+    | 'proposed'
+    | 'shadow'
+    | 'active'
+    | 'rejected'
+    | 'disabled';
+
+export type FinanceParserTemplateEvidenceOutcome =
+    | 'supported'
+    | 'contradicted'
+    | 'not_applicable'
+    | 'invalid_output'
+    | 'unresolved_missing_context';
+
+export type FinanceParserTemplateType =
+    | 'source_phrase'
+    | 'same_line_label'
+    | 'next_non_empty_line'
+    | 'bounded_line_window'
+    | 'allowlisted_regex_capture'
+    | 'strip_prefix'
+    | 'strip_suffix'
+    | 'character_filter'
+    | 'date_format'
+    | 'numeric_separator'
+    | 'direction_phrase'
+    | 'saved_payee_match';
+
+export type FinanceParserTemplateSourceLocation =
+    | 'filename'
+    | 'ocr_line'
+    | 'header'
+    | 'footer';
+
+export type FinanceParserTemplatePatternId =
+    | 'reference_token'
+    | 'iso_date'
+    | 'day_first_numeric_date'
+    | 'day_first_named_date'
+    | 'myr_amount';
+
+export type FinanceParserTemplateDateFormat =
+    | 'yyyy-mm-dd'
+    | 'dd/mm/yyyy'
+    | 'dd-mm-yyyy'
+    | 'dd.mm.yyyy'
+    | 'dd mmm yyyy';
+
+export interface FinanceSourcePhraseTemplateConfiguration {
+    type: 'source_phrase';
+    phrase: string;
+    location: FinanceParserTemplateSourceLocation;
+}
+
+export interface FinanceSameLineLabelTemplateConfiguration {
+    type: 'same_line_label';
+    label: string;
+}
+
+export interface FinanceNextNonEmptyLineTemplateConfiguration {
+    type: 'next_non_empty_line';
+    label: string;
+    max_lines: number;
+}
+
+export interface FinanceBoundedLineWindowTemplateConfiguration {
+    type: 'bounded_line_window';
+    anchor: string;
+    direction: 'before' | 'after';
+    max_lines: number;
+}
+
+export interface FinanceAllowlistedRegexCaptureTemplateConfiguration {
+    type: 'allowlisted_regex_capture';
+    pattern_id: FinanceParserTemplatePatternId;
+    anchor: string | null;
+}
+
+export interface FinanceStripPrefixTemplateConfiguration {
+    type: 'strip_prefix';
+    value: string;
+}
+
+export interface FinanceStripSuffixTemplateConfiguration {
+    type: 'strip_suffix';
+    value: string;
+}
+
+export interface FinanceCharacterFilterTemplateConfiguration {
+    type: 'character_filter';
+    mode: 'digits_only' | 'alphanumeric_only';
+}
+
+export interface FinanceDateFormatTemplateConfiguration {
+    type: 'date_format';
+    input_format: FinanceParserTemplateDateFormat;
+}
+
+export interface FinanceNumericSeparatorTemplateConfiguration {
+    type: 'numeric_separator';
+    decimal_separator: '.' | ',';
+    grouping_separator: ',' | '.' | ' ' | null;
+}
+
+export interface FinanceDirectionPhraseTemplateConfiguration {
+    type: 'direction_phrase';
+    phrases: string[];
+    direction: FinanceTransactionDirection;
+}
+
+export interface FinanceSavedPayeeMatchTemplateConfiguration {
+    type: 'saved_payee_match';
+    normalization: 'canonical';
+}
+
+export type FinanceParserTemplateConfiguration =
+    | FinanceSourcePhraseTemplateConfiguration
+    | FinanceSameLineLabelTemplateConfiguration
+    | FinanceNextNonEmptyLineTemplateConfiguration
+    | FinanceBoundedLineWindowTemplateConfiguration
+    | FinanceAllowlistedRegexCaptureTemplateConfiguration
+    | FinanceStripPrefixTemplateConfiguration
+    | FinanceStripSuffixTemplateConfiguration
+    | FinanceCharacterFilterTemplateConfiguration
+    | FinanceDateFormatTemplateConfiguration
+    | FinanceNumericSeparatorTemplateConfiguration
+    | FinanceDirectionPhraseTemplateConfiguration
+    | FinanceSavedPayeeMatchTemplateConfiguration;
+
+export interface FinanceParserTemplateContract {
+    id: string;
+    user_id: string;
+    target_source_id: string | null;
+    scope_source_id: string | null;
+    field_name: FinanceParserTemplateField;
+    template_type: FinanceParserTemplateType;
+    configuration: FinanceParserTemplateConfiguration;
+    algorithm_version: number;
+    template_version: number;
+    status: FinanceParserTemplateStatus;
+    evidence_count: number;
+    contradiction_count: number;
+    evaluation_count: number;
+    precision: number | null;
+    coverage: number | null;
+    predecessor_template_id: string | null;
+    status_reason: string | null;
+    created_at: string;
+    evaluated_at: string | null;
+    activated_at: string | null;
+    disabled_at: string | null;
+    updated_at: string;
+}
+
 export interface FinanceRuleSuggestion {
     id: string;
     user_id: string;
