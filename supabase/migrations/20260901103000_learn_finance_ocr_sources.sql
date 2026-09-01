@@ -8,10 +8,10 @@ immutable
 security invoker
 set search_path = ''
 as $function$
-  select pg_catalog.nullif(
+  select nullif(
     pg_catalog.btrim(
       pg_catalog.regexp_replace(
-        pg_catalog.regexp_replace(pg_catalog.lower(pg_catalog.coalesce(p_value, '')), '_', ' ', 'g'),
+        pg_catalog.regexp_replace(pg_catalog.lower(coalesce(p_value, '')), '_', ' ', 'g'),
         '[^[:alnum:]]+',
         ' ',
         'g'
@@ -32,7 +32,7 @@ declare
   normalized_phrase text;
 begin
   normalized_phrase := public.finance_normalize_source_phrase(
-    pg_catalog.regexp_replace(pg_catalog.coalesce(p_value, ''), '[0-9]+([.,:/-][0-9]+)*', ' ', 'g')
+    pg_catalog.regexp_replace(coalesce(p_value, ''), '[0-9]+([.,:/-][0-9]+)*', ' ', 'g')
   );
   if normalized_phrase is null
      or pg_catalog.char_length(normalized_phrase) not between 3 and 120
@@ -66,7 +66,7 @@ declare
   token_phrase text;
 begin
   safe_phrase := public.finance_safe_source_candidate_phrase(
-    pg_catalog.regexp_replace(pg_catalog.coalesce(p_original_filename, ''), '\.[^.]+$', '')
+    pg_catalog.regexp_replace(coalesce(p_original_filename, ''), '\.[^.]+$', '')
   );
   if safe_phrase is not null then
     phrase := safe_phrase;
@@ -75,7 +75,7 @@ begin
     filename_tokens := pg_catalog.regexp_split_to_array(safe_phrase, ' +');
     if pg_catalog.cardinality(filename_tokens) > 1 then
       for token_number in 1..pg_catalog.cardinality(filename_tokens) loop
-        for token_window in 1..pg_catalog.least(3, pg_catalog.cardinality(filename_tokens) - token_number + 1) loop
+        for token_window in 1..least(3, pg_catalog.cardinality(filename_tokens) - token_number + 1) loop
           token_phrase := pg_catalog.array_to_string(
             filename_tokens[token_number:token_number + token_window - 1],
             ' '
@@ -93,12 +93,12 @@ begin
   select pg_catalog.array_agg(lines.value order by lines.ordinality)
   into bounded_lines
   from pg_catalog.unnest(pg_catalog.regexp_split_to_array(
-    pg_catalog.left(pg_catalog.coalesce(p_ocr_text, ''), 20000),
+    pg_catalog.left(coalesce(p_ocr_text, ''), 20000),
     E'\\r?\\n'
   )) with ordinality lines(value, ordinality)
   where lines.ordinality <= 200
     and public.finance_normalize_source_phrase(lines.value) is not null;
-  line_count := pg_catalog.coalesce(pg_catalog.cardinality(bounded_lines), 0);
+  line_count := coalesce(pg_catalog.cardinality(bounded_lines), 0);
   if line_count = 0 then
     return;
   end if;
@@ -156,28 +156,28 @@ begin
 
   if p_configuration ->> 'location' = 'filename' then
     normalized_filename := public.finance_normalize_source_phrase(p_original_filename);
-    return (' ' || pg_catalog.coalesce(normalized_filename, '') || ' ')
+    return (' ' || coalesce(normalized_filename, '') || ' ')
       like ('% ' || normalized_phrase || ' %');
   end if;
 
   select pg_catalog.array_agg(lines.value order by lines.ordinality)
   into bounded_lines
   from pg_catalog.unnest(pg_catalog.regexp_split_to_array(
-    pg_catalog.left(pg_catalog.coalesce(p_ocr_text, ''), 20000),
+    pg_catalog.left(coalesce(p_ocr_text, ''), 20000),
     E'\\r?\\n'
   )) with ordinality lines(value, ordinality)
   where lines.ordinality <= 200
     and public.finance_normalize_source_phrase(lines.value) is not null;
-  line_count := pg_catalog.coalesce(pg_catalog.cardinality(bounded_lines), 0);
+  line_count := coalesce(pg_catalog.cardinality(bounded_lines), 0);
   if line_count = 0 then
     return false;
   end if;
 
   if p_configuration ->> 'location' = 'header' then
     first_line := 1;
-    last_line := pg_catalog.least(3, line_count);
+    last_line := least(3, line_count);
   elsif p_configuration ->> 'location' = 'footer' then
-    first_line := pg_catalog.greatest(1, line_count - 2);
+    first_line := greatest(1, line_count - 2);
     last_line := line_count;
   else
     first_line := 1;
@@ -185,7 +185,7 @@ begin
   end if;
 
   for line_number in first_line..last_line loop
-    if (' ' || pg_catalog.coalesce(public.finance_normalize_source_phrase(bounded_lines[line_number]), '') || ' ')
+    if (' ' || coalesce(public.finance_normalize_source_phrase(bounded_lines[line_number]), '') || ' ')
        like ('% ' || normalized_phrase || ' %') then
       return true;
     end if;
@@ -421,7 +421,7 @@ begin
     )
     and (
       templates.status = 'proposed'
-      or reviewed.candidate_created_at <= pg_catalog.coalesce(templates.evaluated_at, reviewed.candidate_created_at)
+      or reviewed.candidate_created_at <= coalesce(templates.evaluated_at, reviewed.candidate_created_at)
       or exists (
         select 1
         from pg_catalog.jsonb_array_elements(reviewed.source_detection_signals) signals(value)
@@ -476,10 +476,10 @@ begin
       contradiction_count = metrics.contradiction_count,
       evaluation_count = metrics.evaluation_count,
       precision = metrics.support_count::numeric
-        / pg_catalog.nullif(metrics.support_count + metrics.contradiction_count, 0),
-      coverage = metrics.support_count::numeric / pg_catalog.nullif(metrics.reviewed_count, 0),
+        / nullif(metrics.support_count + metrics.contradiction_count, 0),
+      coverage = metrics.support_count::numeric / nullif(metrics.reviewed_count, 0),
       evaluated_at = case
-        when metrics.evaluation_count > 0 then pg_catalog.coalesce(templates.evaluated_at, pg_catalog.clock_timestamp())
+        when metrics.evaluation_count > 0 then coalesce(templates.evaluated_at, pg_catalog.clock_timestamp())
         else templates.evaluated_at
       end
   from metrics
@@ -495,8 +495,8 @@ begin
       metrics.support_count,
       metrics.contradiction_count,
       metrics.evaluation_count,
-      metrics.support_count::numeric / pg_catalog.nullif(metrics.support_count + metrics.contradiction_count, 0),
-      metrics.support_count::numeric / pg_catalog.nullif(metrics.reviewed_count, 0)
+      metrics.support_count::numeric / nullif(metrics.support_count + metrics.contradiction_count, 0),
+      metrics.support_count::numeric / nullif(metrics.reviewed_count, 0)
     );
 
   update public.finance_parser_templates templates
@@ -684,7 +684,7 @@ begin
   where runs.invocation_id = p_invocation_id;
 
   if run_row.source_learning_completed_at is not null or run_row.status = 'failed' then
-    return pg_catalog.coalesce(run_row.legacy_inserted_count, 0);
+    return coalesce(run_row.legacy_inserted_count, 0);
   end if;
 
   legacy_inserted_rows := public.finance_refresh_rule_suggestions_phase_one_v1(p_invocation_id);
@@ -704,20 +704,20 @@ begin
     set status = 'succeeded',
         finished_at = pg_catalog.clock_timestamp(),
         corrections_examined = (
-          select pg_catalog.coalesce(pg_catalog.sum(summaries.corrections_examined), 0)::integer
+          select coalesce(pg_catalog.sum(summaries.corrections_examined), 0)::integer
           from public.finance_learning_run_user_summaries summaries
           where summaries.run_id = run_row.id
         ),
-        templates_proposed = pg_catalog.coalesce((source_result ->> 'proposed')::integer, 0),
-        templates_shadowed = pg_catalog.coalesce((source_result ->> 'shadowed')::integer, 0),
-        templates_disabled = pg_catalog.coalesce((source_result ->> 'disabled')::integer, 0),
-        templates_rejected = pg_catalog.coalesce((source_result ->> 'rejected')::integer, 0),
+        templates_proposed = coalesce((source_result ->> 'proposed')::integer, 0),
+        templates_shadowed = coalesce((source_result ->> 'shadowed')::integer, 0),
+        templates_disabled = coalesce((source_result ->> 'disabled')::integer, 0),
+        templates_rejected = coalesce((source_result ->> 'rejected')::integer, 0),
         reason_counts = (
           select pg_catalog.jsonb_build_object(
-            'insufficient_evidence', pg_catalog.coalesce(pg_catalog.sum(
+            'insufficient_evidence', coalesce(pg_catalog.sum(
               (summaries.reason_counts ->> 'insufficient_evidence')::integer
             ), 0),
-            'contradiction', pg_catalog.coalesce(pg_catalog.sum(
+            'contradiction', coalesce(pg_catalog.sum(
               (summaries.reason_counts ->> 'contradiction')::integer
             ), 0)
           )

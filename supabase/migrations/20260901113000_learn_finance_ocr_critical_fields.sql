@@ -15,8 +15,8 @@ declare
   normalized_value text;
   parts text[];
 begin
-  normalized_value := pg_catalog.nullif(
-    pg_catalog.regexp_replace(pg_catalog.btrim(pg_catalog.coalesce(p_value, '')), '[[:space:]]+', ' ', 'g'),
+  normalized_value := nullif(
+    pg_catalog.regexp_replace(pg_catalog.btrim(coalesce(p_value, '')), '[[:space:]]+', ' ', 'g'),
     ''
   );
   if normalized_value is null then
@@ -64,7 +64,7 @@ declare
   normalized_label text;
 begin
   normalized_label := pg_catalog.lower(pg_catalog.regexp_replace(
-    pg_catalog.btrim(pg_catalog.coalesce(p_value, '')),
+    pg_catalog.btrim(coalesce(p_value, '')),
     '[[:space:]]+',
     ' ',
     'g'
@@ -118,14 +118,14 @@ begin
     return;
   end if;
   bounded_lines := pg_catalog.regexp_split_to_array(
-    pg_catalog.left(pg_catalog.coalesce(p_ocr_text, ''), 20000),
+    pg_catalog.left(coalesce(p_ocr_text, ''), 20000),
     E'\r?\n'
   );
-  if pg_catalog.coalesce(pg_catalog.cardinality(bounded_lines), 0) = 0 then
+  if coalesce(pg_catalog.cardinality(bounded_lines), 0) = 0 then
     return;
   end if;
 
-  for line_number in 1..pg_catalog.least(200, pg_catalog.cardinality(bounded_lines)) loop
+  for line_number in 1..least(200, pg_catalog.cardinality(bounded_lines)) loop
     captures := pg_catalog.regexp_match(
       bounded_lines[line_number],
       '^[[:space:]]*(.{1,120}?)[[:space:]]*[:-][[:space:]]*(.+?)[[:space:]]*$'
@@ -148,7 +148,7 @@ begin
       continue;
     end if;
     non_empty_distance := 0;
-    for next_line in line_number + 1..pg_catalog.least(
+    for next_line in line_number + 1..least(
       pg_catalog.cardinality(bounded_lines),
       line_number + 6
     ) loop
@@ -199,14 +199,14 @@ begin
   end if;
   label_value := pg_catalog.lower(pg_catalog.btrim(p_configuration ->> 'label'));
   bounded_lines := pg_catalog.regexp_split_to_array(
-    pg_catalog.left(pg_catalog.coalesce(p_ocr_text, ''), 20000),
+    pg_catalog.left(coalesce(p_ocr_text, ''), 20000),
     E'\r?\n'
   );
-  if pg_catalog.coalesce(pg_catalog.cardinality(bounded_lines), 0) = 0 then
+  if coalesce(pg_catalog.cardinality(bounded_lines), 0) = 0 then
     return null;
   end if;
 
-  for line_number in 1..pg_catalog.least(200, pg_catalog.cardinality(bounded_lines)) loop
+  for line_number in 1..least(200, pg_catalog.cardinality(bounded_lines)) loop
     line_value := pg_catalog.btrim(bounded_lines[line_number]);
     if p_configuration ->> 'type' = 'same_line_label' then
       if not pg_catalog.starts_with(pg_catalog.lower(line_value), label_value) then
@@ -224,7 +224,7 @@ begin
       continue;
     end if;
     non_empty_distance := 0;
-    for next_line in line_number + 1..pg_catalog.least(
+    for next_line in line_number + 1..least(
       pg_catalog.cardinality(bounded_lines),
       line_number + 6
     ) loop
@@ -426,7 +426,7 @@ begin
     left join lateral (
       select evaluation.value ->> 'outcome' as outcome
       from pg_catalog.jsonb_array_elements(
-        pg_catalog.coalesce(reviewed.payload -> 'parser_template_evaluations', '[]'::jsonb)
+        coalesce(reviewed.payload -> 'parser_template_evaluations', '[]'::jsonb)
       ) evaluation(value)
       where evaluation.value ->> 'template_id' = templates.id::text
       limit 1
@@ -449,7 +449,7 @@ begin
       )
       and (
         templates.status = 'proposed'
-        or reviewed.candidate_created_at <= pg_catalog.coalesce(templates.evaluated_at, reviewed.candidate_created_at)
+        or reviewed.candidate_created_at <= coalesce(templates.evaluated_at, reviewed.candidate_created_at)
         or trace.outcome in ('shadow', 'applied', 'conflict', 'invalid_output')
       )
   )
@@ -521,10 +521,10 @@ begin
   set evidence_count = metrics.support_count,
       contradiction_count = metrics.contradiction_count,
       evaluation_count = metrics.evaluation_count,
-      precision = metrics.support_count::numeric / pg_catalog.nullif(metrics.evaluation_count, 0),
-      coverage = metrics.evaluation_count::numeric / pg_catalog.nullif(metrics.reviewed_count, 0),
+      precision = metrics.support_count::numeric / nullif(metrics.evaluation_count, 0),
+      coverage = metrics.evaluation_count::numeric / nullif(metrics.reviewed_count, 0),
       evaluated_at = case
-        when metrics.evaluation_count > 0 then pg_catalog.coalesce(templates.evaluated_at, pg_catalog.clock_timestamp())
+        when metrics.evaluation_count > 0 then coalesce(templates.evaluated_at, pg_catalog.clock_timestamp())
         else templates.evaluated_at
       end
   from metrics
@@ -535,8 +535,8 @@ begin
       templates.precision, templates.coverage
     ) is distinct from row(
       metrics.support_count, metrics.contradiction_count, metrics.evaluation_count,
-      metrics.support_count::numeric / pg_catalog.nullif(metrics.evaluation_count, 0),
-      metrics.evaluation_count::numeric / pg_catalog.nullif(metrics.reviewed_count, 0)
+      metrics.support_count::numeric / nullif(metrics.evaluation_count, 0),
+      metrics.evaluation_count::numeric / nullif(metrics.reviewed_count, 0)
     );
 
   update public.finance_parser_templates templates
@@ -590,7 +590,7 @@ begin
     where templates.field_name in ('reference_number', 'merchant', 'transaction_date')
       and templates.status = 'proposed'
       and templates.evidence_count >= 3
-      and templates.evaluation_count >= pg_catalog.least(5, reviewed_totals.reviewed_count)
+      and templates.evaluation_count >= least(5, reviewed_totals.reviewed_count)
       and templates.contradiction_count = 0
       and templates.precision = 1::numeric
   )
@@ -599,7 +599,7 @@ begin
   from eligible
   where templates.id = eligible.id
     and templates.user_id = eligible.user_id
-    and eligible.promotion_rank <= pg_catalog.greatest(0, 20 - eligible.runtime_count);
+    and eligible.promotion_rank <= greatest(0, 20 - eligible.runtime_count);
   get diagnostics shadowed_count = row_count;
 
   with latest_corrections as materialized (
@@ -656,20 +656,20 @@ begin
         + excluded.corrections_examined,
       reason_counts = pg_catalog.jsonb_build_object(
         'insufficient_evidence',
-          pg_catalog.coalesce((public.finance_learning_run_user_summaries.reason_counts ->> 'insufficient_evidence')::integer, 0)
-          + pg_catalog.coalesce((excluded.reason_counts ->> 'insufficient_evidence')::integer, 0),
+          coalesce((public.finance_learning_run_user_summaries.reason_counts ->> 'insufficient_evidence')::integer, 0)
+          + coalesce((excluded.reason_counts ->> 'insufficient_evidence')::integer, 0),
         'contradiction',
-          pg_catalog.coalesce((public.finance_learning_run_user_summaries.reason_counts ->> 'contradiction')::integer, 0)
-          + pg_catalog.coalesce((excluded.reason_counts ->> 'contradiction')::integer, 0),
+          coalesce((public.finance_learning_run_user_summaries.reason_counts ->> 'contradiction')::integer, 0)
+          + coalesce((excluded.reason_counts ->> 'contradiction')::integer, 0),
         'invalid_output',
-          pg_catalog.coalesce((public.finance_learning_run_user_summaries.reason_counts ->> 'invalid_output')::integer, 0)
-          + pg_catalog.coalesce((excluded.reason_counts ->> 'invalid_output')::integer, 0),
+          coalesce((public.finance_learning_run_user_summaries.reason_counts ->> 'invalid_output')::integer, 0)
+          + coalesce((excluded.reason_counts ->> 'invalid_output')::integer, 0),
         'unresolved_missing_context',
-          pg_catalog.coalesce((public.finance_learning_run_user_summaries.reason_counts ->> 'unresolved_missing_context')::integer, 0),
+          coalesce((public.finance_learning_run_user_summaries.reason_counts ->> 'unresolved_missing_context')::integer, 0),
         'source_archived',
-          pg_catalog.coalesce((public.finance_learning_run_user_summaries.reason_counts ->> 'source_archived')::integer, 0),
+          coalesce((public.finance_learning_run_user_summaries.reason_counts ->> 'source_archived')::integer, 0),
         'conflict',
-          pg_catalog.coalesce((public.finance_learning_run_user_summaries.reason_counts ->> 'conflict')::integer, 0)
+          coalesce((public.finance_learning_run_user_summaries.reason_counts ->> 'conflict')::integer, 0)
       );
 
   return pg_catalog.jsonb_build_object(
@@ -709,7 +709,7 @@ begin
   select * into run_row from public.finance_learning_runs runs
   where runs.invocation_id = p_invocation_id;
   if run_row.critical_field_learning_completed_at is not null or run_row.status = 'failed' then
-    return pg_catalog.coalesce(run_row.legacy_inserted_count, 0);
+    return coalesce(run_row.legacy_inserted_count, 0);
   end if;
 
   legacy_inserted_rows := public.finance_refresh_rule_suggestions_phase_two_v1(p_invocation_id);
@@ -725,36 +725,36 @@ begin
     set status = 'succeeded',
         finished_at = pg_catalog.clock_timestamp(),
         corrections_examined = (
-          select pg_catalog.coalesce(pg_catalog.sum(summaries.corrections_examined), 0)::integer
+          select coalesce(pg_catalog.sum(summaries.corrections_examined), 0)::integer
           from public.finance_learning_run_user_summaries summaries
           where summaries.run_id = run_row.id
         ),
         templates_proposed = runs.templates_proposed
-          + pg_catalog.coalesce((field_result ->> 'proposed')::integer, 0),
+          + coalesce((field_result ->> 'proposed')::integer, 0),
         templates_shadowed = runs.templates_shadowed
-          + pg_catalog.coalesce((field_result ->> 'shadowed')::integer, 0),
+          + coalesce((field_result ->> 'shadowed')::integer, 0),
         templates_disabled = runs.templates_disabled
-          + pg_catalog.coalesce((field_result ->> 'disabled')::integer, 0),
+          + coalesce((field_result ->> 'disabled')::integer, 0),
         templates_rejected = runs.templates_rejected
-          + pg_catalog.coalesce((field_result ->> 'rejected')::integer, 0),
+          + coalesce((field_result ->> 'rejected')::integer, 0),
         reason_counts = (
           select pg_catalog.jsonb_build_object(
-            'insufficient_evidence', pg_catalog.coalesce(pg_catalog.sum(
+            'insufficient_evidence', coalesce(pg_catalog.sum(
               (summaries.reason_counts ->> 'insufficient_evidence')::integer
             ), 0),
-            'contradiction', pg_catalog.coalesce(pg_catalog.sum(
+            'contradiction', coalesce(pg_catalog.sum(
               (summaries.reason_counts ->> 'contradiction')::integer
             ), 0),
-            'invalid_output', pg_catalog.coalesce(pg_catalog.sum(
+            'invalid_output', coalesce(pg_catalog.sum(
               (summaries.reason_counts ->> 'invalid_output')::integer
             ), 0),
-            'unresolved_missing_context', pg_catalog.coalesce(pg_catalog.sum(
+            'unresolved_missing_context', coalesce(pg_catalog.sum(
               (summaries.reason_counts ->> 'unresolved_missing_context')::integer
             ), 0),
-            'source_archived', pg_catalog.coalesce(pg_catalog.sum(
+            'source_archived', coalesce(pg_catalog.sum(
               (summaries.reason_counts ->> 'source_archived')::integer
             ), 0),
-            'conflict', pg_catalog.coalesce(pg_catalog.sum(
+            'conflict', coalesce(pg_catalog.sum(
               (summaries.reason_counts ->> 'conflict')::integer
             ), 0)
           )
