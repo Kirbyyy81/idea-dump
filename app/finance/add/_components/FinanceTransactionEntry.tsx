@@ -6,10 +6,10 @@ import { AppShell } from '@/components/organisms/AppShell';
 import { Button } from '@/components/atoms/Button';
 import { DocumentDoodleIcon, ScanDoodleIcon } from '@/components/atoms/DoodleIcons';
 import { FileUpload } from '@/components/molecules/FileUpload';
-import { InputField } from '@/components/molecules/InputField';
-import { SelectField } from '@/components/molecules/SelectField';
-import { TextareaField } from '@/components/molecules/TextareaField';
-import { ToggleField } from '@/components/molecules/ToggleField';
+import { Input } from '@/components/atoms/Input';
+import { Select } from '@/components/atoms/Select';
+import { Textarea } from '@/components/atoms/Textarea';
+import { Toggle } from '@/components/atoms/Toggle';
 import { FinanceSourceDetail, FinanceTransactionDirection } from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
 import {
@@ -265,11 +265,11 @@ export function FinanceTransactionEntry({ initialMode }: { initialMode: FinanceE
             />
         ) : <form onSubmit={submitManual} className="mt-6 space-y-4" noValidate>
             <FinanceFormErrorSummary errors={fieldErrors} />
-            <SelectField id="manual-direction" label="Type" required errorMessage={fieldErrors.direction} data-finance-field="direction" aria-label="Transaction type" value={form.direction} onChange={(direction) => {
+            <Select id="manual-direction" label="Type" required errorMessage={fieldErrors.direction} data-finance-field="direction" aria-label="Transaction type" value={form.direction} onChange={(direction) => {
                 setManualField('direction', direction as FinanceTransactionDirection);
             }} options={[{ value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }]} />
-            <SelectField id="manual-source" label="Source" required errorMessage={fieldErrors.source_id} data-finance-field="source_id" aria-label="Transaction source" value={form.source_id} onChange={(sourceId) => setManualField('source_id', sourceId)} placeholder="Choose or add a source" options={[...sources.map((source) => ({ value: source.id, label: source.name })), { value: NEW_SOURCE, label: '+ Add new source' }]} />
-            {form.source_id === NEW_SOURCE && <InputField id="manual-new-source" label="New source name" required errorMessage={fieldErrors.new_source_name} data-finance-field="new_source_name" maxLength={MAX_FINANCE_NAME_LENGTH} value={newSource} onChange={(event) => {
+            <Select id="manual-source" label="Source" required errorMessage={fieldErrors.source_id} data-finance-field="source_id" aria-label="Transaction source" value={form.source_id} onChange={(sourceId) => setManualField('source_id', sourceId)} placeholder="Choose or add a source" options={[...sources.map((source) => ({ value: source.id, label: source.name })), { value: NEW_SOURCE, label: '+ Add new source' }]} />
+            {form.source_id === NEW_SOURCE && <Input id="manual-new-source" label="New source name" required errorMessage={fieldErrors.new_source_name} data-finance-field="new_source_name" maxLength={MAX_FINANCE_NAME_LENGTH} value={newSource} onChange={(event) => {
                     setNewSource(event.target.value);
                     setFieldErrors((current) => {
                         if (!current.new_source_name) return current;
@@ -278,17 +278,17 @@ export function FinanceTransactionEntry({ initialMode }: { initialMode: FinanceE
                         return next;
                     });
                 }} placeholder="e.g. Maybank debit card" />}
-            <SelectField id="manual-category" label="Category" errorMessage={fieldErrors.category_id} data-finance-field="category_id" aria-label="Transaction category" value={form.category_id} onChange={(categoryId) => setManualField('category_id', categoryId)} placeholder="Uncategorised" options={[{ value: '', label: 'Uncategorised' }, ...availableCategories]} />
+            <Select id="manual-category" label="Category" errorMessage={fieldErrors.category_id} data-finance-field="category_id" aria-label="Transaction category" value={form.category_id} onChange={(categoryId) => setManualField('category_id', categoryId)} placeholder="Uncategorised" options={[{ value: '', label: 'Uncategorised' }, ...availableCategories]} />
             <div className="grid gap-4 sm:grid-cols-2">
-                <InputField id="manual-amount" label="Amount" required errorMessage={fieldErrors.amount} data-finance-field="amount" type="number" inputMode="decimal" min="0.01" max={MAX_FINANCE_AMOUNT} step="0.01" value={form.amount} onChange={(event) => setManualField('amount', event.target.value)} placeholder="0.00" />
-                <InputField id="manual-currency" label="Currency" value="MYR" readOnly aria-readonly="true" />
+                <Input id="manual-amount" label="Amount" required errorMessage={fieldErrors.amount} data-finance-field="amount" type="number" inputMode="decimal" min="0.01" max={MAX_FINANCE_AMOUNT} step="0.01" value={form.amount} onChange={(event) => setManualField('amount', event.target.value)} placeholder="0.00" />
+                <Input id="manual-currency" label="Currency" value="MYR" readOnly aria-readonly="true" />
             </div>
-            <InputField id="manual-merchant" label="Merchant (optional)" errorMessage={fieldErrors.merchant} data-finance-field="merchant" maxLength={MAX_FINANCE_MERCHANT_LENGTH} value={form.merchant} onChange={(event) => setManualField('merchant', event.target.value)} />
-            <ToggleField id="manual-has-payee" label="Payee" toggleLabel="Is a payee" errorMessage={fieldErrors.has_payee} data-finance-field="has_payee" checked={form.has_payee} aria-label="Is a payee" onChange={setManualPayeeClassification} />
-            {form.has_payee && <InputField id="manual-payee" label="Payee name" required errorMessage={fieldErrors.payee_name} data-finance-field="payee_name" maxLength={MAX_FINANCE_PAYEE_LENGTH} value={form.payee_name} onChange={(event) => setManualField('payee_name', event.target.value)} />}
-            <InputField id="manual-reference" label="Transaction reference" errorMessage={fieldErrors.reference_number} data-finance-field="reference_number" maxLength={MAX_FINANCE_REFERENCE_LENGTH} value={form.reference_number} onChange={(event) => setManualField('reference_number', event.target.value)} />
-            <InputField id="manual-date" label="Date" required errorMessage={fieldErrors.transaction_date} data-finance-field="transaction_date" type="date" max={getLocalFinanceDate()} value={form.transaction_date} onChange={(event) => setManualField('transaction_date', event.target.value)} />
-            <TextareaField id="manual-notes" label="Notes" errorMessage={fieldErrors.notes} data-finance-field="notes" maxLength={MAX_FINANCE_NOTES_LENGTH} value={form.notes} onChange={(event) => setManualField('notes', event.target.value)} />
+            <Input id="manual-merchant" label="Merchant (optional)" errorMessage={fieldErrors.merchant} data-finance-field="merchant" maxLength={MAX_FINANCE_MERCHANT_LENGTH} value={form.merchant} onChange={(event) => setManualField('merchant', event.target.value)} />
+            <Toggle id="manual-has-payee" label="Payee" toggleLabel="Is a payee" errorMessage={fieldErrors.has_payee} data-finance-field="has_payee" checked={form.has_payee} aria-label="Is a payee" onChange={setManualPayeeClassification} />
+            {form.has_payee && <Input id="manual-payee" label="Payee name" required errorMessage={fieldErrors.payee_name} data-finance-field="payee_name" maxLength={MAX_FINANCE_PAYEE_LENGTH} value={form.payee_name} onChange={(event) => setManualField('payee_name', event.target.value)} />}
+            <Input id="manual-reference" label="Transaction reference" errorMessage={fieldErrors.reference_number} data-finance-field="reference_number" maxLength={MAX_FINANCE_REFERENCE_LENGTH} value={form.reference_number} onChange={(event) => setManualField('reference_number', event.target.value)} />
+            <Input id="manual-date" label="Date" required errorMessage={fieldErrors.transaction_date} data-finance-field="transaction_date" type="date" max={getLocalFinanceDate()} value={form.transaction_date} onChange={(event) => setManualField('transaction_date', event.target.value)} />
+            <Textarea id="manual-notes" label="Notes" errorMessage={fieldErrors.notes} data-finance-field="notes" maxLength={MAX_FINANCE_NOTES_LENGTH} value={form.notes} onChange={(event) => setManualField('notes', event.target.value)} />
             <Button type="submit" className="w-full" isLoading={isSaving} disabled={isSaving}>Add transaction</Button>
         </form> : <form onSubmit={submitScreenshot} className="mt-6"><FileUpload label="Transaction screenshot" aria-describedby="finance-upload-help" accept="image/png,image/jpeg,image/webp" value={file} onChange={selectScreenshot} disabled={isSaving} /><p id="finance-upload-help" className="mt-2 text-sm text-text-muted">PNG, JPEG, or WebP · Max 4 MB</p>{ocrPhase !== 'idle' && <OcrProgress phase={ocrPhase} uploadProgress={uploadProgress} />}<Button type="submit" className="mt-5 w-full" isLoading={isSaving} disabled={!file || isSaving}>Process screenshot</Button></form>}
         </>}

@@ -1,13 +1,13 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { SelectField } from '@/components/molecules/SelectField';
-import { TextareaField } from '@/components/molecules/TextareaField';
-import { ToggleField } from '@/components/molecules/ToggleField';
+import { Select } from '@/components/atoms/Select';
+import { Textarea } from '@/components/atoms/Textarea';
+import { Toggle } from '@/components/atoms/Toggle';
 
 describe('shared form control fields', () => {
-    it('associates SelectField labels, required state, and errors', () => {
+    it('associates Select labels, required state, and errors', () => {
         render(
-            <SelectField
+            <Select
                 id="source"
                 label="Source"
                 required
@@ -25,9 +25,9 @@ describe('shared form control fields', () => {
         expect(screen.getByText('Choose a source').id).toBe('source-error');
     });
 
-    it('associates TextareaField labels, native required state, and errors', () => {
+    it('associates Textarea labels, native required state, and errors', () => {
         render(
-            <TextareaField
+            <Textarea
                 id="notes"
                 label="Notes"
                 required
@@ -41,9 +41,9 @@ describe('shared form control fields', () => {
         expect(textarea.getAttribute('aria-describedby')).toBe('notes-error');
     });
 
-    it('associates ToggleField state and errors without requiring a field label', () => {
+    it('associates Toggle state and errors without requiring a field label', () => {
         render(
-            <ToggleField
+            <Toggle
                 id="confirm"
                 toggleLabel="Confirm anyway"
                 required

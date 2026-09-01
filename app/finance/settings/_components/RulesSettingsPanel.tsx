@@ -271,7 +271,7 @@ export function RulesSettingsPanel() {
                                         <p className="mt-2 text-sm text-text-secondary">{[rule.finance_source?.name, rule.category?.name, rule.direction].filter(Boolean).join(' - ')} - Priority {rule.priority}</p>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <Toggle checked={rule.is_active} disabled={pendingItemId !== null} onChange={() => void toggleRule(rule)} label={rule.is_active ? 'Active' : 'Paused'} ariaLabel={`${rule.is_active ? 'Pause' : 'Resume'} rule ${rule.name}`} />
+                                            <Toggle checked={rule.is_active} disabled={pendingItemId !== null} onChange={() => void toggleRule(rule)} toggleLabel={rule.is_active ? 'Active' : 'Paused'} ariaLabel={`${rule.is_active ? 'Pause' : 'Resume'} rule ${rule.name}`} />
                                             {rule.source === 'manual'
                                                 ? <Button type="button" variant="ghost" aria-label={`Delete rule ${rule.name}`} disabled={pendingItemId !== null} className="text-error hover:text-error" icon={<DeleteDoodleIcon size={16} />} onClick={() => setDeleting(rule)}>Delete</Button>
                                                 : <span className="text-xs font-semibold text-text-muted">Pause only</span>}

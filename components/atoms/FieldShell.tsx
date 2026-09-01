@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
-export interface FieldControlState {
+interface FieldControlState {
     controlId: string;
     describedBy?: string;
     hasError: boolean;

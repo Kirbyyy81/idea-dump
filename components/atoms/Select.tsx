@@ -1,8 +1,9 @@
 'use client';
 
-import { KeyboardEvent, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { KeyboardEvent, ReactNode, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, ChevronDown } from 'lucide-react';
+import { FieldShell } from '@/components/atoms/FieldShell';
 import { cn } from '@/lib/utils';
 
 export interface SelectOption {
@@ -26,6 +27,13 @@ export interface SelectProps {
     ariaLabel?: string;
     ariaDescribedBy?: string;
     required?: boolean;
+    label?: ReactNode;
+    description?: ReactNode;
+    errorMessage?: string;
+    containerClassName?: string;
+    'aria-describedby'?: string;
+    'aria-label'?: string;
+    'data-finance-field'?: string;
 }
 
 export function Select({
@@ -43,6 +51,13 @@ export function Select({
     ariaLabel,
     ariaDescribedBy,
     required,
+    label,
+    description,
+    errorMessage,
+    containerClassName,
+    'aria-describedby': standardAriaDescribedBy,
+    'aria-label': standardAriaLabel,
+    'data-finance-field': standardDataFinanceField,
 }: SelectProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
@@ -51,6 +66,9 @@ export function Select({
     const selectId = useId();
     const triggerId = id || `select-trigger-${selectId}`;
     const listboxId = `select-listbox-${selectId}`;
+    const resolvedAriaDescribedBy = standardAriaDescribedBy || ariaDescribedBy;
+    const resolvedAriaLabel = standardAriaLabel || ariaLabel;
+    const resolvedDataFinanceField = standardDataFinanceField || dataFinanceField;
     const [isOpen, setIsOpen] = useState(false);
     const [menuPosition, setMenuPosition] = useState({ left: 0, maxHeight: 256, top: 0, width: 0 });
     const selectedIndex = options.findIndex((option) => option.value === value);
@@ -179,7 +197,10 @@ export function Select({
         }
     };
 
-    return (
+    const renderSelect = (
+        describedBy = resolvedAriaDescribedBy,
+        hasFieldError = false
+    ) => (
         <div ref={containerRef} className={cn('relative', className)}>
             <button
                 ref={buttonRef}
@@ -190,17 +211,17 @@ export function Select({
                 aria-haspopup="listbox"
                 aria-expanded={isOpen}
                 aria-controls={listboxId}
-                aria-label={ariaLabel}
-                aria-describedby={ariaDescribedBy}
-                aria-invalid={error || undefined}
+                aria-label={resolvedAriaLabel}
+                aria-describedby={describedBy}
+                aria-invalid={error || hasFieldError || undefined}
                 aria-required={required || undefined}
-                data-finance-field={dataFinanceField}
+                data-finance-field={resolvedDataFinanceField}
                 onClick={() => setIsOpen((current) => !current)}
                 onKeyDown={handleButtonKeyDown}
                 className={cn(
                     'input flex h-10 items-center justify-between gap-2 pr-10 text-left',
                     disabled && 'cursor-not-allowed opacity-60',
-                    error && 'border-error focus:border-error',
+                    (error || hasFieldError) && 'border-error focus:border-error',
                     buttonClassName
                 )}
             >
@@ -264,5 +285,23 @@ export function Select({
                 document.body
             )}
         </div>
+    );
+
+    if (!label && !description && !errorMessage && !containerClassName) {
+        return renderSelect();
+    }
+
+    return (
+        <FieldShell
+            id={triggerId}
+            label={label}
+            required={required}
+            description={description}
+            errorMessage={errorMessage}
+            ariaDescribedBy={resolvedAriaDescribedBy}
+            className={containerClassName}
+        >
+            {({ describedBy, hasError }) => renderSelect(describedBy, hasError)}
+        </FieldShell>
     );
 }

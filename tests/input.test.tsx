@@ -1,12 +1,12 @@
 import { createRef } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { InputField } from '@/components/molecules/InputField';
+import { Input } from '@/components/atoms/Input';
 
-describe('InputField', () => {
+describe('Input behavior', () => {
     it('associates its label, required state, and error with the input', () => {
         render(
-            <InputField
+            <Input
                 id="amount"
                 label="Amount"
                 required
@@ -37,7 +37,7 @@ describe('InputField', () => {
         const onChange = vi.fn();
         const onValueChange = vi.fn();
         render(
-            <InputField
+            <Input
                 id="amount"
                 label="Amount"
                 onChange={onChange}
@@ -55,8 +55,16 @@ describe('InputField', () => {
 
     it('forwards its ref to the underlying input', () => {
         const ref = createRef<HTMLInputElement>();
-        render(<InputField ref={ref} id="merchant" label="Merchant" />);
+        render(<Input ref={ref} id="merchant" label="Merchant" />);
 
         expect(ref.current).toBe(screen.getByLabelText('Merchant'));
+    });
+
+    it('renders only the native input when field metadata is absent', () => {
+        const { container } = render(<Input aria-label="Search" />);
+
+        expect(container.firstElementChild).toBe(
+            screen.getByRole('textbox', { name: 'Search' })
+        );
     });
 });
