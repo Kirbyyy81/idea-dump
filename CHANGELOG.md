@@ -1,5 +1,48 @@
 # Changelog
 
+## [0.13.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.12.0...idea-dump-v0.13.0) (2026-09-01)
+
+
+### Features
+
+* add finance payees ([22c9528](https://github.com/Kirbyyy81/idea-dump/commit/22c95284ac984bbe4f237dee32dbe08c73ffa601))
+* add input field ([fc00f4d](https://github.com/Kirbyyy81/idea-dump/commit/fc00f4d18bebea7d6b24ca5572490e9c2c9a72c3))
+* add responsive finance ledger filters ([4ef29a3](https://github.com/Kirbyyy81/idea-dump/commit/4ef29a3ef9ec28f0a21627a17c75223da8283dc9))
+* add separate finance transaction editor ([03a0128](https://github.com/Kirbyyy81/idea-dump/commit/03a0128879e9265a4852b2bf9ca15bfac1d27ef5))
+* confirm share handoff ([2a863c5](https://github.com/Kirbyyy81/idea-dump/commit/2a863c53f7fef3d13123f5793bde565d13a01ee4))
+* consolidate finance reference data ([ba82f4e](https://github.com/Kirbyyy81/idea-dump/commit/ba82f4efe4525b52c9a00534bf6aec0d41fe1c2b))
+* consolidate finance settings ([b0a28b2](https://github.com/Kirbyyy81/idea-dump/commit/b0a28b214816b667c09f33ab1cb0345acef03ecd))
+* drop category metadata ([57960b3](https://github.com/Kirbyyy81/idea-dump/commit/57960b3adf3e14a531ce45b74e55b47b96e4af2e))
+* expand finance OCR learning ([85193d1](https://github.com/Kirbyyy81/idea-dump/commit/85193d18e074660b77059cf4338a26cf2438f8f2))
+* extend finance transaction filters ([483fcfe](https://github.com/Kirbyyy81/idea-dump/commit/483fcfeeaeb0f6ec52a52844c1bbecf7a5f1b305))
+* group finance ledger by day ([d746df1](https://github.com/Kirbyyy81/idea-dump/commit/d746df12d5ae91e259030f3a19a6457a92fcdff9))
+* improve finance form validation ([88f0a50](https://github.com/Kirbyyy81/idea-dump/commit/88f0a508610ccc7a022185eb6a25117f76226b69))
+* refine finance transaction workflow ([762e451](https://github.com/Kirbyyy81/idea-dump/commit/762e4510452728225a803d6b330e4d866d876977))
+* render finance dashboard ([3a3408d](https://github.com/Kirbyyy81/idea-dump/commit/3a3408da490ee339f71e2117deabc992d79d746e))
+* scope finance share handoff ([209a549](https://github.com/Kirbyyy81/idea-dump/commit/209a549ab8177208c0e51ec540ffcae6091f757c))
+* server render finance records ([213e254](https://github.com/Kirbyyy81/idea-dump/commit/213e2549dab91efe4ac277ff3dba029ebe97b88e))
+* standardize project API responses ([3a364d5](https://github.com/Kirbyyy81/idea-dump/commit/3a364d59896e10a20e63e0cd652a1f9aee9899e6))
+* unify finance categories ([c84ff3c](https://github.com/Kirbyyy81/idea-dump/commit/c84ff3c5ead6843db58c9a01f992c19f6f0292a0))
+
+
+### Bug Fixes
+
+* complete finance refactor ([e3ebf99](https://github.com/Kirbyyy81/idea-dump/commit/e3ebf99813e37d4e7dcaf28b48c0e6c01f9733a3))
+* correct finance migration ([6309dd7](https://github.com/Kirbyyy81/idea-dump/commit/6309dd7dc8c6c4fcc8cb21049ac8aee508cd2e95))
+* grant finance queue access ([d6cb459](https://github.com/Kirbyyy81/idea-dump/commit/d6cb459cd1c7937dd8cd763f13212f08b303d31c))
+* keep sidebar visible while content scrolls ([3296b11](https://github.com/Kirbyyy81/idea-dump/commit/3296b11d9dc9f281fda508795128eafc4bba37d3))
+* make finance failures actionable ([3206f04](https://github.com/Kirbyyy81/idea-dump/commit/3206f049b001b8828956e26ba98af0b9d0866349))
+* make input field standalone ([1e61dc9](https://github.com/Kirbyyy81/idea-dump/commit/1e61dc9efc336d415d4fa1aed5a0c652e630e9d6))
+* mark required fields ([a4ca5f2](https://github.com/Kirbyyy81/idea-dump/commit/a4ca5f272af1b4a930b9c14f5a6041c4a2c5de53))
+* modernize supabase auth ([5d9e3d5](https://github.com/Kirbyyy81/idea-dump/commit/5d9e3d5a5fa253552f2b6ad743e4dc0bba9d5b09))
+* move merchant to payee ([a493c7b](https://github.com/Kirbyyy81/idea-dump/commit/a493c7b3cfe57d0fa5959286b82f3d09de09e68e))
+* parse reference labels ([0bb0c35](https://github.com/Kirbyyy81/idea-dump/commit/0bb0c3553906ca5208edc23020f75385aefb5f24))
+* removed bottom border for app header ([f2a9c65](https://github.com/Kirbyyy81/idea-dump/commit/f2a9c65bab9a80152017ee3df019a4c518e66628))
+* replace active finance shares ([daeeb1c](https://github.com/Kirbyyy81/idea-dump/commit/daeeb1cfd767364e5f42520732a4e230c3317fe7))
+* secure finance ocr dependencies ([dd776f0](https://github.com/Kirbyyy81/idea-dump/commit/dd776f0ddff788068e418af509a6026752088045))
+* smooth sidebar submenu transitions ([0cf885a](https://github.com/Kirbyyy81/idea-dump/commit/0cf885a7ac78e9b06d27022ef77582176fe17b62))
+* trim finance api payloads ([cf74855](https://github.com/Kirbyyy81/idea-dump/commit/cf748558bcd8fe6f8cf330b1c2fd565dc24b86dd))
+
 ## [0.12.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.11.3...idea-dump-v0.12.0) (2026-07-27)
 
 
