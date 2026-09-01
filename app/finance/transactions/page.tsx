@@ -26,19 +26,18 @@ export default async function FinanceTransactionsPage({
     searchParams,
 }: FinanceTransactionsPageProps) {
     const session = await requireFinancePageAccess();
-    const queryParams = toUrlSearchParams(await searchParams);
-    const parsed = parseFinanceTransactionListFilters(queryParams);
+    const parsed = parseFinanceTransactionListFilters(
+        toUrlSearchParams(await searchParams)
+    );
 
     if ('error' in parsed) {
         redirect('/finance/transactions');
     }
 
     const transactions = await getFinanceTransactions(session.user.id, parsed.data);
-    const filterQuery = queryParams.toString();
 
     return (
         <FinanceTransactionsClient
-            key={filterQuery || 'default'}
             initialQuery={parsed.data.query || ''}
             initialTransactions={transactions}
         />

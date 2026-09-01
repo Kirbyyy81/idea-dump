@@ -4,11 +4,18 @@ import { describe, expect, it } from 'vitest';
 
 const root = path.resolve(import.meta.dirname, '..');
 const reviewSource = fs.readFileSync(
-    path.join(root, 'app', 'finance', 'review', 'page.tsx'),
+    path.join(
+        root,
+        'app',
+        'finance',
+        'review',
+        '_components',
+        'FinanceReviewClient.tsx'
+    ),
     'utf8'
 );
 const failurePanel = reviewSource.slice(
-    reviewSource.indexOf('!isLoading && failedIntakes.length > 0')
+    reviewSource.indexOf('failedIntakes.length > 0')
 );
 
 describe('Finance review failure recovery', () => {
