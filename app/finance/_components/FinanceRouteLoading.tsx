@@ -1,5 +1,5 @@
 import { AppShell } from '@/components/organisms/AppShell';
-import { FinanceLoadingState } from '@/app/finance/_components/FinanceLoadingState';
+import { InlineLoadingState } from '@/components/molecules/InlineLoadingState';
 
 interface FinanceRouteLoadingProps {
     label: string;
@@ -10,7 +10,7 @@ export function FinanceRouteLoading({ label, pageTitle }: FinanceRouteLoadingPro
     return (
         <AppShell contentClassName="p-5 md:p-8" pageTitle={pageTitle}>
             <div className="mx-auto max-w-7xl">
-                <FinanceLoadingState label={label} />
+                <InlineLoadingState label={label} />
             </div>
         </AppShell>
     );

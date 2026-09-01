@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/organisms/AppShell';
 import { Button } from '@/components/atoms/Button';
@@ -453,24 +454,20 @@ export function FinanceReviewClient({
                         <ul className="divide-y divide-error/30">
                             {failedIntakes.map((intake) => (
                                 <li key={intake.id} className="px-5 py-4">
-                                    <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-                                        <div className="min-w-0">
-                                            <p className="break-words font-semibold text-text-primary">
-                                                {intake.original_filename || 'Transaction screenshot'}
-                                            </p>
-                                            <p className="mt-1 text-sm text-error">
-                                                {intake.error_message || 'The screenshot could not be processed.'}
-                                            </p>
-                                        </div>
-                                        <span className="shrink-0 text-xs font-semibold text-text-secondary">
-                                            {intake.processing_attempt_count} attempt{intake.processing_attempt_count === 1 ? '' : 's'}
-                                        </span>
+                                    <p className="break-words font-semibold text-text-primary">
+                                        {intake.original_filename || 'Transaction screenshot'}
+                                    </p>
+                                    <p className="mt-1 text-sm text-error">
+                                        {intake.error_message || 'The screenshot could not be processed.'}
+                                    </p>
+                                    <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                                        <Link href="/finance/add?mode=screenshot" className="btn-primary text-center">
+                                            Try another screenshot
+                                        </Link>
+                                        <Link href="/finance/add?mode=manual" className="btn-secondary text-center">
+                                            Add manually
+                                        </Link>
                                     </div>
-                                    {(intake.failure_stage || intake.failure_code) && (
-                                        <p className="mt-2 text-xs text-text-secondary">
-                                            {[intake.failure_stage, intake.failure_code].filter(Boolean).join(' · ')}
-                                        </p>
-                                    )}
                                 </li>
                             ))}
                         </ul>
