@@ -14,7 +14,7 @@ import { FinanceReferenceDataState } from '@/app/finance/_components/FinanceRefe
 import type { FinanceReferenceDataStatus } from '@/app/finance/_components/FinanceReferenceDataProvider';
 import { getLocalFinanceDate } from '@/lib/finance/core/values';
 import { FINANCE_TRANSACTION_FILTER_KEYS } from '@/lib/finance/transactions/filters';
-import type { FinanceReferenceOption, FinanceTransaction } from '@/lib/types';
+import type { FinanceReferenceOption, FinanceTransactionView } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import {
     formatFinanceLedgerDate,
@@ -33,7 +33,7 @@ interface TransactionLedgerFiltersProps {
     refresh: () => Promise<void>;
     sources: FinanceReferenceOption[];
     status: FinanceReferenceDataStatus;
-    transactions: FinanceTransaction[];
+    transactions: FinanceTransactionView[];
 }
 
 type FilterDimension = 'category' | 'date' | 'direction' | 'source';

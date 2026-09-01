@@ -483,13 +483,39 @@ export interface FinanceTransaction {
     finance_payee?: FinancePayee | null;
 }
 
+export interface FinanceTransactionView {
+    id: string;
+    source_id: string;
+    category_id: string | null;
+    direction: FinanceTransactionDirection;
+    amount: number;
+    currency: FinanceCurrency;
+    merchant: string | null;
+    payee_id: string | null;
+    reference_number: string | null;
+    transaction_date: string;
+    notes: string | null;
+    created_at: string;
+    finance_source?: FinanceReferenceOption | null;
+    category?: FinanceCategoryDetail | null;
+    finance_payee?: FinanceReferenceOption | null;
+}
+
+export interface FinanceDashboardRecentTransaction {
+    id: string;
+    direction: FinanceTransactionDirection;
+    amount: number;
+    merchant: string | null;
+    transaction_date: string;
+    finance_source?: Pick<FinanceReferenceOption, 'name'> | null;
+    finance_payee?: Pick<FinanceReferenceOption, 'name'> | null;
+}
+
 export interface FinanceDashboardSummary {
-    month: string;
     total_expense: number;
     total_income: number;
     net_cash_flow: number;
-    review_count: number;
-    recent_transactions: FinanceTransaction[];
+    recent_transactions: FinanceDashboardRecentTransaction[];
     expense_by_category: Array<{
         category_id: string | null;
         label: string;
@@ -580,6 +606,45 @@ export interface FinanceCandidateTransaction {
     duplicate_transaction?: FinanceTransaction | null;
 }
 
+export interface FinanceReviewIntake {
+    ocr_text: string | null;
+    ocr_raw_text: string | null;
+    ocr_normalized_text: string | null;
+    ocr_confidence: number | null;
+    normalizer_version: number | null;
+}
+
+export interface FinanceReviewDuplicateTransaction {
+    id: string;
+    amount: number;
+    currency: FinanceCurrency;
+    merchant: string | null;
+    transaction_date: string;
+    finance_source?: Pick<FinanceReferenceOption, 'name'> | null;
+    finance_payee?: Pick<FinanceReferenceOption, 'name'> | null;
+}
+
+export interface FinanceReviewCandidate {
+    id: string;
+    payload: FinanceCandidatePayload;
+    confidence: number | null;
+    duplicate_outcome: FinanceDuplicateOutcome;
+    duplicate_signals: FinanceDuplicateSignal[];
+    duplicate_explanation: string | null;
+    intake?: FinanceReviewIntake | null;
+    duplicate_transaction?: FinanceReviewDuplicateTransaction | null;
+}
+
+export type FinanceFailedIntake = Pick<
+    FinanceIntakeItem,
+    | 'id'
+    | 'original_filename'
+    | 'processing_attempt_count'
+    | 'failure_code'
+    | 'failure_stage'
+    | 'error_message'
+>;
+
 export interface FinanceRule {
     id: string;
     user_id: string;
@@ -596,6 +661,26 @@ export interface FinanceRule {
     learning_evidence_count: number | null;
     created_at: string;
     updated_at: string;
+}
+
+export interface FinanceRuleView extends Pick<
+    FinanceRule,
+    | 'id'
+    | 'name'
+    | 'match_type'
+    | 'pattern'
+    | 'category_id'
+    | 'source_id'
+    | 'direction'
+    | 'priority'
+    | 'is_active'
+    | 'source'
+    | 'auto_created_at'
+    | 'learning_evidence_count'
+    | 'created_at'
+> {
+    finance_source?: Pick<FinanceReferenceOption, 'name'> | null;
+    category?: Pick<FinanceReferenceOption, 'name'> | null;
 }
 
 export type FinanceLearnedFieldName = 'reference_number';
@@ -637,6 +722,60 @@ export interface FinanceRuleSuggestion {
     finance_source?: FinanceSource | null;
 }
 
+export interface FinanceRuleSuggestionView extends Pick<
+    FinanceRuleSuggestion,
+    | 'id'
+    | 'name'
+    | 'pattern'
+    | 'match_type'
+    | 'category_id'
+    | 'source_id'
+    | 'direction'
+    | 'priority'
+    | 'evidence_count'
+> {
+    category?: Pick<FinanceReferenceOption, 'name'> | null;
+    finance_source?: Pick<FinanceReferenceOption, 'name'> | null;
+}
+
+export type FinanceOcrSource = Pick<
+    FinanceSource,
+    'id' | 'name' | 'filename_aliases' | 'ocr_aliases' | 'is_archived'
+>;
+
+export type FinanceOcrRule = Pick<
+    FinanceRule,
+    | 'id'
+    | 'name'
+    | 'match_type'
+    | 'pattern'
+    | 'category_id'
+    | 'source_id'
+    | 'direction'
+    | 'priority'
+    | 'is_active'
+    | 'source'
+    | 'auto_created_at'
+    | 'created_at'
+>;
+
+export type FinanceOcrFieldLearningRule = Pick<
+    FinanceFieldLearningRule,
+    | 'id'
+    | 'source_id'
+    | 'field_name'
+    | 'transform_type'
+    | 'transform_value'
+    | 'evidence_count'
+    | 'is_active'
+    | 'created_at'
+>;
+
+export type FinanceOcrPayee = Pick<
+    FinancePayee,
+    'id' | 'name' | 'normalized_name' | 'is_archived'
+>;
+
 export interface FinanceSourceDetectionSignal {
     source_id: string;
     source_name: string;
@@ -659,12 +798,6 @@ export interface FinanceShareBatchItem {
     id: string;
     original_filename: string | null;
     status: FinanceShareBatchItemStatus;
-    attempt_count: number;
-    failure_code: string | null;
-    failure_stage: string | null;
-    intake_item_id: string | null;
-    created_at?: string;
-    updated_at?: string;
 }
 
 export interface FinanceShareBatch {
@@ -677,7 +810,5 @@ export interface FinanceShareBatch {
     review_files: number;
     duplicate_files: number;
     failed_files: number;
-    created_at: string;
-    updated_at: string;
     items: FinanceShareBatchItem[];
 }

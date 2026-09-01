@@ -1,4 +1,4 @@
-import type { FinanceReferenceOption, FinanceTransaction } from '@/lib/types';
+import type { FinanceReferenceOption, FinanceTransactionView } from '@/lib/types';
 
 export type FinanceLedgerPeriod = 'all' | 'this_month' | 'last_30_days' | 'custom';
 
@@ -6,7 +6,7 @@ export interface FinanceLedgerGroup {
     date: string;
     expenseTotal: number;
     incomeTotal: number;
-    transactions: FinanceTransaction[];
+    transactions: FinanceTransactionView[];
 }
 
 export interface FinanceLedgerFilterOption extends FinanceReferenceOption {
@@ -111,7 +111,7 @@ export function getFinanceLedgerPeriodRange(
     return { dateFrom: formatInputDate(todayDate), dateTo: today };
 }
 
-export function groupFinanceLedgerTransactions(transactions: FinanceTransaction[]) {
+export function groupFinanceLedgerTransactions(transactions: FinanceTransactionView[]) {
     const groups = new Map<string, FinanceLedgerGroup>();
 
     transactions.forEach((transaction) => {
@@ -154,7 +154,7 @@ function mergeFinanceLedgerFilterOptions(
 
 export function getFinanceLedgerSourceOptions(
     activeOptions: FinanceReferenceOption[],
-    transactions: FinanceTransaction[]
+    transactions: FinanceTransactionView[]
 ) {
     return mergeFinanceLedgerFilterOptions(
         activeOptions,
@@ -164,7 +164,7 @@ export function getFinanceLedgerSourceOptions(
 
 export function getFinanceLedgerCategoryOptions(
     activeOptions: FinanceReferenceOption[],
-    transactions: FinanceTransaction[]
+    transactions: FinanceTransactionView[]
 ) {
     return mergeFinanceLedgerFilterOptions(
         activeOptions,

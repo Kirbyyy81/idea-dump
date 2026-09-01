@@ -10,10 +10,10 @@ interface FormFieldBaseProps {
     className?: string;
 }
 
-type InputFieldProps = FormFieldBaseProps & Omit<InputProps, 'error'> & { multiline?: false };
-type TextareaFieldProps = FormFieldBaseProps & Omit<TextareaProps, 'error'> & { multiline: true };
+type SingleLineFormFieldProps = FormFieldBaseProps & Omit<InputProps, 'error'> & { multiline?: false };
+type MultilineFormFieldProps = FormFieldBaseProps & Omit<TextareaProps, 'error'> & { multiline: true };
 
-type FormFieldProps = InputFieldProps | TextareaFieldProps;
+type FormFieldProps = SingleLineFormFieldProps | MultilineFormFieldProps;
 
 export const FormField = forwardRef<HTMLInputElement | HTMLTextAreaElement, FormFieldProps>(
     ({ label, error, required, className, multiline, id: providedId, 'aria-describedby': describedBy, ...props }, ref) => {

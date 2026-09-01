@@ -7,24 +7,12 @@ import {
 } from '@/lib/finance/core/auth';
 import { parseFinanceReviewAction } from '@/lib/finance/core/schemas';
 import {
-    getFinanceReviewQueueForUser,
     isFinanceServiceError,
     resolveFinanceReviewCandidateForUser,
 } from '@/lib/finance/core/service';
 import { FINANCE_TIME_ZONE_HEADER, getFinanceDateInTimeZone } from '@/lib/finance/core/values';
 
 export const dynamic = 'force-dynamic';
-
-export async function GET() {
-    try {
-        const session = await authorizeFinance();
-        if ('response' in session) return session.response;
-        return NextResponse.json(await getFinanceReviewQueueForUser(session.user.id));
-    } catch (error) {
-        console.error('Error fetching finance review queue:', error);
-        return jsonError('Failed to fetch review queue', 500);
-    }
-}
 
 export async function POST(request: NextRequest) {
     try {
@@ -42,8 +30,8 @@ export async function POST(request: NextRequest) {
             getFinanceDateInTimeZone(request.headers.get(FINANCE_TIME_ZONE_HEADER))
         );
         if (result.kind === 'success') return NextResponse.json({ success: true });
-        if (result.kind === 'duplicate') return NextResponse.json({ success: true, data: result.data });
-        return NextResponse.json({ data: result.data });
+        if (result.kind === 'candidate') return NextResponse.json({ data: result.data });
+        return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Error resolving finance review item:', error);
         if (isFinanceServiceError(error)) {

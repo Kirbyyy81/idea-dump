@@ -1,6 +1,26 @@
+import {
+    getDateInTimeZone as getFinanceDateInTimeZone,
+    getLocalDate as getLocalFinanceDate,
+    getLocalMonth as getLocalFinanceMonth,
+    getLocalTimeZone as getFinanceTimeZone,
+    getMonthRange as getFinanceMonthRange,
+    isFutureDate as isFutureFinanceDate,
+    normalizeDate as normalizeFinanceDate,
+    shiftMonth as shiftFinanceMonth,
+} from '@/shared/date';
+
+export {
+    getFinanceDateInTimeZone,
+    getFinanceMonthRange,
+    getFinanceTimeZone,
+    getLocalFinanceDate,
+    getLocalFinanceMonth,
+    isFutureFinanceDate,
+    normalizeFinanceDate,
+    shiftFinanceMonth,
+};
+
 const FINANCE_AMOUNT_PATTERN = /^\d+(?:\.\d{1,2})?$/;
-const FINANCE_MONTH_PATTERN = /^(\d{4})-(0[1-9]|1[0-2])$/;
-const FINANCE_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 export const MAX_FINANCE_AMOUNT = 999_999_999_999.99;
 export const MAX_FINANCE_NAME_LENGTH = 120;
@@ -9,14 +29,11 @@ export const MAX_FINANCE_PAYEE_LENGTH = 500;
 export const MAX_FINANCE_REFERENCE_LENGTH = 200;
 export const MAX_FINANCE_NOTES_LENGTH = 2500;
 export const FINANCE_TIME_ZONE_HEADER = 'X-Finance-Time-Zone';
+export const FINANCE_TIME_ZONE = 'Asia/Kuala_Lumpur';
 
 const MAX_FINANCE_AMOUNT_MINOR_UNITS = BigInt('99999999999999');
 const ONE_HUNDRED = BigInt(100);
 const ZERO = BigInt(0);
-
-function pad(value: number, length = 2) {
-    return String(value).padStart(length, '0');
-}
 
 export function toFinanceAmountMinorUnits(value: unknown) {
     const text = typeof value === 'number'
@@ -38,98 +55,6 @@ export function financeMinorUnitsToNumber(value: bigint) {
 export function toPositiveFinanceAmount(value: unknown) {
     const minorUnits = toFinanceAmountMinorUnits(value);
     return minorUnits === null ? null : financeMinorUnitsToNumber(minorUnits);
-}
-
-function isLeapYear(year: number) {
-    return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
-}
-
-function daysInMonth(year: number, month: number) {
-    if (month === 2) return isLeapYear(year) ? 29 : 28;
-    return [4, 6, 9, 11].includes(month) ? 30 : 31;
-}
-
-export function normalizeFinanceDate(value: unknown) {
-    const text = typeof value === 'string' ? value.trim() : '';
-    const match = FINANCE_DATE_PATTERN.exec(text);
-    if (!match) return null;
-
-    const year = Number(match[1]);
-    const month = Number(match[2]);
-    const day = Number(match[3]);
-    if (year < 1 || month < 1 || month > 12 || day < 1 || day > daysInMonth(year, month)) {
-        return null;
-    }
-    return `${pad(year, 4)}-${pad(month)}-${pad(day)}`;
-}
-
-export function getFinanceMonthRange(value: unknown) {
-    const text = typeof value === 'string' ? value.trim() : '';
-    const match = FINANCE_MONTH_PATTERN.exec(text);
-    if (!match) return null;
-
-    const year = Number(match[1]);
-    const month = Number(match[2]);
-    if (year < 1) return null;
-
-    const nextYear = month === 12 ? year + 1 : year;
-    const nextMonth = month === 12 ? 1 : month + 1;
-    return {
-        month: text,
-        monthStart: `${pad(year, 4)}-${pad(month)}-01`,
-        nextMonthStart: `${pad(nextYear, Math.max(4, String(nextYear).length))}-${pad(nextMonth)}-01`,
-    };
-}
-
-export function shiftFinanceMonth(value: unknown, offset: number) {
-    const text = typeof value === 'string' ? value.trim() : '';
-    const match = FINANCE_MONTH_PATTERN.exec(text);
-    if (!match || !Number.isInteger(offset)) return null;
-
-    const year = Number(match[1]);
-    const month = Number(match[2]);
-    const shiftedIndex = year * 12 + month - 1 + offset;
-    const shiftedYear = Math.floor(shiftedIndex / 12);
-    const shiftedMonth = shiftedIndex % 12 + 1;
-    if (shiftedYear < 1 || shiftedYear > 9999) return null;
-    return `${pad(shiftedYear, 4)}-${pad(shiftedMonth)}`;
-}
-
-export function getLocalFinanceDate(date = new Date()) {
-    return `${pad(date.getFullYear(), 4)}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
-
-export function getLocalFinanceMonth(date = new Date()) {
-    return getLocalFinanceDate(date).slice(0, 7);
-}
-
-export function getFinanceTimeZone() {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-}
-
-export function getFinanceDateInTimeZone(timeZone: unknown, date = new Date()) {
-    const requestedTimeZone = typeof timeZone === 'string' ? timeZone.trim() : '';
-    try {
-        const parts = new Intl.DateTimeFormat('en-CA', {
-            timeZone: requestedTimeZone || 'UTC',
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-        }).formatToParts(date);
-        const year = parts.find((part) => part.type === 'year')?.value;
-        const month = parts.find((part) => part.type === 'month')?.value;
-        const day = parts.find((part) => part.type === 'day')?.value;
-        const normalized = normalizeFinanceDate(`${year}-${month}-${day}`);
-        return normalized || getLocalFinanceDate(date);
-    } catch {
-        return getLocalFinanceDate(date);
-    }
-}
-
-export function isFutureFinanceDate(value: unknown, today = getLocalFinanceDate()) {
-    const date = normalizeFinanceDate(value);
-    const currentDate = normalizeFinanceDate(today);
-    return Boolean(date && currentDate && date > currentDate);
 }
 
 export type FinanceTransactionField =

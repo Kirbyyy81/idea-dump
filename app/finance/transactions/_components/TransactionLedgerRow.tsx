@@ -16,7 +16,7 @@ import {
     SparkleDoodleIcon,
     TransportDoodleIcon,
 } from '@/components/atoms/DoodleIcons';
-import type { FinanceTransaction } from '@/lib/types';
+import type { FinanceTransactionView } from '@/lib/types';
 import { cn, formatCurrency } from '@/lib/utils';
 import {
     getFinanceLedgerCategoryIcon,
@@ -24,11 +24,11 @@ import {
 import type { FinanceLedgerCategoryIcon } from './transactionLedger';
 
 interface TransactionLedgerRowProps {
-    transaction: FinanceTransaction;
-    onDelete: (transaction: FinanceTransaction) => void;
+    transaction: FinanceTransactionView;
+    onDelete: (transaction: FinanceTransactionView) => void;
 }
 
-export function getFinanceTransactionRecipient(transaction: FinanceTransaction) {
+export function getFinanceTransactionRecipient(transaction: FinanceTransactionView) {
     return transaction.finance_payee?.name || transaction.merchant || 'Untitled transaction';
 }
 

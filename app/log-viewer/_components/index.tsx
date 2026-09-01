@@ -353,7 +353,7 @@ export function LogViewer() {
             <Toggle
               checked={errorsOnly}
               onChange={setErrorsOnly}
-              label="Errors only"
+              toggleLabel="Errors only"
               className="self-end"
             />
 

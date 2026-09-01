@@ -1,11 +1,11 @@
-import type { FinanceFieldLearningRule } from '@/lib/types';
+import type { FinanceOcrFieldLearningRule } from '@/lib/types';
 
 interface AppliedReferenceRule {
     referenceNumber: string | null;
     matchedRuleIds: string[];
 }
 
-const transformRank: Record<FinanceFieldLearningRule['transform_type'], number> = {
+const transformRank: Record<FinanceOcrFieldLearningRule['transform_type'], number> = {
     strip_prefix: 0,
     strip_suffix: 1,
     digits_only: 2,
@@ -16,14 +16,14 @@ function normalizeReference(value: string) {
     return value.normalize('NFKC').trim().toUpperCase();
 }
 
-function compareRules(left: FinanceFieldLearningRule, right: FinanceFieldLearningRule) {
+function compareRules(left: FinanceOcrFieldLearningRule, right: FinanceOcrFieldLearningRule) {
     return right.evidence_count - left.evidence_count
         || transformRank[left.transform_type] - transformRank[right.transform_type]
         || left.created_at.localeCompare(right.created_at)
         || left.id.localeCompare(right.id);
 }
 
-function transformReference(reference: string, rule: FinanceFieldLearningRule) {
+function transformReference(reference: string, rule: FinanceOcrFieldLearningRule) {
     const value = rule.transform_value ? normalizeReference(rule.transform_value) : null;
     if (rule.transform_type === 'strip_prefix') {
         return value && reference.startsWith(value) ? reference.slice(value.length).trim() : reference;
@@ -38,7 +38,7 @@ function transformReference(reference: string, rule: FinanceFieldLearningRule) {
 export function applyLearnedReferenceRules(
     referenceNumber: string | null,
     sourceId: string | null,
-    rules: FinanceFieldLearningRule[],
+    rules: FinanceOcrFieldLearningRule[],
 ): AppliedReferenceRule {
     if (!referenceNumber || !sourceId) {
         return { referenceNumber, matchedRuleIds: [] };

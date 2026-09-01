@@ -13,7 +13,6 @@ export interface FinanceShareUploadFile {
 
 interface PreparedUpload {
     client_id: string;
-    item_id: string;
     path: string;
     token: string;
 }
@@ -30,7 +29,6 @@ interface CommitResponse {
     data: {
         batch_id: string;
         safe_to_close: boolean;
-        wake_requested: boolean;
     };
 }
 

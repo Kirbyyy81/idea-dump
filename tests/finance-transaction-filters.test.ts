@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
     financeTransactionsHref,
+    parseFinanceTransactionListFilters,
     parseFinanceTransactionFilters,
 } from '@/lib/finance/transactions/filters';
 
@@ -86,5 +87,42 @@ describe('Finance transaction filters', () => {
         [{ date_from: '2026-08-31', date_to: '2026-08-01' }, 'Start date must be on or before end date'],
     ])('rejects invalid or conflicting filters', (values, error) => {
         expect(parseFinanceTransactionFilters(new URLSearchParams(values))).toEqual({ error });
+    });
+
+    it('parses the complete server-rendered ledger query', () => {
+        expect(parseFinanceTransactionListFilters(new URLSearchParams({
+            category_id: CATEGORY_ID,
+            date: '2026-08-13',
+            source_id: SOURCE_ID,
+            status: 'review',
+            q: '  Lunch (team),  ',
+        }))).toEqual({
+            data: {
+                categoryId: CATEGORY_ID,
+                date: '2026-08-13',
+                dateFrom: null,
+                dateTo: null,
+                direction: null,
+                uncategorised: false,
+                sourceId: SOURCE_ID,
+                status: 'review',
+                query: 'Lunch team',
+            },
+        });
+    });
+
+    it('defaults invalid statuses and rejects invalid source IDs', () => {
+        expect(parseFinanceTransactionListFilters(new URLSearchParams({
+            status: 'unknown',
+        }))).toMatchObject({
+            data: {
+                status: 'confirmed',
+                sourceId: null,
+                query: null,
+            },
+        });
+        expect(parseFinanceTransactionListFilters(new URLSearchParams({
+            source_id: 'not-an-id',
+        }))).toEqual({ error: 'Source ID must be a valid UUID' });
     });
 });

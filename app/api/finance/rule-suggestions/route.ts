@@ -6,24 +6,12 @@ import {
     isFinanceUuid,
 } from '@/lib/finance/core/schemas';
 import {
-    getFinanceRuleSuggestions,
     isFinanceServiceError,
     resolveFinanceRuleSuggestionForUser,
     updateFinanceRuleSuggestionForUser,
 } from '@/lib/finance/core/service';
 
 export const dynamic = 'force-dynamic';
-
-export async function GET() {
-    try {
-        const session = await authorizeFinance();
-        if ('response' in session) return session.response;
-        return NextResponse.json({ data: await getFinanceRuleSuggestions(session.user.id) });
-    } catch (error) {
-        console.error('Error fetching finance rule suggestions:', error);
-        return jsonError('Failed to fetch finance rule suggestions', 500);
-    }
-}
 
 export async function PATCH(request: NextRequest) {
     try {
@@ -52,10 +40,8 @@ export async function POST(request: NextRequest) {
         if (!id) return jsonError('Suggestion ID is required');
         if (!isFinanceUuid(id)) return jsonError('Suggestion ID must be a valid UUID');
         if (action !== 'accept' && action !== 'reject') return jsonError('Invalid suggestion action');
-        const result = await resolveFinanceRuleSuggestionForUser(session.user.id, id, action);
-        return result.accepted
-            ? NextResponse.json({ success: true, data: result.data })
-            : NextResponse.json({ success: true });
+        await resolveFinanceRuleSuggestionForUser(session.user.id, id, action);
+        return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Error resolving finance rule suggestion:', error);
         if (isFinanceServiceError(error)) return jsonError(error.message, error.status);

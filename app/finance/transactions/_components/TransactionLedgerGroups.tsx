@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import type { FinanceTransaction } from '@/lib/types';
+import type { FinanceTransactionView } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { TransactionLedgerRow } from './TransactionLedgerRow';
 import {
@@ -11,8 +11,8 @@ import {
 
 interface TransactionLedgerGroupsProps {
     isLoading: boolean;
-    onDelete: (transaction: FinanceTransaction) => void;
-    transactions: FinanceTransaction[];
+    onDelete: (transaction: FinanceTransactionView) => void;
+    transactions: FinanceTransactionView[];
 }
 
 export function TransactionLedgerGroups({

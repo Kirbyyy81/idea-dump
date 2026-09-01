@@ -1,6 +1,6 @@
-import { isFinanceUuid } from '@/lib/finance/core/schemas';
+import type { FinanceTransactionDirection, FinanceTransactionStatus } from '@/lib/types';
+import { isFinanceTransactionStatus, isFinanceUuid } from '@/lib/finance/core/schemas';
 import { normalizeFinanceDate } from '@/lib/finance/core/values';
-import type { FinanceTransactionDirection } from '@/lib/types';
 
 export const FINANCE_TRANSACTION_FILTER_KEYS = {
     categoryId: 'category_id',
@@ -20,6 +20,12 @@ export interface FinanceTransactionFilters {
     direction: FinanceTransactionDirection | null;
     sourceId: string | null;
     uncategorised: boolean;
+}
+
+export interface FinanceTransactionListFilters extends FinanceTransactionFilters {
+    status: FinanceTransactionStatus;
+    sourceId: string | null;
+    query: string | null;
 }
 
 type FinanceTransactionFilterResult =
@@ -80,6 +86,33 @@ export function parseFinanceTransactionFilters(
             direction: rawDirection as FinanceTransactionDirection | null,
             sourceId,
             uncategorised: rawUncategorised === 'true',
+        },
+    };
+}
+
+type FinanceTransactionListFilterResult =
+    | { data: FinanceTransactionListFilters }
+    | { error: string };
+
+export function parseFinanceTransactionListFilters(
+    searchParams: Pick<URLSearchParams, 'get'>
+): FinanceTransactionListFilterResult {
+    const financeFilters = parseFinanceTransactionFilters(searchParams);
+    if ('error' in financeFilters) return financeFilters;
+
+    const status = searchParams.get('status');
+    const query = searchParams.get('q')
+        ?.trim()
+        .slice(0, 100)
+        .replace(/[,()*]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim() || null;
+
+    return {
+        data: {
+            status: isFinanceTransactionStatus(status) ? status : 'confirmed',
+            query,
+            ...financeFilters.data,
         },
     };
 }

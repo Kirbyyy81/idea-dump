@@ -1,9 +1,9 @@
 import {
-    FinanceSource,
     FinanceCandidatePayload,
-    FinanceFieldLearningRule,
-    FinancePayee,
-    FinanceRule,
+    FinanceOcrFieldLearningRule,
+    FinanceOcrPayee,
+    FinanceOcrRule,
+    FinanceOcrSource,
     FinanceTransactionDirection,
 } from '@/lib/types';
 import { FINANCE_V1_CURRENCY } from '@/lib/finance/core/constants';
@@ -15,6 +15,7 @@ import {
     mergeFinanceRecipientReferenceIntoNotes,
 } from '@/lib/finance/ocr/recipientReference';
 import { detectFinanceSource } from '@/lib/finance/ocr/sourceDetection';
+import { toIsoDate } from '@/shared/date';
 
 interface ParsedCandidate {
     confidence: number;
@@ -51,12 +52,6 @@ function parseAmount(lines: string[]) {
     }
 
     return candidates.sort((a, b) => b.score - a.score)[0]?.amount ?? null;
-}
-
-function toIsoDate(year: number, month: number, day: number) {
-    const date = new Date(Date.UTC(year, month - 1, day));
-    if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null;
-    return `${year.toString().padStart(4, '0')}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
 }
 
 function parseTransactionDate(text: string) {
@@ -125,7 +120,7 @@ function fallbackParty(lines: string[]) {
         }) ?? null;
 }
 
-function matchSavedPayee(value: string | null, payees: FinancePayee[]) {
+function matchSavedPayee(value: string | null, payees: FinanceOcrPayee[]) {
     const key = normalizeFinancePayeeKey(value);
     if (!key) return null;
     return payees.find((payee) => (
@@ -134,7 +129,7 @@ function matchSavedPayee(value: string | null, payees: FinancePayee[]) {
     )) || null;
 }
 
-function parseParties(lines: string[], payees: FinancePayee[]) {
+function parseParties(lines: string[], payees: FinanceOcrPayee[]) {
     const explicitMerchant = labeledPartyValue(lines, /^merchant(?:\s+name)?\s*[:\-]?\s*(.*)$/i);
     const explicitPayee = labeledPartyValue(
         lines,
@@ -162,7 +157,7 @@ function parseParties(lines: string[], payees: FinancePayee[]) {
     return { merchant: fallbackParty(lines), payeeId: null, payeeName: null };
 }
 
-function ruleMatches(rule: FinanceRule, text: string, merchant: string | null) {
+function ruleMatches(rule: FinanceOcrRule, text: string, merchant: string | null) {
     const pattern = rule.pattern.trim().toLowerCase();
     if (!pattern) return false;
     if (rule.match_type === 'merchant_alias') {
@@ -177,14 +172,14 @@ function ruleMatches(rule: FinanceRule, text: string, merchant: string | null) {
     return text.includes(pattern);
 }
 
-const matchTypeRank: Record<FinanceRule['match_type'], number> = {
+const matchTypeRank: Record<FinanceOcrRule['match_type'], number> = {
     exact_phrase: 0,
     merchant_alias: 1,
     keyword: 2,
     account_hint: 3,
 };
 
-function compareFinanceRules(left: FinanceRule, right: FinanceRule) {
+function compareFinanceRules(left: FinanceOcrRule, right: FinanceOcrRule) {
     return left.priority - right.priority
         || matchTypeRank[left.match_type] - matchTypeRank[right.match_type]
         || (left.source === right.source ? 0 : left.source === 'manual' ? -1 : 1)
@@ -194,11 +189,11 @@ function compareFinanceRules(left: FinanceRule, right: FinanceRule) {
 
 export function parseFinanceText(
     normalizedText: string,
-    rules: FinanceRule[],
-    sources: FinanceSource[],
+    rules: FinanceOcrRule[],
+    sources: FinanceOcrSource[],
     filename: string | null = null,
-    fieldLearningRules: FinanceFieldLearningRule[] = [],
-    payees: FinancePayee[] = [],
+    fieldLearningRules: FinanceOcrFieldLearningRule[] = [],
+    payees: FinanceOcrPayee[] = [],
 ): ParsedCandidate {
     const lines = normalizedText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
     const normalized = lines.join('\n').toLowerCase();

@@ -18,7 +18,6 @@ export async function POST(request: NextRequest) {
             data: {
                 batch_id: data.batch_id,
                 safe_to_close: true,
-                wake_requested: data.wake_requested,
             },
         }, {
             status: 202,
