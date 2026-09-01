@@ -15,6 +15,7 @@ import { Toggle } from '@/components/atoms/Toggle';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
 import {
     FinanceRule,
+    FinanceLearningSummary,
     FinanceRuleSuggestionView,
     FinanceRuleView,
     FinanceTransactionDirection,
@@ -28,6 +29,7 @@ import { financeApiRequest } from '@/lib/finance/core/client';
 import { sortFinanceRules } from '@/lib/finance/rules';
 import { useFinanceReferenceData } from '@/app/finance/_components/FinanceReferenceDataProvider';
 import { FinanceReferenceDataState } from '@/app/finance/_components/FinanceReferenceDataState';
+import { LearningSummaryPanel } from '@/app/finance/settings/_components/LearningSummaryPanel';
 import {
     FinanceSettingsColumns,
     FinanceSettingsFormCard,
@@ -67,6 +69,7 @@ export function RulesSettingsPanel() {
     } = useFinanceReferenceData();
     const [rules, setRules] = useState<RuleWithRelations[]>([]);
     const [suggestions, setSuggestions] = useState<FinanceRuleSuggestionView[]>([]);
+    const [learning, setLearning] = useState<FinanceLearningSummary>({ availability: 'never_run' });
     const [editingSuggestion, setEditingSuggestion] = useState<FinanceRuleSuggestionView | null>(null);
     const [form, setForm] = useState(initialForm);
     const [isSaving, setIsSaving] = useState(false);
@@ -81,9 +84,11 @@ export function RulesSettingsPanel() {
             const rulesPayload = await financeApiRequest<{
                 data: RuleWithRelations[];
                 suggestions: FinanceRuleSuggestionView[];
+                learning: FinanceLearningSummary;
             }>('/api/finance/rules', { signal });
             setRules(sortFinanceRules(rulesPayload.data || []));
             setSuggestions(rulesPayload.suggestions || []);
+            setLearning(rulesPayload.learning || { availability: 'unavailable' });
         } catch (error) {
             if (signal?.aborted) return;
             showError(error instanceof Error ? error.message : 'Could not load finance rules');
@@ -215,6 +220,8 @@ export function RulesSettingsPanel() {
                         retry={refreshReferenceData}
                     />
                 ) : null}
+
+                <LearningSummaryPanel isLoading={isLoading} summary={learning} />
 
                 {!isLoading && suggestions.length > 0 ? (
                     <section className="border border-border-default bg-bg-subtle">

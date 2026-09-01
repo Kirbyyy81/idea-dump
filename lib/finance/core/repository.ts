@@ -213,6 +213,12 @@ export async function listFinanceRules(userId: string) {
         .order('created_at', { ascending: false });
 }
 
+export async function getFinanceLearningSummary(userId: string) {
+    return createAdminClient().rpc('finance_learning_summary_v1', {
+        p_user_id: userId,
+    });
+}
+
 export async function listActiveFinanceRules(userId: string) {
     return createAdminClient()
         .from('finance_rules')

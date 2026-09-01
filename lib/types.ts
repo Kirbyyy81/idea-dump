@@ -722,6 +722,54 @@ export type FinanceParserTemplateStatus =
     | 'rejected'
     | 'disabled';
 
+export interface FinanceLearningTemplateCounts {
+    active_source: number;
+    active_field: number;
+    proposed: number;
+    shadow: number;
+    rejected: number;
+    disabled: number;
+}
+
+export interface FinanceLearningActiveMetric {
+    field_name: FinanceParserTemplateField;
+    template_count: number;
+    minimum_precision: number | null;
+    average_coverage: number | null;
+}
+
+export interface FinanceLearningRecentOutcome {
+    field_name: FinanceParserTemplateField;
+    status: 'rejected' | 'disabled';
+    reason: string;
+    updated_at: string;
+}
+
+export interface FinanceLearningLatestRun {
+    status: 'succeeded' | 'failed';
+    finished_at: string;
+    failure_code: string | null;
+    corrections_examined: number;
+    category_rules_created: number;
+    category_rules_updated: number;
+    category_rules_disabled: number;
+    reference_rules_created: number;
+    reference_rules_updated: number;
+    reference_rules_disabled: number;
+}
+
+export type FinanceLearningSummary =
+    | { availability: 'never_run' }
+    | { availability: 'unavailable' }
+    | {
+        availability: 'available';
+        latest_run: FinanceLearningLatestRun;
+        template_counts: FinanceLearningTemplateCounts;
+        active_reference_rules: number;
+        active_metrics: FinanceLearningActiveMetric[];
+        recent_outcomes: FinanceLearningRecentOutcome[];
+    };
+
 export type FinanceParserTemplateEvidenceOutcome =
     | 'supported'
     | 'contradicted'
