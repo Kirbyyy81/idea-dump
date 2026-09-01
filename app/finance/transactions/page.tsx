@@ -39,8 +39,6 @@ export default async function FinanceTransactionsPage({
     return (
         <FinanceTransactionsClient
             key={filterQuery || 'default'}
-            filterQuery={filterQuery}
-            filters={parsed.data}
             initialQuery={parsed.data.query || ''}
             initialTransactions={transactions}
         />

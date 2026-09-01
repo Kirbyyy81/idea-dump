@@ -108,6 +108,7 @@ import {
     FinanceRule,
     FinanceSourceDetail,
     FinanceTransaction,
+    FinanceTransactionDirection,
 } from '@/lib/types';
 
 const TRANSACTION_PAGE_SIZE = 500;
@@ -459,6 +460,9 @@ export async function getFinanceTransactions(
         query: string | null;
         categoryId: string | null;
         date: string | null;
+        dateFrom: string | null;
+        dateTo: string | null;
+        direction: FinanceTransactionDirection | null;
         uncategorised: boolean;
     }
 ) {
@@ -467,6 +471,20 @@ export async function getFinanceTransactions(
         pageSize: TRANSACTION_PAGE_SIZE,
     });
     return transactions.map(toFinanceTransactionView);
+}
+
+export async function getFinanceTransactionForUser(
+    userId: string,
+    transactionId: string
+) {
+    const { data, error } = await findFinanceTransaction(userId, transactionId);
+    if (error) throw error;
+    if (!data) fail('Transaction not found', 404);
+    const transaction = normalizeFinanceTransaction(data as unknown as FinanceTransaction);
+    if (transaction.status !== 'confirmed') {
+        fail('Only confirmed ledger transactions can be edited', 409);
+    }
+    return transaction;
 }
 
 export async function createManualFinanceTransactionForUser(

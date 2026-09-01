@@ -64,6 +64,9 @@ describe('server-rendered Finance record pages', () => {
         expect(transactionService).toHaveBeenCalledWith('user-1', {
             categoryId: CATEGORY_ID,
             date: '2026-08-13',
+            dateFrom: null,
+            dateTo: null,
+            direction: null,
             query: 'Lunch',
             sourceId: SOURCE_ID,
             status: 'confirmed',
