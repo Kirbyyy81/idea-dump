@@ -8,6 +8,18 @@ import type { FinanceOcrFieldTemplate, FinanceOcrPayee, FinanceParserTemplateCon
 const database = process.env.FINANCE_PARSER_TEST_DATABASE_URL;
 const psql = process.env.FINANCE_PARSER_TEST_PSQL ?? 'psql';
 const cases: Array<{ field: FinanceOcrFieldTemplate['field_name']; config: FinanceParserTemplateConfiguration; text: string; filename?: string; payees?: FinanceOcrPayee[] }> = [
+    ...([
+        ['tng_date', 'transaction_date', 'Date/Time 05/09/2026 12:22:34'],
+        ['tng_date', 'transaction_date', 'Date & Time 31/02/2026 00:27:24'],
+        ['ryt_date', 'transaction_date', '5 Sep 2026, 7.09 PM'],
+        ['signed_direction', 'direction', '-RM2.55 +2 points'],
+        ['signed_direction', 'direction', '+RM2.55\nTransaction Type Payment'],
+        ['signed_direction', 'direction', 'Transaction Type Transfer to Wallet'],
+        ['tng_wallet_before', 'reference_number', '2026090311121700010100171275872567\nWallet Ref 1"\n164'],
+        ['tng_wallet_wrapped', 'reference_number', 'Wallet Ref ABC12345678901234567890\n71275836468129\nStatus Successful'],
+        ['tng_wallet_wrapped', 'reference_number', 'Wallet Ref ABC12345678901234567890\n154'],
+    ] as const).map(([pattern, field, text]) => ({ field, text, config: { type: 'receipt_pattern' as const, pattern } })),
+    { field: 'direction', config: { type: 'direction_phrase', phrases: ['transaction type payment'], direction: 'expense' }, text: '+RM2.55\nTransaction Type Payment' },
     ...['Screenshot_20260901_164928_Ryt Bank.png', 'Screenshot_20260230_164928.png', 'capture.png'].map((filename) => ({
         field: 'transaction_date' as const, config: { type: 'filename_date' as const, relative_day: 'today' as const }, text: 'Today, 1:43 PM', filename,
     })),

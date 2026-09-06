@@ -45,6 +45,7 @@ const templateTypes = [
     'saved_payee_match',
     'filename_date',
     'reference_label',
+    'receipt_pattern',
 ] as const satisfies readonly FinanceParserTemplateType[];
 
 const templateFields = [
@@ -84,6 +85,7 @@ const allowedFieldsByType: Record<FinanceParserTemplateType, readonly FinancePar
     saved_payee_match: ['payee_name'],
     filename_date: ['transaction_date'],
     reference_label: ['reference_number'],
+    receipt_pattern: ['transaction_date', 'reference_number', 'direction'],
 };
 
 const allowedFieldsByPattern: Record<FinanceParserTemplatePatternId, readonly FinanceParserTemplateField[]> = {
@@ -247,6 +249,10 @@ function getConfigurationShapeError(configuration: Record<string, unknown>) {
                 && hasValidPhraseList(configuration.phrases)
                 && ['expense', 'income'].includes(String(configuration.direction))
                 ? null : 'Direction-phrase configuration is invalid.';
+        case 'receipt_pattern':
+            return hasExactKeys(configuration, ['type', 'pattern'])
+                && ['tng_date', 'ryt_date', 'signed_direction', 'tng_wallet_before', 'tng_wallet_wrapped'].includes(String(configuration.pattern))
+                ? null : 'Receipt pattern configuration is invalid.';
         case 'filename_date':
             return hasExactKeys(configuration, ['type', 'relative_day']) && configuration.relative_day === 'today'
                 ? null : 'Filename date configuration is invalid.';
@@ -282,6 +288,11 @@ export function getFinanceParserTemplateConfigurationErrors(
     }
     if (!allowedFieldsByType[templateType as FinanceParserTemplateType].includes(fieldName)) {
         errors.push('Template type is not valid for the selected field.');
+    }
+    if (templateType === 'receipt_pattern') {
+        const expected = configuration.pattern === 'signed_direction' ? 'direction'
+            : ['tng_date', 'ryt_date'].includes(String(configuration.pattern)) ? 'transaction_date' : 'reference_number';
+        if (fieldName !== expected) errors.push('Receipt pattern does not match the selected field.');
     }
     if (templateType === 'allowlisted_regex_capture') {
         const patternId = configuration.pattern_id as FinanceParserTemplatePatternId;
@@ -454,6 +465,8 @@ function getTemplateSpecificity(configuration: FinanceParserTemplateConfiguratio
                 anchorLength: Math.min(...configuration.phrases.map((phrase) => phrase.length)),
                 lineWindow: 0,
             };
+        case 'receipt_pattern':
+            return { scopeRank: 5, anchorLength: configuration.pattern.length, lineWindow: 3 };
         case 'filename_date':
             return { scopeRank: 4, anchorLength: 5, lineWindow: 0 };
         case 'reference_label':

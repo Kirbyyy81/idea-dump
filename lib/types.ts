@@ -794,7 +794,8 @@ export type FinanceParserTemplateType =
     | 'direction_phrase'
     | 'saved_payee_match'
     | 'filename_date'
-    | 'reference_label';
+    | 'reference_label'
+    | 'receipt_pattern';
 
 export type FinanceParserTemplateSourceLocation =
     | 'filename'
@@ -896,6 +897,13 @@ export interface FinanceReferenceLabelTemplateConfiguration {
     join: 'space' | 'concat';
 }
 
+export type FinanceApprovedReceiptPattern = 'tng_date' | 'ryt_date' | 'signed_direction' | 'tng_wallet_before' | 'tng_wallet_wrapped';
+
+export interface FinanceReceiptPatternTemplateConfiguration {
+    type: 'receipt_pattern';
+    pattern: FinanceApprovedReceiptPattern;
+}
+
 export type FinanceParserTemplateConfiguration =
     | FinanceSourcePhraseTemplateConfiguration
     | FinanceSameLineLabelTemplateConfiguration
@@ -910,7 +918,8 @@ export type FinanceParserTemplateConfiguration =
     | FinanceDirectionPhraseTemplateConfiguration
     | FinanceSavedPayeeMatchTemplateConfiguration
     | FinanceFilenameDateTemplateConfiguration
-    | FinanceReferenceLabelTemplateConfiguration;
+    | FinanceReferenceLabelTemplateConfiguration
+    | FinanceReceiptPatternTemplateConfiguration;
 
 export interface FinanceParserTemplateContract {
     id: string;
