@@ -510,12 +510,18 @@ export async function listFinanceDashboardMonthTransactions(
     return rows;
 }
 
-export async function listFinanceDashboardRecentTransactions(userId: string) {
+export async function listFinanceDashboardRecentTransactions(
+    userId: string,
+    monthStart: string,
+    nextMonthStart: string
+) {
     return createAdminClient()
         .from('finance_transactions')
         .select(FINANCE_DASHBOARD_RECENT_SELECT)
         .eq('user_id', userId)
         .eq('status', 'confirmed')
+        .gte('transaction_date', monthStart)
+        .lt('transaction_date', nextMonthStart)
         .order('transaction_date', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(6);

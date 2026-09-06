@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { getFinanceDashboard } from '@/lib/finance/core/service';
 import {
     findFinanceTransaction,
     listFinanceReviewQueue,
@@ -13,6 +14,8 @@ const database = vi.hoisted(() => {
         gte: vi.fn(),
         is: vi.fn(),
         lte: vi.fn(),
+        lt: vi.fn(),
+        limit: vi.fn(),
         maybeSingle: vi.fn(),
         or: vi.fn(),
         order: vi.fn(),
@@ -20,7 +23,7 @@ const database = vi.hoisted(() => {
         select: vi.fn(),
         then: (resolve: (value: typeof result) => unknown) => Promise.resolve(resolve(result)),
     };
-    for (const method of ['eq', 'from', 'gte', 'is', 'lte', 'or', 'order', 'range', 'select'] as const) {
+    for (const method of ['eq', 'from', 'gte', 'is', 'lte', 'lt', 'limit', 'or', 'order', 'range', 'select'] as const) {
         query[method].mockReturnValue(query);
     }
     query.maybeSingle.mockResolvedValue(result);
@@ -36,6 +39,29 @@ beforeEach(() => {
 });
 
 describe('Finance transaction repository filters', () => {
+    it.each([
+        ['2026-09', '2026-09-01', '2026-10-01'],
+        ['2026-12', '2026-12-01', '2027-01-01'],
+        ['2024-02', '2024-02-01', '2024-03-01'],
+    ])('limits recent dashboard transactions to the selected month %s', async (month, start, end) => {
+        const summary = await getFinanceDashboard('user-1', month);
+
+        expect(database.gte.mock.calls).toEqual([
+            ['transaction_date', start], ['transaction_date', start],
+        ]);
+        expect(database.lt.mock.calls).toEqual([
+            ['transaction_date', end], ['transaction_date', end],
+        ]);
+        expect(database.eq.mock.calls).toEqual([
+            ['user_id', 'user-1'], ['status', 'confirmed'],
+            ['user_id', 'user-1'], ['status', 'confirmed'],
+        ]);
+        expect(database.order.mock.calls).toContainEqual(['transaction_date', { ascending: false }]);
+        expect(database.order.mock.calls).toContainEqual(['created_at', { ascending: false }]);
+        expect(database.limit).toHaveBeenCalledWith(6);
+        expect(summary.recent_transactions).toEqual([]);
+    });
+
     it('scopes single-transaction reads to both the transaction and user', async () => {
         await findFinanceTransaction(
             'user-4',

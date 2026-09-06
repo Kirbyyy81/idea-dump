@@ -638,7 +638,7 @@ export async function getFinanceDashboard(userId: string, requestedMonth: string
     if (!monthRange) fail('Month must use YYYY-MM format');
     const [monthRows, recentResult] = await Promise.all([
         listFinanceDashboardMonthTransactions(userId, monthRange.monthStart, monthRange.nextMonthStart, DASHBOARD_PAGE_SIZE),
-        listFinanceDashboardRecentTransactions(userId),
+        listFinanceDashboardRecentTransactions(userId, monthRange.monthStart, monthRange.nextMonthStart),
     ]);
     if (recentResult.error) throw recentResult.error;
     const aggregate = aggregateFinanceDashboard(monthRows as FinanceDashboardRow[]);
