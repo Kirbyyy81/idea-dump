@@ -105,11 +105,13 @@ Without these variables, the parity suite is explicitly skipped. Keep credential
 
 Local validation used PostgreSQL 17.10 with synthetic Finance prerequisite tables, the actual September learning migrations, and a Unicode ICU database. It exercised new tables, constraints, triggers, lifecycle, privileges, and a real statement timeout. It did not restore the entire Supabase platform or execute production cron.
 
-Validation results: application lint, TypeScript check, 221 tests, and production build passed. OCR typecheck, build, and 180 tests passed, including 16 live PostgreSQL parity cases. The SQL lifecycle suite passed against a fresh application of the September learning migrations. Dependency audit exceptions are listed below.
+Validation results: application lint, TypeScript check, 221 tests, and production build passed. OCR typecheck, build, and 180 tests passed, including 16 live PostgreSQL parity cases. The SQL lifecycle suite passed against a fresh application of the September learning migrations. The dependency audit failures recorded during initial validation were resolved in the follow-up below.
+
+## Dependency audit follow-up
+
+The CI audit failures were resolved by updating browserslist to 4.28.9, postcss-selector-parser to 6.1.4, Fastify to 5.12.3, and the two fast-uri dependencies to 3.1.7 and 4.1.4. Both projects now pass the full and production-only dependency audits with zero reported vulnerabilities. The CI audit checks remain enabled.
 
 ## Remaining issues
 
 - Live migration ledger reconciliation, full staging verification, representative-history performance checks, and Gates C/D remain pending.
-- Dependency audits on 2026-09-06 reported application development-dependency advisories in browserslist (high) and postcss-selector-parser (low). The application production audit reported zero.
-- OCR production and development audits reported fast-uri (high) and Fastify (moderate) advisories. Dependencies and lockfiles remain unchanged in this feature implementation. Review and update these in a focused dependency patch.
 - Production parsing accuracy and promotion eligibility require retained reviewed history and new live shadow observations.
