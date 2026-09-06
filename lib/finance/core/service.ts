@@ -497,7 +497,11 @@ export async function getFinanceTransactionForUser(
     userId: string,
     transactionId: string
 ) {
-    const { data, error } = await findFinanceTransaction(userId, transactionId);
+    const { data, error } = await findFinanceTransaction(
+        userId,
+        transactionId,
+        `${FINANCE_TRANSACTION_VIEW_SELECT}, source, status`
+    );
     if (error) throw error;
     if (!data) fail('Transaction not found', 404);
     const transaction = normalizeFinanceTransaction(data as unknown as FinanceTransaction);
