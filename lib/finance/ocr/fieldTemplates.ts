@@ -1,3 +1,4 @@
+import { hasReceiptToday, screenshotFilenameDate, receiptReferenceValue } from '@/lib/finance/ocr/receiptPatterns';
 import { templateValueHash } from '@/lib/finance/ocr/templateHash';
 import type {
     FinanceCandidatePayload, FinanceOcrFieldTemplate, FinanceOcrPayee,
@@ -17,10 +18,12 @@ function remainder(line: string, label: string) {
 }
 
 export function extractFinanceTemplateValue(
-    template: FinanceOcrFieldTemplate, text: string, payees: FinanceOcrPayee[] = [],
+    template: FinanceOcrFieldTemplate, text: string, payees: FinanceOcrPayee[] = [], filename: string | null = null,
 ): string | null | undefined {
     const lines = templateLines(text);
     const config = template.configuration;
+    if (config.type === 'filename_date') return hasReceiptToday(text) ? screenshotFilenameDate(filename) : undefined;
+    if (config.type === 'reference_label') return receiptReferenceValue(text, config);
     const validate = (raw: string) => {
         const value = templateValue(template.field_name, raw);
         if (!value || template.field_name !== 'payee_name') return value;
@@ -61,7 +64,7 @@ export function extractFinanceTemplateValue(
 
 export function applyFinanceFieldTemplates(
     text: string, payload: FinanceCandidatePayload, sourceId: string | null,
-    templates: FinanceOcrFieldTemplate[], payees: FinanceOcrPayee[] = [],
+    templates: FinanceOcrFieldTemplate[], payees: FinanceOcrPayee[] = [], filename: string | null = null,
 ) {
     if (!sourceId || !templates.length) return { payload, evaluations: [] as FinanceParserTemplateEvaluation[] };
     const eligible = orderFinanceParserTemplates(templates.filter((template) => (
@@ -74,7 +77,7 @@ export function applyFinanceFieldTemplates(
     for (const field of FINANCE_TEMPLATE_FIELDS) {
         const proposals: Array<{ template: FinanceOcrFieldTemplate; value: string }> = [];
         for (const template of eligible.filter((item) => item.field_name === field).slice(0, 20)) {
-            const value = extractFinanceTemplateValue(template, text, payees);
+            const value = extractFinanceTemplateValue(template, text, payees, filename);
             const evaluation: FinanceParserTemplateEvaluation = {
                 template_id: template.id, field_name: field,
                 status: template.status as 'active' | 'shadow',

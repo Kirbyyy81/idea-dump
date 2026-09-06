@@ -1,3 +1,4 @@
+import { receiptReferenceValue } from '@/lib/finance/ocr/receiptPatterns';
 interface ReferenceCandidate {
     value: string;
     labelRank: number;
@@ -38,6 +39,19 @@ function windowCandidates(
 }
 
 export function extractFinanceReferenceNumber(text: string) {
+    for (const label of ['reference id', 'wallet ref', 'reference no', 'transaction no'] as const) {
+        for (let maxLines = 3; maxLines >= 1; maxLines -= 1) {
+            const values = new Set<string>();
+            for (const placement of ['inline', 'after', 'before'] as const) {
+                const value = receiptReferenceValue(text, {
+                    type: 'reference_label', label, placement, max_lines: maxLines, join: 'concat',
+                });
+                if (value) values.add(value);
+            }
+            if (values.size > 1) return null;
+            if (values.size === 1) return [...values][0];
+        }
+    }
     const lines = text
         .normalize('NFKC')
         .toUpperCase()

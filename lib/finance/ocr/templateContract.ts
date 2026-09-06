@@ -43,6 +43,8 @@ const templateTypes = [
     'numeric_separator',
     'direction_phrase',
     'saved_payee_match',
+    'filename_date',
+    'reference_label',
 ] as const satisfies readonly FinanceParserTemplateType[];
 
 const templateFields = [
@@ -80,6 +82,8 @@ const allowedFieldsByType: Record<FinanceParserTemplateType, readonly FinancePar
     numeric_separator: ['amount'],
     direction_phrase: ['direction'],
     saved_payee_match: ['payee_name'],
+    filename_date: ['transaction_date'],
+    reference_label: ['reference_number'],
 };
 
 const allowedFieldsByPattern: Record<FinanceParserTemplatePatternId, readonly FinanceParserTemplateField[]> = {
@@ -243,6 +247,15 @@ function getConfigurationShapeError(configuration: Record<string, unknown>) {
                 && hasValidPhraseList(configuration.phrases)
                 && ['expense', 'income'].includes(String(configuration.direction))
                 ? null : 'Direction-phrase configuration is invalid.';
+        case 'filename_date':
+            return hasExactKeys(configuration, ['type', 'relative_day']) && configuration.relative_day === 'today'
+                ? null : 'Filename date configuration is invalid.';
+        case 'reference_label':
+            return hasExactKeys(configuration, ['type', 'label', 'placement', 'max_lines', 'join'])
+                && ['wallet ref', 'reference id', 'reference no', 'transaction no'].includes(String(configuration.label))
+                && ['inline', 'before', 'after'].includes(String(configuration.placement))
+                && ['space', 'concat'].includes(String(configuration.join)) && isLineWindow(configuration.max_lines)
+                ? null : 'Reference label configuration is invalid.';
         case 'saved_payee_match':
             return hasExactKeys(configuration, ['type', 'normalization'])
                 && configuration.normalization === 'canonical'
@@ -441,6 +454,10 @@ function getTemplateSpecificity(configuration: FinanceParserTemplateConfiguratio
                 anchorLength: Math.min(...configuration.phrases.map((phrase) => phrase.length)),
                 lineWindow: 0,
             };
+        case 'filename_date':
+            return { scopeRank: 4, anchorLength: 5, lineWindow: 0 };
+        case 'reference_label':
+            return { scopeRank: 5, anchorLength: configuration.label.length, lineWindow: configuration.max_lines };
         case 'saved_payee_match':
             return { scopeRank: 2, anchorLength: 0, lineWindow: 0 };
         case 'character_filter':

@@ -1,3 +1,4 @@
+import { hasReceiptToday, screenshotFilenameDate } from '@/lib/finance/ocr/receiptPatterns';
 import {
     FinanceCandidatePayload,
     FinanceOcrFieldLearningRule,
@@ -219,7 +220,8 @@ export function parseFinanceText(
         payee_id: parties.payeeId,
         payee_name: parties.payeeName,
         direction: parseDirection(normalizedText),
-        transaction_date: parseTransactionDate(normalizedText),
+        transaction_date: parseTransactionDate(normalizedText)
+            ?? (hasReceiptToday(normalizedText) ? screenshotFilenameDate(filename) : null),
         source_id: sourceDetection.sourceId,
         category_id: null,
         reference_number: extractFinanceReferenceNumber(normalizedText),
@@ -295,6 +297,7 @@ export function parseFinanceText(
         payload.source_id,
         fieldTemplates,
         payees,
+        filename,
     );
     if (fieldTemplateResult.evaluations.length > 0) {
         payload.parser_template_baseline = {

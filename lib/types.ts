@@ -792,7 +792,9 @@ export type FinanceParserTemplateType =
     | 'date_format'
     | 'numeric_separator'
     | 'direction_phrase'
-    | 'saved_payee_match';
+    | 'saved_payee_match'
+    | 'filename_date'
+    | 'reference_label';
 
 export type FinanceParserTemplateSourceLocation =
     | 'filename'
@@ -881,6 +883,19 @@ export interface FinanceSavedPayeeMatchTemplateConfiguration {
     normalization: 'canonical';
 }
 
+export interface FinanceFilenameDateTemplateConfiguration {
+    type: 'filename_date';
+    relative_day: 'today';
+}
+
+export interface FinanceReferenceLabelTemplateConfiguration {
+    type: 'reference_label';
+    label: 'wallet ref' | 'reference id' | 'reference no' | 'transaction no';
+    placement: 'inline' | 'before' | 'after';
+    max_lines: number;
+    join: 'space' | 'concat';
+}
+
 export type FinanceParserTemplateConfiguration =
     | FinanceSourcePhraseTemplateConfiguration
     | FinanceSameLineLabelTemplateConfiguration
@@ -893,7 +908,9 @@ export type FinanceParserTemplateConfiguration =
     | FinanceDateFormatTemplateConfiguration
     | FinanceNumericSeparatorTemplateConfiguration
     | FinanceDirectionPhraseTemplateConfiguration
-    | FinanceSavedPayeeMatchTemplateConfiguration;
+    | FinanceSavedPayeeMatchTemplateConfiguration
+    | FinanceFilenameDateTemplateConfiguration
+    | FinanceReferenceLabelTemplateConfiguration;
 
 export interface FinanceParserTemplateContract {
     id: string;
