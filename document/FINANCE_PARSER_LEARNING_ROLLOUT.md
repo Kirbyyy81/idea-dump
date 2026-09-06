@@ -115,3 +115,55 @@ The CI audit failures were resolved by updating browserslist to 4.28.9, postcss-
 
 - Live migration ledger reconciliation, full staging verification, representative-history performance checks, and Gates C/D remain pending.
 - Production parsing accuracy and promotion eligibility require retained reviewed history and new live shadow observations.
+
+## Upload cutoff for algorithm 2
+
+Migration `20260906111614_finance_parser_learning_cutoff.sql` adds an opt-in cutoff per user. Apply it with the versioned CLI workflow after reconciling the existing ledger. Applying the migration alone does not reset anyone.
+
+The requested starting point is **6 September 2026, 00:00 Malaysia time**, or `2026-09-05T16:00:00Z`. This is a fixed boundary, not a moving daily window. An upload at exactly that instant qualifies. A receipt showing an older transaction date qualifies if uploaded after the boundary; an earlier upload remains excluded even if reviewed or corrected later.
+
+After deployment, a trusted database operator can set the selected user's boundary and refresh learning:
+
+```sql
+set statement_timeout = '90s';
+select public.finance_set_parser_learning_cutoff(
+  :user_id, '2026-09-06 00:00:00 Asia/Kuala_Lumpur'::timestamptz
+);
+select public.finance_refresh_rule_suggestions();
+```
+
+Bind `:user_id` to the verified account UUID. Check the refresh's durable run status as described above. A false cutoff result means that exact boundary was already set. The setter rejects backward, future, missing, or infinite boundaries and takes the same lock as the cron refresh. No application environment variable or new cron schedule is required.
+
+The setting is stored in `finance_private.finance_parser_learning_settings`. It affects only algorithm 2 proposal generation and evidence replay. The legacy category/reference learners, manual rules, saved aliases, transactions, receipts, and corrections remain intact. Other users retain their own learning periods.
+
+Setting a later boundary disables active algorithm 2 versions and rejects their proposed/shadow versions. Old definitions and evidence remain available for audit. The next refresh creates new versions from eligible uploads and starts a new shadow period. Old contradictions and old runtime traces cannot qualify or disqualify those new versions. Even the same filename pattern needs fresh reviewed observations of the new version before operator promotion.
+
+Verify the effective boundary and current versions:
+
+```sql
+select user_id, eligible_from, updated_at
+from finance_private.finance_parser_learning_settings
+where user_id = :user_id;
+
+select id, field_name, template_version, status, evidence_count,
+       contradiction_count, learning_cutoff_at, shadow_started_at
+from public.finance_parser_templates
+where user_id = :user_id and algorithm_version = 2
+  and learning_cutoff_at = finance_private.finance_parser_learning_cutoff(:user_id);
+```
+
+`candidates_evaluated` and template reason totals in subsequent refresh runs count current-period versions. `corrections_examined` still includes the legacy learner's history. Retired templates and their historical metrics may still appear in aggregate Learning UI totals; those retained records are not being replayed by algorithm 2.
+
+Run `supabase/tests/finance_parser_learning_cutoff.test.sql` alongside the existing lifecycle suite on an isolated migrated database. The cutoff suite covers midnight inclusion, late review of old uploads, old-only proposal exclusion, fresh versions and shadow observations, legacy invocation, history preservation, user isolation, idempotency, and operator-only access. Fixtures roll back.
+
+Validation for the cutoff: both SQL lifecycle suites passed after a fresh application of all September migrations on isolated PostgreSQL 17 with Unicode ICU collation and synthetic prerequisite tables. Application lint, type checks, 221 tests, the production build, and both dependency audits passed. This does not replace full Supabase staging or a production-scale performance check.
+
+Deployment status during this change: the local migration and tests are ready, but the production cutoff has not been set. The CLI reports missing authentication. The live ledger also lacks `20260906090624` despite its functions being installed, in addition to the four version pairs listed above. Compare applied definitions and stored statements before reconciling history and reviewing a dry run. Do not replay those changes blindly.
+
+## Future category learning proposal, not implemented
+
+Add category learning as a separate rule type within the guarded learning pipeline. Use reviewed category choices to learn a mapping from normalized merchant or saved payee, optionally narrowed by source and expense/income direction, to an active category owned by that user. Category assignment is a classification decision and should have its own evaluator rather than treating a category name as OCR text to extract.
+
+Reuse explicit upload cutoffs, immutable versions, distinct-transaction support, contradiction tracking, shadow observations, operator promotion, and automatic disable. In shadow mode, record the proposed category and compare it with the user's confirmed category without changing the saved transaction. Keep manual rules ahead of learned suggestions. Measure false assignments and ambiguous merchants before choosing category-specific promotion thresholds.
+
+Keep legacy category learning running while the new category rules are evaluated. At a later approved cutover, define one application precedence path so both learners cannot overwrite each other's category choice. This change introduces no new category rules or category-learning behavior.

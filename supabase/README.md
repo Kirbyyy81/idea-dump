@@ -91,3 +91,5 @@ writes and trusted RPC mutations share the fail-fast per-user ledger lock.
 ## Finance parser learning, version 2
 
 The forward migration 20260906090624_guarded_finance_parser_learning.sql implements PRD 010 Phases 4 and 5. It retires version 1 templates and starts version 2 in shadow mode. Follow [the rollout guide](../document/FINANCE_PARSER_LEARNING_ROLLOUT.md) for migration-ledger reconciliation, isolated SQL/parity tests, operator promotion, and rollback. Production deployment and activation remain separate approval gates.
+
+Algorithm 2 also supports an opt-in per-user upload cutoff through `20260906111614_finance_parser_learning_cutoff.sql`. See the rollout guide's upload-cutoff section for the separate operator setting, refresh, and verification steps. Run both the lifecycle and cutoff SQL suites on an isolated database before applying it. Legacy learning continues to use its existing history.
