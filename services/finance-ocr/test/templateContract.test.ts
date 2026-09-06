@@ -57,6 +57,8 @@ const validConfigurations: Array<{
     field: FinanceParserTemplateField;
     configuration: FinanceParserTemplateConfiguration;
 }> = [
+    { field: 'transaction_date', configuration: { type: 'filename_date', relative_day: 'today' } },
+    { field: 'reference_number', configuration: { type: 'reference_label', label: 'wallet ref', placement: 'inline', max_lines: 2, join: 'space' } },
     {
         field: 'source_id',
         configuration: { type: 'source_phrase', phrase: 'Aurora Wallet', location: 'filename' },

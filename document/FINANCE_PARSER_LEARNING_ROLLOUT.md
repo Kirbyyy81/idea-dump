@@ -37,7 +37,7 @@ Only the trusted database operator can run promotion, disable, requeue, and refr
 
 New forward migration: supabase/migrations/20260906090624_guarded_finance_parser_learning.sql.
 
-No production migration, deployment, or activation was performed during implementation.
+Initial implementation did not deploy or activate production templates. The completed cutoff rollout is recorded below.
 
 1. Resolve the known migration ledger discrepancy by comparing stored statements and versions. Do not replay applied migrations or repair their history blindly.
 2. Validate the full adopted-baseline schema and forward migrations on isolated staging. Run the SQL lifecycle test and runtime/SQL parity tests there.
@@ -57,7 +57,7 @@ Previously observed remote/local version pairs:
 | Source learning | 20260901103000 | 20260901093435 |
 | Critical fields | 20260901113000 | 20260901093453 |
 
-These are a deployment reconciliation task, not missing implementation.
+These timestamp discrepancies were reconciled on 6 September 2026 after comparing the stored SQL with the repository files. All four bodies matched after line-ending and surrounding-whitespace normalization. Their stored statements were preserved; only their ledger versions were aligned with the filenames.
 
 ## Operator commands
 
@@ -113,5 +113,125 @@ The CI audit failures were resolved by updating browserslist to 4.28.9, postcss-
 
 ## Remaining issues
 
-- Live migration ledger reconciliation, full staging verification, representative-history performance checks, and Gates C/D remain pending.
+- Migration history is reconciled and the cutoff is deployed. Full Supabase staging and representative-history performance checks remain separate from the isolated tests and live smoke checks. Template activation still requires reviewed shadow evidence and operator approval.
 - Production parsing accuracy and promotion eligibility require retained reviewed history and new live shadow observations.
+
+## Upload cutoff for algorithm 2
+
+Migration `20260906111614_finance_parser_learning_cutoff.sql` adds an opt-in cutoff per user. Apply it with the versioned CLI workflow after reconciling the existing ledger. Applying the migration alone does not reset anyone.
+
+The requested starting point is **6 September 2026, 00:00 Malaysia time**, or `2026-09-05T16:00:00Z`. This is a fixed boundary, not a moving daily window. An upload at exactly that instant qualifies. A receipt showing an older transaction date qualifies if uploaded after the boundary; an earlier upload remains excluded even if reviewed or corrected later.
+
+After deployment, a trusted database operator can set the selected user's boundary and refresh learning:
+
+```sql
+set statement_timeout = '90s';
+select public.finance_set_parser_learning_cutoff(
+  :user_id, '2026-09-06 00:00:00 Asia/Kuala_Lumpur'::timestamptz
+);
+select public.finance_refresh_rule_suggestions();
+```
+
+Bind `:user_id` to the verified account UUID. Check the refresh's durable run status as described above. A false cutoff result means that exact boundary was already set. The setter rejects backward, future, missing, or infinite boundaries and takes the same lock as the cron refresh. No application environment variable or new cron schedule is required.
+
+The setting is stored in `finance_private.finance_parser_learning_settings`. It affects only algorithm 2 proposal generation and evidence replay. The legacy category/reference learners, manual rules, saved aliases, transactions, receipts, and corrections remain intact. Other users retain their own learning periods.
+
+Setting a later boundary disables active algorithm 2 versions and rejects their proposed/shadow versions. Old definitions and evidence remain available for audit. The next refresh creates new versions from eligible uploads and starts a new shadow period. Old contradictions and old runtime traces cannot qualify or disqualify those new versions. Even the same filename pattern needs fresh reviewed observations of the new version before operator promotion.
+
+Verify the effective boundary and current versions:
+
+```sql
+select user_id, eligible_from, updated_at
+from finance_private.finance_parser_learning_settings
+where user_id = :user_id;
+
+select id, field_name, template_version, status, evidence_count,
+       contradiction_count, learning_cutoff_at, shadow_started_at
+from public.finance_parser_templates
+where user_id = :user_id and algorithm_version = 2
+  and learning_cutoff_at = finance_private.finance_parser_learning_cutoff(:user_id);
+```
+
+`candidates_evaluated` and template reason totals in subsequent refresh runs count current-period versions. `corrections_examined` still includes the legacy learner's history. Retired templates and their historical metrics may still appear in aggregate Learning UI totals; those retained records are not being replayed by algorithm 2.
+
+Run `supabase/tests/finance_parser_learning_cutoff.test.sql` alongside the existing lifecycle suite on an isolated migrated database. The cutoff suite covers midnight inclusion, late review of old uploads, old-only proposal exclusion, fresh versions and shadow observations, legacy invocation, history preservation, user isolation, idempotency, and operator-only access. Fixtures roll back.
+
+Validation for the cutoff: both SQL lifecycle suites passed after a fresh application of all September migrations on isolated PostgreSQL 17 with Unicode ICU collation and synthetic prerequisite tables. Application lint, type checks, 221 tests, the production build, and both dependency audits passed. This does not replace full Supabase staging or a production-scale performance check.
+
+Production rollout completed on 6 September 2026:
+
+- Authenticated and linked the CLI to the intended project. Compared the phase 4/5 installation with an isolated fresh application of the September migrations: all 15 function definitions, constraints, and 57 column definitions matched. Verified the helper execution restrictions, retirement of algorithm 1 templates, and the cron command as well.
+- Reconciled the four reviewed timestamp pairs and recorded the already-installed `20260906090624` migration atomically, with guards against changed SQL definitions. No old migration was replayed.
+- Reviewed a CLI dry run containing only `20260906111614`, then applied that migration with the versioned CLI workflow. A subsequent dry run reported no pending migrations.
+- Set the selected account's cutoff to `2026-09-05T16:00:00Z` and ran learning in the same transaction, checking the durable business result before committing. Run `59d37fde-d02f-400f-93df-e7d1f669cda6` succeeded at 12:39 UTC in approximately 0.64 seconds.
+- All 27 uploads from the requested day were reviewed and eligible. No source corrections were present in that period, and none of the reviewed field corrections matched an allowed proposal configuration. Consequently, the refresh created no new templates. The old shadow version was retired, and no algorithm 2 template is currently active or in shadow for this account.
+- Confirmed zero earlier-upload evidence in current-period templates. Before/after counts and complete-row fingerprints matched for all 113 transactions, 131 intake items, 127 candidates, and 357 corrections in the account. No historical receipt or transaction was deleted or rewritten.
+- Legacy learning still runs through the unchanged legacy function. The scheduled job remains enabled at `15 3 * * *`, which is 11:15 Malaysia time. Its historical correction totals are intentionally unaffected by the new-system cutoff.
+
+The post-deployment security advisor reports an informational [RLS-without-policy notice](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy) for the private settings table. This is intentional: it is operator-only, with no browser or service-role grants or policies. The scan also reports the existing payee-table notice and two unrelated warnings: [pg_net in the public schema](https://supabase.com/docs/guides/database/database-linter?lint=0014_extension_in_public) and [disabled leaked-password protection](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection). Those were not changed by this rollout.
+
+## Future category learning proposal, not implemented
+
+Add category learning as a separate rule type within the guarded learning pipeline. Use reviewed category choices to learn a mapping from normalized merchant or saved payee, optionally narrowed by source and expense/income direction, to an active category owned by that user. Category assignment is a classification decision and should have its own evaluator rather than treating a category name as OCR text to extract.
+
+Reuse explicit upload cutoffs, immutable versions, distinct-transaction support, contradiction tracking, shadow observations, operator promotion, and automatic disable. In shadow mode, record the proposed category and compare it with the user's confirmed category without changing the saved transaction. Keep manual rules ahead of learned suggestions. Measure false assignments and ambiguous merchants before choosing category-specific promotion thresholds.
+
+Keep legacy category learning running while the new category rules are evaluated. At a later approved cutover, define one application precedence path so both learners cannot overwrite each other's category choice. This change introduces no new category rules or category-learning behavior.
+
+## Reviewed receipt pattern follow-up
+
+Migration `20260906125549_finance_reviewed_receipt_patterns.sql` adds source proposals from accepted candidates linked to confirmed transactions, even when their source was not corrected. It uses the same per-user upload cutoff and active source ownership checks. It creates no artificial correction records. Three distinct reviewed transactions are still required, all retained eligible cases are replayed, and proposals enter shadow mode.
+
+Two additional allowlisted configuration types support the observed layouts:
+
+- `filename_date` resolves an explicit standalone `Today` line, optionally followed by a time, from a validated `Screenshot_YYYYMMDD_HHMMSS` filename. Separated screenshot date/time forms are also accepted. It validates the calendar date and time, uses the original filename rather than upload time, and returns no date for missing/invalid filenames or unsupported relative days. The baseline parser also supports this fallback and preserves explicit OCR dates.
+- `reference_label` supports `Wallet Ref`, `Reference ID`, `Reference No`, and `Transaction No`, with a value on the same line, immediately before, or after the label. It reads at most three identifier chunks within six adjacent physical lines, stops at unrelated text, and requires digit-bearing chunks. Separate space/concatenation configurations are learned only when their output matches reviewed corrections. Repeated conflicting values are not valid evidence. The baseline reference parser also recognizes these labels and joins wrapped identifiers.
+
+Existing configuration semantics and hashes remain unchanged. New types use the existing algorithm 2 contract with their own immutable template definitions. Deploy both compatible application and Finance OCR runtimes **before** applying this migration and running a refresh. No new template is automatically promoted. This follow-up has not been deployed during implementation; the previously deployed cutoff remains active.
+
+Run all three isolated SQL suites: `finance_parser_learning_v2.test.sql`, `finance_parser_learning_cutoff.test.sql`, and `finance_reviewed_receipt_patterns.test.sql`, plus the OCR PostgreSQL parity suite. The new SQL suite verifies confirmed-but-unchanged source learning, exclusion of unreviewed and pre-cutoff receipts, preserved correction records, filename-date and wrapped-reference proposals, repeat-run behavior, and access restrictions.
+
+This follow-up does not add category learning or expand direction phrases.
+
+Validation for this follow-up: 221 application tests and 203 OCR tests passed, including 26 PostgreSQL/runtime parity cases. All three SQL lifecycle suites, application lint, both TypeScript checks, both builds, and all four dependency audits passed. An optional local replay of exported production receipt data was rejected by automatic approval review because it would copy sensitive financial data; verification used synthetic fixtures and evaluator parity instead.
+
+## Approved Ryt and TNG receipt rules
+
+The user approved the observed date, source, reference, direction, merchant, and saved-payee rules on 6 September 2026, including wrapped TNG references. `Transfer to Wallet` remains excluded from the new definitions. Category learning is unchanged.
+
+Migration `20260906135451_approved_finance_receipt_rules.sql` adds an operator-only catalog and installer containing 14 source-scoped definitions. The count includes separate Ryt and TNG definitions for source, dates, and signed direction:
+
+| Definition | Extraction |
+| --- | --- |
+| Ryt source | Filename contains the complete phrase `Ryt Bank` |
+| TNG source | Filename contains the complete phrase `TNG eWallet` |
+| TNG date | Calendar date after `Date/Time` or `Date & Time` |
+| Ryt date | Named calendar date at the start of a receipt line |
+| Ryt Today | Valid screenshot filename date when OCR explicitly says `Today` |
+| Ryt reference | Identifier after `Reference ID`, excluding detached icon characters |
+| TNG reference before label | Long numeric identifier immediately before `Wallet Ref`, ignoring short detached OCR debris |
+| Signed direction, each source | `+RM` means income; `-RM` means expense; reward points do not supply the sign |
+| TNG Payment | `Transaction Type Payment` means expense |
+| TNG Receive from Wallet | `Transaction Type Receive from Wallet` means income |
+| TNG merchant | Same-line value after `Merchant` |
+| TNG receive payee | Same-line value after `Receive From`, matching an active saved payee |
+| Wrapped TNG reference | Long identifier after `Wallet Ref`, followed by a 10 to 30 digit continuation within three physical lines, joined with one space |
+
+The allowlisted `receipt_pattern` type implements the explicit dates, signed direction, and two TNG reference layouts. Multiple conflicting extracted values are invalid. Recognized conflicting amount signs and Payment/Receive transaction types also invalidate the approved direction outputs. No arbitrary regular expressions are stored in configurations.
+
+Wrapped references matched eight of ten reviewed examples. The PINDUODUO RM25.98 receipt's reviewed reference omits its continuation; the StoreHub RM20.30 receipt has a different reviewed continuation. Installation preserves those reviewed values and their contradictions. The wrapped definition will be rejected by replay while those conflicts remain; approval of a definition does not override evidence or activate it.
+
+### Production installation and remaining deployment
+
+The six definitions compatible with the currently deployed parser were installed using `supabase/operations/install_compatible_receipt_rules.sql`. The operator session supplies verified `receipt_rules.user_id`, `receipt_rules.ryt_source_id`, and `receipt_rules.tng_source_id` settings. The operation validates ownership and the existing finite cutoff, installs missing definitions, and verifies the learning run within one transaction. It can be retried without creating duplicate versions.
+
+Production replay `78bc7b8a-dbf7-4bf4-8af8-8dfb5248da20` succeeded at 14:09 UTC on 6 September 2026. All six definitions entered shadow with zero contradictions: Ryt source 11 supporting receipts, TNG source 16, Payment direction 10, Receive direction 3, merchant 10, and saved payee 3. None was activated. The same 27 eligible receipts were evaluated, and legacy learning remained enabled. Counts and complete-row fingerprints of transactions, intake items, candidates, and corrections were unchanged after installation.
+
+The other eight definitions, including wrapped references, are prepared but are **not installed in production yet**. Production migration history still ends at `20260906111614`. Complete the rollout in this order:
+
+1. Push the committed branch when authorized and deploy both the application and Finance OCR service containing the reviewed and approved receipt-pattern support.
+2. Review the versioned CLI dry run. Apply the two pending migrations `20260906125549` and `20260906135451` after confirming the compatible runtimes are live.
+3. As a trusted operator, call `public.finance_install_approved_receipt_rules(:user_id, :ryt_source_id, :tng_source_id)` with the verified source UUIDs. The installer retains the six existing definitions and inserts the remaining eight, then checks a successful replay before returning.
+4. Inspect current-period statuses, support, and contradictions. Consistent definitions enter shadow; the wrapped definition remains blocked by its two conflicts. New reviewed shadow observations and a separate operator promotion remain required for activation.
+
+Validation: 221 application tests and 229 OCR tests passed, including 36 PostgreSQL/runtime parity cases. All four SQL suites passed on isolated PostgreSQL 17 with synthetic receipts, including retry behavior, preserved wrapped-reference conflicts, exclusion of Transfer to Wallet, and operator-only installation. A two-stage installation check verified that the final installer adds eight definitions after the compatible six. Lint, both TypeScript checks, both production builds, and all four dependency audits passed.
