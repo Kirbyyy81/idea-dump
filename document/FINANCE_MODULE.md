@@ -587,7 +587,7 @@ The Settings UI also supports pending `finance_rule_suggestions`: users can edit
 
 Each scheduled refresh records a durable business result in `finance_learning_runs` and bounded user counts in `finance_learning_run_user_summaries`. The Rules settings section reads those aggregates through a server-only summary function. It never returns OCR text, filenames, correction values, transaction values, or parser-template configuration. Detailed completed runs are retained for 90 days.
 
-`finance_parser_templates` and `finance_template_evidence` persist the versioned Phase 0 contract for later OCR phases. Phase 1 does not generate, shadow, activate, or apply these templates. Existing category learning and source-specific reference transforms remain authoritative.
+Version 2 parser learning generates source-scoped reference, merchant, date, direction, canonical payee, notes, and recipient-reference templates from reviewed corrections. Historical support enters shadow evaluation; new reviewed shadow outcomes and explicit operator promotion are required before activation. Contradictions disable active templates during refresh. Existing category learning and reference transforms remain available as the baseline. See [the Phase 4 and 5 rollout guide](FINANCE_PARSER_LEARNING_ROLLOUT.md) for bounds, promotion gates, verification, and deployment status.
 
 ### Reference-number learning
 
