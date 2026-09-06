@@ -1,3 +1,4 @@
+import { templateLines, templateSourcePhrase } from '@/lib/finance/ocr/templateValues';
 import type {
     FinanceOcrSource,
     FinanceOcrSourceTemplate,
@@ -66,7 +67,7 @@ function templateMatches(
     normalizedLines: string[],
 ) {
     if (template.configuration.type !== 'source_phrase') return false;
-    const phrase = normalizeFinanceSourceSignal(template.configuration.phrase);
+    const phrase = templateSourcePhrase(template.configuration.phrase);
     if (phrase.length < 3) return false;
     const location = template.configuration.location;
     if (location === 'filename') return containsSignal(normalizedFilename, phrase);
@@ -85,16 +86,13 @@ function evaluateSourceTemplates(
     sources: FinanceOcrSource[],
 ) {
     const sourceById = new Map(sources.filter((source) => !source.is_archived).map((source) => [source.id, source]));
-    const normalizedFilename = normalizeFinanceSourceSignal(filename ?? '');
-    const normalizedLines = text
-        .split(/\r?\n/)
-        .map(normalizeFinanceSourceSignal)
-        .filter(Boolean);
+    const normalizedFilename = templateSourcePhrase(filename ?? '');
+    const normalizedLines = templateLines(text).map(templateSourcePhrase).filter(Boolean);
     const activeProposals: Array<{ template: FinanceOcrSourceTemplate; value: string }> = [];
     const signals: FinanceSourceDetectionSignal[] = [];
 
     const validTemplates = templates.filter(isFinanceParserTemplateContract);
-    for (const template of orderFinanceParserTemplates(validTemplates, null)) {
+    for (const template of orderFinanceParserTemplates(validTemplates, null).slice(0, 40)) {
         if (
             template.field_name !== 'source_id'
             || template.template_type !== 'source_phrase'
@@ -151,19 +149,6 @@ export function detectFinanceSource(
 
     const filenameSourceIds = sourceIds(baselineSignals, 'filename_alias');
     const ocrSourceIds = sourceIds(baselineSignals, 'ocr_alias');
-    if (sourceTemplates.length === 0) {
-        const sourceId = filenameSourceIds.size === 1
-            ? Array.from(filenameSourceIds)[0]
-            : filenameSourceIds.size === 0 && ocrSourceIds.size === 1
-                ? Array.from(ocrSourceIds)[0]
-                : null;
-        return {
-            sourceId,
-            signals: baselineSignals.slice(0, 50),
-            hasConflict: filenameSourceIds.size > 1
-                || (filenameSourceIds.size === 0 && ocrSourceIds.size > 1),
-        };
-    }
 
     const sourceTemplateResult = evaluateSourceTemplates(text, filename, sourceTemplates, sources);
     const configuredOcrSourceIds = new Set(
@@ -205,8 +190,8 @@ export function detectFinanceSource(
     }
 
     const signals = [
-        ...baselineSignals.filter((signal) => signal.kind === 'filename_alias'),
         ...sourceTemplateResult.signals,
+        ...baselineSignals.filter((signal) => signal.kind === 'filename_alias'),
         ...baselineSignals.filter((signal) => signal.kind === 'ocr_alias'),
     ].slice(0, 50);
     return { sourceId, signals, hasConflict };

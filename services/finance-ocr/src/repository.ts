@@ -317,11 +317,11 @@ export class SupabaseFinanceRepository implements FinanceRepository, ShareQueueR
                 .eq('user_id', userId)
                 .eq('field_name', 'source_id')
                 .in('status', ['active', 'shadow'])
-                .eq('algorithm_version', 1)
+                .eq('algorithm_version', 2)
                 .order('status')
                 .order('activated_at')
                 .order('id')
-                .limit(400),
+                .limit(40),
             this.secretClient
                 .from('finance_parser_templates')
                 .select([
@@ -331,13 +331,13 @@ export class SupabaseFinanceRepository implements FinanceRepository, ShareQueueR
                     'created_at, evaluated_at, activated_at, disabled_at, updated_at',
                 ].join(', '))
                 .eq('user_id', userId)
-                .in('field_name', ['reference_number', 'merchant', 'transaction_date'])
+                .in('field_name', ['reference_number', 'merchant', 'transaction_date', 'direction', 'payee_name', 'notes', 'recipient_reference'])
                 .in('status', ['active', 'shadow'])
-                .eq('algorithm_version', 1)
+                .eq('algorithm_version', 2)
                 .order('status')
                 .order('activated_at')
                 .order('id')
-                .limit(1200),
+                .limit(1000),
             this.secretClient
                 .from('finance_rules')
                 .select('id, name, match_type, pattern, category_id, source_id, direction, priority, is_active, source, auto_created_at, created_at')

@@ -7,7 +7,7 @@ import type {
     FinanceParserTemplateType,
 } from '@/lib/types';
 
-export const FINANCE_PARSER_TEMPLATE_ALGORITHM_VERSION = 1;
+export const FINANCE_PARSER_TEMPLATE_ALGORITHM_VERSION = 2;
 
 export const FINANCE_PARSER_TEMPLATE_GUARDRAILS = Object.freeze({
     minimumEvidenceCount: 3,
@@ -324,7 +324,7 @@ export function getFinanceParserTemplateContractErrors(value: unknown) {
     if (!templateTypes.includes(value.template_type as FinanceParserTemplateType)) {
         errors.push('Template type is not supported.');
     }
-    if (value.algorithm_version !== FINANCE_PARSER_TEMPLATE_ALGORITHM_VERSION) {
+    if (value.algorithm_version !== 1 && value.algorithm_version !== FINANCE_PARSER_TEMPLATE_ALGORITHM_VERSION) {
         errors.push('Template algorithm version is not supported.');
     }
     if (!Number.isInteger(value.template_version) || Number(value.template_version) < 1) {

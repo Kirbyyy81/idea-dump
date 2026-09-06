@@ -1,258 +1,153 @@
+import { templateValueHash } from '@/lib/finance/ocr/templateHash';
 import type {
-    FinanceCandidatePayload,
-    FinanceOcrFieldTemplate,
-    FinanceParserTemplateEvaluation,
-    FinanceParserTemplateField,
+    FinanceCandidatePayload, FinanceOcrFieldTemplate, FinanceOcrPayee,
+    FinanceParserTemplateEvaluation, FinanceParserTemplateField,
 } from '@/lib/types';
-import {
-    MAX_FINANCE_MERCHANT_LENGTH,
-    MAX_FINANCE_REFERENCE_LENGTH,
-    normalizeFinanceDate,
-} from '@/lib/finance/core/values';
-import {
-    isFinanceParserTemplateContract,
-    orderFinanceParserTemplates,
-    selectFinanceParserTemplateProposal,
-} from '@/lib/finance/ocr/templateContract';
+import { isFinanceParserTemplateContract, orderFinanceParserTemplates, selectFinanceParserTemplateProposal } from '@/lib/finance/ocr/templateContract';
+import { FINANCE_TEMPLATE_FIELDS, templateLines, templatePayee, templateSourcePhrase, templateText, templateValue } from '@/lib/finance/ocr/templateValues';
+import { extractFinanceRecipientReference, mergeFinanceRecipientReferenceIntoNotes } from '@/lib/finance/ocr/recipientReference';
 
-type CriticalField = 'reference_number' | 'merchant' | 'transaction_date';
-type CriticalValue = string;
-type ExtractedTemplateValue = CriticalValue | null | undefined;
-
-const criticalFields = new Set<CriticalField>(['reference_number', 'merchant', 'transaction_date']);
-const monthNumbers: Record<string, number> = {
-    jan: 1,
-    feb: 2,
-    mar: 3,
-    apr: 4,
-    may: 5,
-    jun: 6,
-    jul: 7,
-    aug: 8,
-    sep: 9,
-    oct: 10,
-    nov: 11,
-    dec: 12,
-};
-
-function normalizedSignal(value: string) {
-    return value.normalize('NFKC').trim().replace(/\s+/g, ' ').toLocaleLowerCase('en');
+function remainder(line: string, label: string) {
+    const text = templateText(line);
+    const anchor = templateText(label);
+    if (!text.toLowerCase().startsWith(anchor.toLowerCase())) return undefined;
+    const tail = text.slice(anchor.length);
+    if (tail && !/^(?:\s*[:-]\s*|\s+)/.test(tail)) return undefined;
+    return tail.replace(/^\s*[:-]?\s*/, '');
 }
 
-function containsLiteral(value: string, literal: string) {
-    const haystack = normalizedSignal(value);
-    const needle = normalizedSignal(literal);
-    return needle.length > 0 && (` ${haystack} `).includes(` ${needle} `);
-}
-
-function labelRemainder(line: string, label: string) {
-    const normalizedLine = line.normalize('NFKC').trim();
-    const normalizedLabel = label.normalize('NFKC').trim();
-    if (!normalizedLabel || !normalizedLine.toLocaleLowerCase('en').startsWith(normalizedLabel.toLocaleLowerCase('en'))) {
-        return null;
+export function extractFinanceTemplateValue(
+    template: FinanceOcrFieldTemplate, text: string, payees: FinanceOcrPayee[] = [],
+): string | null | undefined {
+    const lines = templateLines(text);
+    const config = template.configuration;
+    const validate = (raw: string) => {
+        const value = templateValue(template.field_name, raw);
+        if (!value || template.field_name !== 'payee_name') return value;
+        return templatePayee(value, payees)?.name ?? null;
+    };
+    if (config.type === 'direction_phrase') {
+        return config.phrases.some((phrase) => lines.some((line) => (
+            (' ' + templateSourcePhrase(line) + ' ').includes(' ' + templateSourcePhrase(phrase) + ' ')
+        ))) ? config.direction : undefined;
     }
-    const boundary = normalizedLine.slice(normalizedLabel.length);
-    if (boundary && !/^(?:\s*[:\-]\s*|\s+)/.test(boundary)) return null;
-    return boundary.replace(/^\s*[:\-]?\s*/, '');
-}
-
-function parseDateValue(value: string) {
-    const normalized = value.normalize('NFKC');
-    const iso = normalized.match(/\b(20\d{2})[-/.](0?[1-9]|1[0-2])[-/.]([0-2]?\d|3[01])\b/);
-    if (iso) return normalizeFinanceDate(`${iso[1]}-${String(Number(iso[2])).padStart(2, '0')}-${String(Number(iso[3])).padStart(2, '0')}`);
-    const local = normalized.match(/\b([0-2]?\d|3[01])[-/.](0?[1-9]|1[0-2])[-/.](20\d{2})\b/);
-    if (local) return normalizeFinanceDate(`${local[3]}-${String(Number(local[2])).padStart(2, '0')}-${String(Number(local[1])).padStart(2, '0')}`);
-    const named = normalized.match(/\b([0-2]?\d|3[01])\s+(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+(20\d{2})\b/i);
-    if (!named) return null;
-    const month = monthNumbers[named[2].slice(0, 3).toLocaleLowerCase('en')];
-    return normalizeFinanceDate(`${named[3]}-${String(month).padStart(2, '0')}-${String(Number(named[1])).padStart(2, '0')}`);
-}
-
-function normalizeCriticalValue(field: CriticalField, value: string): CriticalValue | null {
-    const trimmed = value.normalize('NFKC').trim().replace(/\s+/g, ' ');
-    if (!trimmed) return null;
-    if (field === 'transaction_date') return parseDateValue(trimmed);
-    if (field === 'reference_number') {
-        if (trimmed.length > MAX_FINANCE_REFERENCE_LENGTH || !/[\p{L}\p{N}]/u.test(trimmed)) return null;
-        return trimmed.toLocaleUpperCase('en');
+    if (config.type === 'saved_payee_match') {
+        const matches = new Map(lines.map((line) => templatePayee(line, payees))
+            .filter((payee): payee is FinanceOcrPayee => Boolean(payee)).map((payee) => [payee.id, payee]));
+        return matches.size === 1 ? [...matches.values()][0].name : matches.size > 1 ? null : undefined;
     }
-    if (trimmed.length > MAX_FINANCE_MERCHANT_LENGTH || !/[\p{L}\p{N}]/u.test(trimmed)) return null;
-    return trimmed;
-}
-
-function extractReferenceToken(value: string) {
-    return (value.normalize('NFKC').toLocaleUpperCase('en').match(/[A-Z0-9-]{5,200}/g) ?? [])
-        .find((token) => /\d/.test(token) && !token.startsWith('-') && !token.endsWith('-')) ?? null;
-}
-
-function extractAllowlistedValue(template: FinanceOcrFieldTemplate, text: string) {
-    if (template.configuration.type !== 'allowlisted_regex_capture') return null;
-    const configuration = template.configuration;
-    const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-    const anchor = configuration.anchor;
-    const scopedText = anchor
-        ? lines.filter((line) => containsLiteral(line, anchor)).join('\n')
-        : text;
-    if (!scopedText) return null;
-    if (configuration.pattern_id === 'reference_token') return extractReferenceToken(scopedText);
-    if (configuration.pattern_id === 'iso_date') {
-        return scopedText.match(/\b20\d{2}[-/.](?:0?[1-9]|1[0-2])[-/.](?:[0-2]?\d|3[01])\b/)?.[0] ?? null;
-    }
-    if (configuration.pattern_id === 'day_first_numeric_date') {
-        return scopedText.match(/\b(?:[0-2]?\d|3[01])[-/.](?:0?[1-9]|1[0-2])[-/.]20\d{2}\b/)?.[0] ?? null;
-    }
-    if (configuration.pattern_id === 'day_first_named_date') {
-        return scopedText.match(/\b(?:[0-2]?\d|3[01])\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+20\d{2}\b/i)?.[0] ?? null;
-    }
-    return null;
-}
-
-function extractTemplateValue(
-    template: FinanceOcrFieldTemplate,
-    text: string,
-    baseline: FinanceCandidatePayload,
-): ExtractedTemplateValue {
-    const field = template.field_name as CriticalField;
-    const lines = text.split(/\r?\n/).map((line) => line.trim());
-    const configuration = template.configuration;
-    if (configuration.type === 'same_line_label') {
-        for (const line of lines) {
-            const remainder = labelRemainder(line, configuration.label);
-            if (remainder !== null) return remainder ? normalizeCriticalValue(field, remainder) : null;
+    if (config.type !== 'same_line_label' && config.type !== 'next_non_empty_line') return undefined;
+    let matched = false;
+    for (let index = 0; index < lines.length; index += 1) {
+        const tail = remainder(lines[index], config.label);
+        if (tail === undefined) continue;
+        if (config.type === 'same_line_label') {
+            if (!tail) continue;
+            return validate(tail);
         }
-        return undefined;
-    }
-    if (configuration.type === 'next_non_empty_line') {
-        let matchedLabel = false;
-        for (let index = 0; index < lines.length; index += 1) {
-            if (labelRemainder(lines[index], configuration.label) !== '') continue;
-            matchedLabel = true;
-            let nonEmpty = 0;
-            for (let next = index + 1; next < lines.length; next += 1) {
-                if (!lines[next]) continue;
-                nonEmpty += 1;
-                const value = normalizeCriticalValue(field, lines[next]);
-                if (value) return value;
-                if (nonEmpty >= configuration.max_lines) break;
-            }
-        }
-        return matchedLabel ? null : undefined;
-    }
-    if (configuration.type === 'bounded_line_window') {
-        let matchedAnchor = false;
-        for (let index = 0; index < lines.length; index += 1) {
-            if (!containsLiteral(lines[index], configuration.anchor)) continue;
-            matchedAnchor = true;
-            for (let distance = 1; distance <= configuration.max_lines; distance += 1) {
-                const target = configuration.direction === 'after' ? index + distance : index - distance;
-                if (target < 0 || target >= lines.length || !lines[target]) continue;
-                const value = normalizeCriticalValue(field, lines[target]);
-                if (value) return value;
-            }
-        }
-        return matchedAnchor ? null : undefined;
-    }
-    if (configuration.type === 'allowlisted_regex_capture') {
-        const extracted = extractAllowlistedValue(template, text);
-        return extracted ? normalizeCriticalValue(field, extracted) : undefined;
-    }
-    const baselineValue = baseline[field];
-    if (field === 'reference_number' && typeof baselineValue === 'string') {
-        if (configuration.type === 'strip_prefix') {
-            const prefix = configuration.value.normalize('NFKC');
-            return baselineValue.toLocaleLowerCase('en').startsWith(prefix.toLocaleLowerCase('en'))
-                ? normalizeCriticalValue(field, baselineValue.slice(prefix.length))
-                : undefined;
-        }
-        if (configuration.type === 'strip_suffix') {
-            const suffix = configuration.value.normalize('NFKC');
-            return baselineValue.toLocaleLowerCase('en').endsWith(suffix.toLocaleLowerCase('en'))
-                ? normalizeCriticalValue(field, baselineValue.slice(0, -suffix.length))
-                : undefined;
-        }
-        if (configuration.type === 'character_filter') {
-            const value = configuration.mode === 'digits_only'
-                ? baselineValue.replace(/\D/g, '')
-                : baselineValue.replace(/[^a-z0-9]/gi, '');
-            return normalizeCriticalValue(field, value);
+        if (tail !== '') continue;
+        matched = true;
+        let count = 0;
+        for (let next = index + 1; next < Math.min(lines.length, index + 7); next += 1) {
+            if (!lines[next]) continue;
+            count += 1;
+            const value = validate(lines[next]);
+            if (value) return value;
+            if (count >= config.max_lines) break;
         }
     }
-    if (field === 'transaction_date' && configuration.type === 'date_format') {
-        return parseDateValue(text) ?? undefined;
-    }
-    return undefined;
+    return matched ? null : undefined;
 }
 
-export function applyFinanceCriticalFieldTemplates(
-    text: string,
-    payload: FinanceCandidatePayload,
-    sourceId: string | null,
-    templates: FinanceOcrFieldTemplate[],
+export function applyFinanceFieldTemplates(
+    text: string, payload: FinanceCandidatePayload, sourceId: string | null,
+    templates: FinanceOcrFieldTemplate[], payees: FinanceOcrPayee[] = [],
 ) {
-    if (!sourceId || templates.length === 0) {
-        return { payload, evaluations: [] as FinanceParserTemplateEvaluation[] };
-    }
-    const eligible = orderFinanceParserTemplates(
-        templates.filter((template) => (
-            isFinanceParserTemplateContract(template)
-            && criticalFields.has(template.field_name as CriticalField)
-            && template.scope_source_id === sourceId
-            && (template.status === 'active' || template.status === 'shadow')
-        )),
-        sourceId,
-    );
+    if (!sourceId || !templates.length) return { payload, evaluations: [] as FinanceParserTemplateEvaluation[] };
+    const eligible = orderFinanceParserTemplates(templates.filter((template) => (
+        isFinanceParserTemplateContract(template) && template.scope_source_id === sourceId
+        && (template.status === 'active' || template.status === 'shadow')
+    )), sourceId);
     const nextPayload = { ...payload };
     const evaluations: FinanceParserTemplateEvaluation[] = [];
-
-    for (const field of criticalFields) {
-        const fieldTemplates = eligible.filter((template) => template.field_name === field);
-        const activeProposals: Array<{ template: FinanceOcrFieldTemplate; value: string }> = [];
-        for (const template of fieldTemplates) {
-            const value = extractTemplateValue(template, text, payload);
-            if (value === undefined) {
-                continue;
+    const selected = new Map<FinanceParserTemplateField, { template: FinanceOcrFieldTemplate; value: string }>();
+    for (const field of FINANCE_TEMPLATE_FIELDS) {
+        const proposals: Array<{ template: FinanceOcrFieldTemplate; value: string }> = [];
+        for (const template of eligible.filter((item) => item.field_name === field).slice(0, 20)) {
+            const value = extractFinanceTemplateValue(template, text, payees);
+            const evaluation: FinanceParserTemplateEvaluation = {
+                template_id: template.id, field_name: field,
+                status: template.status as 'active' | 'shadow',
+                outcome: value === undefined ? 'not_applicable' : value === null ? 'invalid_output' : 'shadow',
+                ...(template.algorithm_version === 2 ? {
+                    algorithm_version: 2, template_version: template.template_version,
+                    ...(value ? { value_hash: templateValueHash(field, value) } : {}),
+                } : {}),
+            };
+            // Retain every bounded observation, including losing proposals and misses.
+            if (value && template.status === 'active') {
+                proposals.push({ template, value });
+                evaluation.outcome = 'not_applicable';
             }
-            if (value === null) {
-                evaluations.push({
-                    template_id: template.id,
-                    field_name: field,
-                    status: template.status as 'active' | 'shadow',
-                    outcome: 'invalid_output',
-                });
-                continue;
-            }
-            if (template.status === 'shadow') {
-                evaluations.push({
-                    template_id: template.id,
-                    field_name: field,
-                    status: 'shadow',
-                    outcome: 'shadow',
-                });
-            } else {
-                activeProposals.push({ template, value });
-            }
+            evaluations.push(evaluation);
         }
-
-        const decision = selectFinanceParserTemplateProposal(activeProposals, sourceId);
-        if (decision.status === 'selected') {
-            nextPayload[field] = decision.proposal.value as CriticalValue;
-            evaluations.push({
-                template_id: decision.proposal.template.id,
-                field_name: field,
-                status: 'active',
-                outcome: 'applied',
-            });
-        } else if (decision.status === 'conflict') {
-            for (const templateId of decision.templateIds) {
-                evaluations.push({
-                    template_id: templateId,
-                    field_name: field,
-                    status: 'active',
-                    outcome: 'conflict',
-                });
+        const decision = selectFinanceParserTemplateProposal(proposals, sourceId);
+        if (decision.status === 'selected') selected.set(field, {
+            template: decision.proposal.template, value: String(decision.proposal.value),
+        });
+        if (decision.status === 'conflict') {
+            for (const evaluation of evaluations) {
+                if (decision.templateIds.includes(evaluation.template_id)) evaluation.outcome = 'conflict';
             }
         }
     }
-
-    return { payload: nextPayload, evaluations: evaluations.slice(0, 50) };
+    if (selected.has('merchant') && (selected.has('payee_name') || payload.payee_id || payload.payee_name)) {
+        for (const field of ['merchant', 'payee_name'] as const) {
+            const proposal = selected.get(field);
+            if (proposal) {
+                const evaluation = evaluations.find((item) => item.template_id === proposal.template.id);
+                if (evaluation) evaluation.outcome = 'conflict';
+                selected.delete(field);
+            }
+        }
+    }
+    for (const [field, proposal] of selected) {
+        const evaluation = evaluations.find((item) => item.template_id === proposal.template.id);
+        if (field === 'recipient_reference') continue;
+        if (field === 'payee_name') {
+            const payee = templatePayee(proposal.value, payees);
+            if (!payee) continue;
+            nextPayload.payee_id = payee.id;
+            nextPayload.payee_name = payee.name;
+            nextPayload.merchant = null;
+        } else if (field === 'direction') {
+            nextPayload.direction = proposal.value as 'expense' | 'income';
+        } else if (field === 'reference_number' || field === 'merchant' || field === 'transaction_date' || field === 'notes') {
+            nextPayload[field] = proposal.value;
+        }
+        if (evaluation) evaluation.outcome = 'applied';
+    }
+    const recipient = selected.get('recipient_reference');
+    const genericRecipient = extractFinanceRecipientReference(text);
+    // Replace the generic reference line when a learned reference corrects it.
+    const existingNotes = recipient && !selected.has('notes') && genericRecipient
+        ? nextPayload.notes?.split(/\r?\n/).filter((line) => line !== genericRecipient).join('\n')
+        : nextPayload.notes;
+    const notes = mergeFinanceRecipientReferenceIntoNotes(
+        recipient?.value ?? genericRecipient, existingNotes,
+    );
+    if ((recipient || selected.has('notes')) && (notes?.length ?? 0) <= 2500) {
+        nextPayload.notes = notes;
+        const evaluation = evaluations.find((item) => item.template_id === recipient?.template.id);
+        if (evaluation) evaluation.outcome = 'applied';
+    } else if (recipient || selected.has('notes')) {
+        nextPayload.notes = payload.notes;
+        for (const item of evaluations) {
+            if (item.field_name === 'notes' || item.field_name === 'recipient_reference') item.outcome = 'invalid_output';
+        }
+    }
+    return { payload: nextPayload, evaluations };
 }
+
+// Keep the Phase 3 pure API compatible with existing callers.
+export const applyFinanceCriticalFieldTemplates = applyFinanceFieldTemplates;

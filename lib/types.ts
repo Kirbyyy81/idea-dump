@@ -585,6 +585,7 @@ export interface FinanceCandidatePayload {
     learned_field_rule_ids?: string[];
     matched_parser_template_ids?: string[];
     parser_template_evaluations?: FinanceParserTemplateEvaluation[];
+    parser_template_baseline?: Partial<Record<FinanceParserTemplateField, string | number | null>>;
     duplicate_transaction_id: string | null;
 }
 
@@ -931,6 +932,9 @@ export interface FinanceParserTemplateEvaluation {
     field_name: FinanceParserTemplateField;
     status: Extract<FinanceParserTemplateStatus, 'active' | 'shadow'>;
     outcome: FinanceParserTemplateEvaluationOutcome;
+    algorithm_version?: number;
+    template_version?: number;
+    value_hash?: string;
 }
 
 export interface FinanceRuleSuggestion {

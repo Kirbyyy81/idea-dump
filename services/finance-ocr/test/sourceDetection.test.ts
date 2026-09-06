@@ -204,3 +204,14 @@ describe('Finance source evidence', () => {
         expect(result.hasConflict).toBe(true);
     });
 });
+
+it('keeps explicit OCR alias precedence identical with or without shadow templates', () => {
+    const bank = { ...ryt, ocr_aliases: ['Distinct Header'] };
+    const generic = { ...other, ocr_aliases: [] };
+    const text = 'Distinct Header\nOther Bank\ndistinct transfer header';
+    const baseline = detectFinanceSource(text, null, [bank, generic]);
+    const shadow = detectFinanceSource(text, null, [bank, generic], [sourceTemplate(generic, 'shadow', { algorithm_version: 2 })]);
+    expect(baseline.sourceId).toBe(bank.id);
+    expect(shadow.sourceId).toBe(baseline.sourceId);
+    expect(shadow.hasConflict).toBe(baseline.hasConflict);
+});

@@ -1,5 +1,7 @@
+import { templateValueHash } from '@/lib/finance/ocr/templateHash';
 import { describe, expect, it } from 'vitest';
-import { applyFinanceCriticalFieldTemplates } from '@/lib/finance/ocr/fieldTemplates';
+import { templateValue, templateSourcePhrase } from '@/lib/finance/ocr/templateValues';
+import { applyFinanceCriticalFieldTemplates, extractFinanceTemplateValue } from '@/lib/finance/ocr/fieldTemplates';
 import type {
     FinanceCandidatePayload,
     FinanceOcrFieldTemplate,
@@ -28,7 +30,7 @@ const baseline: FinanceCandidatePayload = {
 
 function fieldTemplate(
     id: string,
-    fieldName: 'reference_number' | 'merchant' | 'transaction_date',
+    fieldName: FinanceOcrFieldTemplate['field_name'],
     configuration: FinanceParserTemplateConfiguration,
     status: 'active' | 'shadow' = 'active',
     overrides: Partial<FinanceOcrFieldTemplate> = {},
@@ -134,11 +136,11 @@ describe('source-scoped Finance OCR field templates', () => {
         const second = fieldTemplate(
             '66666666-6666-4666-8666-666666666666',
             'reference_number',
-            { type: 'same_line_label', label: 'Receipt Number' },
+            { type: 'same_line_label', label: 'Order No' },
         );
 
         const result = applyFinanceCriticalFieldTemplates(
-            'Order ID: SYN-100\nReceipt Number: SYN-200',
+            'Order ID: SYN-100\nOrder No: SYN-200',
             baseline,
             sourceId,
             [first, second],
@@ -189,5 +191,102 @@ describe('source-scoped Finance OCR field templates', () => {
             template_id: template.id,
             outcome: 'invalid_output',
         })]);
+    });
+});
+
+describe('version 2 remaining fields and observation bounds', () => {
+    const payees = [{ id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', name: 'Alex Tan', normalized_name: 'alextan', is_archived: false }];
+    const v2 = (field: FinanceOcrFieldTemplate['field_name'], config: FinanceParserTemplateConfiguration, overrides: Partial<FinanceOcrFieldTemplate> = {}) =>
+        fieldTemplate('cccccccc-cccc-4ccc-8ccc-cccccccccccc', field, config, 'active', { algorithm_version: 2, ...overrides });
+
+    it('maps phrases to direction and records replayable hashes', () => {
+        const result = applyFinanceCriticalFieldTemplates('MONEY RECEIVED!', baseline, sourceId, [
+            v2('direction', { type: 'direction_phrase', direction: 'income', phrases: ['money received'] }),
+        ]);
+        expect(result.payload.direction).toBe('income');
+        expect(result.evaluations[0]).toMatchObject({ outcome: 'applied', algorithm_version: 2, template_version: 1, value_hash: templateValueHash('direction', 'income') });
+    });
+
+    it('matches canonical saved payees and clears merchant classification', () => {
+        const result = applyFinanceCriticalFieldTemplates('Payee: ALEX-TAN', baseline, sourceId, [
+            v2('payee_name', { type: 'same_line_label', label: 'Payee' }),
+        ], payees);
+        expect(result.payload).toMatchObject({ payee_id: payees[0].id, payee_name: 'Alex Tan', merchant: null });
+    });
+
+    it('ignores unknown or archived payees', () => {
+        for (const catalog of [[], [{ ...payees[0], is_archived: true }]]) {
+            const result = applyFinanceCriticalFieldTemplates('Payee: Alex Tan', baseline, sourceId, [
+                v2('payee_name', { type: 'same_line_label', label: 'Payee' }),
+            ], catalog);
+            expect(result.payload).toEqual(baseline);
+            expect(result.evaluations[0].outcome).toBe('invalid_output');
+        }
+    });
+
+    it('keeps merchant and payee conflicts on the baseline', () => {
+        const result = applyFinanceCriticalFieldTemplates('Shop: Shop A\nPayee: Alex Tan', baseline, sourceId, [
+            v2('merchant', { type: 'same_line_label', label: 'Shop' }),
+            v2('payee_name', { type: 'same_line_label', label: 'Payee' }, { id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd' }),
+        ], payees);
+        expect(result.payload).toEqual(baseline);
+        expect(result.evaluations.every((item) => item.outcome === 'conflict')).toBe(true);
+    });
+
+    it('merges notes and recipient reference once', () => {
+        const result = applyFinanceCriticalFieldTemplates('Memo: Lunch\nRecipient Ref: Meal', baseline, sourceId, [
+            v2('notes', { type: 'same_line_label', label: 'Memo' }),
+            v2('recipient_reference', { type: 'same_line_label', label: 'Recipient Ref' }, { id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd' }),
+        ]);
+        expect(result.payload.notes).toBe('Meal\nLunch');
+    });
+
+    it('replaces an incorrect generic recipient line without losing notes', () => {
+        const result = applyFinanceCriticalFieldTemplates('Recipient Ref: WRONG\nCustom Ref: RIGHT',
+            { ...baseline, notes: 'WRONG\nLunch' }, sourceId, [
+                v2('recipient_reference', { type: 'same_line_label', label: 'Custom Ref' }),
+            ]);
+        expect(result.payload.notes).toBe('RIGHT\nLunch');
+    });
+
+    it('retains baseline notes when the merged value exceeds the bound', () => {
+        const result = applyFinanceCriticalFieldTemplates('Memo: ' + 'A'.repeat(2500) + '\nRecipient Ref: Meal',
+            { ...baseline, notes: 'Original' }, sourceId, [
+                v2('notes', { type: 'same_line_label', label: 'Memo' }),
+            ]);
+        expect(result.payload.notes).toBe('Original');
+        expect(result.evaluations[0].outcome).toBe('invalid_output');
+    });
+
+    it('retains an applied date trace after more than 50 observations', () => {
+        const templates = (['reference_number', 'merchant', 'transaction_date'] as const).flatMap((field, f) =>
+            Array.from({ length: 20 }, (_, i) => v2(field, { type: 'same_line_label', label: field === 'transaction_date' && i === 19 ? 'Date' : 'Missing' + i }, {
+                id: '00000000-0000-4000-8000-' + String(f * 20 + i + 1).padStart(12, '0'),
+            })));
+        const result = applyFinanceCriticalFieldTemplates('Date: 15 Jul 2026', baseline, sourceId, templates);
+        expect(result.evaluations).toHaveLength(60);
+        expect(result.payload.transaction_date).toBe('2026-07-15');
+        expect(result.evaluations.find((item) => item.outcome === 'applied')?.field_name).toBe('transaction_date');
+    });
+
+    it('never changes the baseline for shadow or disabled templates', () => {
+        for (const status of ['shadow', 'disabled'] as const) {
+            const result = applyFinanceCriticalFieldTemplates('Memo: Changed', baseline, sourceId, [
+                v2('notes', { type: 'same_line_label', label: 'Memo' }, { status, status_reason: status === 'disabled' ? 'operator_disabled' : null }),
+            ]);
+            expect(result.payload).toEqual(baseline);
+        }
+    });
+
+    it.each([
+        ['15 Jul 2026', '2026-07-15'], ['15/07/2026 10:00', '2026-07-15'],
+        ['31/02/2026', null], ['2026-07-15 junk', null],
+    ])('validates full dates: %s', (input, expected) => expect(templateValue('transaction_date', input)).toBe(expected));
+
+    it('bounds runtime text and physical lines consistently', () => {
+        const template = v2('notes', { type: 'same_line_label', label: 'Memo' });
+        expect(extractFinanceTemplateValue(template, '\n'.repeat(200) + 'Memo: Later')).toBeUndefined();
+        expect(extractFinanceTemplateValue(template, 'X'.repeat(20_000) + '\nMemo: Later')).toBeUndefined();
+        expect(templateSourcePhrase('MONEY!received!!!')).toBe('money received');
     });
 });

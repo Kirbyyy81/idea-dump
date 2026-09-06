@@ -171,11 +171,11 @@ export async function listRuntimeFinanceSourceTemplates(userId: string) {
         .eq('user_id', userId)
         .eq('field_name', 'source_id')
         .in('status', ['active', 'shadow'])
-        .eq('algorithm_version', 1)
+        .eq('algorithm_version', 2)
         .order('status')
         .order('activated_at')
         .order('id')
-        .limit(400);
+        .limit(40);
 }
 
 export async function listRuntimeFinanceFieldTemplates(userId: string) {
@@ -188,13 +188,13 @@ export async function listRuntimeFinanceFieldTemplates(userId: string) {
             'created_at, evaluated_at, activated_at, disabled_at, updated_at',
         ].join(', '))
         .eq('user_id', userId)
-        .in('field_name', ['reference_number', 'merchant', 'transaction_date'])
+        .in('field_name', ['reference_number', 'merchant', 'transaction_date', 'direction', 'payee_name', 'notes', 'recipient_reference'])
         .in('status', ['active', 'shadow'])
-        .eq('algorithm_version', 1)
+        .eq('algorithm_version', 2)
         .order('status')
         .order('activated_at')
         .order('id')
-        .limit(1200);
+        .limit(1000);
 }
 
 export async function createFinanceSource(
