@@ -37,7 +37,7 @@ Only the trusted database operator can run promotion, disable, requeue, and refr
 
 New forward migration: supabase/migrations/20260906090624_guarded_finance_parser_learning.sql.
 
-No production migration, deployment, or activation was performed during implementation.
+Initial implementation did not deploy or activate production templates. The completed cutoff rollout is recorded below.
 
 1. Resolve the known migration ledger discrepancy by comparing stored statements and versions. Do not replay applied migrations or repair their history blindly.
 2. Validate the full adopted-baseline schema and forward migrations on isolated staging. Run the SQL lifecycle test and runtime/SQL parity tests there.
@@ -57,7 +57,7 @@ Previously observed remote/local version pairs:
 | Source learning | 20260901103000 | 20260901093435 |
 | Critical fields | 20260901113000 | 20260901093453 |
 
-These are a deployment reconciliation task, not missing implementation.
+These timestamp discrepancies were reconciled on 6 September 2026 after comparing the stored SQL with the repository files. All four bodies matched after line-ending and surrounding-whitespace normalization. Their stored statements were preserved; only their ledger versions were aligned with the filenames.
 
 ## Operator commands
 
@@ -113,7 +113,7 @@ The CI audit failures were resolved by updating browserslist to 4.28.9, postcss-
 
 ## Remaining issues
 
-- Live migration ledger reconciliation, full staging verification, representative-history performance checks, and Gates C/D remain pending.
+- Migration history is reconciled and the cutoff is deployed. Full Supabase staging and representative-history performance checks remain separate from the isolated tests and live smoke checks. Template activation still requires reviewed shadow evidence and operator approval.
 - Production parsing accuracy and promotion eligibility require retained reviewed history and new live shadow observations.
 
 ## Upload cutoff for algorithm 2
@@ -158,7 +158,17 @@ Run `supabase/tests/finance_parser_learning_cutoff.test.sql` alongside the exist
 
 Validation for the cutoff: both SQL lifecycle suites passed after a fresh application of all September migrations on isolated PostgreSQL 17 with Unicode ICU collation and synthetic prerequisite tables. Application lint, type checks, 221 tests, the production build, and both dependency audits passed. This does not replace full Supabase staging or a production-scale performance check.
 
-Deployment status during this change: the local migration and tests are ready, but the production cutoff has not been set. The CLI reports missing authentication. The live ledger also lacks `20260906090624` despite its functions being installed, in addition to the four version pairs listed above. Compare applied definitions and stored statements before reconciling history and reviewing a dry run. Do not replay those changes blindly.
+Production rollout completed on 6 September 2026:
+
+- Authenticated and linked the CLI to the intended project. Compared the phase 4/5 installation with an isolated fresh application of the September migrations: all 15 function definitions, constraints, and 57 column definitions matched. Verified the helper execution restrictions, retirement of algorithm 1 templates, and the cron command as well.
+- Reconciled the four reviewed timestamp pairs and recorded the already-installed `20260906090624` migration atomically, with guards against changed SQL definitions. No old migration was replayed.
+- Reviewed a CLI dry run containing only `20260906111614`, then applied that migration with the versioned CLI workflow. A subsequent dry run reported no pending migrations.
+- Set the selected account's cutoff to `2026-09-05T16:00:00Z` and ran learning in the same transaction, checking the durable business result before committing. Run `59d37fde-d02f-400f-93df-e7d1f669cda6` succeeded at 12:39 UTC in approximately 0.64 seconds.
+- All 27 uploads from the requested day were reviewed and eligible. No source corrections were present in that period, and none of the reviewed field corrections matched an allowed proposal configuration. Consequently, the refresh created no new templates. The old shadow version was retired, and no algorithm 2 template is currently active or in shadow for this account.
+- Confirmed zero earlier-upload evidence in current-period templates. Before/after counts and complete-row fingerprints matched for all 113 transactions, 131 intake items, 127 candidates, and 357 corrections in the account. No historical receipt or transaction was deleted or rewritten.
+- Legacy learning still runs through the unchanged legacy function. The scheduled job remains enabled at `15 3 * * *`, which is 11:15 Malaysia time. Its historical correction totals are intentionally unaffected by the new-system cutoff.
+
+The post-deployment security advisor reports an informational [RLS-without-policy notice](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy) for the private settings table. This is intentional: it is operator-only, with no browser or service-role grants or policies. The scan also reports the existing payee-table notice and two unrelated warnings: [pg_net in the public schema](https://supabase.com/docs/guides/database/database-linter?lint=0014_extension_in_public) and [disabled leaked-password protection](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection). Those were not changed by this rollout.
 
 ## Future category learning proposal, not implemented
 
