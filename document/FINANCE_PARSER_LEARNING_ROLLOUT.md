@@ -194,3 +194,44 @@ Run all three isolated SQL suites: `finance_parser_learning_v2.test.sql`, `finan
 This follow-up does not add category learning or expand direction phrases.
 
 Validation for this follow-up: 221 application tests and 203 OCR tests passed, including 26 PostgreSQL/runtime parity cases. All three SQL lifecycle suites, application lint, both TypeScript checks, both builds, and all four dependency audits passed. An optional local replay of exported production receipt data was rejected by automatic approval review because it would copy sensitive financial data; verification used synthetic fixtures and evaluator parity instead.
+
+## Approved Ryt and TNG receipt rules
+
+The user approved the observed date, source, reference, direction, merchant, and saved-payee rules on 6 September 2026, including wrapped TNG references. `Transfer to Wallet` remains excluded from the new definitions. Category learning is unchanged.
+
+Migration `20260906135451_approved_finance_receipt_rules.sql` adds an operator-only catalog and installer containing 14 source-scoped definitions. The count includes separate Ryt and TNG definitions for source, dates, and signed direction:
+
+| Definition | Extraction |
+| --- | --- |
+| Ryt source | Filename contains the complete phrase `Ryt Bank` |
+| TNG source | Filename contains the complete phrase `TNG eWallet` |
+| TNG date | Calendar date after `Date/Time` or `Date & Time` |
+| Ryt date | Named calendar date at the start of a receipt line |
+| Ryt Today | Valid screenshot filename date when OCR explicitly says `Today` |
+| Ryt reference | Identifier after `Reference ID`, excluding detached icon characters |
+| TNG reference before label | Long numeric identifier immediately before `Wallet Ref`, ignoring short detached OCR debris |
+| Signed direction, each source | `+RM` means income; `-RM` means expense; reward points do not supply the sign |
+| TNG Payment | `Transaction Type Payment` means expense |
+| TNG Receive from Wallet | `Transaction Type Receive from Wallet` means income |
+| TNG merchant | Same-line value after `Merchant` |
+| TNG receive payee | Same-line value after `Receive From`, matching an active saved payee |
+| Wrapped TNG reference | Long identifier after `Wallet Ref`, followed by a 10 to 30 digit continuation within three physical lines, joined with one space |
+
+The allowlisted `receipt_pattern` type implements the explicit dates, signed direction, and two TNG reference layouts. Multiple conflicting extracted values are invalid. Recognized conflicting amount signs and Payment/Receive transaction types also invalidate the approved direction outputs. No arbitrary regular expressions are stored in configurations.
+
+Wrapped references matched eight of ten reviewed examples. The PINDUODUO RM25.98 receipt's reviewed reference omits its continuation; the StoreHub RM20.30 receipt has a different reviewed continuation. Installation preserves those reviewed values and their contradictions. The wrapped definition will be rejected by replay while those conflicts remain; approval of a definition does not override evidence or activate it.
+
+### Production installation and remaining deployment
+
+The six definitions compatible with the currently deployed parser were installed using `supabase/operations/install_compatible_receipt_rules.sql`. The operator session supplies verified `receipt_rules.user_id`, `receipt_rules.ryt_source_id`, and `receipt_rules.tng_source_id` settings. The operation validates ownership and the existing finite cutoff, installs missing definitions, and verifies the learning run within one transaction. It can be retried without creating duplicate versions.
+
+Production replay `78bc7b8a-dbf7-4bf4-8af8-8dfb5248da20` succeeded at 14:09 UTC on 6 September 2026. All six definitions entered shadow with zero contradictions: Ryt source 11 supporting receipts, TNG source 16, Payment direction 10, Receive direction 3, merchant 10, and saved payee 3. None was activated. The same 27 eligible receipts were evaluated, and legacy learning remained enabled. Counts and complete-row fingerprints of transactions, intake items, candidates, and corrections were unchanged after installation.
+
+The other eight definitions, including wrapped references, are prepared but are **not installed in production yet**. Production migration history still ends at `20260906111614`. Complete the rollout in this order:
+
+1. Push the committed branch when authorized and deploy both the application and Finance OCR service containing the reviewed and approved receipt-pattern support.
+2. Review the versioned CLI dry run. Apply the two pending migrations `20260906125549` and `20260906135451` after confirming the compatible runtimes are live.
+3. As a trusted operator, call `public.finance_install_approved_receipt_rules(:user_id, :ryt_source_id, :tng_source_id)` with the verified source UUIDs. The installer retains the six existing definitions and inserts the remaining eight, then checks a successful replay before returning.
+4. Inspect current-period statuses, support, and contradictions. Consistent definitions enter shadow; the wrapped definition remains blocked by its two conflicts. New reviewed shadow observations and a separate operator promotion remain required for activation.
+
+Validation: 221 application tests and 229 OCR tests passed, including 36 PostgreSQL/runtime parity cases. All four SQL suites passed on isolated PostgreSQL 17 with synthetic receipts, including retry behavior, preserved wrapped-reference conflicts, exclusion of Transfer to Wallet, and operator-only installation. A two-stage installation check verified that the final installer adds eight definitions after the compatible six. Lint, both TypeScript checks, both production builds, and all four dependency audits passed.
