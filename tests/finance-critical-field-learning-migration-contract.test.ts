@@ -25,7 +25,7 @@ describe('Finance critical-field learning migration', () => {
     it('requires independent evidence, bounded evaluation, and perfect precision', () => {
         expect(sql).toContain('count(distinct extracted.transaction_id) >= 3');
         expect(sql).toContain('templates.evidence_count >= 3');
-        expect(sql).toContain('pg_catalog.least(5, reviewed_totals.reviewed_count)');
+        expect(sql).toContain('least(5, reviewed_totals.reviewed_count)');
         expect(sql).toContain('templates.contradiction_count = 0');
         expect(sql).toContain('templates.precision = 1::numeric');
     });

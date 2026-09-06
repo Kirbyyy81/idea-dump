@@ -23,7 +23,7 @@ describe('Finance source-template learning migration', () => {
         expect(sanitizer).toContain("normalized_phrase ~ '[0-9]'");
         expect(sanitizer).toContain('amount|balance|reference|ref|account|recipient|date|time|notes?');
         expect(sanitizer).toContain('between 3 and 120');
-        expect(extractor).toContain("pg_catalog.left(pg_catalog.coalesce(p_ocr_text, ''), 20000)");
+        expect(extractor).toContain("pg_catalog.left(coalesce(p_ocr_text, ''), 20000)");
         expect(extractor).toContain('200');
         expect(extractor).toContain("location := 'filename'");
         expect(extractor).toContain('filename_tokens[token_number:token_number + token_window - 1]');
