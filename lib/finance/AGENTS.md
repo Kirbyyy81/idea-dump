@@ -29,3 +29,4 @@
 
 - Parser-template normalization and extraction must agree with the versioned SQL evaluator. When changing these contracts, run the optional OCR parity suite and supabase/tests/finance_parser_learning_v2.test.sql against an isolated migrated database, following document/FINANCE_PARSER_LEARNING_ROLLOUT.md.
 - Keep Node-only replay hashing separate from normalization modules imported by browser validation.
+- Receipt-pattern changes must also pass `supabase/tests/finance_reviewed_receipt_patterns.test.sql`. Deploy compatible application and OCR runtimes before enabling migrations that generate new template configuration types.

@@ -177,3 +177,20 @@ Add category learning as a separate rule type within the guarded learning pipeli
 Reuse explicit upload cutoffs, immutable versions, distinct-transaction support, contradiction tracking, shadow observations, operator promotion, and automatic disable. In shadow mode, record the proposed category and compare it with the user's confirmed category without changing the saved transaction. Keep manual rules ahead of learned suggestions. Measure false assignments and ambiguous merchants before choosing category-specific promotion thresholds.
 
 Keep legacy category learning running while the new category rules are evaluated. At a later approved cutover, define one application precedence path so both learners cannot overwrite each other's category choice. This change introduces no new category rules or category-learning behavior.
+
+## Reviewed receipt pattern follow-up
+
+Migration `20260906125549_finance_reviewed_receipt_patterns.sql` adds source proposals from accepted candidates linked to confirmed transactions, even when their source was not corrected. It uses the same per-user upload cutoff and active source ownership checks. It creates no artificial correction records. Three distinct reviewed transactions are still required, all retained eligible cases are replayed, and proposals enter shadow mode.
+
+Two additional allowlisted configuration types support the observed layouts:
+
+- `filename_date` resolves an explicit standalone `Today` line, optionally followed by a time, from a validated `Screenshot_YYYYMMDD_HHMMSS` filename. Separated screenshot date/time forms are also accepted. It validates the calendar date and time, uses the original filename rather than upload time, and returns no date for missing/invalid filenames or unsupported relative days. The baseline parser also supports this fallback and preserves explicit OCR dates.
+- `reference_label` supports `Wallet Ref`, `Reference ID`, `Reference No`, and `Transaction No`, with a value on the same line, immediately before, or after the label. It reads at most three identifier chunks within six adjacent physical lines, stops at unrelated text, and requires digit-bearing chunks. Separate space/concatenation configurations are learned only when their output matches reviewed corrections. Repeated conflicting values are not valid evidence. The baseline reference parser also recognizes these labels and joins wrapped identifiers.
+
+Existing configuration semantics and hashes remain unchanged. New types use the existing algorithm 2 contract with their own immutable template definitions. Deploy both compatible application and Finance OCR runtimes **before** applying this migration and running a refresh. No new template is automatically promoted. This follow-up has not been deployed during implementation; the previously deployed cutoff remains active.
+
+Run all three isolated SQL suites: `finance_parser_learning_v2.test.sql`, `finance_parser_learning_cutoff.test.sql`, and `finance_reviewed_receipt_patterns.test.sql`, plus the OCR PostgreSQL parity suite. The new SQL suite verifies confirmed-but-unchanged source learning, exclusion of unreviewed and pre-cutoff receipts, preserved correction records, filename-date and wrapped-reference proposals, repeat-run behavior, and access restrictions.
+
+This follow-up does not add category learning or expand direction phrases.
+
+Validation for this follow-up: 221 application tests and 203 OCR tests passed, including 26 PostgreSQL/runtime parity cases. All three SQL lifecycle suites, application lint, both TypeScript checks, both builds, and all four dependency audits passed. An optional local replay of exported production receipt data was rejected by automatic approval review because it would copy sensitive financial data; verification used synthetic fixtures and evaluator parity instead.
