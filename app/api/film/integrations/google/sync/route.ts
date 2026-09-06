@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authorizeFilmJournal, filmServiceErrorResponse, jsonError } from '@/lib/film/core/api';
+import { applicationErrorResponse } from '@/lib/api/responses';
+import { authorizeFilmJournal, jsonError } from '@/lib/film/core/api';
 import { parseFilmDriveSync, readFilmRequestBody } from '@/lib/film/core/schemas';
 import { syncFilmDriveForUser } from '@/lib/film/core/service';
 
@@ -15,7 +16,7 @@ export async function POST(request: NextRequest) {
         if ('error' in input) return jsonError(input.error);
         return NextResponse.json({ data: await syncFilmDriveForUser(session.user.id, input.data) });
     } catch (error) {
-        const serviceError = filmServiceErrorResponse(error);
+        const serviceError = applicationErrorResponse(error);
         if (serviceError) return serviceError;
         console.error('Error syncing Google Drive folder:', error);
         const message = error instanceof Error && error.message

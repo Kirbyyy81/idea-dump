@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authorizeFilmJournal, filmServiceErrorResponse, jsonError } from '@/lib/film/core/api';
+import { applicationErrorResponse } from '@/lib/api/responses';
+import { authorizeFilmJournal, jsonError } from '@/lib/film/core/api';
 import { FILM_COVER_MAX_BYTES } from '@/lib/film/core/constants';
 import { validateFilmCover } from '@/lib/film/covers';
 import { getFilmCoverForUser, replaceFilmCoverForUser } from '@/lib/film/core/service';
@@ -29,7 +30,7 @@ export async function GET(_request: NextRequest, { params }: CoverRouteProps) {
             },
         });
     } catch (error) {
-        const serviceError = filmServiceErrorResponse(error);
+        const serviceError = applicationErrorResponse(error);
         if (serviceError) return serviceError;
         console.error('Error serving film cover:', error);
         return jsonError('Failed to serve film cover', 500);
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest, { params }: CoverRouteProps) {
             data: await replaceFilmCoverForUser(session.user.id, id, validated),
         });
     } catch (error) {
-        const serviceError = filmServiceErrorResponse(error);
+        const serviceError = applicationErrorResponse(error);
         if (serviceError) return serviceError;
         console.error('Error uploading film cover:', error);
         return jsonError('Failed to upload film cover', 500);

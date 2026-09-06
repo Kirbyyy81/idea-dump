@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { applicationErrorResponse } from '@/lib/api/responses';
 import { authorizeFinance, jsonError, readFinanceJsonObject } from '@/lib/finance/core/auth';
 import { parseFinanceShareCommit } from '@/lib/finance/core/schemas';
-import { commitFinanceShareBatchForUser, isFinanceServiceError } from '@/lib/finance/core/service';
+import { commitFinanceShareBatchForUser } from '@/lib/finance/core/service';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,7 +26,8 @@ export async function POST(request: NextRequest) {
         });
     } catch (error) {
         console.error('Error committing Finance share batch:', error);
-        if (isFinanceServiceError(error)) return jsonError(error.message, error.status);
+        const serviceError = applicationErrorResponse(error);
+        if (serviceError) return serviceError;
         return jsonError('Could not create the background batch', 500);
     }
 }

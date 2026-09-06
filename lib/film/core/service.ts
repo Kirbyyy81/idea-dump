@@ -1,3 +1,4 @@
+import { ApplicationError } from '@/lib/api/applicationError';
 import type { FilmDashboardSummary, FilmRoll } from '@/lib/types';
 import {
     createFilmCoverPath,
@@ -55,19 +56,6 @@ import type {
 } from './schemas';
 import { filmRollStatusConfig } from '@/lib/types';
 
-export class FilmServiceError extends Error {
-    constructor(
-        message: string,
-        readonly status: number = 400
-    ) {
-        super(message);
-    }
-}
-
-export function isFilmServiceError(error: unknown): error is FilmServiceError {
-    return error instanceof FilmServiceError;
-}
-
 export function getFilmGoogleAuthorizationUrl(state: string) {
     return getGoogleAuthUrl(state);
 }
@@ -113,13 +101,13 @@ function getMaintenanceCost(records: ReadonlyArray<{ maintenance_cost: number }>
 
 async function requireFilmCamera(userId: string, cameraId: string) {
     const camera = await findFilmCameraForUser(userId, cameraId);
-    if (!camera) throw new FilmServiceError('Camera not found', 404);
+    if (!camera) throw new ApplicationError('Camera not found', { status: 404 });
     return camera;
 }
 
 async function requireFilmRoll(userId: string, rollId: string) {
     const roll = await findFilmRollForUser(userId, rollId);
-    if (!roll) throw new FilmServiceError('Film roll not found', 404);
+    if (!roll) throw new ApplicationError('Film roll not found', { status: 404 });
     return roll;
 }
 
@@ -164,13 +152,13 @@ export async function listFilmRollsForUser(userId: string, query: FilmRollListQu
 
 export async function getFilmRollForUser(userId: string, rollId: string) {
     const roll = await getFilmRollDetails(userId, rollId);
-    if (!roll) throw new FilmServiceError('Film roll not found', 404);
+    if (!roll) throw new ApplicationError('Film roll not found', { status: 404 });
     return roll;
 }
 
 export async function createFilmRollForUser(userId: string, command: FilmRollCreateCommand) {
     if (command.cover_photo_id) {
-        throw new FilmServiceError('Cover photo cannot be set before the roll is created');
+        throw new ApplicationError('Cover photo cannot be set before the roll is created');
     }
     if (command.camera_id) await requireFilmCamera(userId, command.camera_id);
     return createFilmRoll(userId, command);
@@ -181,7 +169,7 @@ export async function updateFilmRollForUser(userId: string, command: FilmRollUpd
     if (command.camera_id) await requireFilmCamera(userId, command.camera_id);
     if (command.cover_photo_id) {
         const isRollPhoto = await findFilmRollPhotoForUser(userId, command.id, command.cover_photo_id);
-        if (!isRollPhoto) throw new FilmServiceError('Cover photo not found for this roll', 404);
+    if (!isRollPhoto) throw new ApplicationError('Cover photo not found for this roll', { status: 404 });
     }
     return updateFilmRoll(userId, command);
 }
@@ -189,7 +177,7 @@ export async function updateFilmRollForUser(userId: string, command: FilmRollUpd
 export async function deleteFilmRollForUser(userId: string, rollId: string) {
     const roll = await requireFilmRoll(userId, rollId);
     const deleted = await deleteFilmRoll(userId, rollId);
-    if (!deleted) throw new FilmServiceError('Film roll not found', 404);
+    if (!deleted) throw new ApplicationError('Film roll not found', { status: 404 });
 
     try {
         await removeFilmCoverObjects(userId, roll.id);
@@ -205,9 +193,9 @@ export async function listFilmPhotosForUser(userId: string, rollId: string) {
 
 export async function updateFilmPhotoForUser(userId: string, command: FilmPhotoUpdateCommand) {
     const photo = await findFilmPhotoForUser(userId, command.id);
-    if (!photo) throw new FilmServiceError('Photo not found', 404);
+    if (!photo) throw new ApplicationError('Photo not found', { status: 404 });
     if (command.film_roll_id !== undefined && command.film_roll_id !== photo.film_roll_id) {
-        throw new FilmServiceError('Photo does not belong to the requested roll');
+        throw new ApplicationError('Photo does not belong to the requested roll');
     }
 
     const updatedPhoto = await updateFilmPhoto(userId, command);
@@ -318,7 +306,7 @@ export async function getFilmDashboardForUser(userId: string): Promise<FilmDashb
 export async function syncFilmDriveForUser(userId: string, command: FilmDriveSyncCommand) {
     await requireFilmRoll(userId, command.film_roll_id);
     const accessToken = await getValidDriveAccessToken(userId);
-    if (!accessToken) throw new FilmServiceError('Google Drive is not connected');
+    if (!accessToken) throw new ApplicationError('Google Drive is not connected');
 
     const files = await listDriveImages(command.folder_id, accessToken);
     const synced = await syncFilmDriveImages(
@@ -345,10 +333,10 @@ export async function syncFilmDriveForUser(userId: string, command: FilmDriveSyn
 
 export async function getFilmPhotoImageForUser(userId: string, photoId: string) {
     const photo = await findFilmPhotoFileForUser(userId, photoId);
-    if (!photo) throw new FilmServiceError('Photo not found', 404);
+    if (!photo) throw new ApplicationError('Photo not found', { status: 404 });
 
     const accessToken = await getValidDriveAccessToken(userId);
-    if (!accessToken) throw new FilmServiceError('Google Drive is not connected');
+    if (!accessToken) throw new ApplicationError('Google Drive is not connected');
 
     const driveParams = new URLSearchParams({ alt: 'media', supportsAllDrives: 'true' });
     const response = await fetch(
@@ -356,7 +344,7 @@ export async function getFilmPhotoImageForUser(userId: string, photoId: string) 
         { cache: 'no-store', headers: { Authorization: `Bearer ${accessToken}` } }
     );
     if (!response.ok || !response.body) {
-        throw new FilmServiceError('Failed to load Google Drive photo', response.status || 500);
+        throw new ApplicationError('Failed to load Google Drive photo', { status: response.status || 500 });
     }
 
     return { photo, response };
@@ -365,13 +353,13 @@ export async function getFilmPhotoImageForUser(userId: string, photoId: string) 
 export async function getFilmCoverForUser(userId: string, rollId: string) {
     const roll = await requireFilmRoll(userId, rollId);
     if (!isOwnedFilmCoverPath(roll.cover_image_path, userId, roll.id)) {
-        throw new FilmServiceError('Film cover not found', 404);
+        throw new ApplicationError('Film cover not found', { status: 404 });
     }
 
     const cover = await downloadFilmCover(roll.cover_image_path);
-    if (!cover) throw new FilmServiceError('Film cover not found', 404);
+    if (!cover) throw new ApplicationError('Film cover not found', { status: 404 });
     if (!FILM_COVER_MIME_TYPES.includes(cover.type as FilmCoverMimeType)) {
-        throw new FilmServiceError('Stored film cover has an unsupported content type', 415);
+        throw new ApplicationError('Stored film cover has an unsupported content type', { status: 415 });
     }
 
     return cover;
@@ -398,7 +386,9 @@ export async function replaceFilmCoverForUser(
         if (!updated) {
             await removeFilmCover(uploadedPath);
             shouldRemoveUploadedPath = false;
-            throw new FilmServiceError('The film cover changed while this upload was processing. Try again.', 409);
+            throw new ApplicationError('The film cover changed while this upload was processing. Try again.', {
+                status: 409,
+            });
         }
 
         const previousPath = roll.cover_image_path;

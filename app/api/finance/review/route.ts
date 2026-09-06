@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { applicationErrorResponse } from '@/lib/api/responses';
 import {
     authorizeFinance,
     isFinanceSerializationError,
@@ -7,7 +8,6 @@ import {
 } from '@/lib/finance/core/auth';
 import { parseFinanceReviewAction } from '@/lib/finance/core/schemas';
 import {
-    isFinanceServiceError,
     resolveFinanceReviewCandidateForUser,
 } from '@/lib/finance/core/service';
 import { FINANCE_TIME_ZONE_HEADER, getFinanceDateInTimeZone } from '@/lib/finance/core/values';
@@ -34,9 +34,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Error resolving finance review item:', error);
-        if (isFinanceServiceError(error)) {
-            return NextResponse.json({ error: error.message, ...error.details }, { status: error.status });
-        }
+        const serviceError = applicationErrorResponse(error);
+        if (serviceError) return serviceError;
         if (isFinanceSerializationError(error)) {
             return jsonError('Finance data changed concurrently. Retry the action.', 409);
         }
