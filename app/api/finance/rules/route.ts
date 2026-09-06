@@ -16,7 +16,11 @@ export async function GET() {
         const session = await authorizeFinance();
         if ('response' in session) return session.response;
         const settings = await getFinanceRuleSettings(session.user.id);
-        return NextResponse.json({ data: settings.rules, suggestions: settings.suggestions });
+        return NextResponse.json({
+            data: settings.rules,
+            suggestions: settings.suggestions,
+            learning: settings.learning,
+        });
     } catch (error) {
         console.error('Error fetching finance rules:', error);
         return jsonError('Failed to fetch finance rules', 500);

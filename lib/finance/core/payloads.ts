@@ -2,6 +2,11 @@ import { FINANCE_V1_CURRENCY } from '@/lib/finance/core/constants';
 import type {
     FinanceCandidateTransaction,
     FinanceDashboardRecentTransaction,
+    FinanceLearningActiveMetric,
+    FinanceLearningRecentOutcome,
+    FinanceLearningSummary,
+    FinanceLearningTemplateCounts,
+    FinanceParserTemplateField,
     FinanceReviewCandidate,
     FinanceRule,
     FinanceRuleSuggestion,
@@ -20,6 +25,158 @@ type FinanceRuleSuggestionWithRelations = FinanceRuleSuggestion & {
     finance_source?: { name: string } | null;
     category?: { name: string } | null;
 };
+
+const financeParserTemplateFields = new Set<FinanceParserTemplateField>([
+    'source_id',
+    'reference_number',
+    'merchant',
+    'transaction_date',
+    'direction',
+    'payee_name',
+    'notes',
+    'recipient_reference',
+    'amount',
+]);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function nonNegativeInteger(value: unknown) {
+    const parsed = Number(value);
+    return Number.isInteger(parsed) && parsed >= 0 ? parsed : null;
+}
+
+function nullableRatio(value: unknown) {
+    if (value === null) return null;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed >= 0 && parsed <= 1 ? parsed : undefined;
+}
+
+function isTimestamp(value: unknown): value is string {
+    return typeof value === 'string' && Number.isFinite(Date.parse(value));
+}
+
+function isTemplateField(value: unknown): value is FinanceParserTemplateField {
+    return typeof value === 'string' && financeParserTemplateFields.has(value as FinanceParserTemplateField);
+}
+
+function parseTemplateCounts(value: unknown): FinanceLearningTemplateCounts | null {
+    if (!isRecord(value)) return null;
+    const activeSource = nonNegativeInteger(value.active_source);
+    const activeField = nonNegativeInteger(value.active_field);
+    const proposed = nonNegativeInteger(value.proposed);
+    const shadow = nonNegativeInteger(value.shadow);
+    const rejected = nonNegativeInteger(value.rejected);
+    const disabled = nonNegativeInteger(value.disabled);
+    if ([activeSource, activeField, proposed, shadow, rejected, disabled].some((count) => count === null)) {
+        return null;
+    }
+    return {
+        active_source: activeSource!,
+        active_field: activeField!,
+        proposed: proposed!,
+        shadow: shadow!,
+        rejected: rejected!,
+        disabled: disabled!,
+    };
+}
+
+function parseActiveMetric(value: unknown): FinanceLearningActiveMetric | null {
+    if (!isRecord(value) || !isTemplateField(value.field_name)) return null;
+    const templateCount = nonNegativeInteger(value.template_count);
+    const minimumPrecision = nullableRatio(value.minimum_precision);
+    const averageCoverage = nullableRatio(value.average_coverage);
+    if (templateCount === null || minimumPrecision === undefined || averageCoverage === undefined) return null;
+    return {
+        field_name: value.field_name,
+        template_count: templateCount,
+        minimum_precision: minimumPrecision,
+        average_coverage: averageCoverage,
+    };
+}
+
+function parseRecentOutcome(value: unknown): FinanceLearningRecentOutcome | null {
+    if (
+        !isRecord(value)
+        || !isTemplateField(value.field_name)
+        || !['rejected', 'disabled'].includes(String(value.status))
+        || typeof value.reason !== 'string'
+        || value.reason.length < 1
+        || value.reason.length > 200
+        || !isTimestamp(value.updated_at)
+    ) {
+        return null;
+    }
+    return {
+        field_name: value.field_name,
+        status: value.status as FinanceLearningRecentOutcome['status'],
+        reason: value.reason,
+        updated_at: value.updated_at,
+    };
+}
+
+export function toFinanceLearningSummary(value: unknown): FinanceLearningSummary {
+    if (!isRecord(value)) return { availability: 'unavailable' };
+    if (value.availability === 'never_run') return { availability: 'never_run' };
+    if (value.availability !== 'available' || !isRecord(value.latest_run)) {
+        return { availability: 'unavailable' };
+    }
+    const latestRun = value.latest_run;
+
+    const counts = [
+        'corrections_examined',
+        'category_rules_created',
+        'category_rules_updated',
+        'category_rules_disabled',
+        'reference_rules_created',
+        'reference_rules_updated',
+        'reference_rules_disabled',
+    ] as const;
+    const parsedCounts = Object.fromEntries(counts.map((key) => [key, nonNegativeInteger(latestRun[key])]));
+    const templateCounts = parseTemplateCounts(value.template_counts);
+    const activeReferenceRules = nonNegativeInteger(value.active_reference_rules);
+    const activeMetrics = Array.isArray(value.active_metrics)
+        ? value.active_metrics.map(parseActiveMetric)
+        : [];
+    const recentOutcomes = Array.isArray(value.recent_outcomes)
+        ? value.recent_outcomes.map(parseRecentOutcome)
+        : [];
+    const failureCode = latestRun.failure_code;
+    if (
+        !['succeeded', 'failed'].includes(String(latestRun.status))
+        || !isTimestamp(latestRun.finished_at)
+        || (failureCode !== null && (typeof failureCode !== 'string' || failureCode.length > 64))
+        || Object.values(parsedCounts).some((count) => count === null)
+        || !templateCounts
+        || activeReferenceRules === null
+        || activeMetrics.some((metric) => metric === null)
+        || recentOutcomes.some((outcome) => outcome === null)
+        || recentOutcomes.length > 5
+    ) {
+        return { availability: 'unavailable' };
+    }
+
+    return {
+        availability: 'available',
+        latest_run: {
+            status: latestRun.status as 'succeeded' | 'failed',
+            finished_at: latestRun.finished_at,
+            failure_code: failureCode as string | null,
+            corrections_examined: parsedCounts.corrections_examined!,
+            category_rules_created: parsedCounts.category_rules_created!,
+            category_rules_updated: parsedCounts.category_rules_updated!,
+            category_rules_disabled: parsedCounts.category_rules_disabled!,
+            reference_rules_created: parsedCounts.reference_rules_created!,
+            reference_rules_updated: parsedCounts.reference_rules_updated!,
+            reference_rules_disabled: parsedCounts.reference_rules_disabled!,
+        },
+        template_counts: templateCounts,
+        active_reference_rules: activeReferenceRules,
+        active_metrics: activeMetrics as FinanceLearningActiveMetric[],
+        recent_outcomes: recentOutcomes as FinanceLearningRecentOutcome[],
+    };
+}
 
 function referenceOption(value: { id: string; name: string } | null | undefined) {
     return value ? { id: value.id, name: value.name } : null;

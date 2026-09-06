@@ -23,6 +23,7 @@ import {
     FINANCE_TRANSACTION_VIEW_SELECT,
     getFinanceShareObjectInfo,
     getFinanceShareUploadReservation,
+    getFinanceLearningSummary,
     getOwnedActiveFinanceShareBatch,
     getManualFinanceTransactionByIdempotencyKey,
     getOwnedFinanceCategory,
@@ -40,6 +41,8 @@ import {
     listActiveFinanceFieldLearningRules,
     listActiveFinancePayees,
     listActiveFinanceSources,
+    listRuntimeFinanceSourceTemplates,
+    listRuntimeFinanceFieldTemplates,
     listActiveFinanceSourceReferences,
     markFinanceReviewCandidateDuplicate,
     rejectFinanceReviewCandidate,
@@ -61,6 +64,7 @@ import {
 } from '@/lib/finance/core/repository';
 import {
     toFinanceDashboardRecentTransaction,
+    toFinanceLearningSummary,
     toFinanceReviewCandidate,
     toFinanceRuleSuggestionView,
     toFinanceRuleView,
@@ -98,10 +102,13 @@ import {
     FinanceCandidateTransaction,
     FinanceIntakeItem,
     FinanceCategoryDetail,
+    FinanceLearningSummary,
     FinanceOcrFieldLearningRule,
+    FinanceOcrFieldTemplate,
     FinanceOcrPayee,
     FinanceOcrRule,
     FinanceOcrSource,
+    FinanceOcrSourceTemplate,
     FinanceReferenceData,
     FinanceReferenceOption,
     FinanceRuleSuggestion,
@@ -304,10 +311,22 @@ function requireFinanceRuleOutput(input: Pick<FinanceRuleInput, 'source_id' | 'c
     }
 }
 
+async function loadFinanceLearningSummary(userId: string): Promise<FinanceLearningSummary> {
+    try {
+        const result = await getFinanceLearningSummary(userId);
+        return result.error
+            ? { availability: 'unavailable' }
+            : toFinanceLearningSummary(result.data);
+    } catch {
+        return { availability: 'unavailable' };
+    }
+}
+
 export async function getFinanceRuleSettings(userId: string) {
-    const [rulesResult, suggestionsResult] = await Promise.all([
+    const [rulesResult, suggestionsResult, learningResult] = await Promise.all([
         listFinanceRules(userId),
         listFinanceRuleSuggestions(userId),
+        loadFinanceLearningSummary(userId),
     ]);
     if (rulesResult.error) throw rulesResult.error;
     if (suggestionsResult.error) throw suggestionsResult.error;
@@ -318,6 +337,7 @@ export async function getFinanceRuleSettings(userId: string) {
         suggestions: (suggestionsResult.data || []).map((suggestion) => (
             toFinanceRuleSuggestionView(suggestion as unknown as FinanceRuleSuggestion)
         )),
+        learning: learningResult,
     };
 }
 
@@ -753,8 +773,10 @@ export async function resolveFinanceReviewCandidateForUser(
 
     if (action === 'retry') {
         if (candidate.status !== 'pending') fail('Only pending review items can be retried', 409);
-        const [sourcesResult, rulesResult, fieldLearningRulesResult, payeesResult] = await Promise.all([
+        const [sourcesResult, sourceTemplatesResult, fieldTemplatesResult, rulesResult, fieldLearningRulesResult, payeesResult] = await Promise.all([
             listActiveFinanceSources(userId),
+            listRuntimeFinanceSourceTemplates(userId),
+            listRuntimeFinanceFieldTemplates(userId),
             listActiveFinanceRules(userId),
             listActiveFinanceFieldLearningRules(userId),
             listActiveFinancePayees(userId),
@@ -771,6 +793,12 @@ export async function resolveFinanceReviewCandidateForUser(
             candidate.intake?.original_filename || null,
             (fieldLearningRulesResult.data || []) as FinanceOcrFieldLearningRule[],
             (payeesResult.data || []) as FinanceOcrPayee[],
+            sourceTemplatesResult.error
+                ? []
+                : (sourceTemplatesResult.data || []) as unknown as FinanceOcrSourceTemplate[],
+            fieldTemplatesResult.error
+                ? []
+                : (fieldTemplatesResult.data || []) as unknown as FinanceOcrFieldTemplate[],
         );
         const { error: sourceEvidenceError } = await updateFinanceIntakeSourceEvidence(
             userId,

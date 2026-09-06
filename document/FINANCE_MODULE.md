@@ -148,7 +148,7 @@ Pending, unsubmitted shared files are discarded when the user leaves the Finance
 
 Add, Review, Transactions, and Rules consume this shared state instead of independently loading the same option lists. Dashboard and ledger results remain page-owned and are not blocked by reference-data loading. Controls that need a source or category show a local loading or retry state. Concurrent refresh calls share one request, a failed refresh preserves the last successful options, and pending responses are aborted and ignored after unmounting.
 
-Settings remains intentionally separate from the minimal payload. Only the active Settings section is rendered. Sources then loads aliases and archive state, Categories loads archive state, and Rules loads rules and suggestions together in one authenticated request while reusing the provider options. Successful create, rename, archive, restore, and delete operations update both the detailed Settings list and the active provider options.
+Settings remains intentionally separate from the minimal payload. Only the active Settings section is rendered. Sources then loads aliases and archive state, Categories loads archive state, and Rules loads rules, suggestions, and a privacy-safe learning summary together in one authenticated request while reusing the provider options. Successful create, rename, archive, restore, and delete operations update both the detailed Settings list and the active provider options.
 
 ### API authorization
 
@@ -585,6 +585,10 @@ After at least three distinct supporting transactions and no competing category 
 
 The Settings UI also supports pending `finance_rule_suggestions`: users can edit, activate, or dismiss them. Accepted suggestions become learning rules. Learned rules can be paused or resumed, but their core learned fields cannot be edited and they cannot be permanently deleted through the normal rule API.
 
+Each scheduled refresh records a durable business result in `finance_learning_runs` and bounded user counts in `finance_learning_run_user_summaries`. The Rules settings section reads those aggregates through a server-only summary function. It never returns OCR text, filenames, correction values, transaction values, or parser-template configuration. Detailed completed runs are retained for 90 days.
+
+Version 2 parser learning generates source-scoped reference, merchant, date, direction, canonical payee, notes, and recipient-reference templates from reviewed corrections. Historical support enters shadow evaluation; new reviewed shadow outcomes and explicit operator promotion are required before activation. Contradictions disable active templates during refresh. Existing category learning and reference transforms remain available as the baseline. See [the Phase 4 and 5 rollout guide](FINANCE_PARSER_LEARNING_ROLLOUT.md) for bounds, promotion gates, verification, and deployment status.
+
 ### Reference-number learning
 
 Reference learning is source-specific and supports four deterministic transforms:
@@ -715,6 +719,10 @@ Share batch items move from queued to processing and then to one terminal state:
 | `finance_candidate_transactions` | Parsed review candidates, confidence, rules, and duplicate assessment. |
 | `finance_rules` | Manual and learned matching rules. |
 | `finance_rule_suggestions` | Pending, accepted, and rejected learning suggestions. |
+| `finance_learning_runs` | Privacy-safe business outcomes for scheduled learning refreshes. |
+| `finance_learning_run_user_summaries` | User-scoped learning counts used by Finance settings. |
+| `finance_parser_templates` | Versioned bounded OCR parser-template definitions for later phases. |
+| `finance_template_evidence` | Tenant-safe evidence relationships without duplicated OCR or correction values. |
 | `finance_field_learning_rules` | Source-specific deterministic reference transforms. |
 | `finance_corrections` | Original and corrected field values tied to review or transaction lineage. |
 | `finance_processing_events` | Safe processing and state-transition audit events. |
@@ -757,7 +765,7 @@ All Finance API handlers are dynamic and return JSON.
 | `/api/finance/review` | POST | Confirm, retry, duplicate, and reject mutations. Queue reads are server-rendered. |
 | `/api/finance/sources` | GET, POST, PATCH or PUT, DELETE | Source library management. |
 | `/api/finance/categories` | GET, POST, PUT or PATCH, DELETE | Category library management. |
-| `/api/finance/rules` | GET, POST, PUT, DELETE | Rule library management. GET also returns pending suggestions so Settings needs one read. |
+| `/api/finance/rules` | GET, POST, PUT, DELETE | Rule library management. GET also returns pending suggestions and the safe learning summary so Settings needs one read. |
 | `/api/finance/rule-suggestions` | PATCH, POST | Edit, activate, or dismiss learning suggestions. |
 | `/api/finance/share-batches/prepare` | POST | Reserve a batch and return signed upload details. |
 | `/api/finance/share-batches/commit` | POST | Verify uploads, queue them, and return 202. |

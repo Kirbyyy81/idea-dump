@@ -65,4 +65,5 @@
 - Keep changes focused and preserve unrelated working-tree edits.
 - Update a lockfile only when its corresponding dependencies change.
 - Use short, atomic commits that describe one coherent result.
+- After completing and validating task changes, commit them automatically in focused atomic commits. Do not ask again whether to commit. Include only task changes and preserve unrelated user edits. Push only when requested.
 - Document required environment or deployment changes without committing secrets.

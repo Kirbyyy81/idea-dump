@@ -165,6 +165,8 @@ export async function processScreenshot(
             image.originalFilename,
             context.fieldLearningRules,
             context.payees,
+            context.sourceTemplates,
+            context.fieldTemplates,
         );
         const duplicate = await dependencies.repository.assessDuplicate({
             userId,

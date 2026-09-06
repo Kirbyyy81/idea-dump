@@ -1,13 +1,16 @@
 import {
     FinanceCandidatePayload,
     FinanceOcrFieldLearningRule,
+    FinanceOcrFieldTemplate,
     FinanceOcrPayee,
     FinanceOcrRule,
     FinanceOcrSource,
+    FinanceOcrSourceTemplate,
     FinanceTransactionDirection,
 } from '@/lib/types';
 import { FINANCE_V1_CURRENCY } from '@/lib/finance/core/constants';
 import { applyLearnedReferenceRules } from '@/lib/finance/ocr/fieldLearning';
+import { applyFinanceCriticalFieldTemplates } from '@/lib/finance/ocr/fieldTemplates';
 import { normalizeFinanceMerchantKey, normalizeFinancePayeeKey } from '@/lib/finance/ocr/normalizer';
 import { extractFinanceReferenceNumber } from '@/lib/finance/ocr/reference';
 import {
@@ -194,18 +197,19 @@ export function parseFinanceText(
     filename: string | null = null,
     fieldLearningRules: FinanceOcrFieldLearningRule[] = [],
     payees: FinanceOcrPayee[] = [],
+    sourceTemplates: FinanceOcrSourceTemplate[] = [],
+    fieldTemplates: FinanceOcrFieldTemplate[] = [],
 ): ParsedCandidate {
     const lines = normalizedText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
     const normalized = lines.join('\n').toLowerCase();
     const sourceDetection = detectFinanceSource(
         normalizedText,
         filename,
-        sources.filter((source) => !source.is_archived)
+        sources.filter((source) => !source.is_archived),
+        sourceTemplates,
     );
     const sourceDetectionSignals = [...sourceDetection.signals];
-    const sourceSignalsConflict = new Set(
-        sourceDetectionSignals.map((signal) => signal.source_id)
-    ).size > 1;
+    const sourceSignalsConflict = sourceDetection.hasConflict;
     const parties = parseParties(lines, payees);
     const recipientReference = extractFinanceRecipientReference(normalizedText);
     const payload: FinanceCandidatePayload = {
@@ -246,9 +250,9 @@ export function parseFinanceText(
             categoryMatchedRuleId = rule.id;
         }
         if (rule.source_id && !sourceAssigned) {
-            const signaledSourceIds = new Set(
-                sourceDetectionSignals.map((signal) => signal.source_id)
-            );
+            const signaledSourceIds = new Set(sourceDetectionSignals
+                .filter((signal) => signal.kind !== 'learned_source_shadow')
+                .map((signal) => signal.source_id));
             const canAssignRuleSource = !sourceSignalsConflict && (
                 signaledSourceIds.size === 0 || signaledSourceIds.has(rule.source_id)
             );
@@ -284,6 +288,28 @@ export function parseFinanceText(
     );
     payload.reference_number = learnedReference.referenceNumber;
     payload.learned_field_rule_ids = learnedReference.matchedRuleIds;
+
+    const fieldTemplateResult = applyFinanceCriticalFieldTemplates(
+        normalizedText,
+        payload,
+        payload.source_id,
+        fieldTemplates,
+        payees,
+    );
+    if (fieldTemplateResult.evaluations.length > 0) {
+        payload.parser_template_baseline = {
+            reference_number: payload.reference_number, merchant: payload.merchant,
+            transaction_date: payload.transaction_date, direction: payload.direction,
+            payee_name: payload.payee_name, notes: payload.notes, recipient_reference: recipientReference,
+        };
+    }
+    Object.assign(payload, fieldTemplateResult.payload);
+    if (fieldTemplateResult.evaluations.length > 0) {
+        payload.parser_template_evaluations = fieldTemplateResult.evaluations;
+        payload.matched_parser_template_ids = fieldTemplateResult.evaluations
+            .filter((evaluation) => evaluation.outcome === 'applied')
+            .map((evaluation) => evaluation.template_id);
+    }
 
     let confidence = 0;
     if (payload.amount) confidence += 0.35;

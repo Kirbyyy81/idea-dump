@@ -26,3 +26,6 @@
 
 - Run `npm run test:finance-security`, `npm run test:finance-idempotency`, `npm run test:finance-ordering`, and `npm run test:finance-share` after Finance structural changes.
 - When code shared with the OCR service changes, also run the Finance OCR validation from `services/finance-ocr/`.
+
+- Parser-template normalization and extraction must agree with the versioned SQL evaluator. When changing these contracts, run the optional OCR parity suite and supabase/tests/finance_parser_learning_v2.test.sql against an isolated migrated database, following document/FINANCE_PARSER_LEARNING_ROLLOUT.md.
+- Keep Node-only replay hashing separate from normalization modules imported by browser validation.

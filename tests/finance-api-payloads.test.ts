@@ -239,6 +239,8 @@ describe('Finance request inventory', () => {
         );
         expect(rulesLoad).not.toContain('/api/finance/rule-suggestions');
         expect(rulesRoute).toContain('suggestions: settings.suggestions');
+        expect(rulesRoute).toContain('learning: settings.learning');
+        expect(rulesPanel).toContain('setLearning(rulesPayload.learning');
         expect(suggestionRoute).not.toContain('export async function GET');
         expect(uploadRoute).not.toContain('export async function GET');
     });
