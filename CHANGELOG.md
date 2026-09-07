@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.14.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.13.0...idea-dump-v0.14.0) (2026-09-06)
+
+
+### Features
+
+* add approved receipt parsing rules ([e5e79aa](https://github.com/Kirbyyy81/idea-dump/commit/e5e79aa6258322aa87517264a2771f05d6d28531))
+* add observable finance learning schema ([7f28968](https://github.com/Kirbyyy81/idea-dump/commit/7f289684d8bc19cff28736062a2eadede6b5c1ed))
+* apply learned finance ocr fields ([776fe2a](https://github.com/Kirbyyy81/idea-dump/commit/776fe2a353bca2dc5f3bd92909f3755325ee9c93))
+* apply learned ocr sources ([dca0521](https://github.com/Kirbyyy81/idea-dump/commit/dca05216378e638343c7a40e29cd83f24d3d07ac))
+* apply remaining finance OCR field templates ([ca6a481](https://github.com/Kirbyyy81/idea-dump/commit/ca6a4812d1ffaa743f5cd419a7ce452b95ca28ab))
+* guard finance template learning and activation ([aef6789](https://github.com/Kirbyyy81/idea-dump/commit/aef67893dd8b1127889647fdc6d49ecc54ace45f))
+* learn critical finance ocr fields ([718c730](https://github.com/Kirbyyy81/idea-dump/commit/718c73005c3f23d768473eff664fa7ffe6eec01e))
+* learn finance ocr sources ([a76f665](https://github.com/Kirbyyy81/idea-dump/commit/a76f665351f5f9718aaa88a5597aa6c358c58675))
+* learn from reviewed receipt sources and layouts ([c58bc69](https://github.com/Kirbyyy81/idea-dump/commit/c58bc69a92c92aa9c7fdbd5df075c4cf0ec63f56))
+* scope parser learning to an upload cutoff ([95aef9c](https://github.com/Kirbyyy81/idea-dump/commit/95aef9c4b9cd1850c8bd659ac1a10d31e0c5870b))
+* show finance learning summary ([7155a8f](https://github.com/Kirbyyy81/idea-dump/commit/7155a8fd26fe46c7732bf2bf54f29680fe359c53))
+
+
+### Bug Fixes
+
+* update vulnerable OCR service dependencies ([bf24b8f](https://github.com/Kirbyyy81/idea-dump/commit/bf24b8fa91b8a7793d3efdbb15e54075ba61493e))
+* update vulnerable web tooling dependencies ([d39d1b3](https://github.com/Kirbyyy81/idea-dump/commit/d39d1b38d4e5d4613655ce3f82463584f3291f12))
+* use portable finance learning sql ([41b6c6b](https://github.com/Kirbyyy81/idea-dump/commit/41b6c6b07d1d2fbb22cfd3dd75c057de3dcbe458))
+
 ## [0.13.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.12.0...idea-dump-v0.13.0) (2026-09-01)
 
 
