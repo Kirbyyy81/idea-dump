@@ -7,7 +7,7 @@ import type {
     FinanceParserTemplateType,
 } from '@/lib/types';
 
-export const FINANCE_PARSER_TEMPLATE_ALGORITHM_VERSION = 2;
+export const FINANCE_PARSER_TEMPLATE_ALGORITHM_VERSION = 3;
 
 export const FINANCE_PARSER_TEMPLATE_GUARDRAILS = Object.freeze({
     minimumEvidenceCount: 3,
@@ -348,9 +348,13 @@ export function getFinanceParserTemplateContractErrors(value: unknown) {
     if (!templateTypes.includes(value.template_type as FinanceParserTemplateType)) {
         errors.push('Template type is not supported.');
     }
-    if (value.algorithm_version !== 1 && value.algorithm_version !== FINANCE_PARSER_TEMPLATE_ALGORITHM_VERSION) {
+    if (value.algorithm_version !== 1 && value.algorithm_version !== 2 && value.algorithm_version !== FINANCE_PARSER_TEMPLATE_ALGORITHM_VERSION) {
         errors.push('Template algorithm version is not supported.');
     }
+    if (value.algorithm_version === 3 && (
+        value.field_name === 'source_id' || value.field_name === 'amount'
+        || !['bounded_line_window', 'allowlisted_regex_capture', 'strip_prefix', 'strip_suffix', 'character_filter', 'date_format'].includes(String(value.template_type))
+    )) errors.push('Algorithm 3 supports only extended non-amount field templates.');
     if (!Number.isInteger(value.template_version) || Number(value.template_version) < 1) {
         errors.push('Template version must be a positive integer.');
     }

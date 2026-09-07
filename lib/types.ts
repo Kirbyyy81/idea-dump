@@ -585,7 +585,7 @@ export interface FinanceCandidatePayload {
     learned_field_rule_ids?: string[];
     matched_parser_template_ids?: string[];
     parser_template_evaluations?: FinanceParserTemplateEvaluation[];
-    parser_template_baseline?: Partial<Record<FinanceParserTemplateField, string | number | null>>;
+    parser_template_baseline?: FinanceParserTemplateBaseline;
     duplicate_transaction_id: string | null;
 }
 
@@ -946,10 +946,16 @@ export interface FinanceParserTemplateContract {
     updated_at: string;
 }
 
+export type FinanceParserTemplateBaseline = Partial<Record<FinanceParserTemplateField, string | number | null>>;
+export type FinanceTemplateExtraction =
+    | { outcome: 'value'; value: string }
+    | { outcome: 'not_applicable' | 'invalid_output' | 'unresolved_missing_context' };
+
 export type FinanceParserTemplateEvaluationOutcome =
     | 'applied'
     | 'shadow'
     | 'conflict'
+    | 'unresolved_missing_context'
     | 'not_applicable'
     | 'invalid_output';
 
