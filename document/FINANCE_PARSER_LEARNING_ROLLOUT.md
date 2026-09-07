@@ -1,5 +1,7 @@
 # PRD 010: Phases 4 and 5
 
+For the current six-type completion and runtime-first rollout, see [Algorithm 3](#algorithm-3-non-amount-completion-7-september-2026) below. Earlier sections record prior deliveries.
+
 Repository implementation on 2026-09-06, based on merged commit 41b6c6b.
 
 ## Delivered
@@ -235,3 +237,42 @@ The other eight definitions, including wrapped references, are prepared but are 
 4. Inspect current-period statuses, support, and contradictions. Consistent definitions enter shadow; the wrapped definition remains blocked by its two conflicts. New reviewed shadow observations and a separate operator promotion remain required for activation.
 
 Validation: 221 application tests and 229 OCR tests passed, including 36 PostgreSQL/runtime parity cases. All four SQL suites passed on isolated PostgreSQL 17 with synthetic receipts, including retry behavior, preserved wrapped-reference conflicts, exclusion of Transfer to Wallet, and operator-only installation. A two-stage installation check verified that the final installer adds eight definitions after the compatible six. Lint, both TypeScript checks, both production builds, and all four dependency audits passed.
+
+## Algorithm 3 non-amount completion (7 September 2026)
+
+This delivery adds execution, reviewed-correction candidate generation, historical replay and versioned evidence for six configuration types. It does not activate templates or claim production accuracy gains.
+
+| Algorithm | Executable configuration types |
+|---|---|
+| 2, unchanged | Source phrases, same-line labels, next non-empty lines, direction phrases, saved-payee matching, filename dates and approved receipt/reference patterns |
+| 3 | Bounded line windows, internal allowlisted regex captures, prefix removal, suffix removal, ASCII character filtering and explicit date formats |
+| Deferred | Numeric separators and all amount templates, including amount regex captures |
+
+Algorithm 2 definitions, runtime behavior and evidence remain intact. Source loaders still use algorithm 2. Application retries and the OCR service load field templates from algorithms 2 and 3 together, with a combined limit of 20 active/shadow templates per source/field and 1,000 field templates per user.
+
+Every new parse and retry records typed `parser_template_baseline` after manual rules and legacy reference transformations, before generalized templates. Algorithm 3 reference transformations consume only that recorded reference. A missing baseline or missing reference property yields `unresolved_missing_context`; an explicit null reference yields `not_applicable`. Historical corrected values are never used to recreate a missing baseline. Transformations operate independently, not sequentially.
+
+Windows exclude the literal normalized anchor's physical line and inspect one to three physical lines before or after it. Captures search after each literal anchor on its line, or all bounded lines when `anchor: null`. Reference tokens are bounded ASCII letters/digits/hyphens, require a digit and at least five characters, and cannot start/end with a hyphen. Date capture IDs and the five explicit formats accept complete tokens, valid calendar dates, matching separators and supported abbreviated/full English month names. Extraction collapses equal normalized values; distinct valid outputs or a matched extraction with no valid result are invalid. All proposals use the existing semantic ranking and baseline-preserving conflict policy.
+
+Generation uses the latest correction per field/transaction, an accepted candidate linked to a confirmed transaction, current source ownership and the upload cutoff. Anchors come only from existing fixed label lists. Prefix/suffix discovery requires an ASCII alphabetic/punctuation affix of at most 120 characters, no digits, and exact reproduction of the reviewed correction. Both existing ASCII filter modes are evaluated. Three distinct transactions must support a configuration before it is persisted, with a deterministic cap of 20 proposals per user/source/field. Replay retains contradictory, invalid, non-applicable and missing-context evidence, not just successful examples.
+
+Algorithm 3 evidence records algorithm, template version, outcome and an extracted-value hash when a value exists. Existing tenant-safe keys remain enforced, with an additional template-version foreign key. Values and hashes remain private replay metadata. Refresh runs include both versions in one transaction, using the existing invocation ID, lock, safe failure handling, integer result and 90-day retention.
+
+Promotion, disable, requeue and cutoff reset cover both versions through the existing operator-only helper names. No automatic activation is introduced. Promotion still requires perfect precision, zero contradictions, the existing stricter evaluation-count gate and three fresh reviewed shadow transactions. Observed overlap with an active template from either version blocks promotion.
+
+### Algorithm 3 rollout
+
+1. Deploy compatible **application and OCR runtimes first**. They can read the old schema and both algorithms, and begin recording baselines for new uploads.
+2. Confirm the pending receipt-rule migrations are included before `20260907032803_complete_finance_template_learning.sql`. Validate the adopted baseline plus all forward migrations in isolation.
+3. Review a CLI dry run and obtain separate production migration approval. This delivery does not apply production SQL or push the branch.
+4. Apply approved migrations using the canonical CLI workflow. The unchanged cron may then generate algorithm 3 proposals and enter shadow, never active.
+5. Collect fresh reviewed shadow evidence, inspect durable learning results and approve individual promotions separately.
+6. Before rolling back to older runtimes, disable algorithm 3 templates and prevent their requeue/new shadow generation through a separately reviewed database rollback procedure. Do not leave unsupported active templates while running an older parser.
+
+### Algorithm 3 validation
+
+Run all five rollback-only lifecycle suites under `supabase/tests/`: version 2, learning cutoff, reviewed receipts, approved receipt rules and version 3. Run the OCR suite with `FINANCE_PARSER_TEST_DATABASE_URL` and `FINANCE_PARSER_TEST_PSQL` to enable both parity suites. The version 3 suite additionally checks all six generated types, independent support, accepted/cutoff/latest-correction exclusions, invocation retries, hashed evidence, fresh-shadow/requeue gates, mixed-version overlap, combined 20/1,000 limits, contradiction disable, tenant ownership, retention and safe failure.
+
+Validation results: 226 application tests, 422 OCR tests (including 130 PostgreSQL/runtime parity cases), all five SQL lifecycle suites, root lint, both TypeScript checks, both production builds and all four dependency audits passed. The audits found zero vulnerabilities.
+
+Local validation used two fresh PostgreSQL 17.11 databases with ICU Unicode collation, the adopted schema and all subsequent forward migrations, including both pending receipt migrations. Hosted Auth, Storage, Cron, queue and network prerequisites were minimal local scaffolding; no scheduled jobs or network delivery ran. This is not a full Supabase integration or production-scale performance benchmark. The pgTAP RLS suite could not run because pgTAP was absent. Direct catalog checks verified RLS enabled on all four learning tables, denied browser reads, service-role reads, and service-role access to the safe summary. Local query plans used the existing runtime-template and template-evidence indexes. Full Supabase staging, pgTAP and representative-history performance validation remain rollout gates.
