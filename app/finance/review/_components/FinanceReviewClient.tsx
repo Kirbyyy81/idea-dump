@@ -51,8 +51,7 @@ import {
 } from '@/lib/finance/core/values';
 import { FinanceApiError, financeApiRequest } from '@/lib/finance/core/client';
 import { setFinancePayeeClassification } from '@/lib/finance/transactions/payeeClassification';
-import { useFinanceReferenceData } from '@/app/finance/_components/FinanceReferenceDataProvider';
-import { FinanceReferenceDataState } from '@/app/finance/_components/FinanceReferenceDataState';
+import { FinanceReferenceDataState, useFinanceReferenceData } from '@/app/finance/_components/FinanceReferenceData';
 
 const NEW_SOURCE = '__new_source__';
 const NEW_CATEGORY = '__new_category__';

@@ -47,8 +47,7 @@ import {
     toPositiveFinanceAmount,
 } from '@/lib/finance/core/values';
 import { useFinanceShareTarget } from '@/app/finance/_components/FinanceShareTargetProvider';
-import { useFinanceReferenceData } from '@/app/finance/_components/FinanceReferenceDataProvider';
-import { FinanceReferenceDataState } from '@/app/finance/_components/FinanceReferenceDataState';
+import { FinanceReferenceDataState, useFinanceReferenceData } from '@/app/finance/_components/FinanceReferenceData';
 import type { FinanceEntryMode } from '@/lib/types';
 
 const NEW_SOURCE = '__new__';

@@ -27,8 +27,7 @@ import {
 import { persistVirtualDefaultCategory } from '@/lib/finance/catalogClient';
 import { financeApiRequest } from '@/lib/finance/core/client';
 import { sortFinanceRules } from '@/lib/finance/rules';
-import { useFinanceReferenceData } from '@/app/finance/_components/FinanceReferenceDataProvider';
-import { FinanceReferenceDataState } from '@/app/finance/_components/FinanceReferenceDataState';
+import { FinanceReferenceDataState, useFinanceReferenceData } from '@/app/finance/_components/FinanceReferenceData';
 import { LearningSummaryPanel } from '@/app/finance/settings/_components/LearningSummaryPanel';
 import {
     FinanceSettingsColumns,

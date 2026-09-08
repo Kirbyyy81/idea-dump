@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { AppShell } from '@/components/organisms/AppShell';
 import { AddDoodleIcon } from '@/components/atoms/DoodleIcons';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
-import { useFinanceReferenceData } from '@/app/finance/_components/FinanceReferenceDataProvider';
+import { useFinanceReferenceData } from '@/app/finance/_components/FinanceReferenceData';
 import { financeApiRequest } from '@/lib/finance/core/client';
 import { useAlert } from '@/lib/contexts/AlertContext';
 import type { FinanceTransactionView } from '@/lib/types';
