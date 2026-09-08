@@ -497,7 +497,11 @@ export async function getFinanceTransactionForUser(
     userId: string,
     transactionId: string
 ) {
-    const { data, error } = await findFinanceTransaction(userId, transactionId);
+    const { data, error } = await findFinanceTransaction(
+        userId,
+        transactionId,
+        `${FINANCE_TRANSACTION_VIEW_SELECT}, source, status`
+    );
     if (error) throw error;
     if (!data) fail('Transaction not found', 404);
     const transaction = normalizeFinanceTransaction(data as unknown as FinanceTransaction);
@@ -634,7 +638,7 @@ export async function getFinanceDashboard(userId: string, requestedMonth: string
     if (!monthRange) fail('Month must use YYYY-MM format');
     const [monthRows, recentResult] = await Promise.all([
         listFinanceDashboardMonthTransactions(userId, monthRange.monthStart, monthRange.nextMonthStart, DASHBOARD_PAGE_SIZE),
-        listFinanceDashboardRecentTransactions(userId),
+        listFinanceDashboardRecentTransactions(userId, monthRange.monthStart, monthRange.nextMonthStart),
     ]);
     if (recentResult.error) throw recentResult.error;
     const aggregate = aggregateFinanceDashboard(monthRows as FinanceDashboardRow[]);

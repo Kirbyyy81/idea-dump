@@ -4,7 +4,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
-import { useFinanceReferenceData } from '@/app/finance/_components/FinanceReferenceDataProvider';
+import { useFinanceReferenceData } from '@/app/finance/_components/FinanceReferenceData';
 import {
     FinanceSettingsColumns,
     FinanceSettingsFormCard,
@@ -134,9 +134,7 @@ export function SourcesSettingsPanel() {
 
     return (
         <>
-            <FinanceSettingsPanelLayout
-                description="Sources identify where money was paid from or received into. V1 does not calculate source balances."
-            >
+            <FinanceSettingsPanelLayout>
                 <FinanceSettingsColumns>
                     <form onSubmit={createSource}>
                         <FinanceSettingsFormCard

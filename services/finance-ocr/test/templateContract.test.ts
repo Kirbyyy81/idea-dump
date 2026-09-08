@@ -120,7 +120,7 @@ describe('Finance parser template configuration contract', () => {
     });
 
     it('locks the reviewed v1 guardrails', () => {
-        expect(FINANCE_PARSER_TEMPLATE_ALGORITHM_VERSION).toBe(2);
+        expect(FINANCE_PARSER_TEMPLATE_ALGORITHM_VERSION).toBe(3);
         expect(FINANCE_PARSER_TEMPLATE_GUARDRAILS).toEqual({
             minimumEvidenceCount: 3,
             minimumEvaluationCount: 5,
@@ -192,6 +192,7 @@ describe('Finance parser template record contract', () => {
 
     it('accepts a source template with a target and no source scope', () => {
         const sourceTemplate = template({
+            algorithm_version: 2,
             target_source_id: SOURCE_ID,
             scope_source_id: null,
             field_name: 'source_id',
@@ -212,7 +213,7 @@ describe('Finance parser template record contract', () => {
             template_type: 'strip_suffix',
         }))).toContain('Template type must match the configuration discriminator.');
         expect(getFinanceParserTemplateContractErrors(template({
-            algorithm_version: 3,
+            algorithm_version: 4,
             template_version: 0,
         }))).toEqual(expect.arrayContaining([
             'Template algorithm version is not supported.',

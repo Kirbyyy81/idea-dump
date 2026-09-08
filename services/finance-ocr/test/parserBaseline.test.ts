@@ -13,6 +13,13 @@ describe('Finance OCR parser baseline', () => {
             fixture.payees ?? [],
         );
 
-        expect(result).toEqual(fixture.expected);
+        const { parser_template_baseline, ...payload } = result.payload;
+        expect({ ...result, payload }).toEqual(fixture.expected);
+        expect(parser_template_baseline).toEqual({
+            reference_number: payload.reference_number, merchant: payload.merchant,
+            transaction_date: payload.transaction_date, direction: payload.direction,
+            payee_name: payload.payee_name, notes: payload.notes,
+            recipient_reference: payload.notes,
+        });
     });
 });

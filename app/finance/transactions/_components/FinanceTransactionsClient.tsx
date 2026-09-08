@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { AppShell } from '@/components/organisms/AppShell';
 import { AddDoodleIcon } from '@/components/atoms/DoodleIcons';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
-import { useFinanceReferenceData } from '@/app/finance/_components/FinanceReferenceDataProvider';
+import { useFinanceReferenceData } from '@/app/finance/_components/FinanceReferenceData';
 import { financeApiRequest } from '@/lib/finance/core/client';
 import { useAlert } from '@/lib/contexts/AlertContext';
 import type { FinanceTransactionView } from '@/lib/types';
@@ -73,6 +73,7 @@ export function FinanceTransactionsClient({
         <AppShell
             contentClassName="p-5 md:p-8"
             pageTitle="Transactions"
+            headerClassName="flex-row flex-wrap items-center justify-between gap-2"
             headerAction={<Link href="/finance/add" className="btn-primary"><AddDoodleIcon size={16} className="mr-2" />Add transaction</Link>}
         >
             <div className="mx-auto max-w-7xl">

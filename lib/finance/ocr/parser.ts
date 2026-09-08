@@ -291,21 +291,14 @@ export function parseFinanceText(
     payload.reference_number = learnedReference.referenceNumber;
     payload.learned_field_rule_ids = learnedReference.matchedRuleIds;
 
+    payload.parser_template_baseline = {
+        reference_number: payload.reference_number, merchant: payload.merchant,
+        transaction_date: payload.transaction_date, direction: payload.direction,
+        payee_name: payload.payee_name, notes: payload.notes, recipient_reference: recipientReference,
+    };
     const fieldTemplateResult = applyFinanceCriticalFieldTemplates(
-        normalizedText,
-        payload,
-        payload.source_id,
-        fieldTemplates,
-        payees,
-        filename,
+        normalizedText, payload, payload.source_id, fieldTemplates, payees, filename,
     );
-    if (fieldTemplateResult.evaluations.length > 0) {
-        payload.parser_template_baseline = {
-            reference_number: payload.reference_number, merchant: payload.merchant,
-            transaction_date: payload.transaction_date, direction: payload.direction,
-            payee_name: payload.payee_name, notes: payload.notes, recipient_reference: recipientReference,
-        };
-    }
     Object.assign(payload, fieldTemplateResult.payload);
     if (fieldTemplateResult.evaluations.length > 0) {
         payload.parser_template_evaluations = fieldTemplateResult.evaluations;

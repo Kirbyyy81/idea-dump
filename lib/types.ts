@@ -396,6 +396,7 @@ export const filmTypes: FilmType[] = ['NEGATIVE', 'REVERSAL', 'BW_NEGATIVE'];
 export const filmProcessTypes: FilmProcessType[] = ['C41', 'E6', 'BW', 'ECN2'];
 
 export type FinanceTransactionDirection = 'expense' | 'income';
+export type FinanceEntryMode = 'manual' | 'screenshot';
 export type FinanceTransactionSource = 'manual' | 'screenshot';
 export type FinanceTransactionStatus = 'confirmed' | 'review' | 'duplicate' | 'rejected';
 export type FinanceCurrency = 'MYR';
@@ -585,7 +586,7 @@ export interface FinanceCandidatePayload {
     learned_field_rule_ids?: string[];
     matched_parser_template_ids?: string[];
     parser_template_evaluations?: FinanceParserTemplateEvaluation[];
-    parser_template_baseline?: Partial<Record<FinanceParserTemplateField, string | number | null>>;
+    parser_template_baseline?: FinanceParserTemplateBaseline;
     duplicate_transaction_id: string | null;
 }
 
@@ -946,10 +947,16 @@ export interface FinanceParserTemplateContract {
     updated_at: string;
 }
 
+export type FinanceParserTemplateBaseline = Partial<Record<FinanceParserTemplateField, string | number | null>>;
+export type FinanceTemplateExtraction =
+    | { outcome: 'value'; value: string }
+    | { outcome: 'not_applicable' | 'invalid_output' | 'unresolved_missing_context' };
+
 export type FinanceParserTemplateEvaluationOutcome =
     | 'applied'
     | 'shadow'
     | 'conflict'
+    | 'unresolved_missing_context'
     | 'not_applicable'
     | 'invalid_output';
 

@@ -3,8 +3,9 @@ import { PropsWithChildren } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
     FinanceReferenceDataProvider,
+    FinanceReferenceDataState,
     useFinanceReferenceData,
-} from '@/app/finance/_components/FinanceReferenceDataProvider';
+} from '@/app/finance/_components/FinanceReferenceData';
 import { financeApiRequest } from '@/lib/finance/core/client';
 
 vi.mock('@/lib/finance/core/client', () => ({
@@ -26,6 +27,13 @@ function ReferenceProbe() {
     const referenceData = useFinanceReferenceData();
     return (
         <div>
+            {referenceData.status !== 'ready' && (
+                <FinanceReferenceDataState
+                    status={referenceData.status}
+                    error={referenceData.error}
+                    retry={referenceData.refresh}
+                />
+            )}
             <output data-testid="status">{referenceData.status}</output>
             <output data-testid="error">{referenceData.error}</output>
             <output data-testid="sources">
@@ -73,6 +81,8 @@ describe('FinanceReferenceDataProvider', () => {
     it('loads and sorts one minimal payload per module mount', async () => {
         vi.mocked(financeApiRequest).mockResolvedValue({ data: initialData });
         const view = render(<ReferenceProbe />, { wrapper: ReferenceHarness });
+
+        expect(screen.getByText('Loading Finance options...')).toBeTruthy();
 
         expect(await screen.findByText('ready', { selector: '[data-testid="status"]' })).toBeTruthy();
         expect(screen.getByTestId('sources').textContent)
@@ -123,7 +133,8 @@ describe('FinanceReferenceDataProvider', () => {
 
         expect(await screen.findByText('error', { selector: '[data-testid="status"]' })).toBeTruthy();
         expect(screen.getByTestId('error').textContent).toBe('Initial load failed');
-        fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+        expect(screen.getByRole('alert').textContent).toContain('Initial load failed');
+        fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
         await screen.findByText('ready', { selector: '[data-testid="status"]' });
 
         fireEvent.click(screen.getByRole('button', { name: 'Rename source' }));
