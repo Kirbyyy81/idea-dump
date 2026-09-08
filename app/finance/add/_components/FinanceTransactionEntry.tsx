@@ -49,7 +49,7 @@ import {
 import { useFinanceShareTarget } from '@/app/finance/_components/FinanceShareTargetProvider';
 import { useFinanceReferenceData } from '@/app/finance/_components/FinanceReferenceDataProvider';
 import { FinanceReferenceDataState } from '@/app/finance/_components/FinanceReferenceDataState';
-import type { FinanceEntryMode } from '../entryMode';
+import type { FinanceEntryMode } from '@/lib/types';
 
 const NEW_SOURCE = '__new__';
 const MAX_FINANCE_UPLOAD_BYTES = 4 * 1024 * 1024;
