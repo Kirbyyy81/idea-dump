@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.1](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.14.0...idea-dump-v0.14.1) (2026-09-08)
+
+
+### Bug Fixes
+
+* align mobile finance headers ([e6cd857](https://github.com/Kirbyyy81/idea-dump/commit/e6cd85710ed7bafad9f419df461a31447b7ee882))
+
 ## [0.14.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.13.0...idea-dump-v0.14.0) (2026-09-06)
 
 
