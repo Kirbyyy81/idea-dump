@@ -211,7 +211,7 @@ export function RulesSettingsPanel() {
 
     return (
         <>
-            <FinanceSettingsPanelLayout description="Active rules are applied by priority during screenshot processing.">
+            <FinanceSettingsPanelLayout>
                 {referenceStatus !== 'ready' ? (
                     <FinanceReferenceDataState
                         status={referenceStatus}

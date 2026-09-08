@@ -134,9 +134,7 @@ export function SourcesSettingsPanel() {
 
     return (
         <>
-            <FinanceSettingsPanelLayout
-                description="Sources identify where money was paid from or received into. V1 does not calculate source balances."
-            >
+            <FinanceSettingsPanelLayout>
                 <FinanceSettingsColumns>
                     <form onSubmit={createSource}>
                         <FinanceSettingsFormCard

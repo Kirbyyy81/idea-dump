@@ -4,16 +4,13 @@ import { InlineLoadingState } from '@/components/molecules/InlineLoadingState';
 
 interface FinanceSettingsPanelLayoutProps {
     children: ReactNode;
-    description?: string;
 }
 
 export function FinanceSettingsPanelLayout({
     children,
-    description,
 }: FinanceSettingsPanelLayoutProps) {
     return (
         <div className="mx-auto max-w-7xl space-y-5">
-            {description ? <p className="text-sm text-text-muted">{description}</p> : null}
             {children}
         </div>
     );
