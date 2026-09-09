@@ -19,14 +19,14 @@
     "@supabase/supabase-js": "2.110.5",
     "@tesseract.js-data/eng": "1.0.0",
     "fastify": "5.12.3",
-    "sharp": "0.35.3",
+    "sharp": "0.35.4",
     "tesseract.js": "7.0.0"
   },
   "devDependencies": {
     "@types/node": "22.15.21",
     "tsup": "8.5.1",
     "typescript": "5.9.3",
-    "vitest": "4.1.10"
+    "vitest": "4.1.11"
   },
   "overrides": {
     "esbuild": "0.28.1"
