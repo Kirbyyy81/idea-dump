@@ -235,3 +235,41 @@ The other eight definitions, including wrapped references, are prepared but are 
 4. Inspect current-period statuses, support, and contradictions. Consistent definitions enter shadow; the wrapped definition remains blocked by its two conflicts. New reviewed shadow observations and a separate operator promotion remain required for activation.
 
 Validation: 221 application tests and 229 OCR tests passed, including 36 PostgreSQL/runtime parity cases. All four SQL suites passed on isolated PostgreSQL 17 with synthetic receipts, including retry behavior, preserved wrapped-reference conflicts, exclusion of Transfer to Wallet, and operator-only installation. A two-stage installation check verified that the final installer adds eight definitions after the compatible six. Lint, both TypeScript checks, both production builds, and all four dependency audits passed.
+
+## Ryt shared receipt format rollout
+
+`20260908144752_finance_receipt_format_scope.sql` adds `unknown`, `ryt_screenshot_v1`, and `ryt_shared_v1` intake formats, detector version 1, bounded processing diagnostics, immutable optional field-template format scope, and the service-only `finance_finalize_screenshot_intake_v3` RPC. It keeps the v2 RPC available for older OCR runtimes and flag-off processing. There is still one Ryt Bank source.
+
+Historical intake rows keep `receipt_format = 'unknown'` and `receipt_format_eligible = false`. The migration changes the eligibility default for subsequently created rows to true. This also protects historical failed uploads if a user later retries them. The OCR flag cannot override that eligibility check, and v3 rejects classification of ineligible rows. New eligible uploads can retain their eligibility across processing retries. No pending or confirmed receipt is reprocessed by this change. Image deduplication, processing version, the upload cutoff, and legacy learning remain unchanged.
+
+Processing first runs the existing full-image OCR. Unambiguous Ryt source evidence, the blue header, white receipt card and divider, promotional boundary, and receipt labels are required for the shared path. Filenames never authorise it alone. Renamed exports can match when the other signals identify them. Matching exports use proportional header, recipient, and reference regions. Transparency is flattened before header inversion. Each extra recognition uses temporary block settings, a 15-second limit, the existing capacity slot, and the intake lease budget. The next screenshot retains the worker's original defaults.
+
+`ocr_raw_text` retains the full-image result. `ocr_normalized_text` stores reconstructed transaction text for parsing and SQL replay. Promotional and legal text are removed from shared-receipt parsing. Explicit recipients use saved-payee matching; label-only and logo fragments are rejected. Existing transaction-content direction rules remain in force. Missing direction goes to review. Failed regions and independently conflicting fields are recorded in `receipt_processing`; confidence alone never resolves disagreement. Shared processing excludes unscoped field templates and legacy reference transforms. Legacy learning still runs and existing screenshot behavior remains available.
+
+New Ryt field proposals require explicitly classified receipts of the matching format. Source templates remain unscoped. Unknown historical receipts cannot create either format's field rules or contribute to their support, contradictions, or promotion. Definitions remain immutable, distinct by format, and initially in shadow; existing fresh-review promotion requirements still apply.
+
+Deployment order:
+
+1. Read the live migration ledger and installed definitions before any migration push. Earlier receipt-rule definitions may have been installed operationally without matching ledger entries. Compare `pg_get_functiondef` for the finalisation, receipt evaluators, refresh, and promotion routines against the reviewed migrations. Check existing columns and constraints too. Reconcile reviewed, equivalent installations through the established migration-repair process. Do not replay earlier migrations merely because their ledger entries are absent. This local implementation does not repair or mutate the production ledger.
+2. Apply the additive receipt-format migration with the OCR flag off. It requires the approved receipt-pattern and cutoff definitions already installed. Verify the new columns, immutable-scope trigger, v3 signature, and service-only execute grant. All existing rows should remain unknown and ineligible.
+3. Deploy compatible application and OCR runtimes. Keep `RYT_SHARED_RECEIPT_OCR_ENABLED=false` until both deployments pass normal ingestion and review verification. Do not change `PROCESSING_VERSION` to force existing hashes through processing again.
+4. Set `RYT_SHARED_RECEIPT_OCR_ENABLED=true` only on the OCR service. Upload a new synthetic shared receipt and a screenshot, then verify raw versus reconstructed OCR, format/version/diagnostics, pending-review fields, and source ownership. Confirm no existing intake or confirmed transaction changed. Disable the same flag to stop additional passes; preserve schema and history.
+5. Review new classified receipts normally. Run the existing learner only as part of the separately approved rollout, inspect format-specific shadow evidence, and use existing operator promotion checks. Deploying this code does not promote templates.
+
+Validation commands, against an isolated database with Finance migrations and access-control definitions installed:
+
+```powershell
+psql -X -v ON_ERROR_STOP=1 -d $env:FINANCE_PARSER_TEST_DATABASE_URL -f supabase/tests/finance_parser_learning_v2.test.sql
+psql -X -v ON_ERROR_STOP=1 -d $env:FINANCE_PARSER_TEST_DATABASE_URL -f supabase/tests/finance_parser_learning_cutoff.test.sql
+psql -X -v ON_ERROR_STOP=1 -d $env:FINANCE_PARSER_TEST_DATABASE_URL -f supabase/tests/finance_reviewed_receipt_patterns.test.sql
+psql -X -v ON_ERROR_STOP=1 -d $env:FINANCE_PARSER_TEST_DATABASE_URL -f supabase/tests/finance_approved_receipt_rules.test.sql
+psql -X -v ON_ERROR_STOP=1 -d $env:FINANCE_PARSER_TEST_DATABASE_URL -f supabase/tests/finance_receipt_format.test.sql
+psql -X -v ON_ERROR_STOP=1 -d $env:FINANCE_PARSER_TEST_DATABASE_URL -f supabase/tests/finance_receipt_finalization.test.sql
+npm --prefix services/finance-ocr test
+```
+
+The OCR tests include PostgreSQL/runtime format and evaluator parity when `FINANCE_PARSER_TEST_DATABASE_URL` is set; optionally set `FINANCE_PARSER_TEST_PSQL` to the executable path. Synthetic generated artwork is committed in the test fixture helper. The supplied private financial image is used only for local verification and is not committed. Also run the root and OCR audits, type checks, tests and builds required by `AGENTS.md`.
+
+Local validation for this rollout: 228 application tests, 258 OCR tests including PostgreSQL parity, and all six SQL suites passed. The exact migration also passed on a fresh isolated fixture database, preserving a pre-existing historical intake as unknown and ineligible. Application lint, application and OCR type checks, both builds, and all four dependency audits passed. The supplied receipt recovered all five expected fields with no OCR conflicts, and its missing direction stayed in review. A real screenshot produced identical OCR before and after regional recognition. Review retry preserves the stored format and unresolved conflicts. The local Finance route correctly redirected an unauthenticated browser to the rendered sign-in page without browser errors.
+
+The audits required security patches to Next.js 15.5.25, Sharp 0.35.4, Vitest 4.1.11, and their affected transitive dependencies. These dependency updates are committed separately. No production migration, deployment, feature-flag activation, learning run, or historical reprocessing was performed during implementation.
