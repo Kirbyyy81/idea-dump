@@ -337,3 +337,15 @@ describe('Finance parser template ranking and conflicts', () => {
         });
     });
 });
+
+describe('optional receipt format contract', () => {
+    it('accepts scoped v2 field rules and original unscoped contracts', () => {
+        expect(isFinanceParserTemplateContract(template())).toBe(true);
+        expect(isFinanceParserTemplateContract(template({ scope_receipt_format: 'ryt_shared_v1' }))).toBe(true);
+    });
+    it('rejects unknown format, source scopes, and legacy scopes', () => {
+        expect(isFinanceParserTemplateContract({ ...template(), scope_receipt_format: 'unknown' })).toBe(false);
+        expect(isFinanceParserTemplateContract(template({ scope_receipt_format: 'ryt_shared_v1', algorithm_version: 1 }))).toBe(false);
+        expect(isFinanceParserTemplateContract(template({ scope_receipt_format: 'ryt_shared_v1', field_name: 'source_id', scope_source_id: null, target_source_id: SOURCE_ID, template_type: 'source_phrase', configuration: { type: 'source_phrase', phrase: 'Ryt Bank', location: 'filename' } }))).toBe(false);
+    });
+});

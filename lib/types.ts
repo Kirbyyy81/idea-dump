@@ -538,6 +538,15 @@ export type FinanceIntakeStatus =
     | 'failed'
     | 'rejected';
 
+export type FinanceReceiptFormat = 'unknown' | 'ryt_screenshot_v1' | 'ryt_shared_v1';
+export type FinanceReceiptConflictField = 'amount' | 'transaction_date' | 'payee_name' | 'reference_number' | 'direction' | 'notes';
+export interface FinanceReceiptProcessing {
+    format: FinanceReceiptFormat;
+    detector_version: 1;
+    failed_regions: Array<'header' | 'recipient' | 'details'>;
+    conflicts: FinanceReceiptConflictField[];
+}
+
 export interface FinanceIntakeItem {
     id: string;
     user_id: string;
@@ -553,6 +562,10 @@ export interface FinanceIntakeItem {
     ocr_confidence: number | null;
     ocr_text_hash: string | null;
     normalizer_version: number | null;
+    receipt_format?: FinanceReceiptFormat;
+    receipt_format_eligible?: boolean;
+    receipt_detector_version?: number | null;
+    receipt_processing?: FinanceReceiptProcessing | null;
     processing_attempt_id: string | null;
     processing_started_at: string | null;
     processing_lease_expires_at: string | null;
@@ -586,6 +599,7 @@ export interface FinanceCandidatePayload {
     matched_parser_template_ids?: string[];
     parser_template_evaluations?: FinanceParserTemplateEvaluation[];
     parser_template_baseline?: Partial<Record<FinanceParserTemplateField, string | number | null>>;
+    receipt_processing?: FinanceReceiptProcessing;
     duplicate_transaction_id: string | null;
 }
 
@@ -926,6 +940,7 @@ export interface FinanceParserTemplateContract {
     user_id: string;
     target_source_id: string | null;
     scope_source_id: string | null;
+    scope_receipt_format?: Exclude<FinanceReceiptFormat, 'unknown'> | null;
     field_name: FinanceParserTemplateField;
     template_type: FinanceParserTemplateType;
     configuration: FinanceParserTemplateConfiguration;

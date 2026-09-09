@@ -1,7 +1,8 @@
+import { isRytPartyNoise, receiptFormatMatches } from '@/lib/finance/ocr/receiptFormat';
 import { hasReceiptToday, screenshotFilenameDate, receiptReferenceValue, approvedReceiptValue, receiptDirectionConflict } from '@/lib/finance/ocr/receiptPatterns';
 import { templateValueHash } from '@/lib/finance/ocr/templateHash';
 import type {
-    FinanceCandidatePayload, FinanceOcrFieldTemplate, FinanceOcrPayee,
+    FinanceCandidatePayload, FinanceOcrFieldTemplate, FinanceOcrPayee, FinanceReceiptFormat,
     FinanceParserTemplateEvaluation, FinanceParserTemplateField,
 } from '@/lib/types';
 import { isFinanceParserTemplateContract, orderFinanceParserTemplates, selectFinanceParserTemplateProposal } from '@/lib/finance/ocr/templateContract';
@@ -67,10 +68,12 @@ export function extractFinanceTemplateValue(
 export function applyFinanceFieldTemplates(
     text: string, payload: FinanceCandidatePayload, sourceId: string | null,
     templates: FinanceOcrFieldTemplate[], payees: FinanceOcrPayee[] = [], filename: string | null = null,
+    format: FinanceReceiptFormat = 'unknown',
 ) {
     if (!sourceId || !templates.length) return { payload, evaluations: [] as FinanceParserTemplateEvaluation[] };
     const eligible = orderFinanceParserTemplates(templates.filter((template) => (
         isFinanceParserTemplateContract(template) && template.scope_source_id === sourceId
+        && receiptFormatMatches(template.scope_receipt_format, format)
         && (template.status === 'active' || template.status === 'shadow')
     )), sourceId);
     const nextPayload = { ...payload };
@@ -79,7 +82,8 @@ export function applyFinanceFieldTemplates(
     for (const field of FINANCE_TEMPLATE_FIELDS) {
         const proposals: Array<{ template: FinanceOcrFieldTemplate; value: string }> = [];
         for (const template of eligible.filter((item) => item.field_name === field).slice(0, 20)) {
-            const value = extractFinanceTemplateValue(template, text, payees, filename);
+            let value = extractFinanceTemplateValue(template, text, payees, filename);
+            if (format === 'ryt_shared_v1' && (field === 'payee_name' || field === 'merchant') && value && isRytPartyNoise(value)) value = null;
             const evaluation: FinanceParserTemplateEvaluation = {
                 template_id: template.id, field_name: field,
                 status: template.status as 'active' | 'shadow',
