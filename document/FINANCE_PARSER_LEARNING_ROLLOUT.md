@@ -1,6 +1,28 @@
 # PRD 010: Phases 4 and 5
 
-For the current six-type completion and runtime-first rollout, see [Algorithm 3](#algorithm-3-non-amount-completion-7-september-2026) below. Earlier sections record prior deliveries.
+For the current deployment state, see [Production rollout, 14 September 2026](#production-rollout-14-september-2026). The [Algorithm 3](#algorithm-3-non-amount-completion-7-september-2026) section describes the six-type contract. Earlier rollout sections record historical states, including migrations that were pending at that time.
+
+## Production rollout, 14 September 2026
+
+The user confirmed deployment of the application and OCR service. PR #92 was verified merged with head commit `055e207` and successful web/OCR GitHub Actions checks before the database rollout.
+
+- Linked authenticated Supabase CLI 2.113.0 to the verified `idea-dump` project.
+- Compared all 12 final receipt-function bodies against the two committed receipt migrations, normalizing only CRLF line endings. Every body matched. Verified both validated type/field constraints, `postgres` ownership, invoker security, empty search paths and denied browser/service-role helper execution.
+- Reconciled already-installed migrations `20260906125549` and `20260906135451` using `migration repair --status applied`. Their SQL was not replayed and existing receipt definitions were not reinstalled.
+- The subsequent dry run contained only `20260907032803_complete_finance_template_learning.sql`, with no seeds or role changes. Applied that migration through `db push --linked --yes`.
+- A final dry run reported the remote database up to date, with no pending migrations.
+- Verified all 11 algorithm 3 migration function bodies match the committed SQL. Checked validated algorithm/version/hash constraints, RLS on the four learning tables, denied browser access, server-only reads and restricted mutation-helper execution.
+- All 12 read-only synthetic evaluator smoke cases passed: six executable types, impossible dates, repeated equal dates, conflicting dates, missing baseline, explicit null reference and unchanged transforms. These checks do not replace the isolated lifecycle/parity validation recorded below or establish production accuracy.
+- Counts and aggregate full-row fingerprints remained unchanged for transactions, intakes, candidates, corrections and parser templates. No historical values were rewritten. The template state remained nine algorithm 2 shadow templates, zero active templates and no algorithm 3 templates yet.
+- The existing `postgres` Cron job remains active at `15 3 * * *` (11:15 am Malaysia time), executing `SET statement_timeout = '90s'; SELECT public.finance_refresh_rule_suggestions();`. Its next normal run can generate algorithm 3 proposals and shadow evidence. No manual refresh, approved-receipt installation or promotion was performed during this rollout.
+
+The CLI warned that its optional local migration-catalog cache could not be generated because Docker Desktop was unavailable. The production migration succeeded; live catalog verification and the final dry run independently confirmed completion.
+
+Advisor follow-ups remain separate work: the security scan reports the previously documented [RLS-without-policy notices](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy), [public `pg_net` extension](https://supabase.com/docs/guides/database/database-linter?lint=0014_extension_in_public) and [disabled leaked-password protection](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection). The performance scan reports [missing covering foreign-key indexes](https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys) for `finance_template_evidence_template_user_version_fkey` and the new `finance_template_evidence_version_fkey`, plus unused-index notices. No unrelated index, Auth or extension changes were made.
+
+Observe the first scheduled algorithm 3 business outcome and collect fresh reviewed shadow evidence before any separately approved promotion. Category/LLM replacement and amount learning remain deferred.
+
+## Historical implementation baseline
 
 Repository implementation on 2026-09-06, based on merged commit 41b6c6b.
 
