@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.14.3](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.14.2...idea-dump-v0.14.3) (2026-09-14)
+
+
+### Bug Fixes
+
+* compact shadow rule rows ([c4bd9ea](https://github.com/Kirbyyy81/idea-dump/commit/c4bd9ea623f62ffab062aeb48bfa74b5e0445fb7))
+* remove recent outcomes section ([0d0c5f4](https://github.com/Kirbyyy81/idea-dump/commit/0d0c5f4e63fcdbc79e6a4225434c2cd18bc9fd91))
+* show shadow learning rules ([41615c7](https://github.com/Kirbyyy81/idea-dump/commit/41615c754e395a3732254b7c336aacc778e4ee99))
+* trim shadow rule copy ([73ec284](https://github.com/Kirbyyy81/idea-dump/commit/73ec284a563446b4c32e46f5a63c7b10bce02c50))
+
 ## [0.14.2](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.14.1...idea-dump-v0.14.2) (2026-09-14)
 
 
