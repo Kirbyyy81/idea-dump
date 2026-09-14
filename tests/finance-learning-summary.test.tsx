@@ -85,8 +85,9 @@ describe('LearningSummaryPanel', () => {
         expect(screen.getByText('Disabled')).toBeTruthy();
         expect(screen.getByText('8 active reference transforms')).toBeTruthy();
         expect(screen.getByText(/Reference number: 100% precision, 75% coverage/)).toBeTruthy();
-        expect(screen.getByText(/Amount disabled/)).toBeTruthy();
-        expect(screen.getByText(/Contradictory reviewed evidence/)).toBeTruthy();
+        expect(screen.queryByRole('heading', { name: 'Recent outcomes' })).toBeNull();
+        expect(screen.queryByText(/Amount disabled/)).toBeNull();
+        expect(screen.queryByText(/Contradictory reviewed evidence/)).toBeNull();
     });
 
     it('renders never-run, unavailable, and loading states safely', () => {

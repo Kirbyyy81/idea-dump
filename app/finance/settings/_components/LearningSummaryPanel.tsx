@@ -1,24 +1,17 @@
 import { Card } from '@/components/atoms/Card';
+import { Button } from '@/components/atoms/Button';
 import { SparkleDoodleIcon } from '@/components/atoms/DoodleIcons';
 import { InlineLoadingState } from '@/components/molecules/InlineLoadingState';
-import type { FinanceLearningSummary, FinanceParserTemplateField } from '@/lib/types';
+import type { FinanceLearningSummary, FinanceShadowRulesSummary } from '@/lib/types';
+import { financeTemplateFieldLabels as fieldLabels } from '@/lib/finance/shadowRules';
+import { ShadowRulesList } from './ShadowRulesList';
 
 interface LearningSummaryPanelProps {
     isLoading: boolean;
     summary: FinanceLearningSummary;
+    shadowRules?: FinanceShadowRulesSummary;
+    onRefresh?: () => void;
 }
-
-const fieldLabels: Record<FinanceParserTemplateField, string> = {
-    source_id: 'Source',
-    reference_number: 'Reference number',
-    merchant: 'Merchant',
-    transaction_date: 'Transaction date',
-    direction: 'Direction',
-    payee_name: 'Payee',
-    notes: 'Notes',
-    recipient_reference: 'Recipient reference',
-    amount: 'Amount',
-};
 
 function formatRunTime(value: string) {
     return new Intl.DateTimeFormat(undefined, {
@@ -31,12 +24,13 @@ function formatPercentage(value: number | null) {
     return value == null ? 'Not measured' : `${Math.round(value * 100)}%`;
 }
 
-export function LearningSummaryPanel({ isLoading, summary }: LearningSummaryPanelProps) {
+export function LearningSummaryPanel({ isLoading, summary, shadowRules, onRefresh }: LearningSummaryPanelProps) {
     return (
         <Card className="overflow-hidden p-0">
             <div className="flex items-center gap-2 border-b border-border-default px-5 py-4">
                 <SparkleDoodleIcon size={17} className="text-accent-apricot" />
                 <h2 className="text-base font-bold">Learning</h2>
+                {onRefresh ? <Button className="ml-auto" variant="ghost" disabled={isLoading} onClick={onRefresh}>Refresh learning status</Button> : null}
             </div>
             {isLoading ? <InlineLoadingState label="Loading learning status..." /> : null}
             {!isLoading && summary.availability === 'unavailable' ? (
@@ -103,22 +97,9 @@ export function LearningSummaryPanel({ isLoading, summary }: LearningSummaryPane
                             ) : <p className="mt-1 text-text-muted">No active parser templates.</p>}
                         </div>
                     </div>
-
-                    {summary.recent_outcomes.length ? (
-                        <div>
-                            <h3 className="font-semibold">Recent outcomes</h3>
-                            <ul className="mt-2 divide-y divide-border-default border border-border-default">
-                                {summary.recent_outcomes.map((outcome) => (
-                                    <li key={`${outcome.field_name}-${outcome.updated_at}`} className="px-3 py-2 text-sm">
-                                        <span className="font-semibold">{fieldLabels[outcome.field_name]} {outcome.status}</span>
-                                        <span className="text-text-secondary">: {outcome.reason}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    ) : null}
                 </div>
             ) : null}
+            {!isLoading ? <ShadowRulesList summary={shadowRules ?? { availability: 'unavailable' }} /> : null}
         </Card>
     );
 }

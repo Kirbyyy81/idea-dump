@@ -257,6 +257,29 @@ export async function getFinanceLearningSummary(userId: string) {
     });
 }
 
+export async function listFinanceShadowRules(userId: string) {
+    return createAdminClient()
+        .from('finance_parser_templates')
+        .select([
+            'id, target_source_id, scope_source_id, field_name, template_type',
+            'algorithm_version, template_version, evidence_count, evaluation_count',
+            'contradiction_count, precision, coverage, shadow_started_at, evaluated_at',
+        ].join(', '), { count: 'exact' })
+        .eq('user_id', userId)
+        .eq('status', 'shadow')
+        .order('shadow_started_at', { ascending: false, nullsFirst: false })
+        .order('id')
+        .limit(100);
+}
+
+export async function listFinanceShadowRuleSources(userId: string, sourceIds: string[]) {
+    return createAdminClient()
+        .from('dim_finance_sources')
+        .select('id, name')
+        .eq('user_id', userId)
+        .in('id', sourceIds);
+}
+
 export async function listActiveFinanceRules(userId: string) {
     return createAdminClient()
         .from('finance_rules')
