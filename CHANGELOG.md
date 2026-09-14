@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.2](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.14.1...idea-dump-v0.14.2) (2026-09-14)
+
+
+### Bug Fixes
+
+* patch vulnerable dependencies ([055e207](https://github.com/Kirbyyy81/idea-dump/commit/055e20771279f6a629674d0e5cb1bf04bc591cd2))
+
 ## [0.14.1](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.14.0...idea-dump-v0.14.1) (2026-09-08)
 
 
