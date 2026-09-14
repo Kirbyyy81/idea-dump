@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createFinanceTransactionEditForm } from '@/app/finance/transactions/edit/_components/transactionEditForm';
+import { ApplicationError } from '@/lib/api/applicationError';
 import type { FinanceTransaction } from '@/lib/types';
 
 const server = vi.hoisted(() => ({
     getFinanceTransactionForUser: vi.fn(),
     getSessionUser: vi.fn(),
-    isFinanceServiceError: vi.fn(),
 }));
 
 vi.mock('@/lib/rbac/access', () => ({
@@ -14,7 +14,6 @@ vi.mock('@/lib/rbac/access', () => ({
 
 vi.mock('@/lib/finance/core/service', () => ({
     getFinanceTransactionForUser: server.getFinanceTransactionForUser,
-    isFinanceServiceError: server.isFinanceServiceError,
 }));
 
 import FinanceTransactionEditRoute from '@/app/finance/transactions/edit/page';
@@ -65,7 +64,6 @@ async function getEditorProps(id?: string | string[]) {
 beforeEach(() => {
     vi.clearAllMocks();
     server.getSessionUser.mockResolvedValue({ id: 'user-1' });
-    server.isFinanceServiceError.mockReturnValue(false);
 });
 
 describe('Finance transaction edit route', () => {
@@ -103,11 +101,8 @@ describe('Finance transaction edit route', () => {
     });
 
     it('shows a safe domain error without offering an ineffective retry', async () => {
-        const serviceError = new Error('Transaction not found');
+        const serviceError = new ApplicationError('Transaction not found', { status: 404 });
         server.getFinanceTransactionForUser.mockRejectedValue(serviceError);
-        server.isFinanceServiceError.mockImplementation(
-            (error) => error === serviceError
-        );
 
         const props = await getEditorProps(transaction.id);
 

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { applicationErrorResponse } from '@/lib/api/responses';
 import {
     authorizeFinance,
     isFinanceSerializationError,
@@ -13,7 +14,6 @@ import {
 import {
     createManualFinanceTransactionForUser,
     deleteFinanceTransactionForUser,
-    isFinanceServiceError,
     updateFinanceTransactionForUser,
 } from '@/lib/finance/core/service';
 import { FINANCE_TIME_ZONE_HEADER, getFinanceDateInTimeZone } from '@/lib/finance/core/values';
@@ -41,12 +41,8 @@ export async function POST(request: NextRequest) {
         );
     } catch (error) {
         console.error('Error creating finance transaction:', error);
-        if (isFinanceServiceError(error)) {
-            return NextResponse.json(
-                { error: error.message, ...(error.details || {}) },
-                { status: error.status }
-            );
-        }
+        const serviceError = applicationErrorResponse(error);
+        if (serviceError) return serviceError;
         if (isFinanceSerializationError(error)) return jsonError('Finance data changed concurrently. Retry the action.', 409);
         return jsonError('Failed to create finance transaction', 500);
     }
@@ -65,12 +61,8 @@ export async function PUT(request: NextRequest) {
         return NextResponse.json({ data: await updateFinanceTransactionForUser(session.user.id, id, body, today) });
     } catch (error) {
         console.error('Error updating finance transaction:', error);
-        if (isFinanceServiceError(error)) {
-            return NextResponse.json(
-                { error: error.message, ...(error.details || {}) },
-                { status: error.status }
-            );
-        }
+        const serviceError = applicationErrorResponse(error);
+        if (serviceError) return serviceError;
         if (isFinanceSerializationError(error)) return jsonError('Finance data changed concurrently. Retry the action.', 409);
         return jsonError('Failed to update finance transaction', 500);
     }
@@ -87,7 +79,8 @@ export async function DELETE(request: NextRequest) {
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Error deleting finance transaction:', error);
-        if (isFinanceServiceError(error)) return jsonError(error.message, error.status);
+        const serviceError = applicationErrorResponse(error);
+        if (serviceError) return serviceError;
         if (isFinanceSerializationError(error)) return jsonError('Finance data changed concurrently. Retry the action.', 409);
         return jsonError('Failed to delete finance transaction', 500);
     }

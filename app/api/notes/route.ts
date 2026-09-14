@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { applicationErrorResponse } from '@/lib/api/responses';
 import { authorizeSessionModule } from '@/lib/rbac/guards';
 import {
     parseCreateNote,
@@ -9,15 +10,8 @@ import {
 import {
     createNoteForUser,
     deleteNoteForUser,
-    isNoteServiceError,
     listNotesForUser,
 } from '@/lib/notes/core/service';
-
-function serviceErrorResponse(error: unknown) {
-    if (!isNoteServiceError(error)) return null;
-
-    return NextResponse.json({ error: error.error }, { status: error.status });
-}
 
 export async function GET(request: NextRequest) {
     try {
@@ -29,7 +23,7 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ data: await listNotesForUser(session.user.id, projectId.data) });
     } catch (error) {
-        const serviceError = serviceErrorResponse(error);
+        const serviceError = applicationErrorResponse(error);
         if (serviceError) return serviceError;
 
         console.error('Error fetching notes:', error);
@@ -52,7 +46,7 @@ export async function POST(request: NextRequest) {
             { status: 201 }
         );
     } catch (error) {
-        const serviceError = serviceErrorResponse(error);
+        const serviceError = applicationErrorResponse(error);
         if (serviceError) return serviceError;
 
         console.error('Error creating note:', error);
@@ -71,7 +65,7 @@ export async function DELETE(request: NextRequest) {
         await deleteNoteForUser(session.user.id, id.data);
         return NextResponse.json({ success: true });
     } catch (error) {
-        const serviceError = serviceErrorResponse(error);
+        const serviceError = applicationErrorResponse(error);
         if (serviceError) return serviceError;
 
         console.error('Error deleting note:', error);

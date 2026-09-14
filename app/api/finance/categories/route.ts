@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { applicationErrorResponse } from '@/lib/api/responses';
 import { authorizeFinance, jsonError, readFinanceJsonObject } from '@/lib/finance/core/auth';
 import {
     isFinanceUuid,
@@ -9,7 +10,6 @@ import {
     createFinanceCategoryForUser,
     deleteFinanceCategoryForUser,
     getFinanceCategories,
-    isFinanceServiceError,
     updateFinanceCategoryForUser,
 } from '@/lib/finance/core/service';
 
@@ -38,7 +38,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ data: result.data, created: result.created }, { status: result.status });
     } catch (error) {
         console.error('Error creating finance category:', error);
-        if (isFinanceServiceError(error)) return jsonError(error.message, error.status);
+        const serviceError = applicationErrorResponse(error);
+        if (serviceError) return serviceError;
         return jsonError('Failed to create finance category', 500);
     }
 }
@@ -54,7 +55,8 @@ export async function PUT(request: NextRequest) {
         return NextResponse.json({ data: await updateFinanceCategoryForUser(session.user.id, parsed.data) });
     } catch (error) {
         console.error('Error updating finance category:', error);
-        if (isFinanceServiceError(error)) return jsonError(error.message, error.status);
+        const serviceError = applicationErrorResponse(error);
+        if (serviceError) return serviceError;
         return jsonError('Failed to update finance category', 500);
     }
 }
@@ -74,7 +76,8 @@ export async function DELETE(request: NextRequest) {
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Error deleting finance category:', error);
-        if (isFinanceServiceError(error)) return jsonError(error.message, error.status);
+        const serviceError = applicationErrorResponse(error);
+        if (serviceError) return serviceError;
         return jsonError('Failed to delete finance category', 500);
     }
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authorizeFilmJournal, filmServiceErrorResponse, jsonError } from '@/lib/film/core/api';
+import { applicationErrorResponse } from '@/lib/api/responses';
+import { authorizeFilmJournal, jsonError } from '@/lib/film/core/api';
 import {
     parseFilmQueryId,
     parseFilmRollCreate,
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest) {
         const query = parseFilmRollListQuery(new URL(request.url).searchParams);
         return NextResponse.json({ data: await listFilmRollsForUser(session.user.id, query) });
     } catch (error) {
-        const serviceError = filmServiceErrorResponse(error);
+        const serviceError = applicationErrorResponse(error);
         if (serviceError) return serviceError;
         console.error('Error fetching film rolls:', error);
         return jsonError('Failed to fetch film rolls', 500);
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
             { status: 201 }
         );
     } catch (error) {
-        const serviceError = filmServiceErrorResponse(error);
+        const serviceError = applicationErrorResponse(error);
         if (serviceError) return serviceError;
         console.error('Error creating film roll:', error);
         return jsonError('Failed to create film roll', 500);
@@ -60,7 +61,7 @@ export async function PUT(request: NextRequest) {
         if ('error' in input) return jsonError(input.error);
         return NextResponse.json({ data: await updateFilmRollForUser(session.user.id, input.data) });
     } catch (error) {
-        const serviceError = filmServiceErrorResponse(error);
+        const serviceError = applicationErrorResponse(error);
         if (serviceError) return serviceError;
         console.error('Error updating film roll:', error);
         return jsonError('Failed to update film roll', 500);
@@ -76,7 +77,7 @@ export async function DELETE(request: NextRequest) {
         await deleteFilmRollForUser(session.user.id, id.data);
         return NextResponse.json({ success: true });
     } catch (error) {
-        const serviceError = filmServiceErrorResponse(error);
+        const serviceError = applicationErrorResponse(error);
         if (serviceError) return serviceError;
         console.error('Error deleting film roll:', error);
         return jsonError('Failed to delete film roll', 500);

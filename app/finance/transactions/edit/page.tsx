@@ -1,10 +1,8 @@
 import { redirect } from 'next/navigation';
+import { isApplicationError } from '@/lib/api/applicationError';
 import { FinanceTransactionEditor } from './_components/FinanceTransactionEditor';
 import { isFinanceUuid } from '@/lib/finance/core/schemas';
-import {
-    getFinanceTransactionForUser,
-    isFinanceServiceError,
-} from '@/lib/finance/core/service';
+import { getFinanceTransactionForUser } from '@/lib/finance/core/service';
 import { getSessionUser } from '@/lib/rbac/access';
 
 export const dynamic = 'force-dynamic';
@@ -48,7 +46,7 @@ export default async function FinanceTransactionEditRoute({
             />
         );
     } catch (error) {
-        if (isFinanceServiceError(error)) {
+        if (isApplicationError(error)) {
             return (
                 <FinanceTransactionEditor
                     key={`error:${transactionId}`}
@@ -63,6 +61,7 @@ export default async function FinanceTransactionEditRoute({
             errorType: error instanceof Error ? error.name : 'UnknownError',
             transactionId,
         });
+
         return (
             <FinanceTransactionEditor
                 key={`error:${transactionId}`}

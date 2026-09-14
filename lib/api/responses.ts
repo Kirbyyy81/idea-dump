@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { isApplicationError } from './applicationError';
 import type { ApiDataResponse, ApiErrorCode, ApiErrorResponse } from './contracts';
 
 export function dataResponse<T>(data: T, status = 200) {
@@ -17,6 +18,19 @@ export function errorResponse(
         ...(fieldErrors ? { field_errors: fieldErrors } : {}),
     };
     return NextResponse.json(body, { status });
+}
+
+export function applicationErrorResponse(error: unknown) {
+    if (!isApplicationError(error)) return null;
+
+    return NextResponse.json(
+        {
+            ...(error.details || {}),
+            error: error.code ?? error.message,
+            ...(error.code && error.message !== error.code ? { message: error.message } : {}),
+        },
+        { status: error.status }
+    );
 }
 
 export function validationError(message: string, fieldErrors?: Record<string, string>) {

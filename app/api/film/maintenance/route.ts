@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authorizeFilmJournal, filmServiceErrorResponse, jsonError } from '@/lib/film/core/api';
+import { applicationErrorResponse } from '@/lib/api/responses';
+import { authorizeFilmJournal, jsonError } from '@/lib/film/core/api';
 import {
     parseFilmMaintenanceCreate,
     parseFilmMaintenanceUpdate,
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest) {
         if ('error' in cameraId) return jsonError(cameraId.error);
         return NextResponse.json({ data: await listFilmMaintenanceForUser(session.user.id, cameraId.data) });
     } catch (error) {
-        const serviceError = filmServiceErrorResponse(error);
+        const serviceError = applicationErrorResponse(error);
         if (serviceError) return serviceError;
         console.error('Error fetching maintenance records:', error);
         return jsonError('Failed to fetch maintenance records', 500);
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
             { status: 201 }
         );
     } catch (error) {
-        const serviceError = filmServiceErrorResponse(error);
+        const serviceError = applicationErrorResponse(error);
         if (serviceError) return serviceError;
         console.error('Error creating maintenance record:', error);
         return jsonError('Failed to create maintenance record', 500);
@@ -60,7 +61,7 @@ export async function PUT(request: NextRequest) {
         if ('error' in input) return jsonError(input.error);
         return NextResponse.json({ data: await updateFilmMaintenanceForUser(session.user.id, input.data) });
     } catch (error) {
-        const serviceError = filmServiceErrorResponse(error);
+        const serviceError = applicationErrorResponse(error);
         if (serviceError) return serviceError;
         console.error('Error updating maintenance record:', error);
         return jsonError('Failed to update maintenance record', 500);
@@ -76,7 +77,7 @@ export async function DELETE(request: NextRequest) {
         await deleteFilmMaintenanceForUser(session.user.id, id.data);
         return NextResponse.json({ success: true });
     } catch (error) {
-        const serviceError = filmServiceErrorResponse(error);
+        const serviceError = applicationErrorResponse(error);
         if (serviceError) return serviceError;
         console.error('Error deleting maintenance record:', error);
         return jsonError('Failed to delete maintenance record', 500);

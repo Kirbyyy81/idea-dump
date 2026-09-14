@@ -1,27 +1,12 @@
+import { ApplicationError } from '@/lib/api/applicationError';
 import { getOwnedProject, updateOwnedProject } from '@/lib/projects/core/repository';
 import type { Note } from '@/lib/types';
 import { createNote, deleteNote, findNote, listNotesForProject } from './repository';
 import type { NoteCreateCommand } from './schemas';
 
-export class NoteServiceError extends Error {
-    readonly error: string;
-    readonly status: number;
-
-    constructor(error: string, status: number) {
-        super(error);
-        this.name = 'NoteServiceError';
-        this.error = error;
-        this.status = status;
-    }
-}
-
-export function isNoteServiceError(error: unknown): error is NoteServiceError {
-    return error instanceof NoteServiceError;
-}
-
 async function ensureOwnedProject(userId: string, projectId: string) {
     if (!await getOwnedProject(userId, projectId)) {
-        throw new NoteServiceError('Project not found', 404);
+        throw new ApplicationError('Project not found', { status: 404 });
     }
 }
 
@@ -40,11 +25,11 @@ export async function createNoteForUser(userId: string, input: NoteCreateCommand
 
 export async function deleteNoteForUser(userId: string, noteId: string) {
     const note = await findNote(noteId);
-    if (!note) throw new NoteServiceError('Note not found', 404);
+    if (!note) throw new ApplicationError('Note not found', { status: 404 });
 
     if (!await getOwnedProject(userId, note.project_id)) {
-        throw new NoteServiceError('Note not found', 404);
+        throw new ApplicationError('Note not found', { status: 404 });
     }
-    if (!await deleteNote(note)) throw new NoteServiceError('Note not found', 404);
+    if (!await deleteNote(note)) throw new ApplicationError('Note not found', { status: 404 });
     await updateOwnedProject(userId, note.project_id, {});
 }

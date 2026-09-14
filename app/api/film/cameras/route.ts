@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authorizeFilmJournal, filmServiceErrorResponse, jsonError } from '@/lib/film/core/api';
+import { applicationErrorResponse } from '@/lib/api/responses';
+import { authorizeFilmJournal, jsonError } from '@/lib/film/core/api';
 import {
     parseFilmCameraCreate,
     parseFilmCameraUpdate,
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
             { status: 201 }
         );
     } catch (error) {
-        const serviceError = filmServiceErrorResponse(error);
+        const serviceError = applicationErrorResponse(error);
         if (serviceError) return serviceError;
         console.error('Error creating film camera:', error);
         return jsonError('Failed to create film camera', 500);
@@ -58,7 +59,7 @@ export async function PUT(request: NextRequest) {
 
         return NextResponse.json({ data: await updateFilmCameraForUser(session.user.id, input.data) });
     } catch (error) {
-        const serviceError = filmServiceErrorResponse(error);
+        const serviceError = applicationErrorResponse(error);
         if (serviceError) return serviceError;
         console.error('Error updating film camera:', error);
         return jsonError('Failed to update film camera', 500);
@@ -74,7 +75,7 @@ export async function DELETE(request: NextRequest) {
         await deleteFilmCameraForUser(session.user.id, id.data);
         return NextResponse.json({ success: true });
     } catch (error) {
-        const serviceError = filmServiceErrorResponse(error);
+        const serviceError = applicationErrorResponse(error);
         if (serviceError) return serviceError;
         console.error('Error deleting film camera:', error);
         return jsonError('Failed to delete film camera', 500);

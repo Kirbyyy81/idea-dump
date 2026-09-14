@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { applicationErrorResponse } from '@/lib/api/responses';
 import { authorizeFinance, jsonError, readFinanceJsonObject } from '@/lib/finance/core/auth';
 import {
     isFinanceUuid,
@@ -9,7 +10,6 @@ import {
     createFinanceSourceForUser,
     deleteFinanceSourceForUser,
     getFinanceSources,
-    isFinanceServiceError,
     updateFinanceSourceForUser,
 } from '@/lib/finance/core/service';
 
@@ -37,7 +37,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ data: await createFinanceSourceForUser(session.user.id, parsed.data) }, { status: 201 });
     } catch (error) {
         console.error('Error creating finance source:', error);
-        if (isFinanceServiceError(error)) return jsonError(error.message, error.status);
+        const serviceError = applicationErrorResponse(error);
+        if (serviceError) return serviceError;
         return jsonError('Failed to create finance source', 500);
     }
 }
@@ -53,7 +54,8 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ data: await updateFinanceSourceForUser(session.user.id, parsed.data) });
     } catch (error) {
         console.error('Error updating finance source:', error);
-        if (isFinanceServiceError(error)) return jsonError(error.message, error.status);
+        const serviceError = applicationErrorResponse(error);
+        if (serviceError) return serviceError;
         return jsonError('Failed to update finance source', 500);
     }
 }
@@ -73,7 +75,8 @@ export async function DELETE(request: NextRequest) {
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Error deleting finance source:', error);
-        if (isFinanceServiceError(error)) return jsonError(error.message, error.status);
+        const serviceError = applicationErrorResponse(error);
+        if (serviceError) return serviceError;
         return jsonError('Failed to delete finance source', 500);
     }
 }

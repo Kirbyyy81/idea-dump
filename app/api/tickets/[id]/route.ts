@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { applicationErrorResponse } from '@/lib/api/responses';
 import { authorizeSessionModule } from '@/lib/rbac/guards';
 import {
     parseTicketId,
@@ -7,23 +8,11 @@ import {
 } from '@/lib/tickets/core/schemas';
 import {
     deleteTicketForActor,
-    isTicketServiceError,
     updateTicketForActor,
 } from '@/lib/tickets/core/service';
 
 interface RouteParams {
     params: Promise<{ id: string }>;
-}
-
-function serviceErrorResponse(error: unknown) {
-    if (!isTicketServiceError(error)) return null;
-
-    return NextResponse.json(
-        error.responseMessage
-            ? { error: error.error, message: error.responseMessage }
-            : { error: error.error },
-        { status: error.status }
-    );
 }
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
@@ -44,7 +33,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ data: await updateTicketForActor(actor, id.data, updates.data) });
     } catch (error) {
-        const serviceError = serviceErrorResponse(error);
+        const serviceError = applicationErrorResponse(error);
         if (serviceError) return serviceError;
 
         console.error('Error updating ticket:', error);
@@ -66,7 +55,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
         await deleteTicketForActor(actor, id.data);
         return NextResponse.json({ success: true });
     } catch (error) {
-        const serviceError = serviceErrorResponse(error);
+        const serviceError = applicationErrorResponse(error);
         if (serviceError) return serviceError;
 
         console.error('Error deleting ticket:', error);
