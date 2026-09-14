@@ -23,12 +23,6 @@ export function ShadowRulesList({ summary }: { summary: FinanceShadowRulesSummar
                 <p className="text-sm text-text-muted">No rules are currently in shadow testing.</p>
             ) : (
                 <>
-                    <p className="text-sm text-text-secondary">
-                        These rules are being tested, not applied to your transactions. Activation requires fresh reviewed evidence and operator approval.
-                    </p>
-                    <p className="text-xs text-text-secondary">
-                        Algorithm is the extraction-logic version, not an AI model. Algorithm 3 adds nearby-line, approved-pattern, reference-cleanup and date-format rules.
-                    </p>
                     <ul className="space-y-3">
                         {rules.slice(currentPage * pageSize, (currentPage + 1) * pageSize).map((rule) => (
                             <li key={rule.id} className="min-w-0 space-y-2 rounded-lg border border-border-default p-3">

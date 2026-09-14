@@ -73,7 +73,8 @@ describe('shadow-rule settings list', () => {
         expect(screen.getByText('Example bank: Reference number')).toBeTruthy();
         expect(screen.getByText('Read nearby lines around a label')).toBeTruthy();
         expect(screen.getByText('Algorithm 3 · Version 2')).toBeTruthy();
-        expect(screen.getByText(/not applied to your transactions/)).toBeTruthy();
+        expect(screen.queryByText(/These rules are being tested/)).toBeNull();
+        expect(screen.queryByText(/Algorithm is the extraction-logic version/)).toBeNull();
         expect(screen.getByText(/not just fresh shadow reviews/)).toBeTruthy();
         expect(screen.getByText('100%')).toBeTruthy();
         expect(screen.getByText('50%')).toBeTruthy();
