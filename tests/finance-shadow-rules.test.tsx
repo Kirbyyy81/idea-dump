@@ -71,7 +71,7 @@ describe('shadow-rule settings list', () => {
     it('shows individual rules and explains that evidence is not activation approval', () => {
         render(<ShadowRulesList summary={toFinanceShadowRules([row], sources, 1)} />);
         expect(screen.getByText('Example bank: Reference number')).toBeTruthy();
-        expect(screen.getByText('Read nearby lines around a label')).toBeTruthy();
+        expect(screen.queryByText('Read nearby lines around a label')).toBeNull();
         expect(screen.getByText('Algorithm 3 · Version 2')).toBeTruthy();
         expect(screen.queryByText(/These rules are being tested/)).toBeNull();
         expect(screen.queryByText(/Algorithm is the extraction-logic version/)).toBeNull();
@@ -91,6 +91,20 @@ describe('shadow-rule settings list', () => {
         expect(screen.getByText('Showing 6-7 of 7 shadow rules.')).toBeTruthy();
         view.rerender(<ShadowRulesList summary={toFinanceShadowRules([row], sources, 1)} />);
         expect(screen.getByText('Showing 1-1 of 1 shadow rules.')).toBeTruthy();
+    });
+
+    it('omits filename-date descriptions while retaining compact rule metadata', () => {
+        render(<ShadowRulesList summary={toFinanceShadowRules([{
+            ...row, field_name: 'transaction_date', template_type: 'filename_date', algorithm_version: 2,
+        }], sources, 1)} />);
+        expect(screen.getByRole('heading', { name: 'Example bank: Transaction date' })).toBeTruthy();
+        expect(screen.queryByText('Read the date from the filename')).toBeNull();
+        expect(screen.getByText('Algorithm 2 · Version 2')).toBeTruthy();
+        expect(screen.getByText('Supporting transactions:')).toBeTruthy();
+        expect(screen.getByText('Evaluations:')).toBeTruthy();
+        expect(screen.getByText(/Testing since/)).toBeTruthy();
+        expect(screen.getByRole('list').className).toContain('divide-y');
+        expect(screen.getByRole('listitem').className).toContain('py-2');
     });
 
     it('shows loading, empty, unavailable and partial-summary states independently', () => {

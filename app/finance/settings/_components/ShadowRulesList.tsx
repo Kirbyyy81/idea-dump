@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/atoms/Button';
-import { financeTemplateFieldLabels, financeTemplateTypeLabels } from '@/lib/finance/shadowRules';
+import { financeTemplateFieldLabels } from '@/lib/finance/shadowRules';
 import type { FinanceShadowRulesSummary } from '@/lib/types';
 
 const pageSize = 5;
@@ -15,7 +15,7 @@ export function ShadowRulesList({ summary }: { summary: FinanceShadowRulesSummar
     const lastPage = Math.max(0, Math.ceil(rules.length / pageSize) - 1);
     const currentPage = Math.min(page, lastPage);
     return (
-        <section aria-labelledby="shadow-rules-heading" className="space-y-3 border-t border-border-default px-5 py-4">
+        <section aria-labelledby="shadow-rules-heading" className="space-y-2 border-t border-border-default px-5 py-3">
             <h3 id="shadow-rules-heading" className="text-sm font-semibold">Rules in shadow testing</h3>
             {summary.availability === 'unavailable' ? (
                 <p role="status" className="text-sm text-error">Shadow rule details are unavailable. Other rules remain available.</p>
@@ -23,21 +23,18 @@ export function ShadowRulesList({ summary }: { summary: FinanceShadowRulesSummar
                 <p className="text-sm text-text-muted">No rules are currently in shadow testing.</p>
             ) : (
                 <>
-                    <ul className="space-y-3">
+                    <ul className="divide-y divide-border-default rounded-lg border border-border-default">
                         {rules.slice(currentPage * pageSize, (currentPage + 1) * pageSize).map((rule) => (
-                            <li key={rule.id} className="min-w-0 space-y-2 rounded-lg border border-border-default p-3">
-                                <div className="flex flex-wrap items-start justify-between gap-2">
-                                    <div className="min-w-0">
-                                        <h4 className="break-words text-sm font-semibold">
-                                            {rule.source_name ?? 'Source unavailable'}: {financeTemplateFieldLabels[rule.field_name]}
-                                        </h4>
-                                        <p className="text-sm text-text-secondary">{financeTemplateTypeLabels[rule.template_type]}</p>
-                                    </div>
-                                    <span className="rounded-full bg-bg-subtle px-2 py-1 text-xs text-text-secondary">
+                            <li key={rule.id} className="min-w-0 space-y-1 px-3 py-2">
+                                <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+                                    <h4 className="min-w-0 break-words text-sm font-semibold">
+                                        {rule.source_name ?? 'Source unavailable'}: {financeTemplateFieldLabels[rule.field_name]}
+                                    </h4>
+                                    <span className="rounded-full bg-bg-subtle px-2 py-0.5 text-xs text-text-secondary">
                                         Algorithm {rule.algorithm_version} · Version {rule.template_version}
                                     </span>
                                 </div>
-                                <dl className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
+                                <dl className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
                                     {[
                                         ['Supporting transactions', rule.evidence_count],
                                         ['Evaluations', rule.evaluation_count],
@@ -45,7 +42,7 @@ export function ShadowRulesList({ summary }: { summary: FinanceShadowRulesSummar
                                         ['Replay precision', percentage(rule.precision)],
                                         ['Replay coverage', percentage(rule.coverage)],
                                     ].map(([label, value]) => (
-                                        <div key={label}><dt className="text-text-secondary">{label}</dt><dd className="font-semibold">{value}</dd></div>
+                                        <div key={label} className="flex gap-1"><dt className="text-text-secondary">{label}:</dt><dd className="font-semibold tabular-nums">{value}</dd></div>
                                     ))}
                                 </dl>
                                 <p className="text-xs text-text-secondary">
