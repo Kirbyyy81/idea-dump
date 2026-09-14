@@ -97,20 +97,6 @@ export function LearningSummaryPanel({ isLoading, summary, shadowRules, onRefres
                             ) : <p className="mt-1 text-text-muted">No active parser templates.</p>}
                         </div>
                     </div>
-
-                    {summary.recent_outcomes.length ? (
-                        <div>
-                            <h3 className="font-semibold">Recent outcomes</h3>
-                            <ul className="mt-2 divide-y divide-border-default border border-border-default">
-                                {summary.recent_outcomes.map((outcome) => (
-                                    <li key={`${outcome.field_name}-${outcome.updated_at}`} className="px-3 py-2 text-sm">
-                                        <span className="font-semibold">{fieldLabels[outcome.field_name]} {outcome.status}</span>
-                                        <span className="text-text-secondary">: {outcome.reason}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    ) : null}
                 </div>
             ) : null}
             {!isLoading ? <ShadowRulesList summary={shadowRules ?? { availability: 'unavailable' }} /> : null}
