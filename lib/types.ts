@@ -774,6 +774,26 @@ export type FinanceLearningSummary =
         recent_outcomes: FinanceLearningRecentOutcome[];
     };
 
+export interface FinanceShadowRule {
+    id: string;
+    source_name: string | null;
+    field_name: FinanceParserTemplateField;
+    template_type: FinanceParserTemplateType;
+    algorithm_version: number;
+    template_version: number;
+    evidence_count: number;
+    evaluation_count: number;
+    contradiction_count: number;
+    precision: number | null;
+    coverage: number | null;
+    shadow_started_at: string | null;
+    evaluated_at: string | null;
+}
+
+export type FinanceShadowRulesSummary =
+    | { availability: 'unavailable' }
+    | { availability: 'available'; rules: FinanceShadowRule[]; total: number };
+
 export type FinanceParserTemplateEvidenceOutcome =
     | 'supported'
     | 'contradicted'

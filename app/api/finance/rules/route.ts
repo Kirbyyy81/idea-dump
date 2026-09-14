@@ -20,6 +20,7 @@ export async function GET() {
             data: settings.rules,
             suggestions: settings.suggestions,
             learning: settings.learning,
+            shadow_rules: settings.shadow_rules,
         });
     } catch (error) {
         console.error('Error fetching finance rules:', error);

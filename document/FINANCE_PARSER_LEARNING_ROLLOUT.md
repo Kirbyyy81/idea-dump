@@ -20,7 +20,18 @@ The CLI warned that its optional local migration-catalog cache could not be gene
 
 Advisor follow-ups remain separate work: the security scan reports the previously documented [RLS-without-policy notices](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy), [public `pg_net` extension](https://supabase.com/docs/guides/database/database-linter?lint=0014_extension_in_public) and [disabled leaked-password protection](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection). The performance scan reports [missing covering foreign-key indexes](https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys) for `finance_template_evidence_template_user_version_fkey` and the new `finance_template_evidence_version_fkey`, plus unused-index notices. No unrelated index, Auth or extension changes were made.
 
-Observe the first scheduled algorithm 3 business outcome and collect fresh reviewed shadow evidence before any separately approved promotion. Category/LLM replacement and amount learning remain deferred.
+### User-requested learning refresh and shadow visibility
+
+Ran one user-approved refresh on 14 September 2026, finishing at 16:40 Malaysia time. Invocation `c37ea061-72b4-4aab-a2ce-9c5de8caec83` (run `5298ecb9-019d-45a6-8fe8-c723568d9ebd`) succeeded with algorithm 3 using the existing 90-second timeout and idempotent refresh wrapper. No activation or cron change was requested or performed.
+
+- The run reported 419 corrections examined, 55 candidates represented in retained evaluation evidence, one proposal, 11 updated templates, two rejections and zero new shadows, activations or disables.
+- The new algorithm 3 bounded-line reference proposal had four supports and 19 contradictions in 23 evaluations, so it was rejected. The algorithm 2 payee rule had five supports and one contradiction and was also rejected.
+- Eight algorithm 2 rules remain in shadow: four source, two direction, one merchant and one filename-date rule. No generalized parser template is active.
+- Transaction and candidate row counts and complete-row fingerprints were unchanged before and after the refresh.
+
+Rules settings now includes a read-only shadow list through the existing authenticated `/api/finance/rules` route. Its separate `shadow_rules` payload fails independently of rules, suggestions and aggregate learning status. Server-only queries select bounded display metadata with explicit user ownership filters on both templates and source names. No raw configuration, OCR, reference values, hashes or correction payloads are exposed. The newest 100 shadow rules are available, paged five at a time, with the exact total and any truncation shown. Historical replay counts are labelled separately from fresh-shadow promotion requirements. No schema migration is needed for this UI addition; deploy the application commit to expose it in production.
+
+Collect fresh reviewed shadow evidence before any separately approved promotion. Category/LLM replacement and amount learning remain deferred.
 
 ## Historical implementation baseline
 
