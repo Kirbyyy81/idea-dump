@@ -1,6 +1,6 @@
 {
   "name": "idea-dump",
-  "version": "0.14.2",
+  "version": "0.14.3",
   "private": true,
   "engines": {
     "node": ">=22.22.0 <23.0.0"
