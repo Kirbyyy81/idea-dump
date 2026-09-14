@@ -82,6 +82,7 @@ export function FinanceDashboardClient({ month, summary }: FinanceDashboardClien
         <AppShell
             contentClassName="p-5 md:p-8"
             pageTitle="Finance"
+            headerClassName="flex-row flex-wrap items-center justify-between gap-2"
             headerAction={<Link href="/finance/add" className="btn-primary"><AddDoodleIcon size={16} className="mr-2" />Add transaction</Link>}
         >
             <div className="mx-auto max-w-7xl" aria-busy={isPending}>

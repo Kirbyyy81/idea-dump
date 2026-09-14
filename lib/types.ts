@@ -396,6 +396,7 @@ export const filmTypes: FilmType[] = ['NEGATIVE', 'REVERSAL', 'BW_NEGATIVE'];
 export const filmProcessTypes: FilmProcessType[] = ['C41', 'E6', 'BW', 'ECN2'];
 
 export type FinanceTransactionDirection = 'expense' | 'income';
+export type FinanceEntryMode = 'manual' | 'screenshot';
 export type FinanceTransactionSource = 'manual' | 'screenshot';
 export type FinanceTransactionStatus = 'confirmed' | 'review' | 'duplicate' | 'rejected';
 export type FinanceCurrency = 'MYR';
@@ -598,7 +599,7 @@ export interface FinanceCandidatePayload {
     learned_field_rule_ids?: string[];
     matched_parser_template_ids?: string[];
     parser_template_evaluations?: FinanceParserTemplateEvaluation[];
-    parser_template_baseline?: Partial<Record<FinanceParserTemplateField, string | number | null>>;
+    parser_template_baseline?: FinanceParserTemplateBaseline;
     receipt_processing?: FinanceReceiptProcessing;
     duplicate_transaction_id: string | null;
 }
@@ -787,6 +788,26 @@ export type FinanceLearningSummary =
         recent_outcomes: FinanceLearningRecentOutcome[];
     };
 
+export interface FinanceShadowRule {
+    id: string;
+    source_name: string | null;
+    field_name: FinanceParserTemplateField;
+    template_type: FinanceParserTemplateType;
+    algorithm_version: number;
+    template_version: number;
+    evidence_count: number;
+    evaluation_count: number;
+    contradiction_count: number;
+    precision: number | null;
+    coverage: number | null;
+    shadow_started_at: string | null;
+    evaluated_at: string | null;
+}
+
+export type FinanceShadowRulesSummary =
+    | { availability: 'unavailable' }
+    | { availability: 'available'; rules: FinanceShadowRule[]; total: number };
+
 export type FinanceParserTemplateEvidenceOutcome =
     | 'supported'
     | 'contradicted'
@@ -961,10 +982,16 @@ export interface FinanceParserTemplateContract {
     updated_at: string;
 }
 
+export type FinanceParserTemplateBaseline = Partial<Record<FinanceParserTemplateField, string | number | null>>;
+export type FinanceTemplateExtraction =
+    | { outcome: 'value'; value: string }
+    | { outcome: 'not_applicable' | 'invalid_output' | 'unresolved_missing_context' };
+
 export type FinanceParserTemplateEvaluationOutcome =
     | 'applied'
     | 'shadow'
     | 'conflict'
+    | 'unresolved_missing_context'
     | 'not_applicable'
     | 'invalid_output';
 

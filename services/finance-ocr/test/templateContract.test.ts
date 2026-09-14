@@ -120,7 +120,7 @@ describe('Finance parser template configuration contract', () => {
     });
 
     it('locks the reviewed v1 guardrails', () => {
-        expect(FINANCE_PARSER_TEMPLATE_ALGORITHM_VERSION).toBe(2);
+        expect(FINANCE_PARSER_TEMPLATE_ALGORITHM_VERSION).toBe(3);
         expect(FINANCE_PARSER_TEMPLATE_GUARDRAILS).toEqual({
             minimumEvidenceCount: 3,
             minimumEvaluationCount: 5,
@@ -192,6 +192,7 @@ describe('Finance parser template record contract', () => {
 
     it('accepts a source template with a target and no source scope', () => {
         const sourceTemplate = template({
+            algorithm_version: 2,
             target_source_id: SOURCE_ID,
             scope_source_id: null,
             field_name: 'source_id',
@@ -212,7 +213,7 @@ describe('Finance parser template record contract', () => {
             template_type: 'strip_suffix',
         }))).toContain('Template type must match the configuration discriminator.');
         expect(getFinanceParserTemplateContractErrors(template({
-            algorithm_version: 3,
+            algorithm_version: 4,
             template_version: 0,
         }))).toEqual(expect.arrayContaining([
             'Template algorithm version is not supported.',
@@ -339,9 +340,10 @@ describe('Finance parser template ranking and conflicts', () => {
 });
 
 describe('optional receipt format contract', () => {
-    it('accepts scoped v2 field rules and original unscoped contracts', () => {
+    it('accepts scoped v2 and v3 field rules and original unscoped contracts', () => {
         expect(isFinanceParserTemplateContract(template())).toBe(true);
         expect(isFinanceParserTemplateContract(template({ scope_receipt_format: 'ryt_shared_v1' }))).toBe(true);
+        expect(isFinanceParserTemplateContract(template({ algorithm_version: 2, template_type: 'same_line_label', configuration: { type: 'same_line_label', label: 'Ref' }, scope_receipt_format: 'ryt_screenshot_v1' }))).toBe(true);
     });
     it('rejects unknown format, source scopes, and legacy scopes', () => {
         expect(isFinanceParserTemplateContract({ ...template(), scope_receipt_format: 'unknown' })).toBe(false);

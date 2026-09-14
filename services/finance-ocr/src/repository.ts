@@ -333,7 +333,7 @@ export class SupabaseFinanceRepository implements FinanceRepository, ShareQueueR
                 .eq('user_id', userId)
                 .in('field_name', ['reference_number', 'merchant', 'transaction_date', 'direction', 'payee_name', 'notes', 'recipient_reference'])
                 .in('status', ['active', 'shadow'])
-                .eq('algorithm_version', 2)
+                .in('algorithm_version', [2, 3])
                 .order('status')
                 .order('activated_at')
                 .order('id')

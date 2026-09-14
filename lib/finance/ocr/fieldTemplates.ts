@@ -1,8 +1,9 @@
 import { isRytPartyNoise, receiptFormatMatches } from '@/lib/finance/ocr/receiptFormat';
 import { hasReceiptToday, screenshotFilenameDate, receiptReferenceValue, approvedReceiptValue, receiptDirectionConflict } from '@/lib/finance/ocr/receiptPatterns';
+import { evaluateFinanceExtendedTemplate } from './extendedTemplates';
 import { templateValueHash } from '@/lib/finance/ocr/templateHash';
 import type {
-    FinanceCandidatePayload, FinanceOcrFieldTemplate, FinanceOcrPayee, FinanceReceiptFormat,
+    FinanceCandidatePayload, FinanceParserTemplateBaseline, FinanceOcrFieldTemplate, FinanceOcrPayee, FinanceReceiptFormat,
     FinanceParserTemplateEvaluation, FinanceParserTemplateField,
 } from '@/lib/types';
 import { isFinanceParserTemplateContract, orderFinanceParserTemplates, selectFinanceParserTemplateProposal } from '@/lib/finance/ocr/templateContract';
@@ -20,7 +21,12 @@ function remainder(line: string, label: string) {
 
 export function extractFinanceTemplateValue(
     template: FinanceOcrFieldTemplate, text: string, payees: FinanceOcrPayee[] = [], filename: string | null = null,
+    baseline?: FinanceParserTemplateBaseline,
 ): string | null | undefined {
+    if (template.algorithm_version === 3) {
+        const result = evaluateFinanceExtendedTemplate(template, text, payees, baseline);
+        return result.outcome === 'value' ? result.value : result.outcome === 'invalid_output' ? null : undefined;
+    }
     const lines = templateLines(text);
     const config = template.configuration;
     if (config.type === 'receipt_pattern') return approvedReceiptValue(text, config.pattern);
@@ -82,14 +88,17 @@ export function applyFinanceFieldTemplates(
     for (const field of FINANCE_TEMPLATE_FIELDS) {
         const proposals: Array<{ template: FinanceOcrFieldTemplate; value: string }> = [];
         for (const template of eligible.filter((item) => item.field_name === field).slice(0, 20)) {
-            let value = extractFinanceTemplateValue(template, text, payees, filename);
+            const extended = template.algorithm_version === 3
+                ? evaluateFinanceExtendedTemplate(template, text, payees, payload.parser_template_baseline) : null;
+            let value = extended ? (extended.outcome === 'value' ? extended.value : extended.outcome === 'invalid_output' ? null : undefined)
+                : extractFinanceTemplateValue(template, text, payees, filename);
             if (format === 'ryt_shared_v1' && (field === 'payee_name' || field === 'merchant') && value && isRytPartyNoise(value)) value = null;
             const evaluation: FinanceParserTemplateEvaluation = {
                 template_id: template.id, field_name: field,
                 status: template.status as 'active' | 'shadow',
-                outcome: value === undefined ? 'not_applicable' : value === null ? 'invalid_output' : 'shadow',
-                ...(template.algorithm_version === 2 ? {
-                    algorithm_version: 2, template_version: template.template_version,
+                outcome: extended?.outcome === 'unresolved_missing_context' ? 'unresolved_missing_context' : value === undefined ? 'not_applicable' : value === null ? 'invalid_output' : 'shadow',
+                ...(template.algorithm_version >= 2 ? {
+                    algorithm_version: template.algorithm_version, template_version: template.template_version,
                     ...(value ? { value_hash: templateValueHash(field, value) } : {}),
                 } : {}),
             };

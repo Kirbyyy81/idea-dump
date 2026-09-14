@@ -10,8 +10,8 @@ import {
 } from '@/components/atoms/DoodleIcons';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
-import { FinanceReferenceDataState } from '@/app/finance/_components/FinanceReferenceDataState';
-import type { FinanceReferenceDataStatus } from '@/app/finance/_components/FinanceReferenceDataProvider';
+import { FinanceReferenceDataState } from '@/app/finance/_components/FinanceReferenceData';
+import type { FinanceReferenceDataStatus } from '@/app/finance/_components/FinanceReferenceData';
 import { getLocalFinanceDate } from '@/lib/finance/core/values';
 import { FINANCE_TRANSACTION_FILTER_KEYS } from '@/lib/finance/transactions/filters';
 import type { FinanceReferenceOption, FinanceTransactionView } from '@/lib/types';

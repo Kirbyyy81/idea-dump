@@ -11,8 +11,7 @@ import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
 import { Toggle } from '@/components/atoms/Toggle';
-import { useFinanceReferenceData } from '@/app/finance/_components/FinanceReferenceDataProvider';
-import { FinanceReferenceDataState } from '@/app/finance/_components/FinanceReferenceDataState';
+import { FinanceReferenceDataState, useFinanceReferenceData } from '@/app/finance/_components/FinanceReferenceData';
 import {
     FinanceFormErrorSummary,
     focusFirstFinanceError,

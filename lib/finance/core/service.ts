@@ -24,6 +24,8 @@ import {
     getFinanceShareObjectInfo,
     getFinanceShareUploadReservation,
     getFinanceLearningSummary,
+    listFinanceShadowRules,
+    listFinanceShadowRuleSources,
     getOwnedActiveFinanceShareBatch,
     getManualFinanceTransactionByIdempotencyKey,
     getOwnedFinanceCategory,
@@ -87,6 +89,7 @@ import {
     parseFinanceTransaction,
 } from '@/lib/finance/core/schemas';
 import { normalizeFinanceTransaction } from '@/lib/finance/core/auth';
+import { financeShadowSourceIds, toFinanceShadowRules } from '@/lib/finance/shadowRules';
 import { FinanceFieldErrors, getFinanceMonthRange, getLocalFinanceMonth } from '@/lib/finance/core/values';
 import { parseFinanceText } from '@/lib/finance/ocr/parser';
 import { FINANCE_V1_CURRENCY } from '@/lib/finance/core/constants';
@@ -103,6 +106,7 @@ import {
     FinanceIntakeItem,
     FinanceCategoryDetail,
     FinanceLearningSummary,
+    FinanceShadowRulesSummary,
     FinanceOcrFieldLearningRule,
     FinanceOcrFieldTemplate,
     FinanceOcrPayee,
@@ -323,10 +327,11 @@ async function loadFinanceLearningSummary(userId: string): Promise<FinanceLearni
 }
 
 export async function getFinanceRuleSettings(userId: string) {
-    const [rulesResult, suggestionsResult, learningResult] = await Promise.all([
+    const [rulesResult, suggestionsResult, learningResult, shadowRules] = await Promise.all([
         listFinanceRules(userId),
         listFinanceRuleSuggestions(userId),
         loadFinanceLearningSummary(userId),
+        loadFinanceShadowRules(userId),
     ]);
     if (rulesResult.error) throw rulesResult.error;
     if (suggestionsResult.error) throw suggestionsResult.error;
@@ -338,7 +343,23 @@ export async function getFinanceRuleSettings(userId: string) {
             toFinanceRuleSuggestionView(suggestion as unknown as FinanceRuleSuggestion)
         )),
         learning: learningResult,
+        shadow_rules: shadowRules,
     };
+}
+
+async function loadFinanceShadowRules(userId: string): Promise<FinanceShadowRulesSummary> {
+    try {
+        const result = await listFinanceShadowRules(userId);
+        if (result.error) return { availability: 'unavailable' };
+        const sourceIds = financeShadowSourceIds(result.data);
+        const sources = sourceIds.length
+            ? await listFinanceShadowRuleSources(userId, sourceIds)
+            : { data: [], error: null };
+        if (sources.error) return { availability: 'unavailable' };
+        return toFinanceShadowRules(result.data, sources.data, result.count);
+    } catch {
+        return { availability: 'unavailable' };
+    }
 }
 
 export async function createFinanceRuleForUser(userId: string, input: FinanceRuleInput) {

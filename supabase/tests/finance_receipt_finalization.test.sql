@@ -9,8 +9,8 @@ insert into public.bridge_user_module_overrides(user_id,module_id,effect)
 select u.id,m.id,case when u.id='b5000000-0000-4000-8000-000000000003' then 'deny' else 'allow' end
 from auth.users u cross join public.dim_modules m where u.id in ('b5000000-0000-4000-8000-000000000001','b5000000-0000-4000-8000-000000000002','b5000000-0000-4000-8000-000000000003') and m.modules='finance';
 insert into public.dim_finance_sources(id,user_id,name) values('b5000000-0000-4000-8000-000000000004','b5000000-0000-4000-8000-000000000001','Ryt Bank');
-insert into public.finance_intake_items(id,user_id,source,status,processing_attempt_id,original_filename) values
-('b5000000-0000-4000-8000-000000000005','b5000000-0000-4000-8000-000000000001','screenshot','processing','b5000000-0000-4000-8000-000000000006','synthetic.png');
+insert into public.finance_intake_items(id,user_id,source,status,processing_attempt_id,original_filename,processing_started_at,processing_lease_expires_at,processing_attempt_count,processing_version) values
+('b5000000-0000-4000-8000-000000000005','b5000000-0000-4000-8000-000000000001','screenshot','processing','b5000000-0000-4000-8000-000000000006','synthetic.png',clock_timestamp(),clock_timestamp()+interval '5 minutes',1,1);
 create function pg_temp.finalize_receipt(
  actor uuid default 'b5000000-0000-4000-8000-000000000001',attempt uuid default 'b5000000-0000-4000-8000-000000000006',
  diagnostics jsonb default '{"format":"ryt_shared_v1","detector_version":1,"failed_regions":[],"conflicts":[]}',hash text default repeat('a',64))

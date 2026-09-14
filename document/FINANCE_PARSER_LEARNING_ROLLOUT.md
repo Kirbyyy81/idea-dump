@@ -1,5 +1,40 @@
 # PRD 010: Phases 4 and 5
 
+For the current deployment state, see [Production rollout, 14 September 2026](#production-rollout-14-september-2026). The [Algorithm 3](#algorithm-3-non-amount-completion-7-september-2026) section describes the six-type contract. Earlier rollout sections record historical states, including migrations that were pending at that time.
+
+## Production rollout, 14 September 2026
+
+The user confirmed deployment of the application and OCR service. PR #92 was verified merged with head commit `055e207` and successful web/OCR GitHub Actions checks before the database rollout.
+
+- Linked authenticated Supabase CLI 2.113.0 to the verified `idea-dump` project.
+- Compared all 12 final receipt-function bodies against the two committed receipt migrations, normalizing only CRLF line endings. Every body matched. Verified both validated type/field constraints, `postgres` ownership, invoker security, empty search paths and denied browser/service-role helper execution.
+- Reconciled already-installed migrations `20260906125549` and `20260906135451` using `migration repair --status applied`. Their SQL was not replayed and existing receipt definitions were not reinstalled.
+- The subsequent dry run contained only `20260907032803_complete_finance_template_learning.sql`, with no seeds or role changes. Applied that migration through `db push --linked --yes`.
+- A final dry run reported the remote database up to date, with no pending migrations.
+- Verified all 11 algorithm 3 migration function bodies match the committed SQL. Checked validated algorithm/version/hash constraints, RLS on the four learning tables, denied browser access, server-only reads and restricted mutation-helper execution.
+- All 12 read-only synthetic evaluator smoke cases passed: six executable types, impossible dates, repeated equal dates, conflicting dates, missing baseline, explicit null reference and unchanged transforms. These checks do not replace the isolated lifecycle/parity validation recorded below or establish production accuracy.
+- Counts and aggregate full-row fingerprints remained unchanged for transactions, intakes, candidates, corrections and parser templates. No historical values were rewritten. The template state remained nine algorithm 2 shadow templates, zero active templates and no algorithm 3 templates yet.
+- The existing `postgres` Cron job remains active at `15 3 * * *` (11:15 am Malaysia time), executing `SET statement_timeout = '90s'; SELECT public.finance_refresh_rule_suggestions();`. Its next normal run can generate algorithm 3 proposals and shadow evidence. No manual refresh, approved-receipt installation or promotion was performed during this rollout.
+
+The CLI warned that its optional local migration-catalog cache could not be generated because Docker Desktop was unavailable. The production migration succeeded; live catalog verification and the final dry run independently confirmed completion.
+
+Advisor follow-ups remain separate work: the security scan reports the previously documented [RLS-without-policy notices](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy), [public `pg_net` extension](https://supabase.com/docs/guides/database/database-linter?lint=0014_extension_in_public) and [disabled leaked-password protection](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection). The performance scan reports [missing covering foreign-key indexes](https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys) for `finance_template_evidence_template_user_version_fkey` and the new `finance_template_evidence_version_fkey`, plus unused-index notices. No unrelated index, Auth or extension changes were made.
+
+### User-requested learning refresh and shadow visibility
+
+Ran one user-approved refresh on 14 September 2026, finishing at 16:40 Malaysia time. Invocation `c37ea061-72b4-4aab-a2ce-9c5de8caec83` (run `5298ecb9-019d-45a6-8fe8-c723568d9ebd`) succeeded with algorithm 3 using the existing 90-second timeout and idempotent refresh wrapper. No activation or cron change was requested or performed.
+
+- The run reported 419 corrections examined, 55 candidates represented in retained evaluation evidence, one proposal, 11 updated templates, two rejections and zero new shadows, activations or disables.
+- The new algorithm 3 bounded-line reference proposal had four supports and 19 contradictions in 23 evaluations, so it was rejected. The algorithm 2 payee rule had five supports and one contradiction and was also rejected.
+- Eight algorithm 2 rules remain in shadow: four source, two direction, one merchant and one filename-date rule. No generalized parser template is active.
+- Transaction and candidate row counts and complete-row fingerprints were unchanged before and after the refresh.
+
+Rules settings now includes a read-only shadow list through the existing authenticated `/api/finance/rules` route. Its separate `shadow_rules` payload fails independently of rules, suggestions and aggregate learning status. Server-only queries select bounded display metadata with explicit user ownership filters on both templates and source names. No raw configuration, OCR, reference values, hashes or correction payloads are exposed. The newest 100 shadow rules are available, paged five at a time, with the exact total and any truncation shown. Historical replay counts are labelled separately from fresh-shadow promotion requirements. No schema migration is needed for this UI addition; deploy the application commit to expose it in production.
+
+Collect fresh reviewed shadow evidence before any separately approved promotion. Category/LLM replacement and amount learning remain deferred.
+
+## Historical implementation baseline
+
 Repository implementation on 2026-09-06, based on merged commit 41b6c6b.
 
 ## Delivered
@@ -236,6 +271,45 @@ The other eight definitions, including wrapped references, are prepared but are 
 
 Validation: 221 application tests and 229 OCR tests passed, including 36 PostgreSQL/runtime parity cases. All four SQL suites passed on isolated PostgreSQL 17 with synthetic receipts, including retry behavior, preserved wrapped-reference conflicts, exclusion of Transfer to Wallet, and operator-only installation. A two-stage installation check verified that the final installer adds eight definitions after the compatible six. Lint, both TypeScript checks, both production builds, and all four dependency audits passed.
 
+## Algorithm 3 non-amount completion (7 September 2026)
+
+This delivery adds execution, reviewed-correction candidate generation, historical replay and versioned evidence for six configuration types. It does not activate templates or claim production accuracy gains.
+
+| Algorithm | Executable configuration types |
+|---|---|
+| 2, unchanged | Source phrases, same-line labels, next non-empty lines, direction phrases, saved-payee matching, filename dates and approved receipt/reference patterns |
+| 3 | Bounded line windows, internal allowlisted regex captures, prefix removal, suffix removal, ASCII character filtering and explicit date formats |
+| Deferred | Numeric separators and all amount templates, including amount regex captures |
+
+Algorithm 2 definitions, runtime behavior and evidence remain intact. Source loaders still use algorithm 2. Application retries and the OCR service load field templates from algorithms 2 and 3 together, with a combined limit of 20 active/shadow templates per source/field and 1,000 field templates per user.
+
+Every new parse and retry records typed `parser_template_baseline` after manual rules and legacy reference transformations, before generalized templates. Algorithm 3 reference transformations consume only that recorded reference. A missing baseline or missing reference property yields `unresolved_missing_context`; an explicit null reference yields `not_applicable`. Historical corrected values are never used to recreate a missing baseline. Transformations operate independently, not sequentially.
+
+Windows exclude the literal normalized anchor's physical line and inspect one to three physical lines before or after it. Captures search after each literal anchor on its line, or all bounded lines when `anchor: null`. Reference tokens are bounded ASCII letters/digits/hyphens, require a digit and at least five characters, and cannot start/end with a hyphen. Date capture IDs and the five explicit formats accept complete tokens, valid calendar dates, matching separators and supported abbreviated/full English month names. Extraction collapses equal normalized values; distinct valid outputs or a matched extraction with no valid result are invalid. All proposals use the existing semantic ranking and baseline-preserving conflict policy.
+
+Generation uses the latest correction per field/transaction, an accepted candidate linked to a confirmed transaction, current source ownership and the upload cutoff. Anchors come only from existing fixed label lists. Prefix/suffix discovery requires an ASCII alphabetic/punctuation affix of at most 120 characters, no digits, and exact reproduction of the reviewed correction. Both existing ASCII filter modes are evaluated. Three distinct transactions must support a configuration before it is persisted, with a deterministic cap of 20 proposals per user/source/field. Replay retains contradictory, invalid, non-applicable and missing-context evidence, not just successful examples.
+
+Algorithm 3 evidence records algorithm, template version, outcome and an extracted-value hash when a value exists. Existing tenant-safe keys remain enforced, with an additional template-version foreign key. Values and hashes remain private replay metadata. Refresh runs include both versions in one transaction, using the existing invocation ID, lock, safe failure handling, integer result and 90-day retention.
+
+Promotion, disable, requeue and cutoff reset cover both versions through the existing operator-only helper names. No automatic activation is introduced. Promotion still requires perfect precision, zero contradictions, the existing stricter evaluation-count gate and three fresh reviewed shadow transactions. Observed overlap with an active template from either version blocks promotion.
+
+### Algorithm 3 rollout
+
+1. Deploy compatible **application and OCR runtimes first**. They can read the old schema and both algorithms, and begin recording baselines for new uploads.
+2. Confirm the pending receipt-rule migrations are included before `20260907032803_complete_finance_template_learning.sql`. Validate the adopted baseline plus all forward migrations in isolation.
+3. Review a CLI dry run and obtain separate production migration approval. This delivery does not apply production SQL or push the branch.
+4. Apply approved migrations using the canonical CLI workflow. The unchanged cron may then generate algorithm 3 proposals and enter shadow, never active.
+5. Collect fresh reviewed shadow evidence, inspect durable learning results and approve individual promotions separately.
+6. Before rolling back to older runtimes, disable algorithm 3 templates and prevent their requeue/new shadow generation through a separately reviewed database rollback procedure. Do not leave unsupported active templates while running an older parser.
+
+### Algorithm 3 validation
+
+Run all five rollback-only lifecycle suites under `supabase/tests/`: version 2, learning cutoff, reviewed receipts, approved receipt rules and version 3. Run the OCR suite with `FINANCE_PARSER_TEST_DATABASE_URL` and `FINANCE_PARSER_TEST_PSQL` to enable both parity suites. The version 3 suite additionally checks all six generated types, independent support, accepted/cutoff/latest-correction exclusions, invocation retries, hashed evidence, fresh-shadow/requeue gates, mixed-version overlap, combined 20/1,000 limits, contradiction disable, tenant ownership, retention and safe failure.
+
+Validation results: 226 application tests, 422 OCR tests (including 130 PostgreSQL/runtime parity cases), all five SQL lifecycle suites, root lint, both TypeScript checks, both production builds and all four dependency audits passed. The audits found zero vulnerabilities.
+
+Local validation used two fresh PostgreSQL 17.11 databases with ICU Unicode collation, the adopted schema and all subsequent forward migrations, including both pending receipt migrations. Hosted Auth, Storage, Cron, queue and network prerequisites were minimal local scaffolding; no scheduled jobs or network delivery ran. This is not a full Supabase integration or production-scale performance benchmark. The pgTAP RLS suite could not run because pgTAP was absent. Direct catalog checks verified RLS enabled on all four learning tables, denied browser reads, service-role reads, and service-role access to the safe summary. Local query plans used the existing runtime-template and template-evidence indexes. Full Supabase staging, pgTAP and representative-history performance validation remain rollout gates.
+
 ## Ryt shared receipt format rollout
 
 `20260908144752_finance_receipt_format_scope.sql` adds `unknown`, `ryt_screenshot_v1`, and `ryt_shared_v1` intake formats, detector version 1, bounded processing diagnostics, immutable optional field-template format scope, and the service-only `finance_finalize_screenshot_intake_v3` RPC. It keeps the v2 RPC available for older OCR runtimes and flag-off processing. There is still one Ryt Bank source.
@@ -273,3 +347,9 @@ The OCR tests include PostgreSQL/runtime format and evaluator parity when `FINAN
 Local validation for this rollout: 228 application tests, 258 OCR tests including PostgreSQL parity, and all six SQL suites passed. The exact migration also passed on a fresh isolated fixture database, preserving a pre-existing historical intake as unknown and ineligible. Application lint, application and OCR type checks, both builds, and all four dependency audits passed. The supplied receipt recovered all five expected fields with no OCR conflicts, and its missing direction stayed in review. A real screenshot produced identical OCR before and after regional recognition. Review retry preserves the stored format and unresolved conflicts. The local Finance route correctly redirected an unauthenticated browser to the rendered sign-in page without browser errors.
 
 The audits required security patches to Next.js 15.5.25, Sharp 0.35.4, Vitest 4.1.11, and their affected transitive dependencies. These dependency updates are committed separately. No production migration, deployment, feature-flag activation, learning run, or historical reprocessing was performed during implementation.
+
+### Combined algorithm 3 and receipt-format rollout
+
+Apply `20260914154223_finance_receipt_format_algorithm_three.sql` after the algorithm 3 and additive receipt-format migrations, before enabling specialised OCR. It extends format identity, replay, contradiction and promotion checks to algorithm 3, preserves combined runtime capacity limits, and leaves source rules unscoped. Existing templates and historical unknown intake formats remain unchanged. Run `finance_receipt_format_v3.test.sql` alongside the other lifecycle suites.
+
+Combined-branch validation (2026-09-14): 259 application tests, 454 OCR tests including PostgreSQL parity, all eight SQL lifecycle suites, application lint, both type checks and builds, and all four dependency audits passed with zero vulnerabilities. The adopted schema and every forward migration after its marker applied to an isolated PostgreSQL database. Hosted Auth, Storage, Cron and queue prerequisites used local scaffolding; no hosted services ran. The 18 learning-table security assertions passed as direct SQL checks because pgTAP was unavailable.

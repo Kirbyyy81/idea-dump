@@ -10,7 +10,7 @@ import { FinanceCategoryDetail } from '@/lib/types';
 vi.mock('@/lib/finance/core/client', () => ({
     financeApiRequest: vi.fn(),
 }));
-vi.mock('@/app/finance/_components/FinanceReferenceDataProvider', () => ({
+vi.mock('@/app/finance/_components/FinanceReferenceData', () => ({
     useFinanceReferenceData: () => ({
         upsertCategory: vi.fn(),
         removeCategory: vi.fn(),

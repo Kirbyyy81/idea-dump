@@ -16,6 +16,7 @@ import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
 import {
     FinanceRule,
     FinanceLearningSummary,
+    FinanceShadowRulesSummary,
     FinanceRuleSuggestionView,
     FinanceRuleView,
     FinanceTransactionDirection,
@@ -27,8 +28,7 @@ import {
 import { persistVirtualDefaultCategory } from '@/lib/finance/catalogClient';
 import { financeApiRequest } from '@/lib/finance/core/client';
 import { sortFinanceRules } from '@/lib/finance/rules';
-import { useFinanceReferenceData } from '@/app/finance/_components/FinanceReferenceDataProvider';
-import { FinanceReferenceDataState } from '@/app/finance/_components/FinanceReferenceDataState';
+import { FinanceReferenceDataState, useFinanceReferenceData } from '@/app/finance/_components/FinanceReferenceData';
 import { LearningSummaryPanel } from '@/app/finance/settings/_components/LearningSummaryPanel';
 import {
     FinanceSettingsColumns,
@@ -70,6 +70,7 @@ export function RulesSettingsPanel() {
     const [rules, setRules] = useState<RuleWithRelations[]>([]);
     const [suggestions, setSuggestions] = useState<FinanceRuleSuggestionView[]>([]);
     const [learning, setLearning] = useState<FinanceLearningSummary>({ availability: 'never_run' });
+    const [shadowRules, setShadowRules] = useState<FinanceShadowRulesSummary>({ availability: 'unavailable' });
     const [editingSuggestion, setEditingSuggestion] = useState<FinanceRuleSuggestionView | null>(null);
     const [form, setForm] = useState(initialForm);
     const [isSaving, setIsSaving] = useState(false);
@@ -85,10 +86,12 @@ export function RulesSettingsPanel() {
                 data: RuleWithRelations[];
                 suggestions: FinanceRuleSuggestionView[];
                 learning: FinanceLearningSummary;
+                shadow_rules?: FinanceShadowRulesSummary;
             }>('/api/finance/rules', { signal });
             setRules(sortFinanceRules(rulesPayload.data || []));
             setSuggestions(rulesPayload.suggestions || []);
             setLearning(rulesPayload.learning || { availability: 'unavailable' });
+            setShadowRules(rulesPayload.shadow_rules || { availability: 'unavailable' });
         } catch (error) {
             if (signal?.aborted) return;
             showError(error instanceof Error ? error.message : 'Could not load finance rules');
@@ -212,7 +215,7 @@ export function RulesSettingsPanel() {
 
     return (
         <>
-            <FinanceSettingsPanelLayout description="Active rules are applied by priority during screenshot processing.">
+            <FinanceSettingsPanelLayout>
                 {referenceStatus !== 'ready' ? (
                     <FinanceReferenceDataState
                         status={referenceStatus}
@@ -221,7 +224,7 @@ export function RulesSettingsPanel() {
                     />
                 ) : null}
 
-                <LearningSummaryPanel isLoading={isLoading} summary={learning} />
+                <LearningSummaryPanel isLoading={isLoading} summary={learning} shadowRules={shadowRules} onRefresh={() => void loadData()} />
 
                 {!isLoading && suggestions.length > 0 ? (
                     <section className="border border-border-default bg-bg-subtle">

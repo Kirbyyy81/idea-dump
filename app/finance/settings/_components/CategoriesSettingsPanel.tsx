@@ -4,7 +4,7 @@ import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
-import { useFinanceReferenceData } from '@/app/finance/_components/FinanceReferenceDataProvider';
+import { useFinanceReferenceData } from '@/app/finance/_components/FinanceReferenceData';
 import {
     FinanceSettingsColumns,
     FinanceSettingsFormCard,

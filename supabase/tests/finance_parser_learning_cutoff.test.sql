@@ -61,7 +61,7 @@ select public.finance_refresh_rule_suggestions('c1000000-0000-4000-8000-00000000
 select pg_temp.check_cutoff((select count(*)=1 from legacy_calls),'legacy learner is still called');
 select pg_temp.check_cutoff((select status='succeeded' and candidates_evaluated=6 from public.finance_learning_runs where invocation_id='c1000000-0000-4000-8000-000000000009'),'run counts current-period evidence plus unaffected user');
 create temporary table fresh_template as select id from public.finance_parser_templates
- where user_id='c1000000-0000-4000-8000-000000000001' and learning_cutoff_at='2026-09-05T16:00:00Z';
+ where user_id='c1000000-0000-4000-8000-000000000001' and algorithm_version=2 and learning_cutoff_at='2026-09-05T16:00:00Z';
 select pg_temp.check_cutoff((select count(*)=1 from fresh_template),'old-only configuration is not regenerated');
 select pg_temp.check_cutoff((select template_version=2 and predecessor_template_id=(select id from original_template)
  and status='shadow' and evidence_count=3 and contradiction_count=0 from public.finance_parser_templates where id=(select id from fresh_template)),

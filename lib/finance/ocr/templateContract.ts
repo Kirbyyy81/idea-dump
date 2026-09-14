@@ -7,7 +7,7 @@ import type {
     FinanceParserTemplateType,
 } from '@/lib/types';
 
-export const FINANCE_PARSER_TEMPLATE_ALGORITHM_VERSION = 2;
+export const FINANCE_PARSER_TEMPLATE_ALGORITHM_VERSION = 3;
 
 export const FINANCE_PARSER_TEMPLATE_GUARDRAILS = Object.freeze({
     minimumEvidenceCount: 3,
@@ -338,7 +338,7 @@ export function getFinanceParserTemplateContractErrors(value: unknown) {
     if (!isPlainObject(value)) return ['Parser template must be an object.'];
     const errors: string[] = [];
     if (!hasExactKeys(value, 'scope_receipt_format' in value ? [...contractKeys, 'scope_receipt_format'] : contractKeys)) errors.push('Parser template fields are incomplete or unknown.');
-    if (value.scope_receipt_format != null && (!['ryt_shared_v1', 'ryt_screenshot_v1'].includes(String(value.scope_receipt_format)) || value.field_name === 'source_id' || value.algorithm_version !== 2)) errors.push('Receipt format scope is invalid.');
+    if (value.scope_receipt_format != null && (!['ryt_shared_v1', 'ryt_screenshot_v1'].includes(String(value.scope_receipt_format)) || value.field_name === 'source_id' || ![2, 3].includes(Number(value.algorithm_version)))) errors.push('Receipt format scope is invalid.');
     if (!isUuid(value.id)) errors.push('Template ID must be a UUID.');
     if (!isUuid(value.user_id)) errors.push('Template user ID must be a UUID.');
     if (!isNullableUuid(value.target_source_id)) errors.push('Target source ID must be null or a UUID.');
@@ -349,9 +349,13 @@ export function getFinanceParserTemplateContractErrors(value: unknown) {
     if (!templateTypes.includes(value.template_type as FinanceParserTemplateType)) {
         errors.push('Template type is not supported.');
     }
-    if (value.algorithm_version !== 1 && value.algorithm_version !== FINANCE_PARSER_TEMPLATE_ALGORITHM_VERSION) {
+    if (value.algorithm_version !== 1 && value.algorithm_version !== 2 && value.algorithm_version !== FINANCE_PARSER_TEMPLATE_ALGORITHM_VERSION) {
         errors.push('Template algorithm version is not supported.');
     }
+    if (value.algorithm_version === 3 && (
+        value.field_name === 'source_id' || value.field_name === 'amount'
+        || !['bounded_line_window', 'allowlisted_regex_capture', 'strip_prefix', 'strip_suffix', 'character_filter', 'date_format'].includes(String(value.template_type))
+    )) errors.push('Algorithm 3 supports only extended non-amount field templates.');
     if (!Number.isInteger(value.template_version) || Number(value.template_version) < 1) {
         errors.push('Template version must be a positive integer.');
     }
