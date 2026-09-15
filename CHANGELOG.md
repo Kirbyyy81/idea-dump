@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.15.1](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.15.0...idea-dump-v0.15.1) (2026-09-15)
+
+
+### Bug Fixes
+
+* record budget migration ([23ab048](https://github.com/Kirbyyy81/idea-dump/commit/23ab048ff0c0321dca7199bbdc90ac0e24f5030b))
+* record budget schema deployment ([c66de88](https://github.com/Kirbyyy81/idea-dump/commit/c66de88f10b46de05ef13b433786ffe5de1dfc51))
+* simplify budget storage ([dd73c2c](https://github.com/Kirbyyy81/idea-dump/commit/dd73c2c5ae8074188d3c7e9af09cef643458bca1))
+* simplify budget tables ([20d0d93](https://github.com/Kirbyyy81/idea-dump/commit/20d0d933c8d0cfa97b3ef1fe69ef5a6b8faaa6f8))
+* simplify cycle history ([62081e4](https://github.com/Kirbyyy81/idea-dump/commit/62081e4e85f0a002dcd92149a72d694d736460fa))
+* use current budget settings ([2b66ba9](https://github.com/Kirbyyy81/idea-dump/commit/2b66ba91f1f47282408cff0e5681a58ffd25738f))
+
 ## [0.15.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.14.3...idea-dump-v0.15.0) (2026-09-15)
 
 
