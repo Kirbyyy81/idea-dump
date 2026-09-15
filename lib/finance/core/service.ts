@@ -824,6 +824,7 @@ export async function resolveFinanceReviewCandidateForUser(
             fieldTemplatesResult.error
                 ? []
                 : (fieldTemplatesResult.data || []) as unknown as FinanceOcrFieldTemplate[],
+            candidate.intake?.receipt_processing ?? candidate.payload.receipt_processing,
         );
         const { error: sourceEvidenceError } = await updateFinanceIntakeSourceEvidence(
             userId,

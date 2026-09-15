@@ -46,7 +46,7 @@ const FINANCE_REVIEW_QUEUE_SELECT = [
 ].join(', ');
 const FINANCE_REVIEW_INTERNAL_SELECT = [
     'id, intake_item_id, payload, status',
-    'intake:finance_intake_items(ocr_text,ocr_normalized_text,original_filename,ocr_text_hash)',
+    'intake:finance_intake_items(ocr_text,ocr_normalized_text,original_filename,ocr_text_hash,receipt_processing)',
 ].join(', ');
 
 export async function listFinanceCategories(userId: string) {
@@ -163,7 +163,7 @@ export async function listRuntimeFinanceSourceTemplates(userId: string) {
     return createAdminClient()
         .from('finance_parser_templates')
         .select([
-            'id, user_id, target_source_id, scope_source_id, field_name, template_type, configuration',
+            'id, user_id, target_source_id, scope_source_id, scope_receipt_format, field_name, template_type, configuration',
             'algorithm_version, template_version, status, evidence_count, contradiction_count',
             'evaluation_count, precision, coverage, predecessor_template_id, status_reason',
             'created_at, evaluated_at, activated_at, disabled_at, updated_at',
@@ -182,7 +182,7 @@ export async function listRuntimeFinanceFieldTemplates(userId: string) {
     return createAdminClient()
         .from('finance_parser_templates')
         .select([
-            'id, user_id, target_source_id, scope_source_id, field_name, template_type, configuration',
+            'id, user_id, target_source_id, scope_source_id, scope_receipt_format, field_name, template_type, configuration',
             'algorithm_version, template_version, status, evidence_count, contradiction_count',
             'evaluation_count, precision, coverage, predecessor_template_id, status_reason',
             'created_at, evaluated_at, activated_at, disabled_at, updated_at',

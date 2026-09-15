@@ -31,3 +31,6 @@
 - Keep Node-only replay hashing separate from normalization modules imported by browser validation.
 - Receipt-pattern changes must also pass `supabase/tests/finance_reviewed_receipt_patterns.test.sql` and `supabase/tests/finance_approved_receipt_rules.test.sql`. Deploy compatible application and OCR runtimes before enabling migrations that generate new template configuration types.
 - Algorithm 3 non-amount changes must pass `supabase/tests/finance_parser_learning_v3.test.sql` and the paired `extendedTemplates` OCR tests. Reference transforms consume only recorded `parser_template_baseline`, never reconstructed or corrected values. Keep algorithm 2 semantics and source loading unchanged, and enforce field-template runtime limits across versions 2 and 3 together.
+
+- Ryt receipt-format changes must pass `supabase/tests/finance_receipt_format.test.sql` and `supabase/tests/finance_receipt_finalization.test.sql`, plus OCR format/evaluator parity and worker sequence tests. Keep the specialised OCR flag default-off and preserve historical intake eligibility, raw OCR, and format-scoped learning evidence.
+- When algorithms 2 and 3 coexist with receipt formats, also run `supabase/tests/finance_receipt_format_v3.test.sql`. Keep scope identity and eligibility consistent across both algorithms.

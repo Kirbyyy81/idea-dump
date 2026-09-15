@@ -1,5 +1,6 @@
 import type {
     FinanceCandidatePayload,
+    FinanceReceiptProcessing,
     FinanceCandidateTransaction,
     FinanceDuplicateOutcome,
     FinanceDuplicateSignal,
@@ -54,6 +55,7 @@ export interface FinalizeInput {
     ocrConfidence: number | null;
     ocrTextHash: string;
     normalizerVersion: number;
+    receiptProcessing?: FinanceReceiptProcessing;
     detectedSourceId: string | null;
     sourceDetectionSignals: FinanceSourceDetectionSignal[];
     candidatePayload: FinanceCandidatePayload;

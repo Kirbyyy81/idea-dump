@@ -66,3 +66,17 @@ describe.skipIf(!database)('runtime and PostgreSQL evaluator parity', () => {
         if (value) expect(row.hash).toBe(templateValueHash(field, value));
     });
 });
+
+// Format eligibility must agree before either evaluator records evidence.
+describe.skipIf(!database)('receipt format PostgreSQL parity', () => {
+    it('matches all supported scope and intake format combinations', async () => {
+        const { receiptFormatMatches } = await import('@/lib/finance/ocr/receiptFormat');
+        for (const scope of [null, 'ryt_screenshot_v1', 'ryt_shared_v1']) {
+            for (const format of ['unknown', 'ryt_screenshot_v1', 'ryt_shared_v1'] as const) {
+                const sql = `select public.finance_receipt_format_matches(${scope === null ? 'null' : "'" + scope + "'"},'${format}');`;
+                const result = execFileSync(psql, ['-X', '-A', '-t', '-v', 'ON_ERROR_STOP=1', '-d', database!], { input: sql, encoding: 'utf8' }).trim();
+                expect(result === 't').toBe(receiptFormatMatches(scope, format));
+            }
+        }
+    });
+});

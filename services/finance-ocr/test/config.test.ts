@@ -37,3 +37,9 @@ describe('Finance queue configuration', () => {
         );
     });
 });
+
+it('keeps specialised OCR off unless explicitly enabled', () => {
+    expect(loadConfig(env()).rytSharedReceiptOcrEnabled).toBe(false);
+    expect(loadConfig(env({ RYT_SHARED_RECEIPT_OCR_ENABLED: 'true' })).rytSharedReceiptOcrEnabled).toBe(true);
+    expect(loadConfig(env({ RYT_SHARED_RECEIPT_OCR_ENABLED: '1' })).rytSharedReceiptOcrEnabled).toBe(false);
+});

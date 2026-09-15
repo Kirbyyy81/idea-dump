@@ -309,7 +309,7 @@ export class SupabaseFinanceRepository implements FinanceRepository, ShareQueueR
             this.secretClient
                 .from('finance_parser_templates')
                 .select([
-                    'id, user_id, target_source_id, scope_source_id, field_name, template_type, configuration',
+                    'id, user_id, target_source_id, scope_source_id, scope_receipt_format, field_name, template_type, configuration',
                     'algorithm_version, template_version, status, evidence_count, contradiction_count',
                     'evaluation_count, precision, coverage, predecessor_template_id, status_reason',
                     'created_at, evaluated_at, activated_at, disabled_at, updated_at',
@@ -325,7 +325,7 @@ export class SupabaseFinanceRepository implements FinanceRepository, ShareQueueR
             this.secretClient
                 .from('finance_parser_templates')
                 .select([
-                    'id, user_id, target_source_id, scope_source_id, field_name, template_type, configuration',
+                    'id, user_id, target_source_id, scope_source_id, scope_receipt_format, field_name, template_type, configuration',
                     'algorithm_version, template_version, status, evidence_count, contradiction_count',
                     'evaluation_count, precision, coverage, predecessor_template_id, status_reason',
                     'created_at, evaluated_at, activated_at, disabled_at, updated_at',
@@ -446,7 +446,8 @@ export class SupabaseFinanceRepository implements FinanceRepository, ShareQueueR
     }
 
     async finalize(input: FinalizeInput) {
-        const { data, error } = await this.secretClient.rpc('finance_finalize_screenshot_intake_v2', {
+        const { data, error } = await this.secretClient.rpc(input.receiptProcessing ? 'finance_finalize_screenshot_intake_v3' : 'finance_finalize_screenshot_intake_v2', {
+            ...(input.receiptProcessing ? { p_receipt_processing: input.receiptProcessing } : {}),
             p_user_id: input.userId,
             p_intake_id: input.intakeId,
             p_processing_attempt_id: input.attemptId,
