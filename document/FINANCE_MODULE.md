@@ -45,6 +45,8 @@ Stored IANA time zones determine local today. Pace counts completed calendar day
 
 Budget details present schedule and filter selections in a two-column table. Current transactions use a keyboard-accessible disclosure that starts collapsed for each selected budget. The shared `ActionMenu` exposes Edit, Archive and Cycle history; frozen history opens in `FormDialog`, retaining independent pagination and showing read errors inside the dialog. Restore remains available for archived budgets. Successful saves and archival use the shared dismissible `Toast`, which expires after five seconds and pauses while hovered or focused. Progress retains its pace marker without a separate elapsed-days sentence.
 
+Switching budget sections updates the selected tab and URL immediately with visible loading feedback. The list renders as soon as its response arrives, independently of the selected budget's detail response. Other section tabs remain available during reads; superseded requests are aborted and guarded against late responses. Failed list reads show a retryable error rather than a false empty state. Reads still use the authorized endpoints and database reconciliation without caching budget values.
+
 ### Budget interfaces
 
 | Interface | Request and response |
@@ -84,7 +86,7 @@ Use Node 22.22.0. `npm run test:finance-budgets` runs domain, route, service and
 
 Local validation used PostgreSQL 17 with the adopted Finance schema and the forward budgeting migration. Hosted Auth/Storage metadata and Cron were local scaffolding; the cron registration and callable worker were checked, but no real cron scheduler ran. Hosted Supabase scheduling, platform advisors and representative-volume query plans remain deployment checks. Run all repository checks in addition to these feature suites.
 
-Validation on 2026-09-15 used Node 22.22.0. All 319 repository tests passed, including 56 budgeting unit/route/service/component tests and four shared toast/action-menu tests. Twelve desktop/mobile browser tests, the isolated database lifecycle/concurrency suite, Finance security/idempotency/ordering/share regressions, lint, TypeScript checking and production build passed. Calendar tests cover current-week/month starts, time zones, earlier spending, rejected prior periods, custom options and preserved restore boundaries. UI checks cover collapsed transactions, keyboard menu navigation, dialog focus return, and history pagination with failed reads. Both dependency audits reported zero vulnerabilities.
+Validation on 2026-09-15 used Node 22.22.0. All 323 repository tests passed, including 60 budgeting unit/route/service/component tests and four shared toast/action-menu tests. Fourteen desktop/mobile browser tests, Finance security/idempotency/ordering/share regressions, lint, TypeScript checking and production build passed. The isolated database lifecycle/concurrency suite passed during the lifecycle implementation; the subsequent client loading changes did not alter database behavior. Calendar tests cover current-week/month starts, time zones, earlier spending, rejected prior periods, custom options and preserved restore boundaries. UI checks cover collapsed transactions, keyboard menu navigation, dialog focus return, history pagination with failed reads, and immediate section feedback with slow or out-of-order responses. Both dependency audits reported zero vulnerabilities.
 
 ### Production database deployment, 2026-09-15
 

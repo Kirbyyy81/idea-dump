@@ -137,6 +137,39 @@ test('create, edit, archive, frozen history and restore', async ({ page }, testI
     await page.screenshot({ path: testInfo.outputPath('budget-lifecycle.png'), fullPage: true });
 });
 
+test('budget sections respond before slow data finishes', async ({ page }) => {
+    await references(page);
+    const scheduled = budgetFixture({ name: 'Future spending', state: 'scheduled', status: 'scheduled' });
+    let releaseList!: () => void;
+    let releaseDetail!: () => void;
+    const listGate = new Promise<void>((resolve) => { releaseList = resolve; });
+    const detailGate = new Promise<void>((resolve) => { releaseDetail = resolve; });
+    await page.route('**/api/finance/budgets**', async (route) => {
+        const url = new URL(route.request().url());
+        if (url.pathname === '/api/finance/budgets') {
+            const data = url.searchParams.get('state') === 'scheduled' ? [scheduled] : [];
+            if (data.length) await listGate;
+            await route.fulfill({ json: { data, page: 1, page_size: 20, total: data.length } });
+        } else {
+            await detailGate;
+            await route.fulfill({ json: { data: budgetDetailFixture(scheduled) } });
+        }
+    });
+    await page.goto('/finance/budgets');
+    const scheduledTab = page.getByRole('button', { name: 'Scheduled', exact: true });
+    await scheduledTab.click();
+    await expect(scheduledTab).toHaveAttribute('aria-current', 'page');
+    await expect(page.getByRole('button', { name: 'Archived', exact: true })).toBeEnabled();
+    await expect(page.getByRole('status').filter({ hasText: 'Loading budgets...' })).toBeVisible();
+    await expect(page.getByText('No scheduled budgets')).toHaveCount(0);
+    releaseList();
+    await expect(page.getByRole('button', { name: 'View Future spending' })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Future spending details' })).toHaveCount(0);
+    releaseDetail();
+    await expect(page.getByRole('region', { name: 'Future spending details' })).toBeVisible();
+    await expect(page.getByText('Loading budgets...', { exact: true })).toHaveCount(0);
+});
+
 test('budget action keyboard navigation and history pagination', async ({ page }, testInfo) => {
     await references(page);
     const budget = budgetFixture();
