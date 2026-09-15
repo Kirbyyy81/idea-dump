@@ -23,7 +23,7 @@ interface QueueLogger {
 
 export interface FinanceQueueConsumerDependencies {
     repository: FinanceRepository & ShareQueueRepository;
-    recognize(image: Buffer): Promise<OcrResult>;
+    recognize(image: Buffer, mode?: 'block'): Promise<OcrResult>;
     capacity: SingleSlotCapacity;
     logger: QueueLogger;
 }
@@ -85,6 +85,7 @@ export class FinanceQueueConsumer {
         private readonly config: Pick<
             ServiceConfig,
             | 'processingVersion'
+            | 'rytSharedReceiptOcrEnabled'
             | 'intakeLeaseSeconds'
             | 'financeQueueVisibilitySeconds'
             | 'maxImageBytes'

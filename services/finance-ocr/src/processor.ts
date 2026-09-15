@@ -1,3 +1,4 @@
+import { processRytReceipt } from './receiptFormat.js';
 import { randomUUID } from 'node:crypto';
 import { hashNormalizedFinanceText, normalizeFinanceOcrText } from '@/lib/finance/ocr/normalizer';
 import { parseFinanceText } from '@/lib/finance/ocr/parser';
@@ -10,7 +11,7 @@ import type { OcrResult } from './worker.js';
 
 export interface ProcessingDependencies {
     repository: FinanceRepository;
-    recognize(image: Buffer): Promise<OcrResult>;
+    recognize(image: Buffer, mode?: 'block'): Promise<OcrResult>;
     onIntakeBegan?(begin: BeginIntakeResult): Promise<void>;
 }
 
@@ -51,9 +52,10 @@ function failureDetails(error: unknown): {
 export async function processScreenshot(
     userId: string,
     image: ValidatedImage,
-    config: Pick<ServiceConfig, 'intakeLeaseSeconds' | 'processingVersion' | 'busyRetryAfterSeconds'>,
+    config: Pick<ServiceConfig, 'intakeLeaseSeconds' | 'processingVersion' | 'busyRetryAfterSeconds' | 'rytSharedReceiptOcrEnabled'>,
     dependencies: ProcessingDependencies,
 ): Promise<{ data: OcrSuccessData; statusCode: number }> {
+    const processingDeadline = Date.now() + Math.max(0, config.intakeLeaseSeconds - 20) * 1000;
     const attemptId = randomUUID();
     let beginState: 'started' | 'recovered' | null = null;
 
@@ -144,7 +146,10 @@ export async function processScreenshot(
                 intakeId,
             );
         }
-        const normalized = normalizeFinanceOcrText(ocr.rawText);
+        const receipt = config.rytSharedReceiptOcrEnabled && begin.intake.receipt_format_eligible === true
+            ? await processRytReceipt(image, ocr, context, dependencies.recognize, processingDeadline)
+            : null;
+        const normalized = normalizeFinanceOcrText(receipt?.text ?? ocr.rawText);
         if (!normalized.text) {
             throw safeError(
                 422,
@@ -167,6 +172,7 @@ export async function processScreenshot(
             context.payees,
             context.sourceTemplates,
             context.fieldTemplates,
+            receipt?.processing,
         );
         const duplicate = await dependencies.repository.assessDuplicate({
             userId,
@@ -189,6 +195,7 @@ export async function processScreenshot(
             ocrConfidence: ocr.confidence,
             ocrTextHash,
             normalizerVersion: normalized.version,
+            ...(receipt ? { receiptProcessing: receipt.processing } : {}),
             detectedSourceId: parsed.payload.source_id,
             sourceDetectionSignals: parsed.sourceDetectionSignals,
             candidatePayload: parsed.payload,

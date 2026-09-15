@@ -290,3 +290,15 @@ describe('version 2 remaining fields and observation bounds', () => {
         expect(templateSourcePhrase('MONEY!received!!!')).toBe('money received');
     });
 });
+
+describe('receipt format template eligibility', () => {
+    it.each(['unknown', 'ryt_screenshot_v1', 'ryt_shared_v1'] as const)('uses only eligible field templates on %s', (format) => {
+        const unscoped = fieldTemplate('22222222-2222-4222-8222-222222222222', 'reference_number', { type: 'same_line_label', label: 'Order ID' });
+        const screenshot = { ...unscoped, id: '33333333-3333-4333-8333-333333333333', algorithm_version: 2, scope_receipt_format: 'ryt_screenshot_v1' as const };
+        const shared = { ...unscoped, id: '44444444-4444-4444-8444-444444444444', algorithm_version: 2, scope_receipt_format: 'ryt_shared_v1' as const };
+        const result = applyFinanceCriticalFieldTemplates('Order ID: SYN12345', baseline, sourceId, [unscoped, screenshot, shared], [], null, format);
+        const eligible = result.evaluations.map((item) => item.template_id);
+        expect(eligible).toEqual(expect.arrayContaining(format === 'unknown' ? [unscoped.id] : format === 'ryt_shared_v1' ? [shared.id] : [unscoped.id, screenshot.id]));
+        expect(eligible).toHaveLength(format === 'ryt_screenshot_v1' ? 2 : 1);
+    });
+});

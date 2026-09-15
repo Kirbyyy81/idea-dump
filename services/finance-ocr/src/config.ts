@@ -11,6 +11,7 @@ export interface ServiceConfig {
     maxImageDimension: number;
     maxImagePixels: number;
     processingVersion: number;
+    rytSharedReceiptOcrEnabled?: boolean;
     intakeLeaseSeconds: number;
     rateLimitWindowSeconds: number;
     ocrRateLimitMaxRequests: number;
@@ -111,6 +112,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServiceConfig 
         maxImageDimension: integer(env, 'MAX_IMAGE_DIMENSION', 12_000),
         maxImagePixels: integer(env, 'MAX_IMAGE_PIXELS', 25_000_000),
         processingVersion: integer(env, 'PROCESSING_VERSION', 3),
+        rytSharedReceiptOcrEnabled: env.RYT_SHARED_RECEIPT_OCR_ENABLED === 'true',
         intakeLeaseSeconds,
         rateLimitWindowSeconds: integer(env, 'OCR_RATE_LIMIT_WINDOW_SECONDS', 60),
         ocrRateLimitMaxRequests: integer(env, 'OCR_RATE_LIMIT_MAX_REQUESTS', 4),
