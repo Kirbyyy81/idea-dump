@@ -6,5 +6,5 @@ import type { FinanceBudgetDetail, FinanceBudgetPage, FinanceBudgetSummary } fro
 const initial = (window as unknown as { budgetInitial?: { list: FinanceBudgetPage<FinanceBudgetSummary>; detail: FinanceBudgetDetail | null } }).budgetInitial
     ?? { list: { data: [], page: 1, page_size: 20, total: 0 }, detail: null };
 createRoot(document.getElementById('root')!).render(<FinanceReferenceDataProvider>
-    <FinanceBudgetsClient initialList={initial.list} initialState={initial.detail?.budget.state ?? 'active'} initialDetail={initial.detail} />
+    <FinanceBudgetsClient initialBudgets={initial.list.data} initialState={initial.detail?.budget.state ?? 'active'} initialDetail={initial.detail} />
 </FinanceReferenceDataProvider>);

@@ -38,6 +38,8 @@ test('simple calendar budget defaults and optional customization', async ({ page
     await dialog.getByLabel('Budget amount (MYR)').fill('500');
     await page.screenshot({ path: testInfo.outputPath('simple-monthly-budget.png'), fullPage: true });
     await dialog.getByRole('button', { name: 'Create budget', exact: true }).click();
+    await expect(page.getByRole('region', { name: 'Monthly budget details' })).toHaveCount(0);
+    await page.getByRole('button', { name: 'View Monthly budget' }).click();
     await expect(page.getByRole('region', { name: 'Monthly budget details' })).toBeVisible();
     await expect(page.getByRole('status').filter({ hasText: 'Budget saved' })).toBeVisible();
     await page.getByRole('button', { name: 'Dismiss notification' }).click();
@@ -73,14 +75,14 @@ test('create, edit, archive, frozen history and restore', async ({ page }, testI
         const request = route.request();
         if (request.method() !== 'GET') {
             const body = request.postDataJSON(); bodies.push(body);
-            if (body.action === 'archive') budget = budgetFixture({ state: 'archived', status: 'archived', current_cycle: null, revision: 3 });
+            if (body.action === 'archive') budget = budgetFixture({ name: 'Everyday spending', state: 'archived', status: 'archived', current_cycle: null, revision: 3 });
             else budget = budgetFixture({ name: body.configuration.name, revision: body.action === 'restore' ? 4 : budget ? 2 : 1,
                 version: { ...budgetFixture().version, ...body.configuration } });
             await route.fulfill({ json: { data: budget } }); return;
         }
         const url = new URL(request.url());
         if (url.pathname === '/api/finance/budgets') {
-            const data = budget && url.searchParams.get('state') === budget.state ? [budget] : [];
+            const data = budget && (url.searchParams.get('state') === 'all' || url.searchParams.get('state') === budget.state) ? [budget] : [];
             await route.fulfill({ json: { data, page: 1, page_size: 20, total: data.length } });
         } else {
             const detail = budgetDetailFixture(budget!);
@@ -101,6 +103,7 @@ test('create, edit, archive, frozen history and restore', async ({ page }, testI
     await dialog.getByLabel('Match sources and categories').click();
     await page.getByRole('option', { name: 'OR: match either selection' }).click();
     await dialog.getByRole('button', { name: 'Create budget', exact: true }).click();
+    await page.getByRole('button', { name: 'View Everyday spending' }).click();
     await expect(page.getByRole('region', { name: 'Everyday spending details' })).toBeVisible();
     const transactionsToggle = page.locator('summary').filter({ hasText: 'Current transactions' });
     await expect(page.getByText('No matching transactions this cycle.')).not.toBeVisible();
@@ -119,9 +122,11 @@ test('create, edit, archive, frozen history and restore', async ({ page }, testI
     await page.getByRole('button', { name: 'Save changes' }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
     expect(bodies[1]).toMatchObject({ revision: 1, configuration: { amount: '200.00' } });
+    await page.getByRole('button', { name: 'View Everyday spending' }).click();
     await page.getByRole('button', { name: 'Budget actions' }).click();
     await page.getByRole('menuitem', { name: 'Archive', exact: true }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'Archive budget' }).click();
+    await page.getByRole('button', { name: 'View Everyday spending' }).click();
     await expect(page.getByRole('button', { name: 'Restore', exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Budget actions' }).click();
     await page.getByRole('menuitem', { name: 'Cycle history' }).click();
@@ -132,44 +137,40 @@ test('create, edit, archive, frozen history and restore', async ({ page }, testI
     await expect(page.getByRole('button', { name: 'Budget actions' })).toBeFocused();
     await page.getByRole('button', { name: 'Restore', exact: true }).click();
     await page.getByRole('dialog').getByRole('button', { name: 'Restore budget', exact: true }).click();
+    await page.getByRole('button', { name: 'View Everyday spending' }).click();
     await expect(page.getByRole('button', { name: 'Budget actions' })).toBeEnabled();
     expect(bodies[3]).toMatchObject({ action: 'restore', revision: 3, configuration: { start_date: '2026-09-14' } });
     await page.screenshot({ path: testInfo.outputPath('budget-lifecycle.png'), fullPage: true });
 });
 
-test('budget sections respond before slow data finishes', async ({ page }) => {
+test('budget sections use loaded lists and only fetch selected details', async ({ page }) => {
     await references(page);
     const scheduled = budgetFixture({ name: 'Future spending', state: 'scheduled', status: 'scheduled' });
-    let releaseList!: () => void;
+    await page.addInitScript((budget) => { (window as unknown as { budgetInitial: unknown }).budgetInitial = {
+        list: { data: [budget], page: 1, page_size: 20, total: 1 }, detail: null,
+    }; }, scheduled);
     let releaseDetail!: () => void;
-    const listGate = new Promise<void>((resolve) => { releaseList = resolve; });
     const detailGate = new Promise<void>((resolve) => { releaseDetail = resolve; });
+    const requests: string[] = [];
     await page.route('**/api/finance/budgets**', async (route) => {
-        const url = new URL(route.request().url());
-        if (url.pathname === '/api/finance/budgets') {
-            const data = url.searchParams.get('state') === 'scheduled' ? [scheduled] : [];
-            if (data.length) await listGate;
-            await route.fulfill({ json: { data, page: 1, page_size: 20, total: data.length } });
-        } else {
-            await detailGate;
-            await route.fulfill({ json: { data: budgetDetailFixture(scheduled) } });
-        }
+        requests.push(new URL(route.request().url()).pathname);
+        await detailGate;
+        await route.fulfill({ json: { data: budgetDetailFixture(scheduled) } });
     });
     await page.goto('/finance/budgets');
-    const scheduledTab = page.getByRole('button', { name: 'Scheduled', exact: true });
-    await scheduledTab.click();
-    await expect(scheduledTab).toHaveAttribute('aria-current', 'page');
-    await expect(page.getByRole('button', { name: 'Archived', exact: true })).toBeEnabled();
-    await expect(page.getByRole('status').filter({ hasText: 'Loading budgets...' })).toBeVisible();
-    await expect(page.getByText('No scheduled budgets')).toHaveCount(0);
-    releaseList();
+    await page.getByRole('button', { name: 'Scheduled', exact: true }).click();
     await expect(page.getByRole('button', { name: 'View Future spending' })).toBeVisible();
+    await page.getByRole('button', { name: 'Archived', exact: true }).click();
+    await expect(page.getByText('No archived budgets')).toBeVisible();
+    await page.getByRole('button', { name: 'Scheduled', exact: true }).click();
+    expect(requests).toEqual([]);
+    await page.getByRole('button', { name: 'View Future spending' }).click();
+    await expect(page.getByText('Loading budget details...', { exact: true })).toBeVisible();
     await expect(page.getByRole('region', { name: 'Future spending details' })).toHaveCount(0);
     releaseDetail();
     await expect(page.getByRole('region', { name: 'Future spending details' })).toBeVisible();
-    await expect(page.getByText('Loading budgets...', { exact: true })).toHaveCount(0);
+    expect(requests).toEqual([`/api/finance/budgets/${scheduled.id}`]);
 });
-
 test('budget action keyboard navigation and history pagination', async ({ page }, testInfo) => {
     await references(page);
     const budget = budgetFixture();

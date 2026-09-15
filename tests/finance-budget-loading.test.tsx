@@ -2,8 +2,9 @@ import type { ReactNode } from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FinanceBudgetsClient } from '@/app/finance/budgets/_components/FinanceBudgetsClient';
+import { collectBudgetSummaries } from '@/lib/finance/budgets/listing';
 import { budgetDetailFixture, budgetFixture } from './fixtures/finance-budgets';
-import type { FinanceBudgetDetail, FinanceBudgetPage, FinanceBudgetSummary } from '@/lib/types';
+import type { FinanceBudgetDetail, FinanceBudgetSummary } from '@/lib/types';
 
 const mocks = vi.hoisted(() => ({ request: vi.fn() }));
 vi.mock('@/lib/finance/core/client', async (original) => ({ ...await original<typeof import('@/lib/finance/core/client')>(), financeApiRequest: mocks.request }));
@@ -15,68 +16,76 @@ function deferred<T>() {
     const promise = new Promise<T>((done) => { resolve = done; });
     return { promise, resolve };
 }
+const active = budgetFixture({ name: 'Everyday' });
+const scheduled = budgetFixture({ id: 'b0110000-0000-4000-8000-000000000099', name: 'Next week', state: 'scheduled', status: 'scheduled' });
+const renderBudgets = (budgets: FinanceBudgetSummary[] = [active, scheduled]) => render(
+    <FinanceBudgetsClient initialBudgets={budgets} initialState="active" initialDetail={null} />);
 
-const emptyPage: FinanceBudgetPage<FinanceBudgetSummary> = { data: [], page: 1, page_size: 20, total: 0 };
-const scheduled = budgetFixture({ name: 'Next week', state: 'scheduled', status: 'scheduled' });
-const scheduledPage = { ...emptyPage, data: [scheduled], total: 1 };
-const renderBudgets = () => render(<FinanceBudgetsClient initialList={emptyPage} initialState="active" initialDetail={null} />);
-
-describe('budget section loading', () => {
-    it('selects the tab immediately and displays the list before details arrive', async () => {
-        const list = deferred<FinanceBudgetPage<FinanceBudgetSummary>>();
-        const detail = deferred<{ data: FinanceBudgetDetail }>();
-        mocks.request.mockReturnValueOnce(list.promise).mockReturnValueOnce(detail.promise);
+describe('budget list and detail loading', () => {
+    it('switches sections locally without fetching lists or auto-selecting details', () => {
         renderBudgets();
+        expect(screen.getByRole('button', { name: 'View Everyday' })).toBeTruthy();
         fireEvent.click(screen.getByRole('button', { name: 'Scheduled' }));
-        expect(screen.getByRole('button', { name: 'Scheduled' }).getAttribute('aria-current')).toBe('page');
-        expect(screen.getByRole('button', { name: 'Archived' }).hasAttribute('disabled')).toBe(false);
-        expect(screen.getByRole('status').textContent).toBe('Loading budgets...');
-        expect(screen.queryByText('No scheduled budgets')).toBeNull();
-        await act(async () => list.resolve(scheduledPage));
         expect(screen.getByRole('button', { name: 'View Next week' })).toBeTruthy();
-        expect(screen.queryByRole('region', { name: 'Next week details' })).toBeNull();
-        await act(async () => detail.resolve({ data: budgetDetailFixture(scheduled) }));
-        expect(screen.getByRole('region', { name: 'Next week details' })).toBeTruthy();
-        expect(screen.getByRole('status').textContent).toBe('');
+        fireEvent.click(screen.getByRole('button', { name: 'Archived' }));
+        expect(screen.getByText('No archived budgets')).toBeTruthy();
+        fireEvent.click(screen.getByRole('button', { name: 'Active' }));
+        expect(screen.queryByRole('region', { name: 'Everyday details' })).toBeNull();
+        expect(mocks.request).not.toHaveBeenCalled();
     });
-
-    it('cancels an old list request and never starts details for the superseded tab', async () => {
-        const list = deferred<FinanceBudgetPage<FinanceBudgetSummary>>();
-        mocks.request.mockReturnValueOnce(list.promise).mockResolvedValueOnce(emptyPage);
+    it('loads only selected details and ignores a late response after a tab switch', async () => {
+        const pending = deferred<{ data: FinanceBudgetDetail }>();
+        mocks.request.mockReturnValueOnce(pending.promise).mockResolvedValueOnce({ data: budgetDetailFixture(scheduled) });
         renderBudgets();
-        fireEvent.click(screen.getByRole('button', { name: 'Scheduled' }));
+        fireEvent.click(screen.getByRole('button', { name: 'View Everyday' }));
+        expect(mocks.request.mock.calls[0][0]).toBe(`/api/finance/budgets/${active.id}?history_page=1&transactions_page=1`);
         const signal = mocks.request.mock.calls[0][1].signal as AbortSignal;
-        fireEvent.click(screen.getByRole('button', { name: 'Archived' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Scheduled' }));
         expect(signal.aborted).toBe(true);
-        await waitFor(() => expect(screen.getByText('No archived budgets')).toBeTruthy());
-        await act(async () => list.resolve(scheduledPage));
+        fireEvent.click(screen.getByRole('button', { name: 'View Next week' }));
+        await waitFor(() => expect(screen.getByRole('region', { name: 'Next week details' })).toBeTruthy());
+        await act(async () => pending.resolve({ data: budgetDetailFixture(active) }));
+        expect(screen.queryByRole('region', { name: 'Everyday details' })).toBeNull();
         expect(mocks.request).toHaveBeenCalledTimes(2);
-        expect(screen.queryByRole('button', { name: 'View Next week' })).toBeNull();
-        expect(new URLSearchParams(window.location.search).get('state')).toBe('archived');
     });
-
-    it('ignores late details after switching to another tab', async () => {
-        const detail = deferred<{ data: FinanceBudgetDetail }>();
-        mocks.request.mockResolvedValueOnce(scheduledPage).mockReturnValueOnce(detail.promise).mockResolvedValueOnce(emptyPage);
-        renderBudgets();
-        fireEvent.click(screen.getByRole('button', { name: 'Scheduled' }));
-        await waitFor(() => expect(mocks.request).toHaveBeenCalledTimes(2));
-        const signal = mocks.request.mock.calls[1][1].signal as AbortSignal;
-        fireEvent.click(screen.getByRole('button', { name: 'Archived' }));
-        await waitFor(() => expect(screen.getByText('No archived budgets')).toBeTruthy());
-        expect(signal.aborted).toBe(true);
-        await act(async () => detail.resolve({ data: budgetDetailFixture(scheduled) }));
-        expect(screen.queryByRole('region', { name: 'Next week details' })).toBeNull();
-        expect(screen.getByRole('button', { name: 'Archived' }).getAttribute('aria-current')).toBe('page');
+    it('paginates all loaded summaries locally in pages of 20', () => {
+        renderBudgets(Array.from({ length: 21 }, (_, index) => budgetFixture({ id: `id-${index}`, name: `Budget ${index}` })));
+        expect(screen.getAllByRole('button', { name: /^View Budget/ })).toHaveLength(20);
+        fireEvent.click(screen.getByRole('button', { name: 'Next budgets page' }));
+        expect(screen.getAllByRole('button', { name: /^View Budget/ })).toHaveLength(1);
+        expect(screen.getByRole('button', { name: 'View Budget 20' })).toBeTruthy();
+        expect(mocks.request).not.toHaveBeenCalled();
     });
-
-    it('shows a retryable error instead of an empty state when the list fails', async () => {
-        mocks.request.mockRejectedValueOnce(new Error('Network unavailable')).mockResolvedValueOnce(emptyPage);
+    it('retains lists after failed refresh and retries without loading details', async () => {
+        mocks.request.mockRejectedValueOnce(new Error('Network unavailable')).mockResolvedValueOnce({ data: [scheduled], page: 1, page_size: 100, total: 1 });
         renderBudgets();
-        fireEvent.click(screen.getByRole('button', { name: 'Scheduled' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Refresh budgets' }));
         await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('Network unavailable'));
-        expect(screen.queryByText('No scheduled budgets')).toBeNull();
-        fireEvent.click(screen.getByRole('button', { name: 'Reload budgets' }));
-        await waitFor(() => expect(screen.getByText('No scheduled budgets')).toBeTruthy());
+        expect(screen.getByRole('button', { name: 'View Everyday' })).toBeTruthy();
+        fireEvent.click(screen.getByRole('button', { name: 'Retry refresh' }));
+        await waitFor(() => expect(screen.getByText('No active budgets')).toBeTruthy());
+        fireEvent.click(screen.getByRole('button', { name: 'Scheduled' }));
+        expect(screen.getByRole('button', { name: 'View Next week' })).toBeTruthy();
+        expect(mocks.request.mock.calls.map(([url]) => url)).toEqual(Array(2).fill('/api/finance/budgets?state=all&page=1&page_size=100'));
+    });
+    it('retries a failed selection without loading the list', async () => {
+        mocks.request.mockRejectedValueOnce(new Error('Detail unavailable')).mockResolvedValueOnce({ data: budgetDetailFixture(active) });
+        renderBudgets();
+        fireEvent.click(screen.getByRole('button', { name: 'View Everyday' }));
+        await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('Detail unavailable'));
+        fireEvent.click(screen.getByRole('button', { name: 'Retry budget details' }));
+        await waitFor(() => expect(screen.getByRole('region', { name: 'Everyday details' })).toBeTruthy());
+        expect(mocks.request).toHaveBeenCalledTimes(2);
+    });
+    it('collects every API page across states and propagates incomplete refresh failures', async () => {
+        const firstPage = Array.from({ length: 100 }, (_, index) => budgetFixture({ id: `id-${index}` }));
+        const read = vi.fn().mockResolvedValueOnce({ data: firstPage, page: 1, page_size: 100, total: 101 })
+            .mockResolvedValueOnce({ data: [scheduled], page: 2, page_size: 100, total: 101 });
+        expect(await collectBudgetSummaries(read)).toHaveLength(101);
+        expect(read.mock.calls.map(([query]) => query)).toEqual([
+            { state: 'all', page: 1, page_size: 100 }, { state: 'all', page: 2, page_size: 100 },
+        ]);
+        read.mockResolvedValueOnce({ data: firstPage, page: 1, page_size: 100, total: 101 }).mockRejectedValueOnce(new Error('Page unavailable'));
+        await expect(collectBudgetSummaries(read)).rejects.toThrow('Page unavailable');
     });
 });
