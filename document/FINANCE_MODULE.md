@@ -2,7 +2,7 @@
 
 ## Document purpose
 
-This document describes the Finance module as implemented in the repository on 2026-08-17. It is intended for engineers, reviewers, operators, and future maintainers who need to understand the module without reconstructing its behavior from individual pages, route handlers, migrations, and OCR service files.
+This document describes the Finance module, including budgeting added on 2026-09-14. It is intended for engineers, reviewers, operators, and future maintainers who need to understand the module without reconstructing its behavior from individual pages, route handlers, migrations, and OCR service files.
 
 The code and forward database migrations remain the source of truth. When behavior changes, update this document in the same change.
 
@@ -16,6 +16,7 @@ Finance is a personal transaction ledger with two entry paths:
 The module provides:
 
 - Monthly cash-flow reporting.
+- Recurring personal budgets with current progress and frozen cycle history.
 - Expense breakdowns by category.
 - A searchable and editable confirmed transaction ledger.
 - A review queue for OCR candidates and duplicate decisions.
@@ -25,6 +26,59 @@ The module provides:
 - Correction recording and narrowly scoped rule learning.
 
 The current product is not a bank integration, bookkeeping system, or multi-currency accounting platform. Finance v1 supports MYR only.
+
+## Personal budgets
+
+`/finance/budgets` supports weekly, monthly, and custom 1-to-365-day MYR budgets. The Finance sidebar links to it. The server-rendered Finance dashboard adds `active_budgets` through its existing service, independently of the selected reporting month. It ranks all active budgets by over budget, limit reached, needs attention, on track, then exact usage, and returns at most three. No dashboard HTTP endpoint is reintroduced.
+
+### Storage and lifecycle
+
+`finance_budgets` holds owner, stable identity, name, optimistic revision, creation request UUID, lifecycle and current version. `finance_budget_versions` records immutable configuration. Selection tables reference the existing Finance dimensions through tenant-safe relationships, retaining original IDs and labels when archived-budget references are deleted. Cycles have one open row per budget. Completed and partial cycles retain frozen totals and labels in `finance_budget_cycles` and `finance_budget_cycle_breakdowns`. They contain no transaction snapshots.
+
+Confirmed transactions count by their ledger date within inclusive-start/exclusive-end boundaries. Selection OR applies within each dimension; configured AND/OR applies only when both dimensions have selections. Empty filters match everything, including Uncategorised. Selected archived dimensions continue to count. Net spending is expenses minus income; negative net remains visible, with zero usage and remaining capped at the limit. Money uses exact decimal strings across budgeting APIs and BigInt minor units in browser formatting. Status comparisons use exact values before percentage rounding.
+
+Stored IANA time zones determine local today. Pace counts completed calendar days, so first-day pace is zero. Monthly boundaries clamp to month end while retaining their original anchor. Editing a monthly renewal day starts today with a shorter first cycle if needed. Name, amount and filter edits retain the open cycle's start and recalculate it. Schedule edits freeze through yesterday; zero-day partials are discarded. Archive freezes through today from the ledger visible during the atomic operation, excluding future dates. Same-day restoration is supported and starts an independent schedule. Deleted selections must be explicitly repaired before restore.
+
+`lib/finance/budgets/` owns validation, pure calculations, services and server-only RPC access. All mutations and reconciliation coordinate through the existing per-user Finance ledger advisory lock before locking budgets and references. The row-lock, FK and deletion-trigger combination prevents reference deletion from racing successful creation or restore. Budget creation is idempotent per user/request UUID; changed payload reuse conflicts. Edits, archive and restore require the current revision. Budget reads reconcile overdue cycles before calculating current data. Frozen history cannot be updated or extended afterward, including after late or edited ledger entries. Existing account-deletion retention cascades remain supported.
+
+### Budget interfaces
+
+| Interface | Request and response |
+|---|---|
+| `GET /api/finance/budgets` | `state=active|scheduled|archived|all`, `page`, `page_size`; returns `{ data, page, page_size, total }` |
+| `POST /api/finance/budgets` | `{ request_id, configuration }`; returns `{ data: budget }` |
+| `PUT /api/finance/budgets` | `{ id, revision, configuration }`; returns `{ data: budget }` |
+| `GET /api/finance/budgets/[id]` | Independent `history_page`, `history_page_size`, `transactions_page`, `transactions_page_size`; returns `{ data: { budget, history, transactions } }` |
+| `PATCH /api/finance/budgets/[id]` | Archive: `{ action: 'archive', revision }`. Restore: `{ action: 'restore', revision, configuration }` |
+
+Configuration includes `name`, decimal-string `amount`, `cycle_type`, `start_date`, nullable `custom_days` and `anchor_day`, captured `time_zone`, `filter_logic`, `source_ids`, `category_ids`, and `include_uncategorised`. Time zone is preserved on edits/restores. Server services derive ownership from `authorizeFinance`; browser-provided user IDs, calculated fields and cycle states are not accepted. Field validation uses safe 422 errors, stale writes/name conflicts use 409, and other users' IDs return 404. Defaults are 20 budgets/history items and 50 transactions, with a maximum page size of 100.
+
+### Budget rollout and operations
+
+Apply `20260914093154_finance_budgets.sql` using the versioned CLI workflow in `supabase/README.md`, then deploy the application. The migration requires the existing approved Cron installation and registers one hourly `finance-budget-closure` job. Its global worker is operator-only, coordinates overlapping invocations, skips busy owners for retry, and logs only a budget ID and SQLSTATE on per-budget failure. Application reads also catch up missed cycles. No new browser secrets are required.
+
+RPCs execute as the trusted server role. Three trigger-only guards use a fixed empty search path and definer privileges solely to enforce immutability/reference integrity while allowing existing Auth account-deletion cascades, without granting the service role access to `auth.users`.
+
+Before rollout, verify table grants, restrictive RLS policies, function execution grants, and the active cron command. Monitor `cron.job_run_details` through [Supabase Cron monitoring](https://supabase.com/docs/guides/cron), PostgreSQL closure warnings and the worker's overdue-cycle count warnings, since a successful job status alone does not establish that every budget closed. An operator backlog query is:
+
+```sql
+select count(*) as overdue_cycles
+from public.finance_budget_cycles c
+join public.finance_budget_versions v on v.id = c.version_id and v.user_id = c.user_id
+where c.frozen_at is null and c.end_date <= (now() at time zone v.time_zone)::date;
+```
+
+Rollback disables the budgeting page/sidebar/dashboard integration and cron job before reverting application usage. Preserve budget tables, versions and frozen history. Never replay the adopted schema baseline over production.
+
+### Budget validation
+
+Use Node 22.22.0. `npm run test:finance-budgets` runs domain, route, service and component tests. `npm run test:finance-budgets:browser` runs real controls and styles in a test-only local harness on port 4179, with synthetic REST responses and a sans-serif fallback font. It covers desktop/mobile lifecycle actions, deleted selections, conflicts, keyboard focus and 200 percent CSS scaling. It does not authenticate to or write production data. Install its pinned browser using `npx playwright install chromium`.
+
+`npm run test:finance-budgets:db` runs rollback-only SQL lifecycle/security tests plus independent PostgreSQL sessions for concurrent creation, stale edits, closure overlap and deletion races. Set `FINANCE_BUDGET_TEST_DATABASE_URL` to a disposable loopback database with the adopted baseline and forward migrations applied, and `FINANCE_BUDGET_TEST_PSQL` to a compatible psql executable. The runner refuses non-loopback connections and removes its committed synthetic concurrency user afterward. The same lifecycle SQL can be run manually on isolated Supabase staging.
+
+Local validation used PostgreSQL 17 with the adopted Finance schema and the forward budgeting migration. Hosted Auth/Storage metadata and Cron were local scaffolding; the cron registration and callable worker were checked, but no real cron scheduler ran. Hosted Supabase scheduling, platform advisors and representative-volume query plans remain deployment checks. Run all repository checks in addition to these feature suites.
+
+Validation on 2026-09-15 used Node 22.22.0. All 303 repository tests passed, including 46 budgeting unit/route/service/component tests. Six desktop/mobile browser tests, the isolated database lifecycle/concurrency suite, Finance security/idempotency/ordering/share regressions, lint, TypeScript checking and production build passed. Both dependency audits reported zero vulnerabilities.
 
 ## System context
 

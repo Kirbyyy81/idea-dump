@@ -11,6 +11,7 @@
 - `core/` owns Finance-wide authorization, request security, browser requests, constants, values, schemas, repository access, and cross-capability services. Do not create duplicate common layers beside a capability module.
 - Use a nested directory only for a substantial Finance subsystem with several collaborating modules:
   - `transactions/` owns transaction-specific validation, persistence, ordering, idempotency, and duplicate analysis.
+  - `budgets/` owns recurring budget validation, exact calculations, lifecycle services and server-only budget RPC access.
   - `ocr/` owns OCR parsing, normalization, source detection, and the OCR client.
   - `share/` owns PWA share-batch validation, upload preparation, browser handoff, and server handoff.
 - Do not add a directory for a small capability merely to reproduce `schemas.ts`, `repository.ts`, and `service.ts` everywhere.
@@ -23,6 +24,9 @@
 - Preserve Finance mutation request security, idempotency, share-storage verification, and reviewed RPC workflows when moving code.
 
 ## Validation
+
+- Run `npm run test:finance-budgets` and `npm run test:finance-budgets:browser` after budgeting changes. For SQL/lifecycle changes, also run `npm run test:finance-budgets:db` on an isolated migrated loopback database using the documented test variables in `document/FINANCE_MODULE.md`.
+- Keep budgeting money as decimal strings and status comparisons exact. Budget reads and mutations reconcile expired cycles through reviewed RPCs. Never rewrite frozen cycles or bypass the Finance ledger lock.
 
 - Run `npm run test:finance-security`, `npm run test:finance-idempotency`, `npm run test:finance-ordering`, and `npm run test:finance-share` after Finance structural changes.
 - When code shared with the OCR service changes, also run the Finance OCR validation from `services/finance-ocr/`.
