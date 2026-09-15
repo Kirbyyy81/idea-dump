@@ -80,7 +80,7 @@ begin
   result:=public.finance_budget_detail(u,b,1,20,1,50,'2026-01-31T00:00Z');
   perform pg_temp.check_budget(result->'budget'->'current_cycle'->'metrics'->>'net_spending'='90.00','expenses minus income, confirmed rows only');
   perform pg_temp.check_budget(result->'transactions'->>'total'='3','current transaction drilldown matches aggregate');
-  perform pg_temp.check_budget(jsonb_array_length(result->'budget'->'current_cycle'->'breakdowns')=4,'both source and category breakdowns');
+  perform pg_temp.check_budget(result->'budget'->'current_cycle'->'breakdowns'='[]'::jsonb,'legacy breakdown field is empty');
   begin perform public.finance_budget_mutate(u,'create',null,null,'b0110000-0000-4000-8000-000000000041',config||'{"amount":"99.00"}','2026-01-31T00:00Z');
     raise exception 'FAILED: changed idempotency payload accepted'; exception when unique_violation then null; end;
   begin perform public.finance_budget_mutate(u,'create',null,null,gen_random_uuid(),config||'{"name":"  ALL SPENDING  "}','2026-01-31T00:00Z');
@@ -94,11 +94,11 @@ begin
 
   config:=pg_temp.budget_config('Filtered')||'{"source_ids":["b0110000-0000-4000-8000-000000000011"],"category_ids":["b0110000-0000-4000-8000-000000000021"]}';
   b2:=public.finance_budget_mutate(u,'create',null,null,gen_random_uuid(),config,'2026-01-31T00:00Z');
-  begin insert into public.finance_budget_sources(budget_id,user_id,source_id,original_id,label)
-    values(b2,other_user,'b0110000-0000-4000-8000-000000000014','b0110000-0000-4000-8000-000000000014','Wrong owner');
+  begin insert into public.finance_budget_filters(budget_id,user_id,kind,source_id,original_id,label)
+    values(b2,other_user,'source','b0110000-0000-4000-8000-000000000014','b0110000-0000-4000-8000-000000000014','Wrong owner');
     raise exception 'FAILED: cross-owner budget selection'; exception when foreign_key_violation then null; end;
-  begin insert into public.finance_budget_categories(budget_id,user_id,category_id,original_id,label)
-    values(b2,other_user,'b0110000-0000-4000-8000-000000000022','b0110000-0000-4000-8000-000000000022','Wrong owner');
+  begin insert into public.finance_budget_filters(budget_id,user_id,kind,category_id,original_id,label)
+    values(b2,other_user,'category','b0110000-0000-4000-8000-000000000022','b0110000-0000-4000-8000-000000000022','Wrong owner');
     raise exception 'FAILED: cross-owner category selection'; exception when foreign_key_violation then null; end;
   perform pg_temp.check_budget(public.finance_budget_summary(u,b2,'2026-01-31T00:00Z')->'current_cycle'->'metrics'->>'net_spending'='50.00','AND matching');
   config:=config||'{"category_ids":[],"include_uncategorised":true,"filter_logic":"or"}';
@@ -134,7 +134,6 @@ begin
   begin update public.finance_budget_cycles set expense=1 where id=c; raise exception 'FAILED: frozen cycle changed'; exception when check_violation then null; end;
   begin update public.finance_budget_cycles set configuration_snapshot=configuration_snapshot||'{"amount":"1.00"}' where id=c;
     raise exception 'FAILED: frozen settings changed'; exception when check_violation then null; end;
-  begin update public.finance_budget_cycle_breakdowns set label='Changed' where cycle_id=c; raise exception 'FAILED: frozen labels changed'; exception when check_violation then null; end;
 
   config:=pg_temp.budget_config('All spending')||'{"cycle_type":"monthly","anchor_day":15}';
   perform public.finance_budget_mutate(u,'update',b,1,null,config,'2026-02-09T00:00Z');
@@ -183,7 +182,7 @@ $$;
 do $$
 declare t text; fn record;
 begin
-  foreach t in array array['finance_budgets','finance_budget_sources','finance_budget_categories','finance_budget_cycles','finance_budget_cycle_breakdowns'] loop
+  foreach t in array array['finance_budgets','finance_budget_filters','finance_budget_cycles'] loop
     perform pg_temp.check_budget((select relrowsecurity from pg_class where oid=('public.'||t)::regclass),t||' RLS enabled');
     perform pg_temp.check_budget(not has_table_privilege('anon','public.'||t,'select,insert,update,delete'),t||' anonymous denied');
     perform pg_temp.check_budget(not has_table_privilege('authenticated','public.'||t,'select,insert,update,delete'),t||' browser denied');
@@ -216,9 +215,6 @@ begin
   insert into public.finance_transactions(user_id,source_id,direction,amount,transaction_date) values
     (u,'b0110000-0000-4000-8000-000000000014','expense',50,'2026-01-31');
   perform pg_temp.check_budget(public.finance_budget_detail(u,b,1,20,1,50,'2026-01-31T03:00Z')->'history'=frozen,'later same-day commits cannot change archived totals');
-  begin insert into public.finance_budget_cycle_breakdowns(cycle_id,user_id,dimension,reference_id,label,expense,income,net_spending)
-    values((frozen->'data'->0->>'id')::uuid,u,'category',gen_random_uuid(),'Late',1,0,1);
-    raise exception 'FAILED: added frozen breakdown'; exception when check_violation then null; end;
   perform public.finance_budget_mutate(u,'restore',b,3,null,config,'2026-01-31T04:00Z');
   perform public.finance_budget_reconcile(u,b,'2026-03-01T04:00Z');
   perform pg_temp.check_budget(public.finance_budget_detail(u,b,1,20,1,50,'2026-03-01T04:00Z')->'history'->>'total'='2','trusted role restores and closes cycles');
