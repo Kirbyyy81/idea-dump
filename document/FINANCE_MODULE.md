@@ -43,6 +43,8 @@ Stored IANA time zones determine local today. Pace counts completed calendar day
 
 `lib/finance/budgets/` owns validation, pure calculations, services and server-only RPC access. All mutations and reconciliation coordinate through the existing per-user Finance ledger advisory lock before locking budgets and references. The row-lock, FK and deletion-trigger combination prevents reference deletion from racing successful creation or restore. Budget creation is idempotent per user/request UUID; changed payload reuse conflicts. Edits, archive and restore require the current revision. Budget reads reconcile overdue cycles before calculating current data. Frozen history cannot be updated or extended afterward, including after late or edited ledger entries. Existing account-deletion retention cascades remain supported.
 
+Budget details present schedule and filter selections in a two-column table. Current transactions use a keyboard-accessible disclosure that starts collapsed for each selected budget. The shared `ActionMenu` exposes Edit, Archive and Cycle history; frozen history opens in `FormDialog`, retaining independent pagination and showing read errors inside the dialog. Restore remains available for archived budgets. Successful saves and archival use the shared dismissible `Toast`, which expires after five seconds and pauses while hovered or focused. Progress retains its pace marker without a separate elapsed-days sentence.
+
 ### Budget interfaces
 
 | Interface | Request and response |
@@ -82,7 +84,7 @@ Use Node 22.22.0. `npm run test:finance-budgets` runs domain, route, service and
 
 Local validation used PostgreSQL 17 with the adopted Finance schema and the forward budgeting migration. Hosted Auth/Storage metadata and Cron were local scaffolding; the cron registration and callable worker were checked, but no real cron scheduler ran. Hosted Supabase scheduling, platform advisors and representative-volume query plans remain deployment checks. Run all repository checks in addition to these feature suites.
 
-Validation on 2026-09-15 used Node 22.22.0. All 315 repository tests passed, including 56 budgeting unit/route/service/component tests. Ten desktop/mobile browser tests, the isolated database lifecycle/concurrency suite, Finance security/idempotency/ordering/share regressions, lint, TypeScript checking and production build passed. Calendar tests cover current-week/month starts, time zones, earlier spending, rejected prior periods, custom options and preserved restore boundaries. Both dependency audits reported zero vulnerabilities.
+Validation on 2026-09-15 used Node 22.22.0. All 319 repository tests passed, including 56 budgeting unit/route/service/component tests and four shared toast/action-menu tests. Twelve desktop/mobile browser tests, the isolated database lifecycle/concurrency suite, Finance security/idempotency/ordering/share regressions, lint, TypeScript checking and production build passed. Calendar tests cover current-week/month starts, time zones, earlier spending, rejected prior periods, custom options and preserved restore boundaries. UI checks cover collapsed transactions, keyboard menu navigation, dialog focus return, and history pagination with failed reads. Both dependency audits reported zero vulnerabilities.
 
 ### Production database deployment, 2026-09-15
 

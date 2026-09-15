@@ -56,10 +56,22 @@ describe('budget controls and feedback', () => {
         const detail = budgetDetailFixture(budget);
         detail.history.data = [{ ...budgetFixture().current_cycle!, frozen_at: '2026-09-21T00:00Z', state: 'completed', close_reason: 'completed',
             breakdowns: [{ dimension: 'source', reference_id: null, label: 'Frozen bank label', expense: '50.00', income: '10.00', net_spending: '40.00' }] }];
-        render(<BudgetDetails detail={detail} busy={false} onEdit={vi.fn()} onArchive={vi.fn()} onRestore={vi.fn()} onHistoryPage={vi.fn()} onTransactionsPage={vi.fn()} />);
-        const history = screen.getByRole('region', { name: 'Cycle history' });
+        detail.history.total = 21;
+        const nextHistory = vi.fn();
+        const props = { detail, busy: false, onEdit: vi.fn(), onArchive: vi.fn(), onRestore: vi.fn(), onHistoryPage: nextHistory, onTransactionsPage: vi.fn() };
+        const { rerender } = render(<BudgetDetails {...props} />);
+        expect(screen.queryByRole('dialog', { name: 'Cycle history' })).toBeNull();
+        fireEvent.click(screen.getByRole('button', { name: 'Budget actions' }));
+        fireEvent.click(screen.getByRole('menuitem', { name: 'Cycle history' }));
+        const history = screen.getByRole('dialog', { name: 'Cycle history' });
         expect(within(history).getByText('Frozen bank label')).toBeTruthy();
         expect(within(history).queryAllByRole('link')).toHaveLength(0);
         expect(screen.queryByText('Current transactions')).toBeNull();
+        fireEvent.click(within(history).getByRole('button', { name: 'Next history page' }));
+        expect(nextHistory).toHaveBeenCalledWith(2);
+        rerender(<BudgetDetails {...props} loadError="Could not load budgets" />);
+        expect(within(history).getByRole('alert').textContent).toBe('Could not load budgets');
+        fireEvent.click(within(history).getByRole('button', { name: 'Close' }));
+        expect(screen.queryByRole('dialog', { name: 'Cycle history' })).toBeNull();
     });
 });

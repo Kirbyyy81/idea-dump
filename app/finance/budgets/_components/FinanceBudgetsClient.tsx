@@ -76,7 +76,7 @@ export function FinanceBudgetsClient({ initialList, initialState, initialDetail 
                         </li>)}</ul>}
                     <BudgetPagination page={list} onPage={(page) => void load(state, page)} label="Budgets" disabled={busy} />
                 </section>
-                <div ref={detailHeading} tabIndex={-1} className="min-w-0 outline-none">{detail && <BudgetDetails detail={detail} busy={busy} onEdit={() => setForm('edit')}
+                <div ref={detailHeading} tabIndex={-1} className="min-w-0 outline-none">{detail && <BudgetDetails key={detail.budget.id} detail={detail} busy={busy} loadError={error} onEdit={() => setForm('edit')}
                     onArchive={() => setArchiving(true)} onRestore={() => setForm('restore')}
                     onHistoryPage={(page) => void load(state, list.page, detail.budget.id, page, detail.transactions.page)}
                     onTransactionsPage={(page) => void load(state, list.page, detail.budget.id, detail.history.page, page)} />}</div>

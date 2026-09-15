@@ -110,21 +110,79 @@ test('create, edit, archive, frozen history and restore', async ({ page }, testI
     await transactionsToggle.click();
     await expect(page.getByText('No matching transactions this cycle.')).not.toBeVisible();
     expect(bodies[0]).toMatchObject({ request_id: expect.any(String), configuration: { amount: '100.00', cycle_type: 'weekly', source_ids: [sourceId], include_uncategorised: true, filter_logic: 'or' } });
-    await page.getByRole('button', { name: 'Edit', exact: true }).click();
+    await expect(page.getByRole('table', { name: 'Budget configuration' }).getByRole('rowheader')).toHaveText(['Schedule', 'Sources', 'Categories', 'Filter logic']);
+    await expect(page.getByText(/of cycle days elapsed/)).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Edit', exact: true })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Budget actions' }).click();
+    await page.getByRole('menuitem', { name: 'Edit', exact: true }).click();
     await page.getByRole('dialog').getByLabel('Budget amount (MYR)').fill('200');
     await page.getByRole('button', { name: 'Save changes' }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
     expect(bodies[1]).toMatchObject({ revision: 1, configuration: { amount: '200.00' } });
-    await page.getByRole('button', { name: 'Archive', exact: true }).click();
+    await page.getByRole('button', { name: 'Budget actions' }).click();
+    await page.getByRole('menuitem', { name: 'Archive', exact: true }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'Archive budget' }).click();
     await expect(page.getByRole('button', { name: 'Restore', exact: true })).toBeVisible();
-    await page.getByRole('region', { name: 'Cycle history' }).locator('summary').click();
+    await page.getByRole('button', { name: 'Budget actions' }).click();
+    await page.getByRole('menuitem', { name: 'Cycle history' }).click();
+    const historyDialog = page.getByRole('dialog', { name: 'Cycle history' });
+    await historyDialog.locator('summary').click();
     await expect(page.getByText('Expenses', { exact: true })).toBeVisible();
+    await historyDialog.getByRole('button', { name: 'Close' }).click();
+    await expect(page.getByRole('button', { name: 'Budget actions' })).toBeFocused();
     await page.getByRole('button', { name: 'Restore', exact: true }).click();
     await page.getByRole('dialog').getByRole('button', { name: 'Restore budget', exact: true }).click();
-    await expect(page.getByRole('button', { name: 'Edit', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Budget actions' })).toBeEnabled();
     expect(bodies[3]).toMatchObject({ action: 'restore', revision: 3, configuration: { start_date: '2026-09-14' } });
     await page.screenshot({ path: testInfo.outputPath('budget-lifecycle.png'), fullPage: true });
+});
+
+test('budget action keyboard navigation and history pagination', async ({ page }, testInfo) => {
+    await references(page);
+    const budget = budgetFixture();
+    const initial = budgetDetailFixture(budget);
+    initial.history = { data: [{ ...budget.current_cycle!, state: 'completed', frozen_at: '2026-09-14T04:00Z' }], page: 1, page_size: 20, total: 21 };
+    await page.addInitScript((detail) => { (window as unknown as { budgetInitial: unknown }).budgetInitial = {
+        list: { data: [detail.budget], page: 1, page_size: 20, total: 1 }, detail,
+    }; }, initial);
+    let failedOnce = false;
+    await page.route('**/api/finance/budgets**', async (route) => {
+        const url = new URL(route.request().url());
+        if (url.pathname === '/api/finance/budgets') {
+            await route.fulfill({ json: { data: [budget], page: 1, page_size: 20, total: 1 } });
+        } else if (!failedOnce) {
+            failedOnce = true;
+            await route.fulfill({ status: 500, json: { error: 'History unavailable. Retry the page.' } });
+        } else await route.fulfill({ json: { data: { ...initial, history: { ...initial.history, page: 2 } } } });
+    });
+    await page.goto('/finance/budgets');
+    const actions = page.getByRole('button', { name: 'Budget actions' });
+    await actions.focus();
+    await page.keyboard.press('ArrowDown');
+    await expect(page.getByRole('menuitem', { name: 'Edit', exact: true })).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await expect(page.getByRole('menuitem', { name: 'Archive', exact: true })).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(actions).toBeFocused();
+    await expect(page.getByRole('menu')).toHaveCount(0);
+    await actions.click();
+    await page.getByRole('heading', { name: 'Budgets', exact: true }).click();
+    await expect(page.getByRole('menu')).toHaveCount(0);
+    await actions.focus();
+    await page.keyboard.press('ArrowUp');
+    await expect(page.getByRole('menuitem', { name: 'Cycle history' })).toBeFocused();
+    await page.keyboard.press('Enter');
+    const history = page.getByRole('dialog', { name: 'Cycle history' });
+    await expect(history).toBeVisible();
+    await history.getByRole('button', { name: 'Next history page' }).click();
+    await expect(history.getByRole('alert')).toContainText('History unavailable');
+    await history.getByRole('button', { name: 'Next history page' }).click();
+    await expect(history.getByText('Page 2 of 2')).toBeVisible();
+    await expect(history.getByRole('alert')).toHaveCount(0);
+    await page.screenshot({ path: testInfo.outputPath('budget-history-dialog.png'), fullPage: true });
+    await page.keyboard.press('Escape');
+    await expect(history).toHaveCount(0);
+    await expect(actions).toBeFocused();
 });
 
 test('missing references require an explicit repair and conflicts retain input', async ({ page }) => {

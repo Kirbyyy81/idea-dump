@@ -1,6 +1,11 @@
+'use client';
+
+import { useState } from 'react';
 import Link from 'next/link';
-import { ChevronDown } from 'lucide-react';
+import { Archive, ChevronDown, History, Pencil } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
+import { ActionMenu } from '@/components/molecules/ActionMenu';
+import { FormDialog } from '@/components/molecules/FormDialog';
 import { BudgetProgress } from './BudgetProgress';
 import type { FinanceBudgetCycle, FinanceBudgetDetail, FinanceBudgetPage } from '@/lib/types';
 import { addBudgetDays, BUDGET_STATUS_LABELS, formatBudgetMoney } from '@/lib/finance/budgets/calculations';
@@ -32,10 +37,11 @@ function CycleBreakdowns({ cycle }: { cycle: FinanceBudgetCycle }) {
     </div>;
 }
 
-export function BudgetDetails({ detail, onEdit, onArchive, onRestore, onHistoryPage, onTransactionsPage, busy }: {
+export function BudgetDetails({ detail, onEdit, onArchive, onRestore, onHistoryPage, onTransactionsPage, busy, loadError = '' }: {
     detail: FinanceBudgetDetail; onEdit: () => void; onArchive: () => void; onRestore: () => void;
-    onHistoryPage: (page: number) => void; onTransactionsPage: (page: number) => void; busy: boolean;
+    onHistoryPage: (page: number) => void; onTransactionsPage: (page: number) => void; busy: boolean; loadError?: string;
 }) {
+    const [showHistory, setShowHistory] = useState(false);
     const { budget, history, transactions } = detail;
     const version = budget.version;
     const label = (items: typeof version.sources) => items.map((item) => `${item.name}${item.id === null ? ' (deleted)' : item.is_archived ? ' (archived)' : ''}`).join(', ');
@@ -46,9 +52,17 @@ export function BudgetDetails({ detail, onEdit, onArchive, onRestore, onHistoryP
         ['Filter logic', version.filter_logic.toUpperCase()],
     ];
     return <section aria-label={`${budget.name} details`} className="min-w-0 rounded-lg border border-border-default bg-bg-surface p-4 sm:p-5" aria-busy={busy}>
-        <div className="mb-4 flex flex-wrap items-start justify-between gap-3"><h2 className="break-words text-lg font-bold">{budget.name}</h2>
-            <div className="flex gap-2">{budget.state === 'archived' ? <Button variant="secondary" onClick={onRestore} disabled={busy}>Restore</Button> : <>
-                <Button variant="secondary" onClick={onEdit} disabled={busy}>Edit</Button><Button variant="ghost" onClick={onArchive} disabled={busy}>Archive</Button></>}</div></div>
+        <div className="mb-4 flex items-start justify-between gap-3"><h2 className="min-w-0 break-words text-lg font-bold">{budget.name}</h2>
+            <div className="flex shrink-0 gap-2">
+                {budget.state === 'archived' && <Button variant="secondary" onClick={onRestore} disabled={busy}>Restore</Button>}
+                <ActionMenu label="Budget actions" disabled={busy} items={[
+                    ...(budget.state === 'archived' ? [] : [
+                        { label: 'Edit', icon: <Pencil size={16} aria-hidden="true" />, onSelect: onEdit },
+                        { label: 'Archive', icon: <Archive size={16} aria-hidden="true" />, onSelect: onArchive },
+                    ]),
+                    { label: 'Cycle history', icon: <History size={16} aria-hidden="true" />, onSelect: () => setShowHistory(true) },
+                ]} />
+            </div></div>
         <BudgetProgress budget={budget} />
         <table className="mt-5 w-full table-fixed border-y border-border-default text-left text-xs">
             <caption className="sr-only">Budget configuration</caption>
@@ -69,8 +83,8 @@ export function BudgetDetails({ detail, onEdit, onArchive, onRestore, onHistoryP
             {transactions.data.length === 0 && <p className="mt-3 text-sm text-text-muted">No matching transactions this cycle.</p>}
             <BudgetPagination page={transactions} onPage={onTransactionsPage} label="Transactions" disabled={busy} />
         </details>}
-        <section className="mt-6 border-t border-border-default pt-4" aria-labelledby="budget-history-heading">
-            <h3 id="budget-history-heading" className="font-semibold">Cycle history</h3>
+        {showHistory && <FormDialog title="Cycle history" onClose={() => setShowHistory(false)} busy={busy}>
+            {loadError && <p role="alert" className="mb-3 text-sm text-error">{loadError}</p>}
             {history.data.length === 0 && <p className="mt-3 text-sm text-text-muted">Completed cycles will appear here.</p>}
             {history.data.map((cycle) => <details key={cycle.id} className="mt-3 rounded-md border border-border-default p-3">
                 <summary className="min-h-10 cursor-pointer text-sm font-medium">{cycle.start_date} to {addBudgetDays(cycle.end_date, -1)}
@@ -79,6 +93,6 @@ export function BudgetDetails({ detail, onEdit, onArchive, onRestore, onHistoryP
                 <CycleBreakdowns cycle={cycle} />
             </details>)}
             <BudgetPagination page={history} onPage={onHistoryPage} label="History" disabled={busy} />
-        </section>
+        </FormDialog>}
     </section>;
 }
