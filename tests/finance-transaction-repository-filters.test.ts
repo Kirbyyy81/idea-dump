@@ -21,6 +21,7 @@ const database = vi.hoisted(() => {
         order: vi.fn(),
         range: vi.fn(),
         select: vi.fn(),
+        rpc: vi.fn().mockResolvedValue({ data: { data: [] }, error: null }),
         then: (resolve: (value: typeof result) => unknown) => Promise.resolve(resolve(result)),
     };
     for (const method of ['eq', 'from', 'gte', 'is', 'lte', 'lt', 'limit', 'or', 'order', 'range', 'select'] as const) {
@@ -60,6 +61,10 @@ describe('Finance transaction repository filters', () => {
         expect(database.order.mock.calls).toContainEqual(['created_at', { ascending: false }]);
         expect(database.limit).toHaveBeenCalledWith(6);
         expect(summary.recent_transactions).toEqual([]);
+        expect(summary.active_budgets).toEqual([]);
+        expect(database.rpc).toHaveBeenCalledWith('finance_budget_list', {
+            p_user_id: 'user-1', p_state: 'active', p_page: 1, p_page_size: 3, p_dashboard: true,
+        });
     });
 
     it('scopes single-transaction reads to both the transaction and user', async () => {

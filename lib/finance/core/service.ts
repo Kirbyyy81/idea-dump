@@ -125,20 +125,9 @@ import {
 const TRANSACTION_PAGE_SIZE = 500;
 const DASHBOARD_PAGE_SIZE = 500;
 
-export class FinanceServiceError extends Error {
-    constructor(
-        message: string,
-        readonly status = 400,
-        readonly details?: Record<string, unknown>
-    ) {
-        super(message);
-        this.name = 'FinanceServiceError';
-    }
-}
-
-export function isFinanceServiceError(error: unknown): error is FinanceServiceError {
-    return error instanceof FinanceServiceError;
-}
+import { FinanceServiceError } from '@/lib/finance/core/errors';
+import { getFinanceDashboardBudgets } from '@/lib/finance/budgets/service';
+export { FinanceServiceError, isFinanceServiceError } from '@/lib/finance/core/errors';
 
 function toFinanceReferenceOption(value: Pick<FinanceReferenceOption, 'id' | 'name'>): FinanceReferenceOption {
     return { id: value.id, name: value.name };
@@ -657,14 +646,16 @@ export async function deleteFinanceTransactionForUser(userId: string, transactio
 export async function getFinanceDashboard(userId: string, requestedMonth: string | null) {
     const monthRange = getFinanceMonthRange(requestedMonth || getLocalFinanceMonth());
     if (!monthRange) fail('Month must use YYYY-MM format');
-    const [monthRows, recentResult] = await Promise.all([
+    const [monthRows, recentResult, activeBudgets] = await Promise.all([
         listFinanceDashboardMonthTransactions(userId, monthRange.monthStart, monthRange.nextMonthStart, DASHBOARD_PAGE_SIZE),
         listFinanceDashboardRecentTransactions(userId, monthRange.monthStart, monthRange.nextMonthStart),
+        getFinanceDashboardBudgets(userId),
     ]);
     if (recentResult.error) throw recentResult.error;
     const aggregate = aggregateFinanceDashboard(monthRows as FinanceDashboardRow[]);
     return {
         total_expense: aggregate.total_expense,
+        active_budgets: activeBudgets,
         total_income: aggregate.total_income,
         net_cash_flow: aggregate.net_cash_flow,
         recent_transactions: (recentResult.data || []).map((transaction) => (

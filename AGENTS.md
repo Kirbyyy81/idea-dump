@@ -36,6 +36,7 @@
   ```
 
 - Run `npm run test:log-viewer` when changing the log-viewer parser or fixtures.
+- Run the budgeting unit, browser and isolated database suites documented in `lib/finance/AGENTS.md` when changing budgets. Browser fixtures live under `tests/browser/` and do not ship in application routes.
 - Run `npm run check:service-worker` when changing the PWA worker or Finance share-message protocol. Regenerate the checked-in artifact with `npm run build:service-worker`.
 - Validate Finance OCR changes from `services/finance-ocr/` with:
 

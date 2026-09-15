@@ -24,6 +24,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .playwright-cli/
+playwright-report/
+test-results/
 
 # Misc
 .DS_Store
