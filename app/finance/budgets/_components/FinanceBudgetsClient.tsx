@@ -53,7 +53,8 @@ export function FinanceBudgetsClient({ initialList, initialState, initialDetail 
         } catch (failure) { setArchiving(false); setError(failure instanceof Error ? failure.message : 'Could not archive this budget'); }
         finally { setBusy(false); }
     };
-    return <AppShell pageTitle="Budgets" contentClassName="p-5 md:p-8" headerAction={<Button onClick={() => setForm('create')}><AddDoodleIcon size={16} className="mr-2" />Create budget</Button>}>
+    return <AppShell pageTitle="Budgets" contentClassName="p-5 md:p-8" headerClassName="flex-row flex-wrap items-center justify-between gap-2"
+        headerAction={<Button onClick={() => setForm('create')}><AddDoodleIcon size={16} className="mr-2" />Create budget</Button>}>
         <div className="mx-auto max-w-7xl">
             <nav aria-label="Budget sections" className="mb-5 flex flex-wrap gap-2 border-b border-border-default pb-3">
                 {(['active', 'scheduled', 'archived'] as const).map((section) => <Button key={section} variant={state === section ? 'primary' : 'ghost'}
