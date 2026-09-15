@@ -1,5 +1,5 @@
 import 'server-only';
-import type { FinanceBudgetDetail, FinanceBudgetDetailQuery, FinanceBudgetFieldErrors, FinanceBudgetListQuery, FinanceBudgetMutation, FinanceBudgetPage, FinanceBudgetSummary } from '@/lib/types';
+import type { FinanceBudgetDetail, FinanceBudgetDetailQuery, FinanceBudgetFieldErrors, FinanceBudgetListQuery, FinanceBudgetMutation, FinanceBudgetPage, FinanceBudgetSettings, FinanceBudgetSummary } from '@/lib/types';
 import { FinanceServiceError } from '@/lib/finance/core/errors';
 import { getBudgetRecord, listBudgetRecords, mutateBudgetRecord } from './repository';
 
@@ -27,16 +27,25 @@ export function throwBudgetDatabaseError(error: { code?: string; message?: strin
     throw new FinanceServiceError('Could not load or save this budget. Please retry.', 500);
 }
 
+function currentBudgetSettings(budget: FinanceBudgetSummary & { version?: FinanceBudgetSettings }): FinanceBudgetSummary {
+    // Permit either deployment order while the release 15 database migration rolls out.
+    const configuration = budget.configuration ?? budget.version;
+    if (!configuration) throw new FinanceServiceError('Could not load this budget. Please retry.', 500);
+    return { ...budget, configuration };
+}
+
 export async function getFinanceBudgets(userId: string, query: FinanceBudgetListQuery): Promise<FinanceBudgetPage<FinanceBudgetSummary>> {
     const { data, error } = await listBudgetRecords(userId, query);
     if (error) throwBudgetDatabaseError(error);
-    return data as unknown as FinanceBudgetPage<FinanceBudgetSummary>;
+    const page = data as unknown as FinanceBudgetPage<FinanceBudgetSummary>;
+    return { ...page, data: page.data.map(currentBudgetSettings) };
 }
 
 export async function getFinanceBudgetDetail(userId: string, id: string, query = DETAIL_DEFAULTS): Promise<FinanceBudgetDetail> {
     const { data, error } = await getBudgetRecord(userId, id, query);
     if (error) throwBudgetDatabaseError(error);
-    return data as unknown as FinanceBudgetDetail;
+    const detail = data as unknown as FinanceBudgetDetail;
+    return { ...detail, budget: currentBudgetSettings(detail.budget) };
 }
 
 export async function mutateFinanceBudget(userId: string, mutation: FinanceBudgetMutation): Promise<FinanceBudgetSummary> {
@@ -49,5 +58,5 @@ export async function mutateFinanceBudget(userId: string, mutation: FinanceBudge
 export async function getFinanceDashboardBudgets(userId: string): Promise<FinanceBudgetSummary[]> {
     const { data, error } = await listBudgetRecords(userId, { state: 'active', page: 1, page_size: 3 }, true);
     if (error) throwBudgetDatabaseError(error);
-    return (data as unknown as FinanceBudgetPage<FinanceBudgetSummary>).data;
+    return (data as unknown as FinanceBudgetPage<FinanceBudgetSummary>).data.map(currentBudgetSettings);
 }

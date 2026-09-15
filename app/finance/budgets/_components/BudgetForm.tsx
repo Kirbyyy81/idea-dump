@@ -15,11 +15,11 @@ import { startOfBudgetPeriod } from '@/lib/finance/budgets/calculations';
 import type { FinanceBudgetConfiguration, FinanceBudgetFieldErrors, FinanceBudgetSelection, FinanceBudgetSummary, FinanceReferenceOption } from '@/lib/types';
 
 function initialConfiguration(budget?: FinanceBudgetSummary, restore = false): FinanceBudgetConfiguration {
-    const zone = budget?.version.time_zone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const zone = budget?.configuration.time_zone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
     const today = getFinanceDateInTimeZone(zone);
-    return budget ? { ...budget.version, start_date: restore ? today : budget.version.start_date,
-        anchor_day: restore && budget.version.cycle_type === 'monthly' ? Number(today.slice(8)) : budget.version.anchor_day,
-        source_ids: budget.version.sources.map((item) => item.original_id), category_ids: budget.version.categories.map((item) => item.original_id) }
+    return budget ? { ...budget.configuration, start_date: restore ? today : budget.configuration.start_date,
+        anchor_day: restore && budget.configuration.cycle_type === 'monthly' ? Number(today.slice(8)) : budget.configuration.anchor_day,
+        source_ids: budget.configuration.sources.map((item) => item.original_id), category_ids: budget.configuration.categories.map((item) => item.original_id) }
         : { name: '', amount: '', cycle_type: 'monthly', start_date: startOfBudgetPeriod(today, 'monthly'), anchor_day: 1, custom_days: null,
             time_zone: zone, filter_logic: 'and', include_uncategorised: false, source_ids: [], category_ids: [] };
 }
@@ -35,9 +35,9 @@ export function BudgetForm({ budget, restore = false, onClose, onSaved, onReload
 }) {
     const references = useFinanceReferenceData();
     const [configuration, setConfiguration] = useState(() => initialConfiguration(budget, restore));
-    const [customize, setCustomize] = useState(() => Boolean(budget && (restore || budget.version.cycle_type === 'custom'
-        || budget.version.sources.length || budget.version.categories.length || budget.version.include_uncategorised
-        || budget.version.start_date !== startOfBudgetPeriod(budget.version.start_date, budget.version.cycle_type))));
+    const [customize, setCustomize] = useState(() => Boolean(budget && (restore || budget.configuration.cycle_type === 'custom'
+        || budget.configuration.sources.length || budget.configuration.categories.length || budget.configuration.include_uncategorised
+        || budget.configuration.start_date !== startOfBudgetPeriod(budget.configuration.start_date, budget.configuration.cycle_type))));
     const [customStart, setCustomStart] = useState(Boolean(budget));
     const [requestId] = useState(() => crypto.randomUUID());
     const [errors, setErrors] = useState<FinanceBudgetFieldErrors>({});
@@ -122,7 +122,7 @@ export function BudgetForm({ budget, restore = false, onClose, onSaved, onReload
             {references.error && <div role="alert" className="text-sm text-error">{references.error}<Button type="button" variant="ghost" onClick={() => void references.refresh()}>Retry options</Button></div>}
             {(['source_ids', 'category_ids'] as const).map((field) => {
                 const isSource = field === 'source_ids';
-                const options = selectionOptions(isSource ? references.sources : references.categories, isSource ? budget?.version.sources : budget?.version.categories);
+                const options = selectionOptions(isSource ? references.sources : references.categories, isSource ? budget?.configuration.sources : budget?.configuration.categories);
                 return <fieldset key={field} aria-describedby={errors[field] ? isSource ? sourceErrorId : categoryErrorId : undefined}>
                     <legend className="mb-2 text-sm font-semibold">{isSource ? 'Sources' : 'Categories'}</legend>
                     <div className="flex max-h-48 flex-wrap gap-2 overflow-y-auto">
@@ -137,7 +137,7 @@ export function BudgetForm({ budget, restore = false, onClose, onSaved, onReload
             <p className="text-xs text-text-muted">With no selections, all sources and categories count. Time zone: {configuration.time_zone}.</p>
             {errors.time_zone && <p role="alert" className="text-xs text-error">{errors.time_zone}</p>}
             </div>}
-            {activeEdit && (configuration.cycle_type !== budget.version.cycle_type || configuration.custom_days !== budget.version.custom_days || configuration.anchor_day !== budget.version.anchor_day)
+            {activeEdit && (configuration.cycle_type !== budget.configuration.cycle_type || configuration.custom_days !== budget.configuration.custom_days || configuration.anchor_day !== budget.configuration.anchor_day)
                 && <p className="text-xs text-text-secondary">Schedule changes close the current cycle through yesterday and start a new cycle today.</p>}
             <div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={onClose} disabled={saving}>Cancel</Button>
                 <Button type="submit" isLoading={saving} disabled={customize && references.status !== 'ready'}>{title === 'Edit budget' ? 'Save changes' : title}</Button></div>

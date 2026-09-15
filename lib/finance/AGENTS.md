@@ -27,6 +27,7 @@
 
 - Run `npm run test:finance-budgets` and `npm run test:finance-budgets:browser` after budgeting changes. For SQL/lifecycle changes, also run `npm run test:finance-budgets:db` on an isolated migrated loopback database using the documented test variables in `document/FINANCE_MODULE.md`.
 - Keep budgeting money as decimal strings and status comparisons exact. Budget reads and mutations reconcile expired cycles through reviewed RPCs. Never rewrite frozen cycles or bypass the Finance ledger lock.
+- Store current budget settings on `finance_budgets` with typed source/category selections in `finance_budget_filters`. Keep cycle history to totals and settings snapshots, without a breakdown table. Freeze configuration snapshots on cycles; do not reintroduce configuration-version tables. For storage migrations, also run `supabase/tests/finance_budget_settings_migration.test.sql` against a disposable calendar-start baseline and `supabase/tests/finance_budget_filters_migration.test.sql` against a disposable current-settings baseline before the normal lifecycle suite.
 - New weekly/monthly budgets default to Monday/the 1st in the captured time zone and can include the current period before today. Keep customization optional and preserve existing schedules and restore boundaries.
 
 - Run `npm run test:finance-security`, `npm run test:finance-idempotency`, `npm run test:finance-ordering`, and `npm run test:finance-share` after Finance structural changes.

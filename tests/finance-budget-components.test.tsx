@@ -44,7 +44,7 @@ describe('budget controls and feedback', () => {
     });
     it('makes missing selections visible and removable during restore', () => {
         const budget = budgetFixture({ state: 'archived', status: 'archived' });
-        budget.version.sources = [{ id: null, original_id: 'b0110000-0000-4000-8000-000000000099', name: 'Old bank', is_archived: false }];
+        budget.configuration.sources = [{ id: null, original_id: 'b0110000-0000-4000-8000-000000000099', name: 'Old bank', is_archived: false }];
         render(<BudgetForm budget={budget} restore onClose={vi.fn()} onSaved={vi.fn()} onReload={vi.fn()} />);
         const selection = screen.getByRole('switch', { name: 'Old bank (deleted)' });
         expect(selection.getAttribute('aria-checked')).toBe('true');
@@ -54,8 +54,7 @@ describe('budget controls and feedback', () => {
     it('shows frozen aggregate history without historical transaction links', () => {
         const budget = budgetFixture({ state: 'archived', status: 'archived', current_cycle: null });
         const detail = budgetDetailFixture(budget);
-        detail.history.data = [{ ...budgetFixture().current_cycle!, frozen_at: '2026-09-21T00:00Z', state: 'completed', close_reason: 'completed',
-            breakdowns: [{ dimension: 'source', reference_id: null, label: 'Frozen bank label', expense: '50.00', income: '10.00', net_spending: '40.00' }] }];
+        detail.history.data = [{ ...budgetFixture().current_cycle!, frozen_at: '2026-09-21T00:00Z', state: 'completed', close_reason: 'completed' }];
         detail.history.total = 21;
         const nextHistory = vi.fn();
         const props = { detail, busy: false, onEdit: vi.fn(), onArchive: vi.fn(), onRestore: vi.fn(), onHistoryPage: nextHistory, onTransactionsPage: vi.fn() };
@@ -64,7 +63,10 @@ describe('budget controls and feedback', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Budget actions' }));
         fireEvent.click(screen.getByRole('menuitem', { name: 'Cycle history' }));
         const history = screen.getByRole('dialog', { name: 'Cycle history' });
-        expect(within(history).getByText('Frozen bank label')).toBeTruthy();
+        expect(within(history).getByText(/RM 40.00 net spent/)).toBeTruthy();
+        expect(within(history).getByText('RM 60.00 remaining')).toBeTruthy();
+        expect(history.querySelector('details')).toBeNull();
+        expect(within(history).queryByText('By source')).toBeNull();
         expect(within(history).queryAllByRole('link')).toHaveLength(0);
         expect(screen.queryByText('Current transactions')).toBeNull();
         fireEvent.click(within(history).getByRole('button', { name: 'Next history page' }));
