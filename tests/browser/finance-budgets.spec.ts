@@ -102,6 +102,13 @@ test('create, edit, archive, frozen history and restore', async ({ page }, testI
     await page.getByRole('option', { name: 'OR: match either selection' }).click();
     await dialog.getByRole('button', { name: 'Create budget', exact: true }).click();
     await expect(page.getByRole('region', { name: 'Everyday spending details' })).toBeVisible();
+    const transactionsToggle = page.locator('summary').filter({ hasText: 'Current transactions' });
+    await expect(page.getByText('No matching transactions this cycle.')).not.toBeVisible();
+    await transactionsToggle.focus();
+    await page.keyboard.press('Enter');
+    await expect(page.getByText('No matching transactions this cycle.')).toBeVisible();
+    await transactionsToggle.click();
+    await expect(page.getByText('No matching transactions this cycle.')).not.toBeVisible();
     expect(bodies[0]).toMatchObject({ request_id: expect.any(String), configuration: { amount: '100.00', cycle_type: 'weekly', source_ids: [sourceId], include_uncategorised: true, filter_logic: 'or' } });
     await page.getByRole('button', { name: 'Edit', exact: true }).click();
     await page.getByRole('dialog').getByLabel('Budget amount (MYR)').fill('200');
@@ -111,7 +118,7 @@ test('create, edit, archive, frozen history and restore', async ({ page }, testI
     await page.getByRole('button', { name: 'Archive', exact: true }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'Archive budget' }).click();
     await expect(page.getByRole('button', { name: 'Restore', exact: true })).toBeVisible();
-    await page.locator('summary').click();
+    await page.getByRole('region', { name: 'Cycle history' }).locator('summary').click();
     await expect(page.getByText('Expenses', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Restore', exact: true }).click();
     await page.getByRole('dialog').getByRole('button', { name: 'Restore budget', exact: true }).click();

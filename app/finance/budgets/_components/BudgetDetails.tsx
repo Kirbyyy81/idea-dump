@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ChevronDown } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
 import { BudgetProgress } from './BudgetProgress';
 import type { FinanceBudgetCycle, FinanceBudgetDetail, FinanceBudgetPage } from '@/lib/types';
@@ -56,8 +57,10 @@ export function BudgetDetails({ detail, onEdit, onArchive, onRestore, onHistoryP
                 <td className="break-words py-3 align-top text-text-secondary">{value}</td>
             </tr>)}</tbody>
         </table>
-        {budget.state === 'active' && <section className="mt-6 border-t border-border-default pt-4" aria-labelledby="budget-transactions-heading">
-            <h3 id="budget-transactions-heading" className="font-semibold">Current transactions</h3>
+        {budget.state === 'active' && <details key={budget.id} className="group mt-6 border-t border-border-default pt-2">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-md py-2 font-semibold outline-none hover:bg-bg-hover focus-visible:ring-2 focus-visible:ring-accent-rose [&::-webkit-details-marker]:hidden">
+                <h3>Current transactions</h3><ChevronDown size={18} className="shrink-0 transition-transform group-open:rotate-180" aria-hidden="true" />
+            </summary>
             <ul className="mt-2 divide-y divide-border-default">{transactions.data.map((item) => <li key={item.id}>
                 <Link href={`/finance/transactions/edit?id=${item.id}`} className="flex min-h-12 flex-wrap items-center justify-between gap-2 rounded-md py-3 text-sm hover:bg-bg-hover">
                     <span className="min-w-0"><span className="block break-words font-medium">{item.merchant || 'Transaction'}</span><span className="text-xs text-text-muted">{item.transaction_date} · {item.source_name} · {item.category_name}</span></span>
@@ -65,7 +68,7 @@ export function BudgetDetails({ detail, onEdit, onArchive, onRestore, onHistoryP
                 </Link></li>)}</ul>
             {transactions.data.length === 0 && <p className="mt-3 text-sm text-text-muted">No matching transactions this cycle.</p>}
             <BudgetPagination page={transactions} onPage={onTransactionsPage} label="Transactions" disabled={busy} />
-        </section>}
+        </details>}
         <section className="mt-6 border-t border-border-default pt-4" aria-labelledby="budget-history-heading">
             <h3 id="budget-history-heading" className="font-semibold">Cycle history</h3>
             {history.data.length === 0 && <p className="mt-3 text-sm text-text-muted">Completed cycles will appear here.</p>}
