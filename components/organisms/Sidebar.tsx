@@ -379,16 +379,16 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
                                 label: 'Review',
                             })}
                             {renderSubItem({
-                                href: '/finance/settings',
-                                icon: <Settings2 size={14} />,
-                                isActive: isExactPath(pathname, '/finance/settings'),
-                                label: 'Settings',
-                            })}
-                            {renderSubItem({
                                 href: '/finance/budgets',
                                 icon: <MoneyDoodleIcon size={14} />,
                                 isActive: isExactPath(pathname, '/finance/budgets'),
                                 label: 'Budgets',
+                            })}
+                            {renderSubItem({
+                                href: '/finance/settings',
+                                icon: <Settings2 size={14} />,
+                                isActive: isExactPath(pathname, '/finance/settings'),
+                                label: 'Settings',
                             })}
                         </div>
                     ),
