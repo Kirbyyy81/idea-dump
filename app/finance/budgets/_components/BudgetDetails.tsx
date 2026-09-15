@@ -38,17 +38,24 @@ export function BudgetDetails({ detail, onEdit, onArchive, onRestore, onHistoryP
     const { budget, history, transactions } = detail;
     const version = budget.version;
     const label = (items: typeof version.sources) => items.map((item) => `${item.name}${item.id === null ? ' (deleted)' : item.is_archived ? ' (archived)' : ''}`).join(', ');
+    const configurationRows = [
+        ['Schedule', `${version.cycle_type === 'custom' ? `Every ${version.custom_days} days` : version.cycle_type === 'monthly' ? `Monthly on day ${version.anchor_day}` : 'Every 7 days'} (${version.time_zone})`],
+        ['Sources', label(version.sources) || 'All sources'],
+        ['Categories', [label(version.categories), version.include_uncategorised ? 'Uncategorised' : ''].filter(Boolean).join(', ') || 'All categories, including Uncategorised'],
+        ['Filter logic', version.filter_logic.toUpperCase()],
+    ];
     return <section aria-label={`${budget.name} details`} className="min-w-0 rounded-lg border border-border-default bg-bg-surface p-4 sm:p-5" aria-busy={busy}>
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3"><h2 className="break-words text-lg font-bold">{budget.name}</h2>
             <div className="flex gap-2">{budget.state === 'archived' ? <Button variant="secondary" onClick={onRestore} disabled={busy}>Restore</Button> : <>
                 <Button variant="secondary" onClick={onEdit} disabled={busy}>Edit</Button><Button variant="ghost" onClick={onArchive} disabled={busy}>Archive</Button></>}</div></div>
         <BudgetProgress budget={budget} />
-        <dl className="mt-5 space-y-2 border-t border-border-default pt-4 text-xs">
-            <div><dt className="font-semibold">Schedule</dt><dd className="mt-1 text-text-secondary">{version.cycle_type === 'custom' ? `Every ${version.custom_days} days` : version.cycle_type === 'monthly' ? `Monthly on day ${version.anchor_day}` : 'Every 7 days'} ({version.time_zone})</dd></div>
-            <div><dt className="font-semibold">Sources</dt><dd className="mt-1 break-words text-text-secondary">{label(version.sources) || 'All sources'}</dd></div>
-            <div><dt className="font-semibold">Categories</dt><dd className="mt-1 break-words text-text-secondary">{[label(version.categories), version.include_uncategorised ? 'Uncategorised' : ''].filter(Boolean).join(', ') || 'All categories, including Uncategorised'}</dd></div>
-            <div><dt className="font-semibold">Filter logic</dt><dd className="mt-1 text-text-secondary">{version.filter_logic.toUpperCase()}</dd></div>
-        </dl>
+        <table className="mt-5 w-full table-fixed border-y border-border-default text-left text-xs">
+            <caption className="sr-only">Budget configuration</caption>
+            <tbody className="divide-y divide-border-default">{configurationRows.map(([heading, value]) => <tr key={heading}>
+                <th scope="row" className="w-28 py-3 pr-3 align-top font-semibold sm:w-32">{heading}</th>
+                <td className="break-words py-3 align-top text-text-secondary">{value}</td>
+            </tr>)}</tbody>
+        </table>
         {budget.state === 'active' && <section className="mt-6 border-t border-border-default pt-4" aria-labelledby="budget-transactions-heading">
             <h3 id="budget-transactions-heading" className="font-semibold">Current transactions</h3>
             <ul className="mt-2 divide-y divide-border-default">{transactions.data.map((item) => <li key={item.id}>
