@@ -94,13 +94,12 @@ begin
 
   config:=pg_temp.budget_config('Filtered')||'{"source_ids":["b0110000-0000-4000-8000-000000000011"],"category_ids":["b0110000-0000-4000-8000-000000000021"]}';
   b2:=public.finance_budget_mutate(u,'create',null,null,gen_random_uuid(),config,'2026-01-31T00:00Z');
-  begin update public.finance_budget_version_sources set label='Changed' where version_id=(select current_version_id from public.finance_budgets where id=b2);
-    raise exception 'FAILED: changed saved selection'; exception when check_violation then null; end;
-  begin delete from public.finance_budget_version_sources where version_id=(select current_version_id from public.finance_budgets where id=b2);
-    raise exception 'FAILED: deleted saved selection'; exception when check_violation then null; end;
-  begin insert into public.finance_budget_version_sources(version_id,user_id,source_id,original_id,label)
-    select current_version_id,u,'b0110000-0000-4000-8000-000000000012','b0110000-0000-4000-8000-000000000012','Late' from public.finance_budgets where id=b2;
-    raise exception 'FAILED: broadened saved selection'; exception when check_violation then null; end;
+  begin insert into public.finance_budget_sources(budget_id,user_id,source_id,original_id,label)
+    values(b2,other_user,'b0110000-0000-4000-8000-000000000014','b0110000-0000-4000-8000-000000000014','Wrong owner');
+    raise exception 'FAILED: cross-owner budget selection'; exception when foreign_key_violation then null; end;
+  begin insert into public.finance_budget_categories(budget_id,user_id,category_id,original_id,label)
+    values(b2,other_user,'b0110000-0000-4000-8000-000000000022','b0110000-0000-4000-8000-000000000022','Wrong owner');
+    raise exception 'FAILED: cross-owner category selection'; exception when foreign_key_violation then null; end;
   perform pg_temp.check_budget(public.finance_budget_summary(u,b2,'2026-01-31T00:00Z')->'current_cycle'->'metrics'->>'net_spending'='50.00','AND matching');
   config:=config||'{"category_ids":[],"include_uncategorised":true,"filter_logic":"or"}';
   perform public.finance_budget_mutate(u,'update',b2,1,null,config,'2026-01-31T00:00Z');
@@ -133,6 +132,8 @@ begin
   perform pg_temp.check_budget((select count(*)=2 from public.finance_budget_cycles where budget_id=b),'closure retry creates no duplicate successor');
   select id into c from public.finance_budget_cycles where budget_id=b and frozen_at is not null;
   begin update public.finance_budget_cycles set expense=1 where id=c; raise exception 'FAILED: frozen cycle changed'; exception when check_violation then null; end;
+  begin update public.finance_budget_cycles set configuration_snapshot=configuration_snapshot||'{"amount":"1.00"}' where id=c;
+    raise exception 'FAILED: frozen settings changed'; exception when check_violation then null; end;
   begin update public.finance_budget_cycle_breakdowns set label='Changed' where cycle_id=c; raise exception 'FAILED: frozen labels changed'; exception when check_violation then null; end;
 
   config:=pg_temp.budget_config('All spending')||'{"cycle_type":"monthly","anchor_day":15}';
@@ -141,6 +142,7 @@ begin
   perform pg_temp.check_budget(result->'history'->>'total'='2','schedule edit freezes partial history');
   perform pg_temp.check_budget(result->'history'->'data'->0->>'end_date'='2026-02-09','partial stops before today');
   perform pg_temp.check_budget(result->'budget'->'current_cycle'->>'end_date'='2026-02-15','monthly edit short first cycle');
+  perform pg_temp.check_budget(result->'history'->'data'->0->'configuration'->>'cycle_type'='weekly','schedule snapshot preserves old settings');
   config:=config||'{"start_date":"2026-02-09","anchor_day":20}';
   perform public.finance_budget_mutate(u,'update',b,2,null,config,'2026-02-09T00:00Z');
   perform pg_temp.check_budget(public.finance_budget_detail(u,b,1,20,1,50,'2026-02-09T00:00Z')->'history'->>'total'='2','first-day schedule edit has no zero-day partial');
@@ -157,7 +159,7 @@ begin
   perform public.finance_budget_mutate(u,'archive',id1,1,null,null,'2026-01-31T01:00Z');
   perform public.finance_delete_source(u,'b0110000-0000-4000-8000-000000000013');
   perform public.finance_delete_category(u,'b0110000-0000-4000-8000-000000000022');
-  perform pg_temp.check_budget(public.finance_budget_summary(u,id1,'2026-01-31T01:00Z')->'version'->'sources'->0->>'name'='Unused source','deleted selection label retained');
+  perform pg_temp.check_budget(public.finance_budget_summary(u,id1,'2026-01-31T01:00Z')->'configuration'->'sources'->0->>'name'='Unused source','deleted selection label retained');
   begin perform public.finance_budget_mutate(u,'restore',id1,2,null,config,'2026-01-31T02:00Z'); raise exception 'FAILED: restore missing selection'; exception when invalid_parameter_value then null; end;
   config:=config||'{"source_ids":[],"category_ids":[]}';
   perform public.finance_budget_mutate(u,'restore',id1,2,null,config,'2026-01-31T02:00Z');
@@ -181,7 +183,7 @@ $$;
 do $$
 declare t text; fn record;
 begin
-  foreach t in array array['finance_budgets','finance_budget_versions','finance_budget_version_sources','finance_budget_version_categories','finance_budget_cycles','finance_budget_cycle_breakdowns'] loop
+  foreach t in array array['finance_budgets','finance_budget_sources','finance_budget_categories','finance_budget_cycles','finance_budget_cycle_breakdowns'] loop
     perform pg_temp.check_budget((select relrowsecurity from pg_class where oid=('public.'||t)::regclass),t||' RLS enabled');
     perform pg_temp.check_budget(not has_table_privilege('anon','public.'||t,'select,insert,update,delete'),t||' anonymous denied');
     perform pg_temp.check_budget(not has_table_privilege('authenticated','public.'||t,'select,insert,update,delete'),t||' browser denied');
