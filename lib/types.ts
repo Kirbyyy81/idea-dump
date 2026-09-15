@@ -556,9 +556,7 @@ export interface FinanceBudgetSelection {
     name: string;
     is_archived: boolean;
 }
-export interface FinanceBudgetVersion extends FinanceBudgetConfiguration {
-    id: string;
-    effective_date: string;
+export interface FinanceBudgetSettings extends FinanceBudgetConfiguration {
     sources: FinanceBudgetSelection[];
     categories: FinanceBudgetSelection[];
 }
@@ -589,6 +587,8 @@ export interface FinanceBudgetCycle {
     state: 'scheduled' | 'active' | 'completed' | 'partial';
     close_reason: 'completed' | 'schedule' | 'archived' | null;
     frozen_at: string | null;
+    // Older RPCs omit cycle settings during the release 15 migration rollout.
+    configuration?: FinanceBudgetSettings;
     metrics: FinanceBudgetMetrics;
     breakdowns: FinanceBudgetBreakdown[];
 }
@@ -599,7 +599,7 @@ export interface FinanceBudgetSummary {
     state: FinanceBudgetState;
     status: FinanceBudgetStatus;
     today: string;
-    version: FinanceBudgetVersion;
+    configuration: FinanceBudgetSettings;
     current_cycle: FinanceBudgetCycle | null;
 }
 export interface FinanceBudgetPage<T> {

@@ -6,6 +6,15 @@ const mocks = vi.hoisted(() => ({ list: vi.fn(), detail: vi.fn(), mutate: vi.fn(
 vi.mock('@/lib/finance/budgets/repository', () => ({ listBudgetRecords: mocks.list, getBudgetRecord: mocks.detail, mutateBudgetRecord: mocks.mutate }));
 beforeEach(() => { vi.clearAllMocks(); mocks.detail.mockResolvedValue({ data: budgetDetailFixture(), error: null }); });
 describe('budget services', () => {
+    it('reads legacy settings during the release 15 migration rollout', async () => {
+        const { configuration, ...budget } = budgetFixture();
+        const legacy = { ...budget, version: configuration };
+        mocks.list.mockResolvedValue({ data: { data: [legacy], total: 1, page: 1, page_size: 20 }, error: null });
+        mocks.detail.mockResolvedValue({ data: { ...budgetDetailFixture(), budget: legacy }, error: null });
+        expect((await getFinanceBudgets('owner', { state: 'all', page: 1, page_size: 20 })).data[0].configuration).toEqual(configuration);
+        expect((await getFinanceBudgetDetail('owner', budget.id)).budget.configuration).toEqual(configuration);
+        expect((await getFinanceDashboardBudgets('owner'))[0].configuration).toEqual(configuration);
+    });
     it('scopes every operation and reloads the committed budget', async () => {
         mocks.mutate.mockResolvedValue({ data: budgetFixture().id, error: null });
         const mutation = { action: 'create' as const, id: null, revision: null, request_id: budgetFixture().id, configuration: budgetConfiguration };

@@ -107,8 +107,8 @@ export function prioritizeBudgets(budgets: FinanceBudgetSummary[]): FinanceBudge
     return budgets.filter((budget) => budget.state === 'active').sort((left, right) => {
         const status = order.indexOf(left.status) - order.indexOf(right.status);
         if (status) return status;
-        const l = budgetMinorUnits(left.current_cycle!.metrics.used_amount) * budgetMinorUnits(right.version.amount);
-        const r = budgetMinorUnits(right.current_cycle!.metrics.used_amount) * budgetMinorUnits(left.version.amount);
+        const l = budgetMinorUnits(left.current_cycle!.metrics.used_amount) * budgetMinorUnits(right.configuration.amount);
+        const r = budgetMinorUnits(right.current_cycle!.metrics.used_amount) * budgetMinorUnits(left.configuration.amount);
         return l === r ? left.id.localeCompare(right.id) : l > r ? -1 : 1;
     }).slice(0, 3);
 }

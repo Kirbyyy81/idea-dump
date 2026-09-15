@@ -15,8 +15,8 @@ test('simple calendar budget defaults and optional customization', async ({ page
     await page.route('**/api/finance/budgets**', async (route) => {
         if (route.request().method() === 'POST') {
             body = route.request().postDataJSON();
-            const configuration = body.configuration as FinanceBudgetSummary['version'];
-            created = budgetFixture({ name: configuration.name, version: { ...budgetFixture().version, ...configuration } });
+            const configuration = body.configuration as FinanceBudgetSummary['configuration'];
+            created = budgetFixture({ name: configuration.name, configuration: { ...budgetFixture().configuration, ...configuration } });
             await route.fulfill({ json: { data: created } });
         } else if (new URL(route.request().url()).pathname === '/api/finance/budgets') {
             await route.fulfill({ json: { data: created ? [created] : [], page: 1, page_size: 20, total: created ? 1 : 0 } });
@@ -77,7 +77,7 @@ test('create, edit, archive, frozen history and restore', async ({ page }, testI
             const body = request.postDataJSON(); bodies.push(body);
             if (body.action === 'archive') budget = budgetFixture({ name: 'Everyday spending', state: 'archived', status: 'archived', current_cycle: null, revision: 3 });
             else budget = budgetFixture({ name: body.configuration.name, revision: body.action === 'restore' ? 4 : budget ? 2 : 1,
-                version: { ...budgetFixture().version, ...body.configuration } });
+                configuration: { ...budgetFixture().configuration, ...body.configuration } });
             await route.fulfill({ json: { data: budget } }); return;
         }
         const url = new URL(request.url());
@@ -222,7 +222,7 @@ test('budget action keyboard navigation and history pagination', async ({ page }
 test('missing references require an explicit repair and conflicts retain input', async ({ page }) => {
     await references(page);
     const budget = budgetFixture({ state: 'archived', status: 'archived', current_cycle: null });
-    budget.version.sources = [{ id: null, original_id: sourceId, name: 'Deleted bank', is_archived: false }];
+    budget.configuration.sources = [{ id: null, original_id: sourceId, name: 'Deleted bank', is_archived: false }];
     await page.addInitScript((budget) => { (window as unknown as { budgetInitial: unknown }).budgetInitial = { list: { data: [budget], page: 1, page_size: 20, total: 1 }, detail: { budget, history: { data: [], page: 1, page_size: 20, total: 0 }, transactions: { data: [], page: 1, page_size: 50, total: 0 } } }; }, budget);
     let body: Record<string, unknown> = {};
     await page.route('**/api/finance/budgets/**', async (route) => { body = route.request().postDataJSON(); await route.fulfill({ status: 409, json: { error: 'This budget changed. Reload and retry.' } }); });

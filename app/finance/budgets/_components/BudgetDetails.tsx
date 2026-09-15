@@ -43,13 +43,13 @@ export function BudgetDetails({ detail, onEdit, onArchive, onRestore, onHistoryP
 }) {
     const [showHistory, setShowHistory] = useState(false);
     const { budget, history, transactions } = detail;
-    const version = budget.version;
-    const label = (items: typeof version.sources) => items.map((item) => `${item.name}${item.id === null ? ' (deleted)' : item.is_archived ? ' (archived)' : ''}`).join(', ');
+    const configuration = budget.configuration;
+    const label = (items: typeof configuration.sources) => items.map((item) => `${item.name}${item.id === null ? ' (deleted)' : item.is_archived ? ' (archived)' : ''}`).join(', ');
     const configurationRows = [
-        ['Schedule', `${version.cycle_type === 'custom' ? `Every ${version.custom_days} days` : version.cycle_type === 'monthly' ? `Monthly on day ${version.anchor_day}` : 'Every 7 days'} (${version.time_zone})`],
-        ['Sources', label(version.sources) || 'All sources'],
-        ['Categories', [label(version.categories), version.include_uncategorised ? 'Uncategorised' : ''].filter(Boolean).join(', ') || 'All categories, including Uncategorised'],
-        ['Filter logic', version.filter_logic.toUpperCase()],
+        ['Schedule', `${configuration.cycle_type === 'custom' ? `Every ${configuration.custom_days} days` : configuration.cycle_type === 'monthly' ? `Monthly on day ${configuration.anchor_day}` : 'Every 7 days'} (${configuration.time_zone})`],
+        ['Sources', label(configuration.sources) || 'All sources'],
+        ['Categories', [label(configuration.categories), configuration.include_uncategorised ? 'Uncategorised' : ''].filter(Boolean).join(', ') || 'All categories, including Uncategorised'],
+        ['Filter logic', configuration.filter_logic.toUpperCase()],
     ];
     return <section aria-label={`${budget.name} details`} className="min-w-0 rounded-lg border border-border-default bg-bg-surface p-4 sm:p-5" aria-busy={busy}>
         <div className="mb-4 flex items-start justify-between gap-3"><h2 className="min-w-0 break-words text-lg font-bold">{budget.name}</h2>

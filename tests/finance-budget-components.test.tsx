@@ -44,7 +44,7 @@ describe('budget controls and feedback', () => {
     });
     it('makes missing selections visible and removable during restore', () => {
         const budget = budgetFixture({ state: 'archived', status: 'archived' });
-        budget.version.sources = [{ id: null, original_id: 'b0110000-0000-4000-8000-000000000099', name: 'Old bank', is_archived: false }];
+        budget.configuration.sources = [{ id: null, original_id: 'b0110000-0000-4000-8000-000000000099', name: 'Old bank', is_archived: false }];
         render(<BudgetForm budget={budget} restore onClose={vi.fn()} onSaved={vi.fn()} onReload={vi.fn()} />);
         const selection = screen.getByRole('switch', { name: 'Old bank (deleted)' });
         expect(selection.getAttribute('aria-checked')).toBe('true');

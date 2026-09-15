@@ -27,6 +27,6 @@ export function BudgetProgress({ budget, compact = false }: { budget: FinanceBud
                 <span>Limit {formatBudgetMoney(metrics.amount)}</span>
                 <span>{budget.status === 'over_budget' ? `${formatBudgetMoney(metrics.over_amount)} over` : `${formatBudgetMoney(metrics.remaining)} remaining`}</span>
             </div>
-        </> : <p className="text-sm text-text-secondary">{formatBudgetMoney(budget.version.amount)}{budget.state === 'scheduled' ? `, starts ${budget.version.start_date}` : ' limit'}</p>}
+        </> : <p className="text-sm text-text-secondary">{formatBudgetMoney(budget.configuration.amount)}{budget.state === 'scheduled' ? `, starts ${budget.configuration.start_date}` : ' limit'}</p>}
     </div>;
 }
