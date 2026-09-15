@@ -39,6 +39,9 @@ test('simple calendar budget defaults and optional customization', async ({ page
     await page.screenshot({ path: testInfo.outputPath('simple-monthly-budget.png'), fullPage: true });
     await dialog.getByRole('button', { name: 'Create budget', exact: true }).click();
     await expect(page.getByRole('region', { name: 'Monthly budget details' })).toBeVisible();
+    await expect(page.getByRole('status').filter({ hasText: 'Budget saved' })).toBeVisible();
+    await page.getByRole('button', { name: 'Dismiss notification' }).click();
+    await expect(page.getByText('Budget saved', { exact: true })).toHaveCount(0);
     expect(body).toMatchObject({ configuration: { cycle_type: 'monthly', start_date: '2026-09-01', anchor_day: 1, amount: '500.00', source_ids: [], category_ids: [] } });
 });
 

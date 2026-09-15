@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { AppShell } from '@/components/organisms/AppShell';
 import { Button } from '@/components/atoms/Button';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
+import { Toast } from '@/components/molecules/Toast';
 import { AddDoodleIcon } from '@/components/atoms/DoodleIcons';
 import { financeApiRequest } from '@/lib/finance/core/client';
 import type { FinanceBudgetDetail, FinanceBudgetPage, FinanceBudgetState, FinanceBudgetSummary } from '@/lib/types';
@@ -19,7 +20,7 @@ export function FinanceBudgetsClient({ initialList, initialState, initialDetail 
     const [detail, setDetail] = useState(initialDetail);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState('');
-    const [notice, setNotice] = useState('');
+    const [notice, setNotice] = useState<{ id: number; message: string } | null>(null);
     const [form, setForm] = useState<'create' | 'edit' | 'restore' | null>(null);
     const [archiving, setArchiving] = useState(false);
     const requestSequence = useRef(0);
@@ -42,14 +43,15 @@ export function FinanceBudgetsClient({ initialList, initialState, initialDetail 
             if (sequence === requestSequence.current) setError(failure instanceof Error ? failure.message : 'Could not load budgets');
         } finally { if (sequence === requestSequence.current) setBusy(false); }
     };
-    const saved = (budget: FinanceBudgetSummary) => { setForm(null); setNotice('Budget saved'); void load(budget.state, 1, budget.id); };
+    const notify = (message: string) => setNotice((current) => ({ id: (current?.id ?? 0) + 1, message }));
+    const saved = (budget: FinanceBudgetSummary) => { setForm(null); notify('Budget saved'); void load(budget.state, 1, budget.id); };
     const archive = async () => {
         if (!detail) return;
         setBusy(true); setError('');
         try {
             await financeApiRequest(`/api/finance/budgets/${detail.budget.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'archive', revision: detail.budget.revision }) });
-            setArchiving(false); setNotice('Budget archived'); await load('archived', 1, detail.budget.id);
+            setArchiving(false); notify('Budget archived'); await load('archived', 1, detail.budget.id);
         } catch (failure) { setArchiving(false); setError(failure instanceof Error ? failure.message : 'Could not archive this budget'); }
         finally { setBusy(false); }
     };
@@ -60,8 +62,7 @@ export function FinanceBudgetsClient({ initialList, initialState, initialDetail 
                 {(['active', 'scheduled', 'archived'] as const).map((section) => <Button key={section} variant={state === section ? 'primary' : 'ghost'}
                     aria-current={state === section ? 'page' : undefined} onClick={() => void load(section, 1, undefined)} disabled={busy}>{section[0].toUpperCase() + section.slice(1)}</Button>)}
             </nav>
-            <p className="sr-only" role="status" aria-live="polite">{busy ? 'Loading budgets...' : notice}</p>
-            {notice && !busy && <p className="mb-3 text-sm text-success">{notice}</p>}
+            <p className="sr-only" role="status" aria-live="polite">{busy ? 'Loading budgets...' : ''}</p>
             {error && <div role="alert" className="mb-4 rounded-md border border-error bg-error-bg p-3 text-sm text-error">{error}<Button variant="ghost" onClick={() => void load()}>Reload budgets</Button></div>}
             <div className="grid items-start gap-5 lg:grid-cols-[minmax(260px,0.9fr)_minmax(0,1.4fr)]" aria-busy={busy}>
                 <section aria-label={`${state} budgets`}>
@@ -81,6 +82,7 @@ export function FinanceBudgetsClient({ initialList, initialState, initialDetail 
                     onTransactionsPage={(page) => void load(state, list.page, detail.budget.id, detail.history.page, page)} />}</div>
             </div>
         </div>
+        {notice && <Toast key={notice.id} message={notice.message} onDismiss={() => setNotice(null)} />}
         {form && <BudgetForm budget={form === 'create' ? undefined : detail?.budget} restore={form === 'restore'} onClose={() => setForm(null)} onSaved={saved}
             onReload={() => { setForm(null); void load(); }} />}
         <ConfirmDialog isOpen={archiving} title="Archive budget?" description="The current cycle will be frozen through today. You can restore this budget with a new start date."
