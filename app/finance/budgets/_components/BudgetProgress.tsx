@@ -1,7 +1,7 @@
 import type { FinanceBudgetSummary } from '@/lib/types';
-import { addBudgetDays, BUDGET_STATUS_LABELS, formatBudgetMoney } from '@/lib/finance/budgets/calculations';
+import { BUDGET_STATUS_LABELS, formatBudgetDate, formatBudgetDateRange, formatBudgetMoney } from '@/lib/finance/budgets/calculations';
 
-export function BudgetProgress({ budget, compact = false }: { budget: FinanceBudgetSummary; compact?: boolean }) {
+export function BudgetProgress({ budget, compact = false, showStatus = true }: { budget: FinanceBudgetSummary; compact?: boolean; showStatus?: boolean }) {
     const cycle = budget.current_cycle;
     const metrics = cycle?.metrics;
     const usage = Number(metrics?.usage_percentage ?? 0);
@@ -9,9 +9,9 @@ export function BudgetProgress({ budget, compact = false }: { budget: FinanceBud
     const warning = budget.status === 'over_budget' || budget.status === 'limit_reached';
     return <div className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-            <span className={`rounded-full border px-2.5 py-1 font-semibold ${warning ? 'border-error text-error' : budget.status === 'needs_attention' ? 'border-warning text-warning' : 'border-border-default text-text-secondary'}`}>
+            <span className={showStatus ? `rounded-full border px-2.5 py-1 font-semibold ${warning ? 'border-error text-error' : budget.status === 'needs_attention' ? 'border-warning text-warning' : 'border-border-default text-text-secondary'}` : 'sr-only'}>
                 {BUDGET_STATUS_LABELS[budget.status]}</span>
-            {cycle && <span className="text-text-muted">{cycle.start_date} to {addBudgetDays(cycle.end_date, -1)}</span>}
+            {cycle && <span className="text-text-muted">{formatBudgetDateRange(cycle.start_date, cycle.end_date)}</span>}
         </div>
         {metrics && budget.state === 'active' ? <>
             <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -24,9 +24,9 @@ export function BudgetProgress({ budget, compact = false }: { budget: FinanceBud
                 {!compact && <span className="absolute top-0 h-full w-0.5 bg-text-muted" style={{ left: `${Math.min(pace, 99.5)}%` }} aria-hidden="true" />}
             </div>
             <div className="flex flex-wrap justify-between gap-2 text-xs text-text-secondary">
-                <span>Limit {formatBudgetMoney(metrics.amount)}</span>
+                <span>Budget {formatBudgetMoney(metrics.amount)}</span>
                 <span>{budget.status === 'over_budget' ? `${formatBudgetMoney(metrics.over_amount)} over` : `${formatBudgetMoney(metrics.remaining)} remaining`}</span>
             </div>
-        </> : <p className="text-sm text-text-secondary">{formatBudgetMoney(budget.configuration.amount)}{budget.state === 'scheduled' ? `, starts ${budget.configuration.start_date}` : ' limit'}</p>}
+        </> : <p className="text-sm text-text-secondary">Budget {formatBudgetMoney(budget.configuration.amount)}{budget.state === 'scheduled' ? `, starts ${formatBudgetDate(budget.configuration.start_date)}` : ''}</p>}
     </div>;
 }

@@ -34,6 +34,19 @@ export function addBudgetDays(value: string, days: number): string {
     return new Date((budgetDayNumber(value) + days) * 86_400_000).toISOString().slice(0, 10);
 }
 
+export function formatBudgetDate(value: string, options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' }): string {
+    return new Intl.DateTimeFormat('en-GB', { ...options, timeZone: 'UTC' }).format(new Date(budgetDayNumber(value) * 86_400_000));
+}
+
+export function formatBudgetDateRange(start: string, endExclusive: string): string {
+    const end = addBudgetDays(endExclusive, -1);
+    if (start === end) return formatBudgetDate(start);
+    const sameYear = start.slice(0, 4) === end.slice(0, 4);
+    const sameMonth = start.slice(0, 7) === end.slice(0, 7);
+    const first = formatBudgetDate(start, { day: 'numeric', ...(!sameMonth && { month: 'short' }), ...(!sameYear && { year: 'numeric' }) });
+    return `${first} to ${formatBudgetDate(end)}`;
+}
+
 export function startOfBudgetPeriod(today: string, type: FinanceBudgetCycleType): string {
     budgetDayNumber(today);
     if (type === 'monthly') return `${today.slice(0, 7)}-01`;

@@ -1,9 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { addBudgetDays, budgetDecimal, budgetMinorUnits, calculateBudgetMetrics, formatBudgetMoney, matchesBudgetFilters, nextBudgetBoundary, prioritizeBudgets, startOfBudgetPeriod } from '@/lib/finance/budgets/calculations';
+import { addBudgetDays, budgetDecimal, budgetMinorUnits, calculateBudgetMetrics, formatBudgetMoney, formatBudgetDateRange, matchesBudgetFilters, nextBudgetBoundary, prioritizeBudgets, startOfBudgetPeriod } from '@/lib/finance/budgets/calculations';
 import { parseBudgetDetailQuery, parseBudgetListQuery, parseBudgetMutation, validateBudgetConfiguration } from '@/lib/finance/budgets/validation';
 import { budgetConfiguration, budgetFixture } from './fixtures/finance-budgets';
 
 describe('budget schedules and calculations', () => {
+    it.each([
+        ['2026-09-14', '2026-09-21', '14 to 20 Sept 2026'],
+        ['2026-09-28', '2026-10-05', '28 Sept to 4 Oct 2026'],
+        ['2026-12-28', '2027-01-04', '28 Dec 2026 to 3 Jan 2027'],
+        ['2024-02-29', '2024-03-01', '29 Feb 2024'],
+    ])('formats inclusive calendar dates from %s to %s', (start, end, expected) => {
+        expect(formatBudgetDateRange(start, end)).toBe(expected);
+    });
     it.each([
         ['2026-09-15', 'weekly', '2026-09-14'], ['2026-09-20', 'weekly', '2026-09-14'],
         ['2026-09-14', 'weekly', '2026-09-14'], ['2027-01-01', 'weekly', '2026-12-28'],

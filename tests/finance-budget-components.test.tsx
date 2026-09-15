@@ -11,6 +11,29 @@ vi.mock('@/lib/finance/core/client', async (original) => ({ ...await original<ty
 vi.mock('@/app/finance/_components/FinanceReferenceData', () => ({ useFinanceReferenceData: () => ({ status: 'ready', sources: [], categories: [], refresh: vi.fn() }) }));
 beforeEach(() => vi.clearAllMocks());
 describe('budget controls and feedback', () => {
+    it('shows only applied filter groups and combines their matching logic', () => {
+        const detail = budgetDetailFixture();
+        const props = { detail, busy: false, onEdit: vi.fn(), onArchive: vi.fn(), onRestore: vi.fn(), onHistoryPage: vi.fn(), onTransactionsPage: vi.fn() };
+        const { rerender } = render(<BudgetDetails {...props} />);
+        expect(screen.queryByRole('rowheader', { name: 'Filters' })).toBeNull();
+        expect(screen.getByText('14 to 20 Sept 2026')).toBeTruthy();
+        expect(screen.getByText('Budget RM 100.00')).toBeTruthy();
+        expect(screen.getByText('Needs attention').className).toBe('sr-only');
+        detail.budget.configuration.categories = [{ id: 'food', original_id: 'food', name: 'Food', is_archived: false }];
+        rerender(<BudgetDetails {...props} />);
+        expect(screen.getByText('Categories: Food')).toBeTruthy();
+        expect(screen.queryByText(/Sources:/)).toBeNull();
+        expect(screen.queryByText('and', { exact: true })).toBeNull();
+        detail.budget.configuration.sources = [{ id: null, original_id: 'bank', name: 'Bank', is_archived: false }];
+        detail.budget.configuration.include_uncategorised = true;
+        rerender(<BudgetDetails {...props} />);
+        expect(screen.getByText('Sources: Bank (deleted)')).toBeTruthy();
+        expect(screen.getByText('Categories: Food or Uncategorised')).toBeTruthy();
+        expect(screen.getByText('and', { exact: true })).toBeTruthy();
+        detail.budget.configuration.filter_logic = 'or';
+        rerender(<BudgetDetails {...props} />);
+        expect(screen.getByText('or', { exact: true })).toBeTruthy();
+    });
     it('starts with only basic controls and reveals customization on request', () => {
         render(<BudgetForm onClose={vi.fn()} onSaved={vi.fn()} onReload={vi.fn()} />);
         expect(screen.queryByText('Start date')).toBeNull();
