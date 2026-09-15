@@ -11,6 +11,15 @@ vi.mock('@/lib/finance/core/client', async (original) => ({ ...await original<ty
 vi.mock('@/app/finance/_components/FinanceReferenceData', () => ({ useFinanceReferenceData: () => ({ status: 'ready', sources: [], categories: [], refresh: vi.fn() }) }));
 beforeEach(() => vi.clearAllMocks());
 describe('budget controls and feedback', () => {
+    it('starts with only basic controls and reveals customization on request', () => {
+        render(<BudgetForm onClose={vi.fn()} onSaved={vi.fn()} onReload={vi.fn()} />);
+        expect(screen.queryByText('Start date')).toBeNull();
+        expect(screen.queryByText('Sources', { exact: true })).toBeNull();
+        fireEvent.click(screen.getByRole('button', { name: 'Customize' }));
+        expect(screen.getByText('Start date')).toBeTruthy();
+        expect(screen.getByText('Sources', { exact: true })).toBeTruthy();
+        expect(screen.getByText('Match sources and categories')).toBeTruthy();
+    });
     it('displays uncapped usage and exact money with an accessible status', () => {
         const budget = budgetFixture({ status: 'over_budget' });
         budget.current_cycle!.metrics = { ...budget.current_cycle!.metrics, net_spending: '125.00', used_amount: '125.00', over_amount: '25.00', usage_percentage: '125.000000' };

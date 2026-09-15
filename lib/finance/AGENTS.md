@@ -27,6 +27,7 @@
 
 - Run `npm run test:finance-budgets` and `npm run test:finance-budgets:browser` after budgeting changes. For SQL/lifecycle changes, also run `npm run test:finance-budgets:db` on an isolated migrated loopback database using the documented test variables in `document/FINANCE_MODULE.md`.
 - Keep budgeting money as decimal strings and status comparisons exact. Budget reads and mutations reconcile expired cycles through reviewed RPCs. Never rewrite frozen cycles or bypass the Finance ledger lock.
+- New weekly/monthly budgets default to Monday/the 1st in the captured time zone and can include the current period before today. Keep customization optional and preserve existing schedules and restore boundaries.
 
 - Run `npm run test:finance-security`, `npm run test:finance-idempotency`, `npm run test:finance-ordering`, and `npm run test:finance-share` after Finance structural changes.
 - When code shared with the OCR service changes, also run the Finance OCR validation from `services/finance-ocr/`.

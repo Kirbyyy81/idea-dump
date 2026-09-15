@@ -1,9 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { addBudgetDays, budgetDecimal, budgetMinorUnits, calculateBudgetMetrics, formatBudgetMoney, matchesBudgetFilters, nextBudgetBoundary, prioritizeBudgets } from '@/lib/finance/budgets/calculations';
+import { addBudgetDays, budgetDecimal, budgetMinorUnits, calculateBudgetMetrics, formatBudgetMoney, matchesBudgetFilters, nextBudgetBoundary, prioritizeBudgets, startOfBudgetPeriod } from '@/lib/finance/budgets/calculations';
 import { parseBudgetDetailQuery, parseBudgetListQuery, parseBudgetMutation, validateBudgetConfiguration } from '@/lib/finance/budgets/validation';
 import { budgetConfiguration, budgetFixture } from './fixtures/finance-budgets';
 
 describe('budget schedules and calculations', () => {
+    it.each([
+        ['2026-09-15', 'weekly', '2026-09-14'], ['2026-09-20', 'weekly', '2026-09-14'],
+        ['2026-09-14', 'weekly', '2026-09-14'], ['2027-01-01', 'weekly', '2026-12-28'],
+        ['2024-02-29', 'monthly', '2024-02-01'], ['2026-09-15', 'monthly', '2026-09-01'],
+        ['2026-09-15', 'custom', '2026-09-15'],
+    ] as const)('starts %s %s budgets at %s', (today, type, expected) => expect(startOfBudgetPeriod(today, type)).toBe(expected));
     it.each([
         ['2024-01-31', '2024-02-29', 31], ['2024-02-29', '2024-03-31', 31], ['2026-01-30', '2026-02-28', 30],
         ['2026-02-28', '2026-03-30', 30], ['2026-12-31', '2027-01-31', 31], ['2026-09-14', '2026-09-20', 20],
@@ -53,6 +59,23 @@ describe('budget validation', () => {
         expect(validateBudgetConfiguration({ ...budgetConfiguration, amount: '0001.2', name: ' Trimmed ' }, { now })).toMatchObject({ data: { name: 'Trimmed', amount: '1.20' } });
         expect(validateBudgetConfiguration({ ...budgetConfiguration, start_date: '2026-09-13' }, { now })).toHaveProperty('field_errors.start_date');
         expect(validateBudgetConfiguration({ ...budgetConfiguration, start_date: '2026-09-13' }, { now, allowPastStart: true })).toHaveProperty('data');
+    });
+    it('allows the current month or week and rejects an earlier period', () => {
+        const monthly = { ...budgetConfiguration, cycle_type: 'monthly', anchor_day: 1, start_date: '2026-09-01' };
+        expect(validateBudgetConfiguration(monthly, { now })).toHaveProperty('data');
+        expect(validateBudgetConfiguration({ ...monthly, start_date: '2026-08-31' }, { now })).toHaveProperty('field_errors.start_date');
+        const midweek = new Date('2026-09-16T04:00Z');
+        expect(validateBudgetConfiguration(budgetConfiguration, { now: midweek })).toHaveProperty('data');
+        expect(validateBudgetConfiguration({ ...budgetConfiguration, start_date: '2026-09-13' }, { now: midweek })).toHaveProperty('field_errors.start_date');
+        expect(validateBudgetConfiguration(monthly, { now, allowCurrentPeriod: false })).toHaveProperty('field_errors.start_date');
+    });
+    it('uses the captured zone when a UTC instant falls in different weeks or months', () => {
+        const weekly = { ...budgetConfiguration, start_date: '2026-09-07', time_zone: 'America/Los_Angeles' };
+        expect(validateBudgetConfiguration(weekly, { now })).toHaveProperty('data');
+        expect(validateBudgetConfiguration({ ...weekly, time_zone: 'Asia/Kuala_Lumpur' }, { now })).toHaveProperty('field_errors.start_date');
+        const monthly = { ...budgetConfiguration, cycle_type: 'monthly', anchor_day: 1, start_date: '2026-08-01' };
+        expect(validateBudgetConfiguration(monthly, { now: new Date('2026-08-31T16:00Z') })).toHaveProperty('field_errors.start_date');
+        expect(validateBudgetConfiguration({ ...monthly, time_zone: 'America/Los_Angeles' }, { now: new Date('2026-08-31T16:00Z') })).toHaveProperty('data');
     });
     it.each([
         ['amount', '1.001'], ['name', ' '], ['cycle_type', 'yearly'], ['time_zone', 'Bad/Zone'], ['filter_logic', 'xor'],

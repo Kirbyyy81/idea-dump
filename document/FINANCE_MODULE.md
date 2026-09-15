@@ -31,6 +31,8 @@ The current product is not a bank integration, bookkeeping system, or multi-curr
 
 `/finance/budgets` supports weekly, monthly, and custom 1-to-365-day MYR budgets. The Finance sidebar links to it. The server-rendered Finance dashboard adds `active_budgets` through its existing service, independently of the selected reporting month. It ranks all active budgets by over budget, limit reached, needs attention, on track, then exact usage, and returns at most three. No dashboard HTTP endpoint is reintroduced.
 
+Budget creation opens with name, amount and weekly/monthly cycle only. Monthly defaults to the 1st of the current month; weekly defaults to the current week's Monday, both in the captured time zone. Spending earlier in that current period counts immediately. Customize exposes dates, custom durations, source/category selections and filter logic. Dates within the current calendar period or later are accepted for new and scheduled weekly/monthly budgets. Custom durations and restoration retain today-or-later starts. Editing an existing budget preserves its schedule unless the user changes it.
+
 ### Storage and lifecycle
 
 `finance_budgets` holds owner, stable identity, name, optimistic revision, creation request UUID, lifecycle and current version. `finance_budget_versions` records immutable configuration. Selection tables reference the existing Finance dimensions through tenant-safe relationships, retaining original IDs and labels when archived-budget references are deleted. Cycles have one open row per budget. Completed and partial cycles retain frozen totals and labels in `finance_budget_cycles` and `finance_budget_cycle_breakdowns`. They contain no transaction snapshots.
@@ -57,6 +59,8 @@ Configuration includes `name`, decimal-string `amount`, `cycle_type`, `start_dat
 
 Apply `20260914093154_finance_budgets.sql` using the versioned CLI workflow in `supabase/README.md`, then deploy the application. The migration requires the existing approved Cron installation and registers one hourly `finance-budget-closure` job. Its global worker is operator-only, coordinates overlapping invocations, skips busy owners for retry, and logs only a budget ID and SQLSTATE on per-budget failure. Application reads also catch up missed cycles. No new browser secrets are required.
 
+The simplified creation form also requires `20260915034305_finance_budget_calendar_starts.sql`. This forward migration relaxes only the new/scheduled weekly and monthly start-date guard to the current period boundary. It keeps existing schedules, ledger data, frozen history, function privileges, idempotency and restoration behavior unchanged. Apply it before using the updated form.
+
 RPCs execute as the trusted server role. Three trigger-only guards use a fixed empty search path and definer privileges solely to enforce immutability/reference integrity while allowing existing Auth account-deletion cascades, without granting the service role access to `auth.users`.
 
 Before rollout, verify table grants, restrictive RLS policies, function execution grants, and the active cron command. Monitor `cron.job_run_details` through [Supabase Cron monitoring](https://supabase.com/docs/guides/cron), PostgreSQL closure warnings and the worker's overdue-cycle count warnings, since a successful job status alone does not establish that every budget closed. An operator backlog query is:
@@ -78,7 +82,7 @@ Use Node 22.22.0. `npm run test:finance-budgets` runs domain, route, service and
 
 Local validation used PostgreSQL 17 with the adopted Finance schema and the forward budgeting migration. Hosted Auth/Storage metadata and Cron were local scaffolding; the cron registration and callable worker were checked, but no real cron scheduler ran. Hosted Supabase scheduling, platform advisors and representative-volume query plans remain deployment checks. Run all repository checks in addition to these feature suites.
 
-Validation on 2026-09-15 used Node 22.22.0. All 303 repository tests passed, including 46 budgeting unit/route/service/component tests. Six desktop/mobile browser tests, the isolated database lifecycle/concurrency suite, Finance security/idempotency/ordering/share regressions, lint, TypeScript checking and production build passed. Both dependency audits reported zero vulnerabilities.
+Validation on 2026-09-15 used Node 22.22.0. All 315 repository tests passed, including 56 budgeting unit/route/service/component tests. Ten desktop/mobile browser tests, the isolated database lifecycle/concurrency suite, Finance security/idempotency/ordering/share regressions, lint, TypeScript checking and production build passed. Calendar tests cover current-week/month starts, time zones, earlier spending, rejected prior periods, custom options and preserved restore boundaries. Both dependency audits reported zero vulnerabilities.
 
 ### Production database deployment, 2026-09-15
 

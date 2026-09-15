@@ -11,6 +11,7 @@ import { useFinanceReferenceData } from '@/app/finance/_components/FinanceRefere
 import { financeApiRequest, FinanceApiError } from '@/lib/finance/core/client';
 import { getFinanceDateInTimeZone } from '@/lib/finance/core/values';
 import { validateBudgetConfiguration } from '@/lib/finance/budgets/validation';
+import { startOfBudgetPeriod } from '@/lib/finance/budgets/calculations';
 import type { FinanceBudgetConfiguration, FinanceBudgetFieldErrors, FinanceBudgetSelection, FinanceBudgetSummary, FinanceReferenceOption } from '@/lib/types';
 
 function initialConfiguration(budget?: FinanceBudgetSummary, restore = false): FinanceBudgetConfiguration {
@@ -19,7 +20,7 @@ function initialConfiguration(budget?: FinanceBudgetSummary, restore = false): F
     return budget ? { ...budget.version, start_date: restore ? today : budget.version.start_date,
         anchor_day: restore && budget.version.cycle_type === 'monthly' ? Number(today.slice(8)) : budget.version.anchor_day,
         source_ids: budget.version.sources.map((item) => item.original_id), category_ids: budget.version.categories.map((item) => item.original_id) }
-        : { name: '', amount: '', cycle_type: 'monthly', start_date: today, anchor_day: Number(today.slice(8)), custom_days: null,
+        : { name: '', amount: '', cycle_type: 'monthly', start_date: startOfBudgetPeriod(today, 'monthly'), anchor_day: 1, custom_days: null,
             time_zone: zone, filter_logic: 'and', include_uncategorised: false, source_ids: [], category_ids: [] };
 }
 
@@ -34,6 +35,10 @@ export function BudgetForm({ budget, restore = false, onClose, onSaved, onReload
 }) {
     const references = useFinanceReferenceData();
     const [configuration, setConfiguration] = useState(() => initialConfiguration(budget, restore));
+    const [customize, setCustomize] = useState(() => Boolean(budget && (restore || budget.version.cycle_type === 'custom'
+        || budget.version.sources.length || budget.version.categories.length || budget.version.include_uncategorised
+        || budget.version.start_date !== startOfBudgetPeriod(budget.version.start_date, budget.version.cycle_type))));
+    const [customStart, setCustomStart] = useState(Boolean(budget));
     const [requestId] = useState(() => crypto.randomUUID());
     const [errors, setErrors] = useState<FinanceBudgetFieldErrors>({});
     const [error, setError] = useState('');
@@ -43,6 +48,7 @@ export function BudgetForm({ budget, restore = false, onClose, onSaved, onReload
     const dateId = useId();
     const sourceErrorId = useId();
     const categoryErrorId = useId();
+    const customizationId = useId();
     const title = restore ? 'Restore budget' : budget ? 'Edit budget' : 'Create budget';
     const activeEdit = budget?.state === 'active' && !restore;
     const update = <K extends keyof FinanceBudgetConfiguration>(key: K, value: FinanceBudgetConfiguration[K]) => {
@@ -53,8 +59,12 @@ export function BudgetForm({ budget, restore = false, onClose, onSaved, onReload
         configuration[field].includes(id) ? configuration[field].filter((value) => value !== id) : [...configuration[field], id]);
     const submit = async (event: FormEvent) => {
         event.preventDefault();
-        const parsed = validateBudgetConfiguration(configuration, { allowPastStart: activeEdit || (!budget && creationAttempted) });
-        if ('error' in parsed) { setError(parsed.error); setErrors(parsed.field_errors ?? {}); return; }
+        const parsed = validateBudgetConfiguration(configuration, { allowPastStart: activeEdit || (!budget && creationAttempted), allowCurrentPeriod: !restore });
+        if ('error' in parsed) {
+            setError(parsed.error); setErrors(parsed.field_errors ?? {});
+            if (Object.keys(parsed.field_errors ?? {}).some((field) => !['name', 'amount', 'cycle_type'].includes(field))) setCustomize(true);
+            return;
+        }
         setSaving(true); setError(''); setErrors({}); setConflict(false);
         if (!budget) setCreationAttempted(true);
         try {
@@ -67,7 +77,10 @@ export function BudgetForm({ budget, restore = false, onClose, onSaved, onReload
             onSaved(result.data);
         } catch (failure) {
             setError(failure instanceof Error ? failure.message : 'Could not save this budget');
-            if (failure instanceof FinanceApiError) { setErrors(failure.fieldErrors as FinanceBudgetFieldErrors); setConflict(failure.status === 409); }
+            if (failure instanceof FinanceApiError) {
+                setErrors(failure.fieldErrors as FinanceBudgetFieldErrors); setConflict(failure.status === 409);
+                if (Object.keys(failure.fieldErrors).some((field) => !['name', 'amount', 'cycle_type'].includes(field))) setCustomize(true);
+            }
         } finally { setSaving(false); }
     };
     return <FormDialog title={title} onClose={onClose} busy={saving}>
@@ -79,18 +92,30 @@ export function BudgetForm({ budget, restore = false, onClose, onSaved, onReload
                 <Input label="Budget amount (MYR)" inputMode="decimal" value={configuration.amount} onValueChange={(value) => update('amount', value)} required disabled={saving} errorMessage={errors.amount} />
                 <Select label="Cycle" value={configuration.cycle_type} onChange={(value) => {
                     const cycle = value as FinanceBudgetConfiguration['cycle_type'];
-                    setConfiguration((current) => ({ ...current, cycle_type: cycle, custom_days: cycle === 'custom' ? 7 : null,
-                        anchor_day: cycle === 'monthly' ? Number((activeEdit ? budget.today : current.start_date).slice(8)) : null }));
-                }} options={[{ value: 'weekly', label: 'Weekly' }, { value: 'monthly', label: 'Monthly' }, { value: 'custom', label: 'Custom' }]} disabled={saving} errorMessage={errors.cycle_type} />
+                    setConfiguration((current) => {
+                        const start = !customStart ? startOfBudgetPeriod(getFinanceDateInTimeZone(current.time_zone), cycle) : current.start_date;
+                        return { ...current, cycle_type: cycle, start_date: start, custom_days: cycle === 'custom' ? 7 : null,
+                            anchor_day: cycle === 'monthly' ? activeEdit ? 1 : Number(start.slice(8)) : null };
+                    });
+                    setErrors((current) => ({ ...current, cycle_type: undefined, start_date: undefined, anchor_day: undefined, custom_days: undefined }));
+                }} options={[{ value: 'weekly', label: 'Weekly' }, { value: 'monthly', label: 'Monthly' },
+                    ...(customize || configuration.cycle_type === 'custom' ? [{ value: 'custom', label: 'Custom' }] : [])]} disabled={saving} errorMessage={errors.cycle_type} />
+            </div>
+            {!activeEdit && <p className="text-sm text-text-secondary">Counts spending from {new Intl.DateTimeFormat('en-MY', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${configuration.start_date}T00:00:00Z`))}.</p>}
+            <Button type="button" variant="ghost" aria-expanded={customize} aria-controls={customizationId} disabled={saving} onClick={() => setCustomize(!customize)}>
+                {customize ? 'Hide customization' : 'Customize'}
+            </Button>
+            {customize && <div id={customizationId} className="space-y-5 border-t border-border-default pt-4">
+            <div className="grid gap-4 sm:grid-cols-2">
                 {configuration.cycle_type === 'custom' && <Input label="Days per cycle" inputMode="numeric" value={configuration.custom_days ?? ''} onValueChange={(value) => update('custom_days', Number(value))} errorMessage={errors.custom_days} disabled={saving} />}
                 {!activeEdit && <div><label htmlFor={dateId} className="mb-1 block text-sm font-medium">Start date</label><DatePicker id={dateId} ariaDescribedBy={errors.start_date ? `${dateId}-error` : undefined} error={Boolean(errors.start_date)} value={configuration.start_date} ariaLabel="Start date" disabled={saving} onChange={(value) => {
+                    setCustomStart(true);
                     update('start_date', value);
                     if (configuration.cycle_type === 'monthly') update('anchor_day', Number(value.slice(8)));
                 }} />{errors.start_date && <p id={`${dateId}-error`} role="alert" className="mt-1 text-xs text-error">{errors.start_date}</p>}</div>}
                 {activeEdit && configuration.cycle_type === 'monthly' && <Select label="Monthly renewal day" value={String(configuration.anchor_day)}
                     onChange={(value) => update('anchor_day', Number(value))} options={Array.from({ length: 31 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }))} errorMessage={errors.anchor_day} disabled={saving} />}
             </div>
-            {activeEdit && <p className="text-xs text-text-secondary">Schedule changes close the current cycle through yesterday and start a new cycle today.</p>}
             <Select label="Match sources and categories" value={configuration.filter_logic} onChange={(value) => update('filter_logic', value as 'and' | 'or')}
                 options={[{ value: 'and', label: 'AND: match both selections' }, { value: 'or', label: 'OR: match either selection' }]} errorMessage={errors.filter_logic} disabled={saving} />
             {references.status === 'loading' && <p role="status" className="text-sm text-text-muted">Loading Finance options...</p>}
@@ -111,8 +136,11 @@ export function BudgetForm({ budget, restore = false, onClose, onSaved, onReload
             })}
             <p className="text-xs text-text-muted">With no selections, all sources and categories count. Time zone: {configuration.time_zone}.</p>
             {errors.time_zone && <p role="alert" className="text-xs text-error">{errors.time_zone}</p>}
+            </div>}
+            {activeEdit && (configuration.cycle_type !== budget.version.cycle_type || configuration.custom_days !== budget.version.custom_days || configuration.anchor_day !== budget.version.anchor_day)
+                && <p className="text-xs text-text-secondary">Schedule changes close the current cycle through yesterday and start a new cycle today.</p>}
             <div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={onClose} disabled={saving}>Cancel</Button>
-                <Button type="submit" isLoading={saving} disabled={references.status !== 'ready'}>{title === 'Edit budget' ? 'Save changes' : title}</Button></div>
+                <Button type="submit" isLoading={saving} disabled={customize && references.status !== 'ready'}>{title === 'Edit budget' ? 'Save changes' : title}</Button></div>
         </form>
     </FormDialog>;
 }

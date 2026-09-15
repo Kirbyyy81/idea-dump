@@ -7,12 +7,13 @@ create function pg_temp.budget_config(name text,start_date text default '2026-01
 select jsonb_build_object('name',name,'amount','100.00','cycle_type',cycle,'start_date',start_date,'custom_days',case when cycle='custom' then 1 end,
   'anchor_day',case when cycle='monthly' then 31 end,'time_zone','Asia/Kuala_Lumpur','filter_logic','and','include_uncategorised',false,'source_ids','[]'::jsonb,'category_ids','[]'::jsonb);
 $$;
-insert into auth.users(id) values('b0110000-0000-4000-8000-000000000001'),('b0110000-0000-4000-8000-000000000002');
+insert into auth.users(id) values('b0110000-0000-4000-8000-000000000001'),('b0110000-0000-4000-8000-000000000002'),('b0110000-0000-4000-8000-000000000003');
 insert into public.dim_finance_sources(id,user_id,name) values
  ('b0110000-0000-4000-8000-000000000011','b0110000-0000-4000-8000-000000000001','Budget Bank'),
  ('b0110000-0000-4000-8000-000000000012','b0110000-0000-4000-8000-000000000001','Budget Cash'),
  ('b0110000-0000-4000-8000-000000000013','b0110000-0000-4000-8000-000000000001','Unused source'),
- ('b0110000-0000-4000-8000-000000000014','b0110000-0000-4000-8000-000000000002','Other owner');
+ ('b0110000-0000-4000-8000-000000000014','b0110000-0000-4000-8000-000000000002','Other owner'),
+ ('b0110000-0000-4000-8000-000000000015','b0110000-0000-4000-8000-000000000003','Calendar owner');
 insert into public.dim_finance_categories(id,user_id,name) values
  ('b0110000-0000-4000-8000-000000000021','b0110000-0000-4000-8000-000000000001','Budget Food'),
  ('b0110000-0000-4000-8000-000000000022','b0110000-0000-4000-8000-000000000001','Unused category');
@@ -22,6 +23,38 @@ insert into public.finance_transactions(id,user_id,source_id,category_id,directi
  ('b0110000-0000-4000-8000-000000000033','b0110000-0000-4000-8000-000000000001','b0110000-0000-4000-8000-000000000012',null,'expense',40,'2026-02-01','confirmed'),
  ('b0110000-0000-4000-8000-000000000034','b0110000-0000-4000-8000-000000000001','b0110000-0000-4000-8000-000000000011',null,'expense',999,'2026-01-31','review'),
  ('b0110000-0000-4000-8000-000000000035','b0110000-0000-4000-8000-000000000001','b0110000-0000-4000-8000-000000000011',null,'expense',10,'2026-01-30','confirmed');
+
+-- Calendar starts include spending earlier in the current period without generating old cycles.
+do $$
+declare u uuid:='b0110000-0000-4000-8000-000000000003'; b uuid; scheduled uuid; config jsonb; summary jsonb;
+begin
+  insert into public.finance_transactions(user_id,source_id,direction,amount,transaction_date) values
+    (u,'b0110000-0000-4000-8000-000000000015','expense',25,'2026-09-02');
+  config:=pg_temp.budget_config('Calendar month','2026-09-01','monthly')||'{"anchor_day":1}';
+  b:=public.finance_budget_mutate(u,'create',null,null,gen_random_uuid(),config,'2026-09-15T04:00Z');
+  summary:=public.finance_budget_summary(u,b,'2026-09-15T04:00Z');
+  perform pg_temp.check_budget(summary->'current_cycle'->>'start_date'='2026-09-01' and summary->'current_cycle'->>'end_date'='2026-10-01','monthly calendar bounds');
+  perform pg_temp.check_budget(summary->'current_cycle'->'metrics'->>'expense'='25.00','spending before budget creation counts');
+  begin perform public.finance_budget_mutate(u,'create',null,null,gen_random_uuid(),config||'{"name":"Prior month","start_date":"2026-08-31"}','2026-09-15T04:00Z');
+    raise exception 'FAILED: prior month accepted'; exception when invalid_parameter_value then null; end;
+  perform public.finance_budget_mutate(u,'archive',b,1,null,null,'2026-09-15T05:00Z');
+  begin perform public.finance_budget_mutate(u,'restore',b,2,null,config,'2026-09-15T06:00Z');
+    raise exception 'FAILED: restore retroactively overlaps history'; exception when invalid_parameter_value then null; end;
+  config:=pg_temp.budget_config('Calendar week','2026-09-14','weekly');
+  b:=public.finance_budget_mutate(u,'create',null,null,gen_random_uuid(),config,'2026-09-20T04:00Z');
+  summary:=public.finance_budget_summary(u,b,'2026-09-20T04:00Z');
+  perform pg_temp.check_budget(summary->'current_cycle'->>'end_date'='2026-09-21','weekly Monday to Sunday');
+  begin perform public.finance_budget_mutate(u,'create',null,null,gen_random_uuid(),config||'{"name":"Prior week","start_date":"2026-09-13"}','2026-09-20T04:00Z');
+    raise exception 'FAILED: prior week accepted'; exception when invalid_parameter_value then null; end;
+  begin perform public.finance_budget_mutate(u,'create',null,null,gen_random_uuid(),pg_temp.budget_config('Past custom','2026-09-14','custom'),'2026-09-20T04:00Z');
+    raise exception 'FAILED: backdated custom cycle'; exception when invalid_parameter_value then null; end;
+  scheduled:=public.finance_budget_mutate(u,'create',null,null,gen_random_uuid(),pg_temp.budget_config('Change scheduled','2026-10-01','monthly'),'2026-09-15T04:00Z');
+  perform public.finance_budget_mutate(u,'update',scheduled,1,null,pg_temp.budget_config('Change scheduled','2026-09-01','monthly'),'2026-09-15T04:00Z');
+  perform pg_temp.check_budget(public.finance_budget_summary(u,scheduled,'2026-09-15T04:00Z')->>'state'='active','scheduled edit may select current period');
+  perform public.finance_budget_mutate(u,'archive',b,1,null,null,'2026-09-20T05:00Z');
+  perform public.finance_budget_mutate(u,'archive',scheduled,2,null,null,'2026-09-15T05:00Z');
+end;
+$$;
 
 do $$
 declare u uuid:='b0110000-0000-4000-8000-000000000001'; other_user uuid:='b0110000-0000-4000-8000-000000000002';

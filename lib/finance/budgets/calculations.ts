@@ -34,6 +34,16 @@ export function addBudgetDays(value: string, days: number): string {
     return new Date((budgetDayNumber(value) + days) * 86_400_000).toISOString().slice(0, 10);
 }
 
+export function startOfBudgetPeriod(today: string, type: FinanceBudgetCycleType): string {
+    budgetDayNumber(today);
+    if (type === 'monthly') return `${today.slice(0, 7)}-01`;
+    if (type === 'weekly') {
+        const weekday = new Date(`${today}T00:00:00.000Z`).getUTCDay();
+        return addBudgetDays(today, -((weekday + 6) % 7));
+    }
+    return today;
+}
+
 export function nextBudgetBoundary(start: string, type: FinanceBudgetCycleType, customDays: number | null, anchorDay: number | null): string {
     budgetDayNumber(start);
     if (type === 'weekly') return addBudgetDays(start, 7);

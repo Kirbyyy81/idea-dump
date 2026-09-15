@@ -6,7 +6,7 @@ import { getBudgetRecord, listBudgetRecords, mutateBudgetRecord } from './reposi
 const DETAIL_DEFAULTS: FinanceBudgetDetailQuery = { history_page: 1, history_page_size: 20, transactions_page: 1, transactions_page_size: 50 };
 const FIELD_MESSAGES: FinanceBudgetFieldErrors = {
     name: 'Choose a unique name of 1 to 120 characters', amount: 'Choose a valid positive MYR amount',
-    start_date: 'Choose today or a future date', time_zone: 'The budget time zone is unavailable',
+    start_date: 'Choose a valid start date for this schedule', time_zone: 'The budget time zone is unavailable',
     cycle_type: 'Choose a valid cycle', custom_days: 'Choose a duration from 1 to 365 days', anchor_day: 'Choose a renewal day from 1 to 31',
     filter_logic: 'Choose AND or OR', include_uncategorised: 'Choose whether Uncategorised transactions count',
     source_ids: 'Remove missing sources or choose sources you own', category_ids: 'Remove missing categories or choose categories you own',

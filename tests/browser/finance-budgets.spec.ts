@@ -8,6 +8,60 @@ async function references(page: Page) {
     await page.route('**/api/finance/reference-data', (route) => route.fulfill({ json: { data: { sources: [{ id: sourceId, name: 'Bank' }], categories: [] } } }));
 }
 
+test('simple calendar budget defaults and optional customization', async ({ page }, testInfo) => {
+    await references(page);
+    let created: FinanceBudgetSummary | null = null;
+    let body: Record<string, unknown> = {};
+    await page.route('**/api/finance/budgets**', async (route) => {
+        if (route.request().method() === 'POST') {
+            body = route.request().postDataJSON();
+            const configuration = body.configuration as FinanceBudgetSummary['version'];
+            created = budgetFixture({ name: configuration.name, version: { ...budgetFixture().version, ...configuration } });
+            await route.fulfill({ json: { data: created } });
+        } else if (new URL(route.request().url()).pathname === '/api/finance/budgets') {
+            await route.fulfill({ json: { data: created ? [created] : [], page: 1, page_size: 20, total: created ? 1 : 0 } });
+        } else await route.fulfill({ json: { data: budgetDetailFixture(created!) } });
+    });
+    await page.goto('/finance/budgets');
+    await page.getByRole('button', { name: 'Create budget' }).first().click();
+    const dialog = page.getByRole('dialog', { name: 'Create budget' });
+    await expect(dialog.getByText('Counts spending from 1 Sept 2026.')).toBeVisible();
+    await expect(dialog.getByText('Start date', { exact: true })).toHaveCount(0);
+    await expect(dialog.getByRole('switch')).toHaveCount(0);
+    await dialog.getByLabel('Cycle', { exact: true }).click();
+    await expect(page.getByRole('option', { name: 'Custom', exact: true })).toHaveCount(0);
+    await page.getByRole('option', { name: 'Weekly', exact: true }).click();
+    await expect(dialog.getByText('Counts spending from 14 Sept 2026.')).toBeVisible();
+    await dialog.getByLabel('Cycle', { exact: true }).click();
+    await page.getByRole('option', { name: 'Monthly', exact: true }).click();
+    await dialog.getByLabel('Name').fill('Monthly budget');
+    await dialog.getByLabel('Budget amount (MYR)').fill('500');
+    await page.screenshot({ path: testInfo.outputPath('simple-monthly-budget.png'), fullPage: true });
+    await dialog.getByRole('button', { name: 'Create budget', exact: true }).click();
+    await expect(page.getByRole('region', { name: 'Monthly budget details' })).toBeVisible();
+    expect(body).toMatchObject({ configuration: { cycle_type: 'monthly', start_date: '2026-09-01', anchor_day: 1, amount: '500.00', source_ids: [], category_ids: [] } });
+});
+
+test('custom dates and durations remain available without losing edits', async ({ page }) => {
+    await references(page);
+    await page.goto('/finance/budgets');
+    await page.getByRole('button', { name: 'Create budget' }).first().click();
+    const dialog = page.getByRole('dialog', { name: 'Create budget' });
+    await dialog.getByRole('button', { name: 'Customize', exact: true }).click();
+    await dialog.getByRole('button', { name: /^Start date,/ }).click();
+    await page.getByRole('button', { name: 'Thursday, September 10, 2026', exact: true }).click();
+    await expect(dialog.getByText('Counts spending from 10 Sept 2026.')).toBeVisible();
+    await dialog.getByRole('button', { name: 'Hide customization' }).click();
+    await dialog.getByRole('button', { name: 'Customize', exact: true }).click();
+    await expect(dialog.getByRole('button', { name: /^Start date,/ })).toContainText('10 Sept 2026');
+    await dialog.getByLabel('Cycle', { exact: true }).click();
+    await page.getByRole('option', { name: 'Custom', exact: true }).click();
+    await dialog.getByLabel('Days per cycle').fill('10');
+    await dialog.getByRole('button', { name: 'Hide customization' }).click();
+    await dialog.getByRole('button', { name: 'Customize', exact: true }).click();
+    await expect(dialog.getByLabel('Days per cycle')).toHaveValue('10');
+});
+
 test('create, edit, archive, frozen history and restore', async ({ page }, testInfo) => {
     await references(page);
     let budget: FinanceBudgetSummary | null = null;
@@ -38,6 +92,7 @@ test('create, edit, archive, frozen history and restore', async ({ page }, testI
     await dialog.getByLabel('Budget amount (MYR)').fill('100');
     await dialog.getByLabel('Cycle', { exact: true }).click();
     await page.getByRole('option', { name: 'Weekly', exact: true }).click();
+    await dialog.getByRole('button', { name: 'Customize', exact: true }).click();
     await dialog.getByRole('switch', { name: 'Bank' }).click();
     await dialog.getByRole('switch', { name: 'Uncategorised' }).click();
     await dialog.getByLabel('Match sources and categories').click();

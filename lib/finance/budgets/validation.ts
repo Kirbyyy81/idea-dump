@@ -1,12 +1,12 @@
 import type { FinanceBudgetConfiguration, FinanceBudgetDetailQuery, FinanceBudgetFieldErrors, FinanceBudgetListQuery, FinanceBudgetMutation } from '@/lib/types';
 import { getFinanceDateInTimeZone, normalizeFinanceDate, toFinanceAmountMinorUnits } from '@/lib/finance/core/values';
-import { budgetDecimal } from './calculations';
+import { budgetDecimal, startOfBudgetPeriod } from './calculations';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const isBudgetUuid = (value: unknown): value is string => typeof value === 'string' && UUID.test(value);
 type Validation<T> = { data: T } | { error: string; field_errors?: FinanceBudgetFieldErrors };
 
-export function validateBudgetConfiguration(value: unknown, options: { allowPastStart?: boolean; now?: Date } = {}): Validation<FinanceBudgetConfiguration> {
+export function validateBudgetConfiguration(value: unknown, options: { allowPastStart?: boolean; allowCurrentPeriod?: boolean; now?: Date } = {}): Validation<FinanceBudgetConfiguration> {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return { error: 'Budget configuration must be an object' };
     const input = value as Record<string, unknown>;
     const errors: FinanceBudgetFieldErrors = {};
@@ -27,7 +27,11 @@ export function validateBudgetConfiguration(value: unknown, options: { allowPast
         // Intl accepts named IANA zones. Fixed numeric offsets are not budget zones.
         if (!timeZone || timeZone.length > 100 || /^[+-]/.test(timeZone)) throw new Error('Invalid zone');
         new Intl.DateTimeFormat('en', { timeZone }).format(options.now ?? new Date());
-        if (start && !options.allowPastStart && start < getFinanceDateInTimeZone(timeZone, options.now)) errors.start_date = 'Choose today or a future date';
+        const today = getFinanceDateInTimeZone(timeZone, options.now);
+        const period = cycleType === 'weekly' || cycleType === 'monthly' ? cycleType : 'custom';
+        const earliest = options.allowCurrentPeriod === false ? today : startOfBudgetPeriod(today, period);
+        if (start && !options.allowPastStart && start < earliest) errors.start_date = options.allowCurrentPeriod === false || period === 'custom'
+            ? 'Choose today or a future date' : `Choose a date in the current ${period === 'weekly' ? 'week' : 'month'} or later`;
     } catch {
         errors.time_zone = 'Your browser time zone is unavailable. Check your device settings and retry';
         timeZone = '';
@@ -65,7 +69,7 @@ export function parseBudgetMutation(body: Record<string, unknown>, action: Finan
     }
     // Creation checks its idempotency key before the database validates local today.
     // An exact retry after midnight must still return the previously created budget.
-    const config = action === 'archive' ? { data: null } : validateBudgetConfiguration(body.configuration, { allowPastStart: action !== 'restore' });
+    const config = action === 'archive' ? { data: null } : validateBudgetConfiguration(body.configuration, { allowPastStart: action !== 'restore', allowCurrentPeriod: action !== 'restore' });
     if ('error' in config) return config;
     return { data: { action, id: action === 'create' ? null : id as string, revision: action === 'create' ? null : body.revision as number,
         request_id: action === 'create' ? body.request_id as string : null, configuration: config.data } };
