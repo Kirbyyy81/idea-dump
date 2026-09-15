@@ -7,7 +7,7 @@ import { Button } from '@/components/atoms/Button';
 import { ActionMenu } from '@/components/molecules/ActionMenu';
 import { FormDialog } from '@/components/molecules/FormDialog';
 import { BudgetProgress } from './BudgetProgress';
-import type { FinanceBudgetCycle, FinanceBudgetDetail, FinanceBudgetPage } from '@/lib/types';
+import type { FinanceBudgetDetail, FinanceBudgetPage } from '@/lib/types';
 import { addBudgetDays, BUDGET_STATUS_LABELS, formatBudgetMoney } from '@/lib/finance/budgets/calculations';
 
 export function BudgetPagination({ page, onPage, label, disabled = false }: { page: FinanceBudgetPage<unknown>; onPage: (page: number) => void; label: string; disabled?: boolean }) {
@@ -17,24 +17,6 @@ export function BudgetPagination({ page, onPage, label, disabled = false }: { pa
         <span>Page {page.page} of {Math.max(1, Math.ceil(page.total / page.page_size))}</span>
         <Button type="button" variant="ghost" disabled={disabled || page.page * page.page_size >= page.total} onClick={() => onPage(page.page + 1)} aria-label={`Next ${label.toLowerCase()} page`}>Next</Button>
     </nav>;
-}
-
-function CycleBreakdowns({ cycle }: { cycle: FinanceBudgetCycle }) {
-    return <div className="mt-3 space-y-4">
-        <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-3">
-            <div><dt className="text-text-muted">Expenses</dt><dd className="break-all">{formatBudgetMoney(cycle.metrics.expense)}</dd></div>
-            <div><dt className="text-text-muted">Income</dt><dd className="break-all">{formatBudgetMoney(cycle.metrics.income)}</dd></div>
-            <div><dt className="text-text-muted">Net spent</dt><dd className="break-all font-semibold">{formatBudgetMoney(cycle.metrics.net_spending)}</dd></div>
-        </dl>
-        {(['source', 'category'] as const).map((dimension) => <div key={dimension}>
-            <h4 className="text-xs font-semibold">By {dimension}</h4>
-            <ul className="mt-1 divide-y divide-border-subtle">{cycle.breakdowns.filter((item) => item.dimension === dimension).map((item) => <li key={item.reference_id ?? 'uncategorised'} className="py-2 text-xs">
-                <div className="flex justify-between gap-3"><span>{item.label}</span><span className="break-all text-right font-medium">{formatBudgetMoney(item.net_spending)} net</span></div>
-                <p className="mt-1 text-text-muted">Expenses {formatBudgetMoney(item.expense)}, income {formatBudgetMoney(item.income)}</p>
-            </li>)}</ul>
-        </div>)}
-        {cycle.breakdowns.length === 0 && <p className="text-xs text-text-muted">No matching spending in this cycle.</p>}
-    </div>;
 }
 
 export function BudgetDetails({ detail, onEdit, onArchive, onRestore, onHistoryPage, onTransactionsPage, busy, loadError = '' }: {
@@ -86,12 +68,12 @@ export function BudgetDetails({ detail, onEdit, onArchive, onRestore, onHistoryP
         {showHistory && <FormDialog title="Cycle history" onClose={() => setShowHistory(false)} busy={busy}>
             {loadError && <p role="alert" className="mb-3 text-sm text-error">{loadError}</p>}
             {history.data.length === 0 && <p className="mt-3 text-sm text-text-muted">Completed cycles will appear here.</p>}
-            {history.data.map((cycle) => <details key={cycle.id} className="mt-3 rounded-md border border-border-default p-3">
-                <summary className="min-h-10 cursor-pointer text-sm font-medium">{cycle.start_date} to {addBudgetDays(cycle.end_date, -1)}
-                    <span className="mt-1 block text-xs font-normal text-text-secondary">{cycle.state === 'partial' ? 'Partial cycle' : 'Completed cycle'} · {BUDGET_STATUS_LABELS[cycle.metrics.status]} · {formatBudgetMoney(cycle.metrics.net_spending)} net spent</span></summary>
+            {history.data.map((cycle) => <article key={cycle.id} className="mt-3 rounded-md border border-border-default p-3">
+                <h3 className="text-sm font-medium">{cycle.start_date} to {addBudgetDays(cycle.end_date, -1)}
+                    <span className="mt-1 block text-xs font-normal text-text-secondary">{cycle.state === 'partial' ? 'Partial cycle' : 'Completed cycle'} · {BUDGET_STATUS_LABELS[cycle.metrics.status]} · {formatBudgetMoney(cycle.metrics.net_spending)} net spent</span></h3>
                 <p className="mt-2 text-xs text-text-muted">Limit {formatBudgetMoney(cycle.metrics.amount)} · {Number(cycle.metrics.usage_percentage).toLocaleString('en-MY', { maximumFractionDigits: 1 })}% used</p>
-                <CycleBreakdowns cycle={cycle} />
-            </details>)}
+                <p className="mt-1 text-xs text-text-muted">{cycle.metrics.status === 'over_budget' ? `${formatBudgetMoney(cycle.metrics.over_amount)} over` : `${formatBudgetMoney(cycle.metrics.remaining)} remaining`}</p>
+            </article>)}
             <BudgetPagination page={history} onPage={onHistoryPage} label="History" disabled={busy} />
         </FormDialog>}
     </section>;

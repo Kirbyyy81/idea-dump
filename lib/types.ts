@@ -572,14 +572,6 @@ export interface FinanceBudgetMetrics {
     pace_percentage: string;
     status: FinanceBudgetStatus;
 }
-export interface FinanceBudgetBreakdown {
-    dimension: 'source' | 'category';
-    reference_id: string | null;
-    label: string;
-    expense: FinanceBudgetMoney;
-    income: FinanceBudgetMoney;
-    net_spending: FinanceBudgetMoney;
-}
 export interface FinanceBudgetCycle {
     id: string;
     start_date: string;
@@ -590,7 +582,6 @@ export interface FinanceBudgetCycle {
     // Older RPCs omit cycle settings during the release 15 migration rollout.
     configuration?: FinanceBudgetSettings;
     metrics: FinanceBudgetMetrics;
-    breakdowns: FinanceBudgetBreakdown[];
 }
 export interface FinanceBudgetSummary {
     id: string;

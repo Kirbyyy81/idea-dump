@@ -131,8 +131,8 @@ test('create, edit, archive, frozen history and restore', async ({ page }, testI
     await page.getByRole('button', { name: 'Budget actions' }).click();
     await page.getByRole('menuitem', { name: 'Cycle history' }).click();
     const historyDialog = page.getByRole('dialog', { name: 'Cycle history' });
-    await historyDialog.locator('summary').click();
-    await expect(page.getByText('Expenses', { exact: true })).toBeVisible();
+    await expect(historyDialog.getByText(/net spent/)).toBeVisible();
+    await expect(historyDialog.locator('details')).toHaveCount(0);
     await historyDialog.getByRole('button', { name: 'Close' }).click();
     await expect(page.getByRole('button', { name: 'Budget actions' })).toBeFocused();
     await page.getByRole('button', { name: 'Restore', exact: true }).click();
