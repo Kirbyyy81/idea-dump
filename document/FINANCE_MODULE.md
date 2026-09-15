@@ -45,7 +45,7 @@ Stored IANA time zones determine local today. Pace counts completed calendar day
 
 | Interface | Request and response |
 |---|---|
-| `GET /api/finance/budgets` | `state=active|scheduled|archived|all`, `page`, `page_size`; returns `{ data, page, page_size, total }` |
+| `GET /api/finance/budgets` | `state=active\|scheduled\|archived\|all`, `page`, `page_size`; returns `{ data, page, page_size, total }` |
 | `POST /api/finance/budgets` | `{ request_id, configuration }`; returns `{ data: budget }` |
 | `PUT /api/finance/budgets` | `{ id, revision, configuration }`; returns `{ data: budget }` |
 | `GET /api/finance/budgets/[id]` | Independent `history_page`, `history_page_size`, `transactions_page`, `transactions_page_size`; returns `{ data: { budget, history, transactions } }` |
@@ -79,6 +79,14 @@ Use Node 22.22.0. `npm run test:finance-budgets` runs domain, route, service and
 Local validation used PostgreSQL 17 with the adopted Finance schema and the forward budgeting migration. Hosted Auth/Storage metadata and Cron were local scaffolding; the cron registration and callable worker were checked, but no real cron scheduler ran. Hosted Supabase scheduling, platform advisors and representative-volume query plans remain deployment checks. Run all repository checks in addition to these feature suites.
 
 Validation on 2026-09-15 used Node 22.22.0. All 303 repository tests passed, including 46 budgeting unit/route/service/component tests. Six desktop/mobile browser tests, the isolated database lifecycle/concurrency suite, Finance security/idempotency/ordering/share regressions, lint, TypeScript checking and production build passed. Both dependency audits reported zero vulnerabilities.
+
+### Production database deployment, 2026-09-15
+
+With explicit user approval, the CLI applied only `20260914093154_finance_budgets.sql` to `xcaxukhjkqqnmzziqrkc`. The subsequent dry run reported no pending migrations. This resolves the local app's `PGRST202` failure caused by the previously absent budgeting functions. The app's server credentials successfully called both list and dashboard RPC variants over the Data API with HTTP 200, using a nonexistent test owner and creating no user data.
+
+All six budget tables have RLS enabled and deny browser table access. All 18 budget functions deny browser execution, the server can mutate budgets, and the global worker remains operator-only. Cron job 3, `finance-budget-closure`, is active hourly with a 90-second timeout. Its first scheduled execution had not occurred at verification time; monitoring `cron.job_run_details` remains necessary.
+
+The hosted security advisor reported no budgeting findings. Its performance advisor reported four informational [composite foreign-key index suggestions](https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys), for the cycle-to-budget, breakdown-to-cycle, and two selection-to-version relationships. These are follow-up performance review items, alongside representative-volume query plans. Newly created indexes were also reported unused, which is expected before budget traffic. This deployment changed the database only; production application deployment remains separate.
 
 ## System context
 
