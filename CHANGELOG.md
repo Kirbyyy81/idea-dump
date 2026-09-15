@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.15.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.14.3...idea-dump-v0.15.0) (2026-09-15)
+
+
+### Features
+
+* add budget lifecycle ([84b11d2](https://github.com/Kirbyyy81/idea-dump/commit/84b11d2f17ce839aa363ce674797de11cbc7d70f))
+* add budgeting interface ([3ead909](https://github.com/Kirbyyy81/idea-dump/commit/3ead909ce338ef0d52ad1f6c05f61400d0795c68))
+* simplify budget setup ([fcd3a06](https://github.com/Kirbyyy81/idea-dump/commit/fcd3a0641853dd940a5ee19f8cd80b0d33085897))
+
+
+### Bug Fixes
+
+* align mobile budget header ([f5052c2](https://github.com/Kirbyyy81/idea-dump/commit/f5052c25228538b783f15fa40ed59bf3dc0bf326))
+* clarify budget cycle labels ([f3ef9ab](https://github.com/Kirbyyy81/idea-dump/commit/f3ef9abf6ffc34aadc32b8a7402726fa3bf5bb0c))
+* collapse budget transactions ([4db6b77](https://github.com/Kirbyyy81/idea-dump/commit/4db6b77b38d9121fc6a5209e1f6329999db416ae))
+* group budget actions ([122b274](https://github.com/Kirbyyy81/idea-dump/commit/122b274a09c5a0744b9ac3dc1cd55a6cf773b40b))
+* load budget details on demand ([a243beb](https://github.com/Kirbyyy81/idea-dump/commit/a243beb89a6b2152ddd290b3de1b3b0ff54b48bb))
+* make budget tabs responsive ([f48fb23](https://github.com/Kirbyyy81/idea-dump/commit/f48fb237d5fb3802f06c42cf7238deb9133f6dac))
+* merge main while preserving receipt format learning ([a2bb5e4](https://github.com/Kirbyyy81/idea-dump/commit/a2bb5e4a84b1a92316ee8f31113eed3356ec59f6))
+* reorder finance sidebar ([0b62e3b](https://github.com/Kirbyyy81/idea-dump/commit/0b62e3b9baeb830e172661e89f229b05974a41fa))
+* simplify budget progress ([2cad8b0](https://github.com/Kirbyyy81/idea-dump/commit/2cad8b0f79ec229b062ddf04e0e28fd2cf16f030))
+* sync remote OCR branch ([1fa0e20](https://github.com/Kirbyyy81/idea-dump/commit/1fa0e20a1582a3b7d8bcba3c73f43ea7a164331e))
+* tabulate budget configuration ([1a07d16](https://github.com/Kirbyyy81/idea-dump/commit/1a07d16d036276871926edb89e32d17c3d771dc3))
+* toast budget confirmations ([3a8ff4d](https://github.com/Kirbyyy81/idea-dump/commit/3a8ff4d7dad4e356651fb32936a7b7bc81af753a))
+
 ## [0.14.3](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.14.2...idea-dump-v0.14.3) (2026-09-14)
 
 
