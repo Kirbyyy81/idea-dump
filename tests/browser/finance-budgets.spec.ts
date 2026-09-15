@@ -25,15 +25,15 @@ test('simple calendar budget defaults and optional customization', async ({ page
     await page.goto('/finance/budgets');
     await page.getByRole('button', { name: 'Create budget' }).first().click();
     const dialog = page.getByRole('dialog', { name: 'Create budget' });
-    await expect(dialog.getByText('Counts spending from 1 Sept 2026.')).toBeVisible();
+    await expect(dialog.getByLabel('Cycle', { exact: true })).toHaveText('Monthly (starts from 1st of the month)');
     await expect(dialog.getByText('Start date', { exact: true })).toHaveCount(0);
     await expect(dialog.getByRole('switch')).toHaveCount(0);
     await dialog.getByLabel('Cycle', { exact: true }).click();
     await expect(page.getByRole('option', { name: 'Custom', exact: true })).toHaveCount(0);
-    await page.getByRole('option', { name: 'Weekly', exact: true }).click();
-    await expect(dialog.getByText('Counts spending from 14 Sept 2026.')).toBeVisible();
+    await page.getByRole('option', { name: 'Weekly (starts on Monday)', exact: true }).click();
+    await expect(dialog.getByLabel('Cycle', { exact: true })).toHaveText('Weekly (starts on Monday)');
     await dialog.getByLabel('Cycle', { exact: true }).click();
-    await page.getByRole('option', { name: 'Monthly', exact: true }).click();
+    await page.getByRole('option', { name: 'Monthly (starts from 1st of the month)', exact: true }).click();
     await dialog.getByLabel('Name').fill('Monthly budget');
     await dialog.getByLabel('Budget amount (MYR)').fill('500');
     await page.screenshot({ path: testInfo.outputPath('simple-monthly-budget.png'), fullPage: true });
@@ -50,7 +50,7 @@ test('custom dates and durations remain available without losing edits', async (
     await dialog.getByRole('button', { name: 'Customize', exact: true }).click();
     await dialog.getByRole('button', { name: /^Start date,/ }).click();
     await page.getByRole('button', { name: 'Thursday, September 10, 2026', exact: true }).click();
-    await expect(dialog.getByText('Counts spending from 10 Sept 2026.')).toBeVisible();
+    await expect(dialog.getByRole('button', { name: /^Start date,/ })).toContainText('10 Sept 2026');
     await dialog.getByRole('button', { name: 'Hide customization' }).click();
     await dialog.getByRole('button', { name: 'Customize', exact: true }).click();
     await expect(dialog.getByRole('button', { name: /^Start date,/ })).toContainText('10 Sept 2026');
@@ -91,7 +91,7 @@ test('create, edit, archive, frozen history and restore', async ({ page }, testI
     await dialog.getByLabel('Name').fill('Everyday spending');
     await dialog.getByLabel('Budget amount (MYR)').fill('100');
     await dialog.getByLabel('Cycle', { exact: true }).click();
-    await page.getByRole('option', { name: 'Weekly', exact: true }).click();
+    await page.getByRole('option', { name: 'Weekly (starts on Monday)', exact: true }).click();
     await dialog.getByRole('button', { name: 'Customize', exact: true }).click();
     await dialog.getByRole('switch', { name: 'Bank' }).click();
     await dialog.getByRole('switch', { name: 'Uncategorised' }).click();

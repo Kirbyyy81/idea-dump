@@ -98,10 +98,10 @@ export function BudgetForm({ budget, restore = false, onClose, onSaved, onReload
                             anchor_day: cycle === 'monthly' ? activeEdit ? 1 : Number(start.slice(8)) : null };
                     });
                     setErrors((current) => ({ ...current, cycle_type: undefined, start_date: undefined, anchor_day: undefined, custom_days: undefined }));
-                }} options={[{ value: 'weekly', label: 'Weekly' }, { value: 'monthly', label: 'Monthly' },
-                    ...(customize || configuration.cycle_type === 'custom' ? [{ value: 'custom', label: 'Custom' }] : [])]} disabled={saving} errorMessage={errors.cycle_type} />
+                }} options={[{ value: 'weekly', label: 'Weekly (starts on Monday)' }, { value: 'monthly', label: 'Monthly (starts from 1st of the month)' },
+                    ...(customize || configuration.cycle_type === 'custom' ? [{ value: 'custom', label: 'Custom' }] : [])]}
+                    buttonClassName="h-auto min-h-10 [&>span]:whitespace-normal" menuClassName="[&_span]:whitespace-normal" disabled={saving} errorMessage={errors.cycle_type} />
             </div>
-            {!activeEdit && <p className="text-sm text-text-secondary">Counts spending from {new Intl.DateTimeFormat('en-MY', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${configuration.start_date}T00:00:00Z`))}.</p>}
             <Button type="button" variant="ghost" aria-expanded={customize} aria-controls={customizationId} disabled={saving} onClick={() => setCustomize(!customize)}>
                 {customize ? 'Hide customization' : 'Customize'}
             </Button>
