@@ -26,7 +26,7 @@ export async function sharedImage(width = 924, transparent = false, anchors = tr
 
 export const receiptContext: FinanceContext = {
     sources: [{ id: '11111111-1111-4111-8111-111111111111', name: 'Ryt Bank', filename_aliases: ['Ryt Bank'], ocr_aliases: ['Ryt Bank'], is_archived: false }],
-    sourceTemplates: [], fieldTemplates: [], rules: [], fieldLearningRules: [], payees: [],
+    sourceTemplates: [], fieldTemplates: [], rules: [], payees: [],
 };
 export const baselineText = '0) Recipient\nbuitNow | YNTHETIC CORNER SHOP\nReference ID\nSYN260909123ABC\nRecipient reference\nTransfer\nJoin Ryt Bank! Earn interest, paid daily.\nDownload now at rytbank.my';
 export const regionTexts = ['Ryt Bank\nRM 17.25\n9 Sep 2026, 1:54 PM', 'Recipient\nSYNTHETIC CORNER SHOP', 'Reference ID\nSYN260909123ABC\nRecipient reference\nTransfer'];

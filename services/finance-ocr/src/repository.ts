@@ -300,7 +300,7 @@ export class SupabaseFinanceRepository implements FinanceRepository, ShareQueueR
     }
 
     async loadContext(userId: string): Promise<FinanceContext> {
-        const [sources, sourceTemplates, fieldTemplates, rules, fieldLearningRules, payees] = await Promise.all([
+        const [sources, sourceTemplates, fieldTemplates, rules, payees] = await Promise.all([
             this.secretClient
                 .from('dim_finance_sources')
                 .select('id, name, filename_aliases, ocr_aliases, is_archived')
@@ -342,15 +342,8 @@ export class SupabaseFinanceRepository implements FinanceRepository, ShareQueueR
                 .from('finance_rules')
                 .select('id, name, match_type, pattern, category_id, source_id, direction, priority, is_active, source, auto_created_at, created_at')
                 .eq('user_id', userId)
-                .eq('is_active', true),
-            this.secretClient
-                .from('finance_field_learning_rules')
-                .select('id, source_id, field_name, transform_type, transform_value, evidence_count, is_active, created_at')
-                .eq('user_id', userId)
                 .eq('is_active', true)
-                .order('evidence_count', { ascending: false })
-                .order('created_at')
-                .order('id'),
+                .eq('source', 'manual'),
             this.secretClient
                 .from('dim_finance_payees')
                 .select('id, name, normalized_name, is_archived')
@@ -359,7 +352,6 @@ export class SupabaseFinanceRepository implements FinanceRepository, ShareQueueR
         ]);
         if (sources.error) throw new RepositoryError('load_sources', sources.error);
         if (rules.error) throw new RepositoryError('load_rules', rules.error);
-        if (fieldLearningRules.error) throw new RepositoryError('load_field_learning_rules', fieldLearningRules.error);
         if (payees.error) throw new RepositoryError('load_payees', payees.error);
         return {
             sources: (sources.data ?? []) as FinanceContext['sources'],
@@ -370,7 +362,6 @@ export class SupabaseFinanceRepository implements FinanceRepository, ShareQueueR
                 ? []
                 : (fieldTemplates.data ?? []) as unknown as FinanceContext['fieldTemplates'],
             rules: (rules.data ?? []) as FinanceContext['rules'],
-            fieldLearningRules: (fieldLearningRules.data ?? []) as FinanceContext['fieldLearningRules'],
             payees: (payees.data ?? []) as FinanceContext['payees'],
         };
     }

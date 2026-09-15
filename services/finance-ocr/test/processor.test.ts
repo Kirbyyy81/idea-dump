@@ -28,7 +28,6 @@ function repository(overrides: Partial<FinanceRepository> = {}) {
             sourceTemplates: [],
             fieldTemplates: [],
             rules: [],
-            fieldLearningRules: [],
             payees: [],
         }),
         assessDuplicate: vi.fn().mockResolvedValue({
@@ -178,7 +177,6 @@ describe('fenced screenshot processing', () => {
                     updated_at: '2026-01-03T00:00:00Z',
                 }],
                 rules: [],
-                fieldLearningRules: [],
                 payees: [],
             }),
             finalize: vi.fn().mockResolvedValue({

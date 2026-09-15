@@ -71,18 +71,7 @@ export function LearningSummaryPanel({ isLoading, summary, shadowRules, onRefres
                         ))}
                     </dl>
 
-                    <div className="grid gap-4 text-sm md:grid-cols-2">
-                        <div>
-                            <h3 className="font-semibold">Compatibility rules</h3>
-                            <p className="mt-1 text-text-secondary">
-                                {summary.active_reference_rules} active reference transforms
-                            </p>
-                            <p className="mt-1 text-text-muted">
-                                {summary.latest_run.category_rules_created + summary.latest_run.reference_rules_created} created,{' '}
-                                {summary.latest_run.category_rules_updated + summary.latest_run.reference_rules_updated} updated,{' '}
-                                {summary.latest_run.category_rules_disabled + summary.latest_run.reference_rules_disabled} disabled
-                            </p>
-                        </div>
+                    <div className="text-sm">
                         <div>
                             <h3 className="font-semibold">Active template metrics</h3>
                             {summary.active_metrics.length ? (

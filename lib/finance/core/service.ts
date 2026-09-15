@@ -6,7 +6,6 @@ import {
     isManualTransactionReplay,
 } from '@/lib/finance/transactions/idempotency';
 import {
-    acceptFinanceRuleSuggestion,
     createFinanceCategory,
     createFinanceShareUploadUrl,
     createFinanceRule,
@@ -19,7 +18,6 @@ import {
     findFinanceRule,
     findFinanceReviewCandidate,
     findFinanceTransaction,
-    findPendingFinanceRuleSuggestion,
     FINANCE_TRANSACTION_VIEW_SELECT,
     getFinanceShareObjectInfo,
     getFinanceShareUploadReservation,
@@ -33,14 +31,12 @@ import {
     listFinanceCategories,
     listFinanceDashboardMonthTransactions,
     listFinanceDashboardRecentTransactions,
-    listFinanceRuleSuggestions,
     listFinanceRules,
     listFinanceReviewQueue,
     listFinanceSources,
     listFinanceReviewDuplicateTransactionsByIds,
     listActiveFinanceCategoryReferences,
     listActiveFinanceRules,
-    listActiveFinanceFieldLearningRules,
     listActiveFinancePayees,
     listActiveFinanceSources,
     listRuntimeFinanceSourceTemplates,
@@ -55,12 +51,10 @@ import {
     commitFinanceShareBatch,
     listFinanceTransactions,
     prepareFinanceShareBatch,
-    rejectFinanceRuleSuggestion,
     setFinanceCategoryArchived,
     setFinanceSourceArchived,
     updateFinanceCategory,
     updateFinanceRule,
-    updateFinanceRuleSuggestion,
     updateFinanceSource,
     updateFinanceTransaction,
 } from '@/lib/finance/core/repository';
@@ -68,7 +62,6 @@ import {
     toFinanceDashboardRecentTransaction,
     toFinanceLearningSummary,
     toFinanceReviewCandidate,
-    toFinanceRuleSuggestionView,
     toFinanceRuleView,
     toFinanceTransactionView,
 } from '@/lib/finance/core/payloads';
@@ -76,7 +69,6 @@ import {
     FinanceCategoryCreateInput,
     FinanceCategoryUpdateInput,
     FinanceRuleInput,
-    FinanceRuleSuggestionEditInput,
     FinanceReviewConfirmInput,
     FinanceRuleUpdateInput,
     FinanceSourceCreateInput,
@@ -107,7 +99,6 @@ import {
     FinanceCategoryDetail,
     FinanceLearningSummary,
     FinanceShadowRulesSummary,
-    FinanceOcrFieldLearningRule,
     FinanceOcrFieldTemplate,
     FinanceOcrPayee,
     FinanceOcrRule,
@@ -115,7 +106,6 @@ import {
     FinanceOcrSourceTemplate,
     FinanceReferenceData,
     FinanceReferenceOption,
-    FinanceRuleSuggestion,
     FinanceRule,
     FinanceSourceDetail,
     FinanceTransaction,
@@ -316,21 +306,17 @@ async function loadFinanceLearningSummary(userId: string): Promise<FinanceLearni
 }
 
 export async function getFinanceRuleSettings(userId: string) {
-    const [rulesResult, suggestionsResult, learningResult, shadowRules] = await Promise.all([
+    const [rulesResult, learningResult, shadowRules] = await Promise.all([
         listFinanceRules(userId),
-        listFinanceRuleSuggestions(userId),
         loadFinanceLearningSummary(userId),
         loadFinanceShadowRules(userId),
     ]);
     if (rulesResult.error) throw rulesResult.error;
-    if (suggestionsResult.error) throw suggestionsResult.error;
     return {
         rules: (rulesResult.data || []).map((rule) => (
             toFinanceRuleView(rule as unknown as FinanceRule)
         )),
-        suggestions: (suggestionsResult.data || []).map((suggestion) => (
-            toFinanceRuleSuggestionView(suggestion as unknown as FinanceRuleSuggestion)
-        )),
+        suggestions: [],
         learning: learningResult,
         shadow_rules: shadowRules,
     };
@@ -368,12 +354,7 @@ export async function updateFinanceRuleForUser(userId: string, input: FinanceRul
     if (existingError) throw existingError;
     if (!existing) fail('Rule not found', 404);
     const existingRule = existing as unknown as FinanceRule;
-    if (
-        existingRule.source === 'learning'
-        && Object.keys(input.updates).some((key) => key !== 'id' && key !== 'is_active' && key !== 'updated_at')
-    ) {
-        fail('Learned rules can only be paused or resumed', 409);
-    }
+    if (existingRule.source === 'learning') fail('Legacy learning rules are retired', 410);
     const effective = {
         source_id: input.updates.source_id !== undefined ? input.updates.source_id as string | null : existingRule.source_id,
         category_id: input.updates.category_id !== undefined ? input.updates.category_id as string | null : existingRule.category_id,
@@ -398,63 +379,9 @@ export async function deleteFinanceRuleForUser(userId: string, ruleId: string) {
     const { data: existing, error: existingError } = await findFinanceRule(userId, ruleId, 'id, source');
     if (existingError) throw existingError;
     if (!existing) fail('Rule not found', 404);
-    if ((existing as unknown as FinanceRule).source === 'learning') fail('Learned rules can be paused but not permanently deleted', 409);
+    if ((existing as unknown as FinanceRule).source === 'learning') fail('Legacy learning rules are retired', 410);
     const { error } = await deleteFinanceRule(userId, ruleId);
     if (error) throw error;
-}
-
-async function validateFinanceSuggestionTargets(
-    userId: string,
-    categoryId: string,
-    sourceId: string | null
-) {
-    const category = await getOwnedFinanceCategory(userId, categoryId);
-    if (!category || category.is_archived) fail('Choose an active category', 404);
-    if (sourceId) {
-        const source = await getOwnedFinanceSource(userId, sourceId);
-        if (!source || source.is_archived) fail('Choose an active source', 404);
-    }
-}
-
-export async function updateFinanceRuleSuggestionForUser(userId: string, input: FinanceRuleSuggestionEditInput) {
-    await validateFinanceSuggestionTargets(userId, input.category_id as string, input.source_id);
-    const { data, error } = await updateFinanceRuleSuggestion(userId, input.id, {
-        name: input.name,
-        pattern: input.pattern,
-        match_type: input.match_type,
-        category_id: input.category_id,
-        source_id: input.source_id,
-        direction: input.direction,
-        priority: input.priority,
-        updated_at: new Date().toISOString(),
-    });
-    if (error) throw error;
-    if (!data) fail('Rule suggestion not found', 404);
-    return toFinanceRuleSuggestionView(data as unknown as FinanceRuleSuggestion);
-}
-
-export async function resolveFinanceRuleSuggestionForUser(
-    userId: string,
-    suggestionId: string,
-    action: 'accept' | 'reject'
-) {
-    const { data: suggestion, error: findError } = await findPendingFinanceRuleSuggestion(userId, suggestionId);
-    if (findError) throw findError;
-    if (!suggestion) fail('Rule suggestion not found', 404);
-    if (action === 'accept') {
-        await validateFinanceSuggestionTargets(
-            userId,
-            suggestion.category_id,
-            suggestion.source_id
-        );
-        const { data, error } = await acceptFinanceRuleSuggestion(userId, suggestionId);
-        if (error) throw error;
-        return { data, accepted: true };
-    }
-    const { data, error } = await rejectFinanceRuleSuggestion(userId, suggestionId);
-    if (error) throw error;
-    if (!data) fail('Rule suggestion changed while it was being dismissed', 409);
-    return { data: null, accepted: false };
 }
 
 async function validateFinanceTransactionReferences(
@@ -789,17 +716,15 @@ export async function resolveFinanceReviewCandidateForUser(
 
     if (action === 'retry') {
         if (candidate.status !== 'pending') fail('Only pending review items can be retried', 409);
-        const [sourcesResult, sourceTemplatesResult, fieldTemplatesResult, rulesResult, fieldLearningRulesResult, payeesResult] = await Promise.all([
+        const [sourcesResult, sourceTemplatesResult, fieldTemplatesResult, rulesResult, payeesResult] = await Promise.all([
             listActiveFinanceSources(userId),
             listRuntimeFinanceSourceTemplates(userId),
             listRuntimeFinanceFieldTemplates(userId),
             listActiveFinanceRules(userId),
-            listActiveFinanceFieldLearningRules(userId),
             listActiveFinancePayees(userId),
         ]);
         if (sourcesResult.error) throw sourcesResult.error;
         if (rulesResult.error) throw rulesResult.error;
-        if (fieldLearningRulesResult.error) throw fieldLearningRulesResult.error;
         if (payeesResult.error) throw payeesResult.error;
         const normalizedText = candidate.intake?.ocr_normalized_text || candidate.intake?.ocr_text || '';
         const parsed = parseFinanceText(
@@ -807,7 +732,6 @@ export async function resolveFinanceReviewCandidateForUser(
             (rulesResult.data || []) as FinanceOcrRule[],
             (sourcesResult.data || []) as FinanceOcrSource[],
             candidate.intake?.original_filename || null,
-            (fieldLearningRulesResult.data || []) as FinanceOcrFieldLearningRule[],
             (payeesResult.data || []) as FinanceOcrPayee[],
             sourceTemplatesResult.error
                 ? []
