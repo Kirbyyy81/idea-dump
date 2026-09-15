@@ -17,6 +17,7 @@ import { FinanceDashboardSummary } from '@/lib/types';
 import { shiftFinanceMonth } from '@/lib/finance/core/values';
 import { formatCurrencyMYR } from '@/lib/utils';
 import { financeTransactionsHref } from '@/lib/finance/transactions/filters';
+import { BudgetProgress } from '@/app/finance/budgets/_components/BudgetProgress';
 
 const CHART_COLORS = ['#e76f51', '#2a9d8f', '#457b9d', '#e9c46a', '#8d6e63', '#6d597a'];
 
@@ -103,6 +104,14 @@ export function FinanceDashboardClient({ month, summary }: FinanceDashboardClien
                 </section>
 
                 <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(280px,1fr)]">
+                    <section aria-labelledby="active-budgets-heading" className="lg:col-span-2">
+                        <div className="mb-3 flex items-center justify-between gap-3"><h2 id="active-budgets-heading" className="text-base font-bold">Active budgets</h2>
+                            <Link href="/finance/budgets" className="text-sm font-medium underline underline-offset-4">View budgets</Link></div>
+                        {(summary.active_budgets?.length ?? 0) > 0 ? <ul className="grid gap-3 md:grid-cols-3">{summary.active_budgets!.map((budget) => <li key={budget.id} className="min-w-0">
+                            <Link href={`/finance/budgets?budget=${budget.id}`} className="block h-full rounded-lg border border-border-default bg-bg-surface p-4 hover:bg-bg-hover">
+                                <h3 className="mb-3 break-words font-semibold">{budget.name}</h3><BudgetProgress budget={budget} compact />
+                            </Link></li>)}</ul> : <p className="text-sm text-text-muted">No active budgets.</p>}
+                    </section>
                     <section aria-labelledby="cash-flow-heading" className="flex h-full flex-col">
                         <h2 id="cash-flow-heading" className="text-base font-bold">Cash flow</h2>
                         <div className="mt-2 flex flex-wrap gap-4 text-sm" aria-hidden="true"><span><span className="mr-2 inline-block size-3 bg-success" />Income</span><span><span className="mr-2 inline-block size-3 bg-error" />Spent</span></div>
