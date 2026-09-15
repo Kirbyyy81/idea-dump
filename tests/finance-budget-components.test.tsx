@@ -17,7 +17,7 @@ describe('budget controls and feedback', () => {
         const { rerender } = render(<BudgetDetails {...props} />);
         expect(screen.queryByRole('rowheader', { name: 'Filters' })).toBeNull();
         expect(screen.getByText('14 to 20 Sept 2026')).toBeTruthy();
-        expect(screen.getByText('Budget RM 100.00')).toBeTruthy();
+        expect(screen.queryByText('Budget RM 100.00')).toBeNull();
         expect(screen.getByText('Needs attention').className).toBe('sr-only');
         detail.budget.configuration.categories = [{ id: 'food', original_id: 'food', name: 'Food', is_archived: false }];
         rerender(<BudgetDetails {...props} />);

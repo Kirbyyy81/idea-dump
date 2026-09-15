@@ -23,10 +23,9 @@ export function BudgetProgress({ budget, compact = false, showStatus = true }: {
                 <div className={`h-full rounded-full ${warning ? 'bg-error' : 'bg-action-primary'}`} style={{ width: `${Math.min(usage, 100)}%` }} />
                 {!compact && <span className="absolute top-0 h-full w-0.5 bg-text-muted" style={{ left: `${Math.min(pace, 99.5)}%` }} aria-hidden="true" />}
             </div>
-            <div className="flex flex-wrap justify-between gap-2 text-xs text-text-secondary">
-                <span>Budget {formatBudgetMoney(metrics.amount)}</span>
+            <div className="flex justify-end text-xs text-text-secondary">
                 <span>{budget.status === 'over_budget' ? `${formatBudgetMoney(metrics.over_amount)} over` : `${formatBudgetMoney(metrics.remaining)} remaining`}</span>
             </div>
-        </> : <p className="text-sm text-text-secondary">Budget {formatBudgetMoney(budget.configuration.amount)}{budget.state === 'scheduled' ? `, starts ${formatBudgetDate(budget.configuration.start_date)}` : ''}</p>}
+        </> : budget.state === 'scheduled' ? <p className="text-sm text-text-secondary">Starts {formatBudgetDate(budget.configuration.start_date)}</p> : null}
     </div>;
 }
