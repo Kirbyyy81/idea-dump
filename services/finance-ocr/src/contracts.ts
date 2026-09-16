@@ -4,7 +4,6 @@ import type {
     FinanceCandidateTransaction,
     FinanceDuplicateOutcome,
     FinanceDuplicateSignal,
-    FinanceOcrFieldLearningRule,
     FinanceOcrFieldTemplate,
     FinanceOcrPayee,
     FinanceOcrRule,
@@ -24,7 +23,6 @@ export interface FinanceContext {
     sourceTemplates: FinanceOcrSourceTemplate[];
     fieldTemplates: FinanceOcrFieldTemplate[];
     rules: FinanceOcrRule[];
-    fieldLearningRules: FinanceOcrFieldLearningRule[];
     payees: FinanceOcrPayee[];
 }
 

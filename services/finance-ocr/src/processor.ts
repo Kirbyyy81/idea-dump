@@ -168,7 +168,6 @@ export async function processScreenshot(
             context.rules,
             context.sources,
             image.originalFilename,
-            context.fieldLearningRules,
             context.payees,
             context.sourceTemplates,
             context.fieldTemplates,

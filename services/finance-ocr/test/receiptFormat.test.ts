@@ -9,7 +9,7 @@ function recognizer(texts = regionTexts) {
     return vi.fn(async () => ({ rawText: texts[index++], confidence: 75 }));
 }
 function parsed(receipt: Awaited<ReturnType<typeof processRytReceipt>>) {
-    return parseFinanceText(receipt.text, [], receiptContext.sources, null, [], [], [], [], receipt.processing).payload;
+    return parseFinanceText(receipt.text, [], receiptContext.sources, null, [], [], [], receipt.processing).payload;
 }
 
 describe('Ryt exported receipt layout', () => {
@@ -89,7 +89,7 @@ describe('Ryt exported receipt layout', () => {
 
 it.each(['Recipient', 'Payee', 'DuitNow', 'buitNow | EXAMPLE', 'Logo'])('rejects shared-receipt party noise: %s', (noise) => {
     const processing = { format: 'ryt_shared_v1' as const, detector_version: 1 as const, failed_regions: [], conflicts: [] };
-    const payload = parseFinanceText(`Ryt Bank\nRecipient: ${noise}\nReference ID\nSYN1234567`, [], receiptContext.sources, null, [], [], [], [], processing).payload;
+    const payload = parseFinanceText(`Ryt Bank\nRecipient: ${noise}\nReference ID\nSYN1234567`, [], receiptContext.sources, null, [], [], [], processing).payload;
     expect(payload.payee_name).toBeNull();
     expect(payload.merchant).toBeNull();
 });

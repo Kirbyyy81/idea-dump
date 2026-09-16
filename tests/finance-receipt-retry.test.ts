@@ -3,7 +3,7 @@ const repo = vi.hoisted(() => ({
     findFinanceReviewCandidate: vi.fn(), updateFinanceReviewCandidate: vi.fn(), updateFinanceIntakeSourceEvidence: vi.fn().mockResolvedValue({ error: null }),
     listActiveFinanceSources: vi.fn(), listRuntimeFinanceSourceTemplates: vi.fn().mockResolvedValue({ data: [] }),
     listRuntimeFinanceFieldTemplates: vi.fn().mockResolvedValue({ data: [] }), listActiveFinanceRules: vi.fn().mockResolvedValue({ data: [] }),
-    listActiveFinanceFieldLearningRules: vi.fn().mockResolvedValue({ data: [] }), listActiveFinancePayees: vi.fn().mockResolvedValue({ data: [] }),
+    listActiveFinancePayees: vi.fn().mockResolvedValue({ data: [] }),
 }));
 vi.mock('@/lib/finance/core/repository', () => repo);
 vi.mock('@/lib/finance/transactions/duplicates', () => ({
@@ -21,9 +21,12 @@ describe('review retry preserves receipt classification', () => {
         } });
         repo.listActiveFinanceSources.mockResolvedValue({ data: [{ id: '11111111-1111-4111-8111-111111111111', name: 'Ryt Bank', filename_aliases: [], ocr_aliases: [], is_archived: false }] });
         repo.updateFinanceReviewCandidate.mockImplementation(async (_user, _candidate, update) => ({ data: { id: 'candidate', ...update } }));
+        repo.listActiveFinanceRules.mockResolvedValue({ data: [{ id: 'legacy', source: 'learning', is_active: true, match_type: 'keyword', pattern: 'Ryt Bank', name: 'Retired', category_id: 'old-category', direction: 'income', priority: 1, created_at: '2026-01-01' }] });
         const result = await resolveFinanceReviewCandidateForUser('user', 'candidate', 'retry', {}, '2026-09-09');
         expect(result.kind).toBe('candidate');
         const payload = repo.updateFinanceReviewCandidate.mock.calls.at(-1)![2].payload;
+        expect(payload.category_id).toBeNull();
+        expect(payload.matched_rule_names).toEqual([]);
         expect(payload.amount).toBe(classified ? null : 17.25);
         expect(payload.receipt_processing).toEqual(processing);
         expect(payload.payee_name).toBe('SYNTHETIC CORNER SHOP');

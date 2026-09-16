@@ -40,3 +40,4 @@
 
 - Ryt receipt-format changes must pass `supabase/tests/finance_receipt_format.test.sql` and `supabase/tests/finance_receipt_finalization.test.sql`, plus OCR format/evaluator parity and worker sequence tests. Keep the specialised OCR flag default-off and preserve historical intake eligibility, raw OCR, and format-scoped learning evidence.
 - When algorithms 2 and 3 coexist with receipt formats, also run `supabase/tests/finance_receipt_format_v3.test.sql`. Keep scope identity and eligibility consistent across both algorithms.
+- Legacy category/direction and reference learning is retired. Runtime parsing loads manual rules and algorithms 2/3 only. Preserve historical payload fields and baselines. Changes to retirement must pass `supabase/tests/finance_legacy_retirement_upgrade.test.sql` against the predecessor schema, then current SQL suites against the retired schema.

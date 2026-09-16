@@ -9,7 +9,6 @@ describe('Finance OCR parser baseline', () => {
             fixture.rules ?? [],
             fixture.sources ?? [],
             fixture.filename,
-            fixture.fieldLearningRules ?? [],
             fixture.payees ?? [],
         );
 

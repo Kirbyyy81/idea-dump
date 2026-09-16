@@ -1,5 +1,4 @@
 import type {
-    FinanceOcrFieldLearningRule,
     FinanceOcrPayee,
     FinanceOcrRule,
     FinanceOcrSource,
@@ -28,17 +27,6 @@ const rowanPayee: FinanceOcrPayee = {
     is_archived: false,
 };
 
-const learnedReferenceRule: FinanceOcrFieldLearningRule = {
-    id: 'learned-reference-prefix',
-    source_id: auroraSource.id,
-    field_name: 'reference_number',
-    transform_type: 'strip_prefix',
-    transform_value: 'OCR-',
-    evidence_count: 3,
-    is_active: true,
-    created_at: '2026-08-01T00:00:00.000Z',
-};
-
 const coffeeRule: FinanceOcrRule = {
     id: 'rule-coffee',
     name: 'Coffee purchases',
@@ -60,7 +48,6 @@ export interface FinanceParserBaselineFixture {
     filename: string;
     rules?: FinanceOcrRule[];
     sources?: FinanceOcrSource[];
-    fieldLearningRules?: FinanceOcrFieldLearningRule[];
     payees?: FinanceOcrPayee[];
     expected: {
         confidence: number;
@@ -391,7 +378,7 @@ export const financeParserBaselineFixtures: FinanceParserBaselineFixture[] = [
         },
     },
     {
-        name: 'existing learned reference transform remains source scoped',
+        name: 'untransformed reference becomes the parser baseline',
         normalizedText: [
             'Merchant: Solstice Supplies',
             'Paid RM 30.00',
@@ -400,7 +387,6 @@ export const financeParserBaselineFixtures: FinanceParserBaselineFixture[] = [
         ].join('\n'),
         filename: 'Capture_Aurora_Wallet.png',
         sources: [auroraSource],
-        fieldLearningRules: [learnedReferenceRule],
         expected: {
             confidence: 0.9,
             matchedRuleId: null,
@@ -414,10 +400,10 @@ export const financeParserBaselineFixtures: FinanceParserBaselineFixture[] = [
                 transaction_date: '2026-08-19',
                 source_id: auroraSource.id,
                 category_id: null,
-                reference_number: '654321',
+                reference_number: 'OCR-654321',
                 notes: null,
                 matched_rule_names: [],
-                learned_field_rule_ids: [learnedReferenceRule.id],
+                learned_field_rule_ids: [],
                 duplicate_transaction_id: null,
             },
             sourceDetectionSignals: [{

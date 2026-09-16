@@ -117,7 +117,7 @@ export async function processRytReceipt(
         processing.format = 'unknown';
         return unchanged;
     }
-    const parse = (value: string) => parseFinanceText(value, [], context.sources, image.originalFilename, [], context.payees, [], [], processing).payload;
+    const parse = (value: string) => parseFinanceText(value, [], context.sources, image.originalFilename, context.payees, [], [], processing).payload;
     const readings = [parse(original), ...Object.values(pieces).map(parse)];
     for (const field of fields) {
         const values = new Set(readings.map((row) => row[field]).filter((value) => value !== null)

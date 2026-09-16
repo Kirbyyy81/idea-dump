@@ -74,7 +74,7 @@ describe('Finance learning summary payload', () => {
 });
 
 describe('LearningSummaryPanel', () => {
-    it('renders active, shadow, gathering, rejected, disabled, and legacy states', () => {
+    it('renders parser learning without retired compatibility metrics', () => {
         render(<LearningSummaryPanel isLoading={false} summary={availableSummary} />);
         expect(screen.getByText('Succeeded')).toBeTruthy();
         expect(screen.getByText('Active source')).toBeTruthy();
@@ -83,7 +83,8 @@ describe('LearningSummaryPanel', () => {
         expect(screen.getByText('Gathering evidence')).toBeTruthy();
         expect(screen.getByText('Rejected')).toBeTruthy();
         expect(screen.getByText('Disabled')).toBeTruthy();
-        expect(screen.getByText('8 active reference transforms')).toBeTruthy();
+        expect(screen.queryByText('8 active reference transforms')).toBeNull();
+        expect(screen.queryByText('Compatibility rules')).toBeNull();
         expect(screen.getByText(/Reference number: 100% precision, 75% coverage/)).toBeTruthy();
         expect(screen.queryByRole('heading', { name: 'Recent outcomes' })).toBeNull();
         expect(screen.queryByText(/Amount disabled/)).toBeNull();

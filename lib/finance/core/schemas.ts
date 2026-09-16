@@ -62,10 +62,6 @@ export interface FinanceRuleUpdateInput {
     updates: Record<string, unknown>;
 }
 
-export interface FinanceRuleSuggestionEditInput extends FinanceRuleInput {
-    id: string;
-}
-
 export interface FinanceTransactionInput {
     source_id: string;
     category_id: string | null;
@@ -293,18 +289,6 @@ export function parseFinanceRuleUpdate(body: Record<string, unknown>): FinanceVa
         updates.is_active = body.is_active;
     }
     return { data: { id, updates } };
-}
-
-export function parseFinanceRuleSuggestionEdit(body: Record<string, unknown>): FinanceValidationResult<FinanceRuleSuggestionEditInput> {
-    const id = toRequiredFinanceText(body.id);
-    if (!id) return { error: 'Suggestion ID is required' };
-    if (!isFinanceUuid(id)) return { error: 'Suggestion ID must be a valid UUID' };
-    const parsed = parseFinanceRuleValues(body, { partial: false });
-    if ('error' in parsed) return parsed;
-    const categoryId = toRequiredFinanceText(body.category_id);
-    if (!categoryId) return { error: 'Category is required' };
-    if (!isFinanceUuid(categoryId)) return { error: 'Category ID must be a valid UUID' };
-    return { data: { id, ...parsed.data as FinanceRuleInput, category_id: categoryId } };
 }
 
 export function parseFinanceTransaction(

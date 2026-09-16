@@ -514,7 +514,7 @@ OCR text is normalized before parsing and hashing. The normalizer provides stabl
 - Exact normalized OCR-text duplicate detection.
 - Review retry behavior.
 
-The parser is pure TypeScript shared by the Next.js application and the OCR service. Review's `Retry rules` action reparses stored normalized OCR text using the user's current active sources, rules, learned reference transforms, and payees.
+The parser is pure TypeScript shared by the Next.js application and the OCR service. Review's `Retry rules` action reparses stored normalized OCR text using the user's current active sources, manual rules, algorithm 2/3 parser templates, and payees.
 
 ### Amount extraction
 
@@ -671,36 +671,15 @@ Review confirmation records differences between the original candidate and the c
 
 Transaction edits also record payee-name changes. Corrections store the text payee name, not the opaque payee ID.
 
-### Category learning
+### Parser learning and retired legacy rules
 
-The database schedules `finance_refresh_rule_suggestions()` daily at 03:15 database time. For category learning, it considers the latest correction for each confirmed transaction and groups evidence by:
+The daily learning job continues to refresh algorithm 2 and 3 parser templates. Templates retain the existing source/receipt-format scopes, upload cutoff, shadow evidence, contradiction handling, and explicit promotion requirements. Algorithm 3 transforms consume recorded parser baselines; new baselines are captured after standard parsing and manual rules.
 
-- User.
-- Exact normalized merchant.
-- Direction.
-- Source.
-- Confirmed category.
+Legacy category/direction rules and reference transforms are retired by the forward migration `20260915172224_retire_legacy_finance_learning.sql`. Existing rows are disabled and retained, including accepted suggestions. The database prevents new legacy rules, reactivation, and conversion into manual rules. The compatibility legacy refresh returns zero without generating rules. No replacement category learner is included.
 
-After at least three distinct supporting transactions and no competing category for the same key, the refresh creates or maintains a narrow learned merchant-alias rule. Unsupported generated rules are paused. Manual compatible rules take precedence over generating redundant learned rules.
+Rules settings shows legacy category rules as read-only retired entries. Manual rules remain editable. Suggestion lists return empty and authorized suggestion mutations return HTTP 410. Historical candidates, traces, baselines, corrections and confirmed transactions are retained. The existing 90-day learning-run retention still applies; new runs report zero legacy activity.
 
-The Settings UI also supports pending `finance_rule_suggestions`: users can edit, activate, or dismiss them. Accepted suggestions become learning rules. Learned rules can be paused or resumed, but their core learned fields cannot be edited and they cannot be permanently deleted through the normal rule API.
-
-Each scheduled refresh records a durable business result in `finance_learning_runs` and bounded user counts in `finance_learning_run_user_summaries`. The Rules settings section reads those aggregates through a server-only summary function. It never returns OCR text, filenames, correction values, transaction values, or parser-template configuration. Detailed completed runs are retained for 90 days.
-
-Version 2 parser learning generates source-scoped reference, merchant, date, direction, canonical payee, notes, and recipient-reference templates from reviewed corrections. Historical support enters shadow evaluation; new reviewed shadow outcomes and explicit operator promotion are required before activation. Contradictions disable active templates during refresh. Existing category learning and reference transforms remain available as the baseline. See [the Phase 4 and 5 rollout guide](FINANCE_PARSER_LEARNING_ROLLOUT.md) for bounds, promotion gates, verification, and deployment status.
-
-### Reference-number learning
-
-Reference learning is source-specific and supports four deterministic transforms:
-
-- Strip a repeated prefix.
-- Strip a repeated suffix.
-- Keep digits only.
-- Keep alphanumeric characters only.
-
-A transform becomes eligible only after at least three distinct corrected transactions and zero contradictory reviewed outcomes. During parsing, eligible active rules are ordered by evidence count, transform rank, creation time, and ID. At most one transform is applied. The transformed result must differ from the original and remain between 5 and 200 characters.
-
-Learning currently changes category selection and transaction-reference cleanup. It does not learn arbitrary payee aliases, notes transformations, date formats, or merchant-to-payee reclassification.
+See [the retirement rollout instructions](FINANCE_PARSER_LEARNING_ROLLOUT.md#legacy-learning-retirement) for migration order and validation.
 
 ## Automatic confirmation
 
@@ -818,12 +797,12 @@ Share batch items move from queued to processing and then to one terminal state:
 | `finance_intake_items` | OCR intake lifecycle, hashes, text, source evidence, leases, and failures. |
 | `finance_candidate_transactions` | Parsed review candidates, confidence, rules, and duplicate assessment. |
 | `finance_rules` | Manual and learned matching rules. |
-| `finance_rule_suggestions` | Pending, accepted, and rejected learning suggestions. |
+| `finance_rule_suggestions` | Retained legacy suggestion history; activation is retired. |
 | `finance_learning_runs` | Privacy-safe business outcomes for scheduled learning refreshes. |
 | `finance_learning_run_user_summaries` | User-scoped learning counts used by Finance settings. |
 | `finance_parser_templates` | Versioned bounded OCR parser-template definitions for later phases. |
 | `finance_template_evidence` | Tenant-safe evidence relationships without duplicated OCR or correction values. |
-| `finance_field_learning_rules` | Source-specific deterministic reference transforms. |
+| `finance_field_learning_rules` | Retained, disabled legacy reference transforms. |
 | `finance_corrections` | Original and corrected field values tied to review or transaction lineage. |
 | `finance_processing_events` | Safe processing and state-transition audit events. |
 
@@ -865,8 +844,8 @@ All Finance API handlers are dynamic and return JSON.
 | `/api/finance/review` | POST | Confirm, retry, duplicate, and reject mutations. Queue reads are server-rendered. |
 | `/api/finance/sources` | GET, POST, PATCH or PUT, DELETE | Source library management. |
 | `/api/finance/categories` | GET, POST, PUT or PATCH, DELETE | Category library management. |
-| `/api/finance/rules` | GET, POST, PUT, DELETE | Rule library management. GET also returns pending suggestions and the safe learning summary so Settings needs one read. |
-| `/api/finance/rule-suggestions` | PATCH, POST | Edit, activate, or dismiss learning suggestions. |
+| `/api/finance/rules` | GET, POST, PUT, DELETE | Rule library management. GET also returns an empty suggestions array and the safe learning summary so Settings needs one read. |
+| `/api/finance/rule-suggestions` | PATCH, POST | Retired endpoint; authorized mutations return HTTP 410. |
 | `/api/finance/share-batches/prepare` | POST | Reserve a batch and return signed upload details. |
 | `/api/finance/share-batches/commit` | POST | Verify uploads, queue them, and return 202. |
 | `/api/finance/share-batches/active` | GET | Return the verified user's current active transient batch. |
@@ -1110,7 +1089,7 @@ See [`ARCHITECTURE_CLEAN_CODE_REVIEW.md`](./ARCHITECTURE_CLEAN_CODE_REVIEW.md) f
 - Source detection: [`lib/finance/ocr/sourceDetection.ts`](../lib/finance/ocr/sourceDetection.ts)
 - Transaction reference extraction: [`lib/finance/ocr/reference.ts`](../lib/finance/ocr/reference.ts)
 - Recipient-reference handling: [`lib/finance/ocr/recipientReference.ts`](../lib/finance/ocr/recipientReference.ts)
-- Learned reference transforms: [`lib/finance/ocr/fieldLearning.ts`](../lib/finance/ocr/fieldLearning.ts)
+- Legacy reference transforms: retired; historical rows remain in `finance_field_learning_rules`.
 - Duplicate policy: [`lib/finance/transactions/duplicates.ts`](../lib/finance/transactions/duplicates.ts)
 - Payee form classification: [`lib/finance/transactions/payeeClassification.ts`](../lib/finance/transactions/payeeClassification.ts)
 - Dashboard aggregation: [`lib/finance/dashboard.ts`](../lib/finance/dashboard.ts)

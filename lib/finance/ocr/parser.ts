@@ -3,7 +3,6 @@ import { hasReceiptToday, screenshotFilenameDate } from '@/lib/finance/ocr/recei
 import {
     FinanceCandidatePayload,
     FinanceReceiptProcessing,
-    FinanceOcrFieldLearningRule,
     FinanceOcrFieldTemplate,
     FinanceOcrPayee,
     FinanceOcrRule,
@@ -12,7 +11,6 @@ import {
     FinanceTransactionDirection,
 } from '@/lib/types';
 import { FINANCE_V1_CURRENCY } from '@/lib/finance/core/constants';
-import { applyLearnedReferenceRules } from '@/lib/finance/ocr/fieldLearning';
 import { applyFinanceCriticalFieldTemplates } from '@/lib/finance/ocr/fieldTemplates';
 import { normalizeFinanceMerchantKey, normalizeFinancePayeeKey } from '@/lib/finance/ocr/normalizer';
 import { extractFinanceReferenceNumber } from '@/lib/finance/ocr/reference';
@@ -201,7 +199,6 @@ export function parseFinanceText(
     rules: FinanceOcrRule[],
     sources: FinanceOcrSource[],
     filename: string | null = null,
-    fieldLearningRules: FinanceOcrFieldLearningRule[] = [],
     payees: FinanceOcrPayee[] = [],
     sourceTemplates: FinanceOcrSourceTemplate[] = [],
     fieldTemplates: FinanceOcrFieldTemplate[] = [],
@@ -248,7 +245,7 @@ export function parseFinanceText(
     let categoryAssigned = false;
     let directionAssigned = false;
     let merchantAssigned = false;
-    for (const rule of [...rules].filter((rule) => rule.is_active).sort(compareFinanceRules)) {
+    for (const rule of [...rules].filter((rule) => rule.is_active && rule.source === 'manual').sort(compareFinanceRules)) {
         if (!ruleMatches(rule, normalized, parsedMerchant)) continue;
         if (rule.auto_created_at && rule.source_id && rule.source_id !== inferredSourceId) continue;
         if (rule.auto_created_at && inferredDirection && rule.direction && rule.direction !== inferredDirection) continue;
@@ -290,14 +287,6 @@ export function parseFinanceText(
             merchantAssigned = true;
         }
     }
-
-    const learnedReference = applyLearnedReferenceRules(
-        payload.reference_number,
-        payload.source_id,
-        sharedReceipt ? [] : fieldLearningRules,
-    );
-    payload.reference_number = learnedReference.referenceNumber;
-    payload.learned_field_rule_ids = learnedReference.matchedRuleIds;
 
     payload.parser_template_baseline = {
         reference_number: payload.reference_number, merchant: payload.merchant,

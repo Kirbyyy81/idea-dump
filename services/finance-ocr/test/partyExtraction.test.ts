@@ -13,7 +13,7 @@ const alice: FinancePayee = {
 };
 
 function parse(text: string, payees: FinancePayee[] = []) {
-    return parseFinanceText(text, [], [], 'Screenshot.png', [], payees).payload;
+    return parseFinanceText(text, [], [], 'Screenshot.png', payees).payload;
 }
 
 describe('Finance merchant and payee extraction', () => {
