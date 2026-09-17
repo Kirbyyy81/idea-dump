@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.15.2](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.15.1...idea-dump-v0.15.2) (2026-09-17)
+
+
+### Bug Fixes
+
+* remove budget status badges ([c269901](https://github.com/Kirbyyy81/idea-dump/commit/c269901cdcfc7f5543ba3e0f48456e8a22bd8ed9))
+* show budget detail skeleton ([514c36b](https://github.com/Kirbyyy81/idea-dump/commit/514c36b7ee935e471419f0e6b9a95703c4423676))
+
 ## [0.15.1](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.15.0...idea-dump-v0.15.1) (2026-09-15)
 
 
