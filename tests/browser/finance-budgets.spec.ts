@@ -118,7 +118,9 @@ test('create, edit, archive, frozen history and restore', async ({ page }, testI
     const details = page.getByRole('region', { name: 'Everyday spending details' });
     await expect(details.getByText('14 to 20 Sept 2026')).toBeVisible();
     await expect(details.getByText('Budget RM 100.00')).toHaveCount(0);
-    await expect(details.getByText('Needs attention', { exact: true })).toHaveClass('sr-only');
+    for (const status of await page.getByText('Needs attention', { exact: true }).all()) {
+        await expect(status).toHaveClass('sr-only');
+    }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
     await details.screenshot({ path: testInfo.outputPath('budget-details.png') });
     await expect(page.getByText(/of cycle days elapsed/)).toHaveCount(0);

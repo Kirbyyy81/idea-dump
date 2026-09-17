@@ -1,7 +1,7 @@
 import type { FinanceBudgetSummary } from '@/lib/types';
 import { BUDGET_STATUS_LABELS, formatBudgetDate, formatBudgetDateRange, formatBudgetMoney } from '@/lib/finance/budgets/calculations';
 
-export function BudgetProgress({ budget, compact = false, showStatus = true }: { budget: FinanceBudgetSummary; compact?: boolean; showStatus?: boolean }) {
+export function BudgetProgress({ budget, compact = false }: { budget: FinanceBudgetSummary; compact?: boolean }) {
     const cycle = budget.current_cycle;
     const metrics = cycle?.metrics;
     const usage = Number(metrics?.usage_percentage ?? 0);
@@ -9,7 +9,7 @@ export function BudgetProgress({ budget, compact = false, showStatus = true }: {
     const warning = budget.status === 'over_budget' || budget.status === 'limit_reached';
     return <div className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-            <span className={showStatus ? `rounded-full border px-2.5 py-1 font-semibold ${warning ? 'border-error text-error' : budget.status === 'needs_attention' ? 'border-warning text-warning' : 'border-border-default text-text-secondary'}` : 'sr-only'}>
+            <span className="sr-only">
                 {BUDGET_STATUS_LABELS[budget.status]}</span>
             {cycle && <span className="text-text-muted">{formatBudgetDateRange(cycle.start_date, cycle.end_date)}</span>}
         </div>
