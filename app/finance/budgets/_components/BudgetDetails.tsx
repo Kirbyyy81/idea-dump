@@ -48,7 +48,7 @@ export function BudgetDetails({ detail, onEdit, onArchive, onRestore, onHistoryP
                     { label: 'Cycle history', icon: <History size={16} aria-hidden="true" />, onSelect: () => setShowHistory(true) },
                 ]} />
             </div></div>
-        <BudgetProgress budget={budget} showStatus={false} />
+        <BudgetProgress budget={budget} />
         <table className="mt-5 w-full table-fixed border-y border-border-default text-left text-xs">
             <caption className="sr-only">Budget configuration</caption>
             <tbody className="divide-y divide-border-default">{configurationRows.map(([heading, value]) => <tr key={heading}>

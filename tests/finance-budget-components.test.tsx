@@ -50,7 +50,7 @@ describe('budget controls and feedback', () => {
         expect(screen.getByText('125% used')).toBeTruthy();
         expect(screen.getByText('RM 25.00 over')).toBeTruthy();
         expect(screen.getByRole('meter').getAttribute('aria-valuenow')).toBe('125');
-        expect(screen.getByText('Over budget')).toBeTruthy();
+        expect(screen.getByText('Over budget').className).toBe('sr-only');
     });
     it('retains edits on revision conflicts and provides reload', async () => {
         mocks.request.mockRejectedValue(new FinanceApiError('Reload and retry', 409));
