@@ -152,7 +152,7 @@ test('create, edit, archive, frozen history and restore', async ({ page }, testI
     await page.screenshot({ path: testInfo.outputPath('budget-lifecycle.png'), fullPage: true });
 });
 
-test('budget sections use loaded lists and only fetch selected details', async ({ page }) => {
+test('budget sections use loaded lists and only fetch selected details', async ({ page }, testInfo) => {
     await references(page);
     const scheduled = budgetFixture({ name: 'Future spending', state: 'scheduled', status: 'scheduled' });
     await page.addInitScript((budget) => { (window as unknown as { budgetInitial: unknown }).budgetInitial = {
@@ -174,10 +174,13 @@ test('budget sections use loaded lists and only fetch selected details', async (
     await page.getByRole('button', { name: 'Scheduled', exact: true }).click();
     expect(requests).toEqual([]);
     await page.getByRole('button', { name: 'View Future spending' }).click();
-    await expect(page.getByText('Loading budget details...', { exact: true })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Loading budget details' })).toBeVisible();
+    await expect(page.getByText('Loading budget details...', { exact: true })).toHaveClass('sr-only');
+    await page.getByRole('region', { name: 'Loading budget details' }).screenshot({ path: testInfo.outputPath('budget-detail-skeleton.png') });
     await expect(page.getByRole('region', { name: 'Future spending details' })).toHaveCount(0);
     releaseDetail();
     await expect(page.getByRole('region', { name: 'Future spending details' })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Loading budget details' })).toHaveCount(0);
     expect(requests).toEqual([`/api/finance/budgets/${scheduled.id}`]);
 });
 test('budget action keyboard navigation and history pagination', async ({ page }, testInfo) => {

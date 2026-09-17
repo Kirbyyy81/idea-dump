@@ -39,13 +39,17 @@ describe('budget list and detail loading', () => {
         renderBudgets();
         fireEvent.click(screen.getByRole('button', { name: 'View Everyday' }));
         expect(mocks.request.mock.calls[0][0]).toBe(`/api/finance/budgets/${active.id}?history_page=1&transactions_page=1`);
+        expect(screen.getByRole('region', { name: 'Loading budget details' }).getAttribute('aria-busy')).toBe('true');
+        expect(screen.getByText('Loading budget details...').className).toBe('sr-only');
         const signal = mocks.request.mock.calls[0][1].signal as AbortSignal;
         fireEvent.click(screen.getByRole('button', { name: 'Scheduled' }));
         expect(signal.aborted).toBe(true);
+        expect(screen.queryByRole('region', { name: 'Loading budget details' })).toBeNull();
         fireEvent.click(screen.getByRole('button', { name: 'View Next week' }));
         await waitFor(() => expect(screen.getByRole('region', { name: 'Next week details' })).toBeTruthy());
         await act(async () => pending.resolve({ data: budgetDetailFixture(active) }));
         expect(screen.queryByRole('region', { name: 'Everyday details' })).toBeNull();
+        expect(screen.queryByRole('region', { name: 'Loading budget details' })).toBeNull();
         expect(mocks.request).toHaveBeenCalledTimes(2);
     });
     it('paginates all loaded summaries locally in pages of 20', () => {

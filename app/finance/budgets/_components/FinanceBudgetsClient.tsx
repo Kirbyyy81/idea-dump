@@ -11,6 +11,7 @@ import type { FinanceBudgetDetail, FinanceBudgetPage, FinanceBudgetState, Financ
 import { BudgetForm } from './BudgetForm';
 import { BudgetDetails, BudgetPagination } from './BudgetDetails';
 import { BudgetProgress } from './BudgetProgress';
+import { BudgetDetailsSkeleton } from './BudgetDetailsSkeleton';
 import { collectBudgetSummaries } from '@/lib/finance/budgets/listing';
 
 export function FinanceBudgetsClient({ initialBudgets, initialState, initialDetail, initialPage = 1 }: {
@@ -66,7 +67,7 @@ export function FinanceBudgetsClient({ initialBudgets, initialState, initialDeta
         const controller = new AbortController();
         loadController.current = controller;
         setDetailBusy(true); setError(''); setSelectedId(id);
-        if (detail?.budget.id !== id) setDetail(null);
+        if (focus || detail?.budget.id !== id) setDetail(null);
         updateLocation(state, currentPage, id);
         try {
             const nextDetail = (await financeApiRequest<{ data: FinanceBudgetDetail }>(`/api/finance/budgets/${id}?history_page=${historyPage}&transactions_page=${transactionsPage}`, { signal: controller.signal })).data;
@@ -127,7 +128,7 @@ export function FinanceBudgetsClient({ initialBudgets, initialState, initialDeta
                     aria-current={state === section ? 'page' : undefined} onClick={() => navigateList(section)} disabled={mutating}>{section[0].toUpperCase() + section.slice(1)}</Button>)}
                 <Button variant="ghost" className="ml-auto" onClick={() => void refreshBudgets()} disabled={refreshing || mutating}>Refresh budgets</Button>
             </nav>
-            <p className={refreshing || detailBusy ? 'mb-3 text-sm text-text-muted' : 'sr-only'} role="status" aria-live="polite">{refreshing ? 'Refreshing budgets...' : detailBusy ? 'Loading budget details...' : ''}</p>
+            <p className={refreshing ? 'mb-3 text-sm text-text-muted' : 'sr-only'} role="status" aria-live="polite">{refreshing ? 'Refreshing budgets...' : detailBusy ? 'Loading budget details...' : ''}</p>
             {listError && <div role="alert" className="mb-4 rounded-md border border-error bg-error-bg p-3 text-sm text-error">{listError}<Button variant="ghost" onClick={() => void refreshBudgets()}>Retry refresh</Button></div>}
             {error && <div role="alert" className="mb-4 rounded-md border border-error bg-error-bg p-3 text-sm text-error">{error}<Button variant="ghost" onClick={() => selectedId && void loadDetail(selectedId)}>Retry budget details</Button></div>}
             <div className="grid items-start gap-5 lg:grid-cols-[minmax(260px,0.9fr)_minmax(0,1.4fr)]" aria-busy={refreshing || detailBusy}>
@@ -142,7 +143,9 @@ export function FinanceBudgetsClient({ initialBudgets, initialState, initialDeta
                         </li>)}</ul>}
                     <BudgetPagination page={list} onPage={(page) => navigateList(state, page)} label="Budgets" disabled={mutating} />
                 </section>
-                <div ref={detailHeading} tabIndex={-1} className="min-w-0 outline-none">{detail && <BudgetDetails key={detail.budget.id} detail={detail} busy={busy} loadError={error} onEdit={() => setForm('edit')}
+                <div ref={detailHeading} tabIndex={-1} className="min-w-0 outline-none">
+                    {detailBusy && !detail && <BudgetDetailsSkeleton budget={budgets.find((budget) => budget.id === selectedId)} />}
+                    {detail && <BudgetDetails key={detail.budget.id} detail={detail} busy={busy} loadError={error} onEdit={() => setForm('edit')}
                     onArchive={() => setArchiving(true)} onRestore={() => setForm('restore')}
                     onHistoryPage={(page) => void loadDetail(detail.budget.id, page, detail.transactions.page)}
                     onTransactionsPage={(page) => void loadDetail(detail.budget.id, detail.history.page, page)} />}</div>
