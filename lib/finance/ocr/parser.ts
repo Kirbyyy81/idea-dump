@@ -18,7 +18,8 @@ import {
     extractFinanceRecipientReference,
     mergeFinanceRecipientReferenceIntoNotes,
 } from '@/lib/finance/ocr/recipientReference';
-import { detectFinanceSource } from '@/lib/finance/ocr/sourceDetection';
+import { detectFinanceSource, normalizeFinanceSourceSignal } from '@/lib/finance/ocr/sourceDetection';
+import { cleanRytMerchantIcon, rytQrMerchant } from '@/lib/finance/ocr/reviewedReceiptRules';
 import { toIsoDate } from '@/shared/date';
 
 interface ParsedCandidate {
@@ -133,8 +134,10 @@ function matchSavedPayee(value: string | null, payees: FinanceOcrPayee[]) {
     )) || null;
 }
 
-function parseParties(lines: string[], payees: FinanceOcrPayee[]) {
+function parseParties(lines: string[], payees: FinanceOcrPayee[], rytText: string | null = null) {
     const explicitMerchant = labeledPartyValue(lines, /^merchant(?:\s+name)?\s*[:\-]?\s*(.*)$/i);
+    const qrMerchant = !explicitMerchant && rytText !== null ? rytQrMerchant(rytText) : null;
+    if (qrMerchant) return { merchant: qrMerchant, payeeId: null, payeeName: null };
     const explicitPayee = labeledPartyValue(
         lines,
         /^(?:payee|recipient|transfer\s+(?:recipient|to)|to)\b(?!\s+(?:reference|ref))(?:\s+name)?\s*[:\-]?\s*(.*)$/i,
@@ -158,7 +161,11 @@ function parseParties(lines: string[], payees: FinanceOcrPayee[]) {
         }
     }
 
-    return { merchant: fallbackParty(lines), payeeId: null, payeeName: null };
+    const merchant = fallbackParty(lines);
+    return {
+        merchant: (rytText !== null ? cleanRytMerchantIcon(rytText, merchant) : null) ?? merchant,
+        payeeId: null, payeeName: null,
+    };
 }
 
 function ruleMatches(rule: FinanceOcrRule, text: string, merchant: string | null) {
@@ -211,7 +218,9 @@ export function parseFinanceText(
     );
     const sourceDetectionSignals = [...sourceDetection.signals];
     const sourceSignalsConflict = sourceDetection.hasConflict;
-    const parties = parseParties(lines, payees);
+    const detectedSource = sources.find((source) => source.id === sourceDetection.sourceId && !source.is_archived);
+    const isRyt = detectedSource && normalizeFinanceSourceSignal(detectedSource.name) === 'ryt bank';
+    const parties = parseParties(lines, payees, isRyt ? normalizedText : null);
     const recipientReference = extractFinanceRecipientReference(normalizedText);
     const payload: FinanceCandidatePayload = {
         amount: parseAmount(lines),

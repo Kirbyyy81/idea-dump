@@ -1071,6 +1071,7 @@ export interface FinanceSourceDetectionSignal {
     kind:
         | 'filename_alias'
         | 'ocr_alias'
+        | 'receipt_structure'
         | 'learned_source_active'
         | 'learned_source_shadow'
         | 'rule_match';
