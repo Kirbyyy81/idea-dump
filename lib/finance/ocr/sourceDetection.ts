@@ -1,4 +1,5 @@
 import { templateLines, templateSourcePhrase } from '@/lib/finance/ocr/templateValues';
+import { matchesFinanceRuleConditions } from './guardedRules';
 import type {
     FinanceOcrSource,
     FinanceOcrSourceTemplate,
@@ -65,7 +66,9 @@ function templateMatches(
     template: FinanceOcrSourceTemplate,
     normalizedFilename: string,
     normalizedLines: string[],
+    text: string,
 ) {
+    if (template.configuration.type === 'source_signature') return matchesFinanceRuleConditions(text, template.configuration.conditions);
     if (template.configuration.type !== 'source_phrase') return false;
     const phrase = templateSourcePhrase(template.configuration.phrase);
     if (phrase.length < 3) return false;
@@ -95,12 +98,14 @@ function evaluateSourceTemplates(
     for (const template of orderFinanceParserTemplates(validTemplates, null).slice(0, 40)) {
         if (
             template.field_name !== 'source_id'
-            || template.template_type !== 'source_phrase'
+            || !['source_phrase', 'source_signature'].includes(template.template_type)
             || (template.status !== 'active' && template.status !== 'shadow')
             || !template.target_source_id
         ) continue;
         const source = sourceById.get(template.target_source_id);
-        if (!source || !templateMatches(template, normalizedFilename, normalizedLines)) continue;
+        const config = template.configuration;
+        if (config.type === 'source_signature' && (!sourceById.has(config.replaces_source_id) || config.replaces_source_id === source?.id)) continue;
+        if (!source || !templateMatches(template, normalizedFilename, normalizedLines, text)) continue;
         signals.push({
             source_id: source.id,
             source_name: source.name,
@@ -115,7 +120,8 @@ function evaluateSourceTemplates(
 
     return {
         signals,
-        activeDecision: selectFinanceParserTemplateProposal(activeProposals, null),
+        activeProposals,
+        activeDecision: selectFinanceParserTemplateProposal(activeProposals.filter(({ template }) => template.template_type !== 'source_signature'), null),
     };
 }
 
@@ -188,6 +194,20 @@ export function detectFinanceSource(
         sourceId = genericOcrSourceIds.size === 1 ? Array.from(genericOcrSourceIds)[0] : null;
         hasConflict = genericOcrSourceIds.size > 1;
     }
+
+    // An operator-approved signature may refine only its configured source pair.
+    const refinements = sourceTemplateResult.activeProposals.filter(({ template }) => {
+        const config = template.configuration;
+        if (config.type !== 'source_signature') return false;
+        const allowed = new Set([config.replaces_source_id, template.target_source_id]);
+        return (sourceId === null || allowed.has(sourceId))
+            && baselineSignals.every((signal) => allowed.has(signal.source_id));
+    });
+    const refinement = selectFinanceParserTemplateProposal(refinements, null);
+    if (refinement.status === 'selected') {
+        sourceId = String(refinement.proposal.value);
+        hasConflict = false;
+    } else if (refinement.status === 'conflict') hasConflict = true;
 
     const signals = [
         ...sourceTemplateResult.signals,

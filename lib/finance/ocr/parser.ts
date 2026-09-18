@@ -298,6 +298,7 @@ export function parseFinanceText(
     };
     const fieldTemplateResult = applyFinanceCriticalFieldTemplates(
         normalizedText, payload, payload.source_id, fieldTemplates, payees, filename,
+        merchantAssigned ? ['merchant'] : [],
     );
     Object.assign(payload, fieldTemplateResult.payload);
     if (fieldTemplateResult.evaluations.length > 0) {
