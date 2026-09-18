@@ -1,17 +1,5 @@
 # PRD 010: Phases 4 and 5
 
-## Reviewed baseline receipt fixes, 18 September 2026 (not deployed)
-
-Three user-approved fixes run in the shared baseline parser, before manual merchant rules and before capturing `parser_template_baseline`. They are not algorithm 3 templates, do not create learning evidence, and do not promote any existing shadow rule.
-
-- TnG Card: require the bounded OCR lines to contain valued `Posting Time`, `Card Balance`, and `Entry Loc` labels together. Resolve only an existing, unarchived `TnG Card` source. This refines shared TnG filename evidence; evidence naming another bank remains authoritative. Duplicate card source names remain unresolved. The decision records a `receipt_structure` source signal containing the label names, not transaction values.
-- Ryt DuitNow QR: route a single distinct same-line `To` value to merchant only when the resolved source is Ryt Bank and the transaction type is exactly `DuitNow QR`. Explicit merchant labels and subsequent manual merchant rules remain authoritative. Ordinary transfers retain payee classification.
-- Ryt merchant icons: remove one uppercase `D ` or `DO ` prefix only from the unlabelled fallback merchant immediately above `Paid from Main Account`, with `Successful`, an RM amount line, and `Reference ID` present. Do not modify explicit merchants, saved-payee matches, other sources, attached letters, or mixed-case names. This is a layout heuristic, not proof that every leading initial is an icon; review remains important for a legitimate name beginning with these exact tokens in the same layout.
-
-Deploy compatible application and Finance OCR builds together. No SQL migration, historical reprocessing, template activation, or production rollout is included. Existing algorithm 2/3 evaluator semantics, immutable definitions, and SQL replay remain unchanged. Validate using the synthetic `reviewedReceiptRules.test.ts` cases and the existing baseline, source, party, and template suites.
-
-Validation on Node 22.22.0: root lint, TypeScript, 257 tests and production build passed; OCR typecheck, 315 tests and build passed. Both projects' full and production-only dependency audits reported zero vulnerabilities. The 130 optional database-parity tests were skipped because no isolated test database was configured; no SQL evaluator or schema changed.
-
 For the current deployment state, see [Production rollout, 14 September 2026](#production-rollout-14-september-2026). The [Algorithm 3](#algorithm-3-non-amount-completion-7-september-2026) section describes the six-type contract. Earlier rollout sections record historical states, including migrations that were pending at that time.
 
 ## Production rollout, 14 September 2026

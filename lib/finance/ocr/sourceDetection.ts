@@ -1,5 +1,4 @@
 import { templateLines, templateSourcePhrase } from '@/lib/finance/ocr/templateValues';
-import { isTngCardReceipt } from '@/lib/finance/ocr/reviewedReceiptRules';
 import type {
     FinanceOcrSource,
     FinanceOcrSourceTemplate,
@@ -126,7 +125,6 @@ export function detectFinanceSource(
     sources: FinanceOcrSource[],
     sourceTemplates: FinanceOcrSourceTemplate[] = [],
 ) {
-    sources = sources.filter((source) => !source.is_archived);
     const normalizedText = normalizeFinanceSourceSignal(text);
     const normalizedFilename = normalizeFinanceSourceSignal(filename ?? '');
     const baselineSignals: FinanceSourceDetectionSignal[] = [];
@@ -191,24 +189,7 @@ export function detectFinanceSource(
         hasConflict = genericOcrSourceIds.size > 1;
     }
 
-    const structuralSignals: FinanceSourceDetectionSignal[] = [];
-    if (isTngCardReceipt(text)) {
-        const cardSources = sources.filter((source) => normalizeFinanceSourceSignal(source.name) === 'tng card');
-        // Refine a shared TnG filename, but never override evidence for another bank.
-        const tngNames = new Set(['tng', 'tng ewallet', 'tng card']);
-        const otherSourceEvidence = baselineSignals.some((signal) => !tngNames.has(normalizeFinanceSourceSignal(signal.source_name)));
-        if (cardSources.length > 0 && !otherSourceEvidence) {
-            structuralSignals.push(...cardSources.map((source): FinanceSourceDetectionSignal => ({
-                source_id: source.id, source_name: source.name, kind: 'receipt_structure',
-                alias: 'Posting Time + Card Balance + Entry Loc', score: 6,
-            })));
-            sourceId = cardSources.length === 1 ? cardSources[0].id : null;
-            hasConflict = cardSources.length > 1;
-        }
-    }
-
     const signals = [
-        ...structuralSignals,
         ...sourceTemplateResult.signals,
         ...baselineSignals.filter((signal) => signal.kind === 'filename_alias'),
         ...baselineSignals.filter((signal) => signal.kind === 'ocr_alias'),
