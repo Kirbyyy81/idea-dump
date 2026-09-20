@@ -211,7 +211,17 @@ export function FinanceShareExperience() {
         setPhase('preparing');
 
         try {
-            const uploadFiles = validFiles.map(({ id, file }) => ({ clientId: id, file }));
+            const uploadFiles = validFiles.map(({ id, file, validation }) => {
+                const type = validation?.detectedMimeType;
+                if (!type) throw new Error('The shared image has not finished validation. Try again.');
+                return {
+                    clientId: id,
+                    file: file.type === type ? file : new File([file], file.name, {
+                        type,
+                        lastModified: file.lastModified,
+                    }),
+                };
+            });
             const prepareAttempt = prepareAttemptRef.current?.fingerprint === fileFingerprint
                 ? prepareAttemptRef.current
                 : {

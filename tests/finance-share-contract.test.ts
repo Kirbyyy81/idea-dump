@@ -329,6 +329,7 @@ describe('Finance share target contracts', () => {
         expect(source).toMatch(/method:\s*['"]POST['"]/);
         expect(source).toMatch(/enctype:\s*['"]multipart\/form-data['"]/);
         expect(source).toMatch(/name:\s*['"]finance_images['"]/);
+        expect(source).toContain("'image/*'");
         expect(source).toMatch(/image\/png/);
         expect(source).toMatch(/image\/jpeg/);
         expect(source).toMatch(/image\/webp/);

@@ -22,7 +22,7 @@
     "test:finance-payees": "vitest run tests/finance-payees-contract.test.ts tests/finance-payee-classification.test.ts",
     "test:finance-idempotency": "vitest run tests/finance-idempotency.test.ts",
     "test:finance-ordering": "vitest run tests/finance-ordering.test.ts",
-    "test:finance-share": "npm run check:service-worker && vitest run tests/finance-share-contract.test.ts tests/finance-share-migration-contract.test.ts tests/finance-share-target.test.tsx tests/finance-share-receive.test.ts",
+    "test:finance-share": "npm run check:service-worker && vitest run tests/finance-share-",
     "test:logs-api": "vitest run tests/log-schemas.test.ts",
     "test:notes-api": "vitest run tests/note-schemas.test.ts",
     "test:api-contract": "vitest run tests/api-contract.test.ts",

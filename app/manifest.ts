@@ -47,6 +47,8 @@ export default function manifest(): IdeaDumpManifest {
                     {
                         name: 'finance_images',
                         accept: [
+                            // Receive generic image labels, then validate the actual bytes in Finance.
+                            'image/*',
                             'image/png',
                             '.png',
                             'image/jpeg',
