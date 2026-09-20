@@ -63,6 +63,12 @@ export function FinanceDashboardClient({ month, summary }: FinanceDashboardClien
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
 
+    const categoryTotals = summary.net_by_category.map((item, index) => ({
+        ...item,
+        color: CHART_COLORS[index % CHART_COLORS.length],
+    }));
+    const positiveCategoryTotals = categoryTotals.filter((item) => item.amount > 0);
+
     const openTransactions = (href: string) => router.push(href);
     const openMonth = (nextMonth: string) => {
         if (nextMonth === month) return;
@@ -120,10 +126,25 @@ export function FinanceDashboardClient({ month, summary }: FinanceDashboardClien
                             ? <table className="sr-only"><caption>Daily cash flow values</caption><thead><tr><th scope="col">Day</th><th scope="col">Income</th><th scope="col">Spent</th></tr></thead><tbody>{summary.daily_cash_flow.map((item) => <tr key={item.date}><th scope="row"><Link href={financeTransactionsHref({ date: item.date })}>{item.label}</Link></th><td>{formatCurrencyMYR(item.income)}</td><td>{formatCurrencyMYR(item.expense)}</td></tr>)}</tbody></table>
                             : <p className="-mt-36 text-center text-sm text-text-muted">No activity this month.</p>}
                     </section>
-                    <section aria-labelledby="category-spending-heading" className="flex h-full flex-col">
-                        <h2 id="category-spending-heading" className="text-base font-bold">Spending by category</h2>
-                        <div className="mt-3 h-64 w-full"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={summary.expense_by_category} dataKey="amount" nameKey="label" innerRadius="55%" outerRadius="82%" paddingAngle={2}>{summary.expense_by_category.map((item, index) => { const href = financeTransactionsHref(item.category_id ? { categoryId: item.category_id } : { uncategorised: true }); return <Cell key={item.category_id || 'uncategorised'} fill={CHART_COLORS[index % CHART_COLORS.length]} stroke="#4d463b" strokeWidth={1} role="link" tabIndex={0} aria-label={`View ${item.label} transactions`} className="cursor-pointer outline-none focus-visible:stroke-text-primary focus-visible:stroke-[3px]" onClick={() => openTransactions(href)} onKeyDown={(event) => activateTransactionsLink(event, href)} />; })}</Pie><Tooltip formatter={(value) => formatCurrencyMYR(Number(value))} /></PieChart></ResponsiveContainer></div>
-                        <ul className="space-y-2">{summary.expense_by_category.map((item, index) => { const href = financeTransactionsHref(item.category_id ? { categoryId: item.category_id } : { uncategorised: true }); return <li key={item.category_id || 'uncategorised'}><Link href={href} className="flex min-h-10 items-start justify-between gap-3 rounded-md px-1 py-2 text-sm hover:bg-bg-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-dark"><span className="flex min-w-0 items-center gap-2"><span aria-hidden="true" className="mt-1 size-2.5 shrink-0" style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }} /><span className="break-words">{item.label}</span></span><span className="break-words text-right">{formatCurrencyMYR(item.amount)}</span></Link></li>; })}</ul>
+                    <section aria-labelledby="category-net-heading" className="flex h-full flex-col">
+                        <h2 id="category-net-heading" className="text-base font-bold">Net spending by category</h2>
+                        <p className="mt-1 text-sm text-text-muted">Expenses minus income</p>
+                        {positiveCategoryTotals.length > 0 ? (
+                            <div className="mt-3 h-64 w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie data={positiveCategoryTotals} dataKey="amount" nameKey="label" innerRadius="55%" outerRadius="82%" paddingAngle={2}>
+                                            {positiveCategoryTotals.map((item) => {
+                                                const href = financeTransactionsHref(item.category_id ? { categoryId: item.category_id } : { uncategorised: true });
+                                                return <Cell key={item.category_id || 'uncategorised'} fill={item.color} stroke="#4d463b" strokeWidth={1} role="link" tabIndex={0} aria-label={`View ${item.label} transactions`} className="cursor-pointer outline-none focus-visible:stroke-text-primary focus-visible:stroke-[3px]" onClick={() => openTransactions(href)} onKeyDown={(event) => activateTransactionsLink(event, href)} />;
+                                            })}
+                                        </Pie>
+                                        <Tooltip formatter={(value) => formatCurrencyMYR(Number(value))} />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </div>
+                        ) : <p className="my-3 text-sm text-text-muted">No positive net spending this month.</p>}
+                        <ul className="space-y-2">{categoryTotals.map((item) => { const href = financeTransactionsHref(item.category_id ? { categoryId: item.category_id } : { uncategorised: true }); return <li key={item.category_id || 'uncategorised'}><Link href={href} className="flex min-h-10 items-start justify-between gap-3 rounded-md px-1 py-2 text-sm hover:bg-bg-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-dark"><span className="flex min-w-0 items-center gap-2"><span aria-hidden="true" className="mt-1 size-2.5 shrink-0" style={{ backgroundColor: item.color }} /><span className="break-words">{item.label}</span></span><span className="break-words text-right">{formatCurrencyMYR(item.amount)}</span></Link></li>; })}</ul>
                     </section>
                 </div>
 

@@ -588,7 +588,7 @@ export async function getFinanceDashboard(userId: string, requestedMonth: string
         recent_transactions: (recentResult.data || []).map((transaction) => (
             toFinanceDashboardRecentTransaction(transaction as unknown as FinanceTransaction)
         )),
-        expense_by_category: aggregate.expense_by_category,
+        net_by_category: aggregate.net_by_category,
         daily_cash_flow: aggregate.daily_cash_flow,
     };
 }

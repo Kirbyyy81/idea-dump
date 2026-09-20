@@ -48,7 +48,9 @@ vi.mock('recharts', () => {
         BarChart: ChartPart,
         CartesianGrid: ChartPart,
         Cell: ChartPart,
-        Pie: ChartPart,
+        Pie: ({ data, children }: { data: Array<{ amount: number }>; children: ReactNode }) => (
+            <div data-testid="category-donut" data-amounts={JSON.stringify(data.map((item) => item.amount))}>{children}</div>
+        ),
         PieChart: ChartPart,
         ResponsiveContainer: ChartPart,
         Tooltip: ChartPart,
@@ -62,7 +64,7 @@ const summary: FinanceDashboardSummary = {
     total_income: 100,
     net_cash_flow: 75,
     recent_transactions: [],
-    expense_by_category: [{
+    net_by_category: [{
         category_id: '20000000-0000-4000-8000-000000000001',
         label: 'Food',
         amount: 25,
@@ -114,6 +116,29 @@ describe('server-rendered Finance dashboard', () => {
 
         fireEvent.click(screen.getByRole('button', { name: 'Selected month 2026-05' }));
         expect(routerPush).toHaveBeenLastCalledWith('/finance?month=2026-06');
+    });
+
+    it('displays signed category totals including fully offset and income-only categories', () => {
+        render(<FinanceDashboardClient month="2026-05" summary={{ ...summary, net_by_category: [
+            { category_id: 'food', label: 'Food', amount: 15 },
+            { category_id: 'refund', label: 'Refunded', amount: 0 },
+            { category_id: 'salary', label: 'Salary', amount: -90 },
+        ] }} />);
+        expect(screen.getByRole('heading', { name: 'Net spending by category' })).toBeTruthy();
+        expect(screen.getByRole('link', { name: /Food/ }).textContent).toContain('15.00');
+        expect(screen.getByRole('link', { name: /Refunded/ }).textContent).toContain('0.00');
+        expect(screen.getByRole('link', { name: /Salary/ }).textContent).toMatch(/-RM\s90\.00/);
+        expect(screen.getByTestId('category-donut').getAttribute('data-amounts')).toBe('[15]');
+    });
+
+    it('keeps labels but omits the donut when every category is zero or negative', () => {
+        render(<FinanceDashboardClient month="2026-05" summary={{ ...summary, net_by_category: [
+            { category_id: 'refund', label: 'Refunded', amount: 0 },
+            { category_id: 'salary', label: 'Salary', amount: -90 },
+        ] }} />);
+        expect(screen.queryByTestId('category-donut')).toBeNull();
+        expect(screen.getByRole('link', { name: /Refunded/ })).toBeTruthy();
+        expect(screen.getByRole('link', { name: /Salary/ })).toBeTruthy();
     });
 
     it('authorizes before loading the tenant-scoped dashboard summary', async () => {

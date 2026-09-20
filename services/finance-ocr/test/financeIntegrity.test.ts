@@ -136,9 +136,9 @@ describe('Finance dashboard aggregation integrity', () => {
         expect(result.total_expense).toBe(0.3);
         expect(Object.is(result.net_cash_flow, -0)).toBe(false);
         expect(result.net_cash_flow).toBe(0);
-        expect(result.expense_by_category).toEqual([
+        expect(result.net_by_category).toEqual([
             { category_id: 'real-uncategorised', label: 'Uncategorised', amount: 0.2 },
-            { category_id: null, label: 'Uncategorised', amount: 0.1 },
+            { category_id: null, label: 'Uncategorised', amount: -0.2 },
         ]);
         expect(result.daily_cash_flow).toEqual([
             { date: '2026-06-10', label: '10', income: 0.3, expense: 0.1 },
@@ -174,7 +174,7 @@ describe('Finance dashboard aggregation integrity', () => {
         expect(result.total_income).toBe(0.01);
         expect(result.total_expense).toBe(1_000_000_001_000.99);
         expect(result.net_cash_flow).toBe(-1_000_000_001_000.98);
-        expect(result.expense_by_category).toContainEqual({
+        expect(result.net_by_category).toContainEqual({
             category_id: 'bulk',
             label: 'Bulk',
             amount: 1001,
