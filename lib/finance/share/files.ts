@@ -35,7 +35,12 @@ export function detectFinanceShareImageType(bytes: Uint8Array) {
 }
 
 export async function validateFinanceSharedFile(file: File): Promise<FinanceSharedFileValidation> {
-    const normalizedType = file.type.toLowerCase();
+    const declaredType = file.type.toLowerCase();
+    const normalizedType = declaredType === 'image/jpg' ? 'image/jpeg'
+        : declaredType === 'image/x-png' ? 'image/png' : declaredType;
+    const unspecifiedType = normalizedType === ''
+        || normalizedType === 'image/*'
+        || normalizedType === 'application/octet-stream';
     if (!file.size) {
         return {
             detectedMimeType: null,
@@ -54,7 +59,7 @@ export async function validateFinanceSharedFile(file: File): Promise<FinanceShar
             width: null,
         };
     }
-    if (!FINANCE_SHARE_MIME_TYPES.includes(normalizedType as typeof FINANCE_SHARE_MIME_TYPES[number])) {
+    if (!unspecifiedType && !FINANCE_SHARE_MIME_TYPES.includes(normalizedType as typeof FINANCE_SHARE_MIME_TYPES[number])) {
         return {
             detectedMimeType: null,
             height: null,
@@ -67,7 +72,7 @@ export async function validateFinanceSharedFile(file: File): Promise<FinanceShar
     const detectedMimeType = detectFinanceShareImageType(
         new Uint8Array(await file.slice(0, 12).arrayBuffer())
     );
-    if (!detectedMimeType || detectedMimeType !== normalizedType) {
+    if (!detectedMimeType || (!unspecifiedType && detectedMimeType !== normalizedType)) {
         return {
             detectedMimeType,
             height: null,
@@ -78,7 +83,7 @@ export async function validateFinanceSharedFile(file: File): Promise<FinanceShar
     }
 
     try {
-        const bitmap = await createImageBitmap(file);
+        const bitmap = await createImageBitmap(file.slice(0, file.size, detectedMimeType));
         const width = bitmap.width;
         const height = bitmap.height;
         bitmap.close();
