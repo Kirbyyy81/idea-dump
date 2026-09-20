@@ -711,6 +711,10 @@ sequenceDiagram
 
 The service worker and Finance UI communicate through the shared protocol in [`lib/finance/share/protocol.ts`](../lib/finance/share/protocol.ts). Message types cover ready, claim, payload, acknowledgement, missing payload, and error. Runtime parsers reject malformed messages.
 
+The receiver prefers attachments in `finance_images`. If that field contains no files, it recovers actual file entries from other multipart fields. It never converts shared text or `content://` links into files or fetches them. Recovered files still pass the existing type, signature, size and dimension validation before upload. Both ready and claim messages return the same error for a failed handoff, rather than delivering an empty file list.
+
+Share failures show a fixed support code without exposing filenames or shared text: `SHARE_EMPTY` means the parsed form had no entries, `SHARE_TEXT_ONLY` means it contained only strings, and `SHARE_UNREADABLE` means parsing failed. These failures precede batch creation and OCR. If a phone still fails after deployment, record the code and Chrome version; an empty incoming request cannot be repaired by OCR or by scanning alternative fields. Direct image upload remains the fallback. Deploy the application with the regenerated `public/sw.js`; no database or OCR-service deployment is needed for this receiver change. Desktop handoff tests do not establish success on Android's native share path.
+
 ### Durable batch behavior
 
 - Preparing a batch reserves tenant-owned private Storage paths and signed upload tokens.
