@@ -79,6 +79,15 @@ function postFinanceSharePayload(
     shareId: string,
     pending: PendingFinanceShare
 ) {
+    if (pending.error) {
+        postFinanceShareMessage(client, {
+            type: FINANCE_SHARE_MESSAGE_TYPES.error,
+            shareId,
+            message: pending.error,
+        });
+        finishPendingFinanceShare(shareId);
+        return;
+    }
     postFinanceShareMessage(client, {
         type: FINANCE_SHARE_MESSAGE_TYPES.payload,
         shareId,
@@ -93,14 +102,26 @@ async function receiveFinanceShare(request: Request, resultingClientId: string) 
 
     try {
         const formData = await request.formData();
+        // FormData entries are strings or Files. Do not depend on File's realm.
         files = formData
             .getAll(FINANCE_SHARE_FIELD)
-            .filter((entry): entry is File => entry instanceof File);
+            .filter((entry): entry is File => typeof entry !== 'string');
         if (!files.length) {
-            error = 'No image files were received. Return to the source app and share them again.';
+            // Keep actual attachments when a sender uses another multipart field.
+            // The Finance UI and upload service still validate every image.
+            let hasText = false;
+            formData.forEach((entry) => {
+                if (typeof entry === 'string') hasText = true;
+                else files.push(entry);
+            });
+            if (!files.length) {
+                error = hasText
+                    ? 'The share contained text but no image attachment. Use Upload image to select the screenshot. (SHARE_TEXT_ONLY)'
+                    : 'The share contained no image attachment. Use Upload image to select the screenshot. (SHARE_EMPTY)';
+            }
         }
     } catch {
-        error = 'The shared images could not be read. Return to the source app and share them again.';
+        error = 'The shared attachment could not be read. Use Upload image to select the screenshot. (SHARE_UNREADABLE)';
     }
 
     const shareId = crypto.randomUUID();
@@ -159,15 +180,6 @@ self.addEventListener('message', (event) => {
                 shareId: message.shareId,
                 message: 'The shared images are no longer available. Return to the source app and share them again.',
             });
-            return;
-        }
-        if (pending.error) {
-            postFinanceShareMessage(event.source, {
-                type: FINANCE_SHARE_MESSAGE_TYPES.error,
-                shareId: message.shareId,
-                message: pending.error,
-            });
-            finishPendingFinanceShare(message.shareId);
             return;
         }
         postFinanceSharePayload(event.source, message.shareId, pending);

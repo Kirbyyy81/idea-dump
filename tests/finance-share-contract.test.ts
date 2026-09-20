@@ -319,7 +319,7 @@ describe('Finance share target contracts', () => {
             source: invalidTab.source,
         });
         expect(invalidTab.posted[0].type).toBe(types.error);
-        expect(invalidTab.posted[0].message).toMatch(/No image files were received/);
+        expect(invalidTab.posted[0].message).toMatch(/SHARE_EMPTY/);
         await invalid.lifetimePromise;
     });
 
