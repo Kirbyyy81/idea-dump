@@ -518,7 +518,7 @@ export interface FinanceDashboardSummary {
     total_income: number;
     net_cash_flow: number;
     recent_transactions: FinanceDashboardRecentTransaction[];
-    expense_by_category: Array<{
+    net_by_category: Array<{
         category_id: string | null;
         label: string;
         amount: number;
