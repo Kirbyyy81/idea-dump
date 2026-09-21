@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.15.3](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.15.2...idea-dump-v0.15.3) (2026-09-21)
+
+
+### Bug Fixes
+
+* accept generic image labels in shared receipts ([2f11210](https://github.com/Kirbyyy81/idea-dump/commit/2f11210654969e2960a3cdf29cadb55736f8fd6c))
+* deduct category income from dashboard spending ([dc5ec8a](https://github.com/Kirbyyy81/idea-dump/commit/dc5ec8a6931f794ad057122c102cd97ba46fbdc8))
+
 ## [0.15.2](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.15.1...idea-dump-v0.15.2) (2026-09-17)
 
 
