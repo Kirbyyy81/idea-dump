@@ -49,6 +49,7 @@ test('simple calendar budget defaults and optional customization', async ({ page
 
 test('over-budget spending fills a second darker bar', async ({ page }, testInfo) => {
     await references(page);
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
     const budget = budgetFixture({ status: 'over_budget' });
     budget.current_cycle!.metrics = { ...budget.current_cycle!.metrics, net_spending: '125.00', used_amount: '125.00', over_amount: '25.00', remaining: '0.00', usage_percentage: '125.000000' };
     await page.addInitScript((detail) => { (window as unknown as { budgetInitial: unknown }).budgetInitial = {
@@ -61,6 +62,25 @@ test('over-budget spending fills a second darker bar', async ({ page }, testInfo
     await expect(tracks).toHaveCount(2);
     const firstFill = tracks.nth(0).locator('div');
     const overflowFill = tracks.nth(1).locator('div');
+    for (const fill of [firstFill, overflowFill]) {
+        await expect(fill).toHaveCSS('animation-name', 'budgetFill');
+        await expect(fill).toHaveCSS('animation-duration', '0.45s');
+        await expect(fill).toHaveCSS('animation-iteration-count', '1');
+        const scales = await fill.evaluate((element) => {
+            const animation = element.getAnimations()[0];
+            animation.pause();
+            const values = [0, 225, 450].map((time) => {
+                animation.currentTime = time;
+                return new DOMMatrixReadOnly(getComputedStyle(element).transform).a;
+            });
+            animation.finish();
+            return values;
+        });
+        expect(scales[0]).toBe(0);
+        expect(scales[1]).toBeGreaterThan(0);
+        expect(scales[1]).toBeLessThan(1);
+        expect(scales[2]).toBe(1);
+    }
     await expect(firstFill).toHaveAttribute('style', 'width: 100%;');
     await expect(overflowFill).toHaveAttribute('style', 'width: 25%;');
     await expect(overflowFill).toHaveCSS('filter', 'brightness(0.75)');
@@ -72,6 +92,11 @@ test('over-budget spending fills a second darker bar', async ({ page }, testInfo
     await expect(details.getByText('RM 25.00 over')).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
     await details.screenshot({ path: testInfo.outputPath('budget-overflow.png') });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    for (const fill of [firstFill, overflowFill]) {
+        await expect(fill).toHaveCSS('animation-name', 'none');
+        await expect(fill).toHaveCSS('transform', 'none');
+    }
 });
 
 test('custom dates and durations remain available without losing edits', async ({ page }) => {
