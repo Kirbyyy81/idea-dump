@@ -5,13 +5,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { Button } from '@/components/atoms/Button';
+import { FinanceTransactionRow } from './FinanceTransactionRow';
 import { FinanceActivityCalendar } from './FinanceActivityCalendar';
 import { AppShell } from '@/components/organisms/AppShell';
 import { MonthPicker } from '@/components/atoms/MonthPicker';
 import {
     AddDoodleIcon,
-    ExpenseDoodleIcon,
-    IncomeDoodleIcon,
     NextDoodleIcon,
     PreviousDoodleIcon,
 } from '@/components/atoms/DoodleIcons';
@@ -112,7 +111,16 @@ export function FinanceDashboardClient({ month, today, summary }: FinanceDashboa
                     </section>
                 </div>
 
-                <section className="mt-6"><div className="flex items-center justify-between"><h2 className="text-base font-bold">Recent transactions</h2><Link href="/finance/transactions" className="text-sm font-semibold text-accent-blue hover:underline">View all</Link></div><ul className="mt-3 divide-y divide-border-default border-y border-border-default">{summary.recent_transactions.map((transaction) => { const isIncome = transaction.direction === 'income'; return <li key={transaction.id} className="flex flex-col items-start gap-2 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4"><div className="flex min-w-0 items-center gap-3">{isIncome ? <IncomeDoodleIcon size={18} className="shrink-0 text-success" /> : <ExpenseDoodleIcon size={18} className="shrink-0 text-error" />}<div className="min-w-0"><p className="break-words font-semibold">{transaction.finance_payee?.name || transaction.merchant || 'Untitled transaction'}</p>{transaction.finance_payee?.name && transaction.merchant && <p className="break-words text-sm text-text-secondary">Merchant: {transaction.merchant}</p>}<p className="break-words text-sm text-text-muted">{transaction.finance_source?.name || 'Unknown source'} · {transaction.transaction_date}</p></div></div><p className={isIncome ? 'break-words pl-7 font-bold text-success sm:pl-0 sm:text-right' : 'break-words pl-7 font-bold text-error sm:pl-0 sm:text-right'}>{isIncome ? '+' : '-'}{formatCurrencyMYR(transaction.amount)}</p></li>; })}{!summary.recent_transactions.length && <li className="py-10 text-center text-sm text-text-muted">No transactions this month.</li>}</ul></section>
+                <section className="mt-6"><div className="flex items-center justify-between"><h2 className="text-base font-bold">Recent transactions</h2><Link href="/finance/transactions" className="text-sm font-semibold text-accent-blue hover:underline">View all</Link></div><ul className="mt-3 divide-y divide-border-default border-y border-border-default">{summary.recent_transactions.map((transaction) => <li key={transaction.id}>
+                    <FinanceTransactionRow
+                        payeeName={transaction.finance_payee?.name}
+                        merchant={transaction.merchant}
+                        sourceName={transaction.finance_source?.name}
+                        date={transaction.transaction_date}
+                        direction={transaction.direction}
+                        formattedAmount={formatCurrencyMYR(transaction.amount)}
+                    />
+                </li>)}{!summary.recent_transactions.length && <li className="py-10 text-center text-sm text-text-muted">No transactions this month.</li>}</ul></section>
             </div>
         </AppShell>
     );

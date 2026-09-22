@@ -11,5 +11,8 @@ export const dashboardFixture: FinanceDashboardSummary = {
     net_by_category: ['Housing', 'Food', 'Transport', 'Shopping', 'Utilities', 'Entertainment', 'Travel', 'Health', 'Gifts', 'Other'].map((label, index) => ({
         category_id: `20000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`, label, amount: 1000 / (index + 1),
     })),
-    recent_transactions: [],
+    recent_transactions: [
+        { id: 'recent-1', merchant: 'Sample cafe', finance_payee: { name: 'Alex' }, finance_source: { name: 'Bank' }, direction: 'expense', amount: 12.3, transaction_date: '2026-09-21' },
+        { id: 'recent-2', merchant: 'Refund', direction: 'income', amount: 1234.56, transaction_date: '2026-09-20' },
+    ],
 };
