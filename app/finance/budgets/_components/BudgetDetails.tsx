@@ -64,9 +64,9 @@ export function BudgetDetails({ detail, onEdit, onArchive, onRestore, onHistoryP
                 </tr>}
             </tbody>
         </table>
-        {budget.state === 'active' && <details key={budget.id} className="group mt-6 border-t border-border-default pt-2">
+        {budget.state === 'active' && <details key={budget.id} className="group mt-6">
             <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-md px-3 py-2 font-semibold outline-none hover:bg-bg-hover focus-visible:ring-2 focus-visible:ring-accent-rose [&::-webkit-details-marker]:hidden">
-                <h3>Current transactions</h3><ChevronDown size={18} className="shrink-0 transition-transform group-open:rotate-180" aria-hidden="true" />
+                <h3>Transactions</h3><ChevronDown size={18} className="shrink-0 transition-transform group-open:rotate-180" aria-hidden="true" />
             </summary>
             <ul className="mt-2 divide-y divide-border-default">{transactions.data.map((item) => <li key={item.id}>
                 <Link href={`/finance/transactions/edit?id=${item.id}`} className="flex min-h-12 flex-wrap items-center justify-between gap-2 rounded-md py-3 text-sm hover:bg-bg-hover">

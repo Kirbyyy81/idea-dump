@@ -19,6 +19,8 @@ describe('budget controls and feedback', () => {
         expect(screen.getByText('14 to 20 Sept 2026')).toBeTruthy();
         expect(screen.queryByText('Budget RM 100.00')).toBeNull();
         expect(screen.getByText('Needs attention').className).toBe('sr-only');
+        const transactions = screen.getByRole('heading', { name: 'Transactions' });
+        expect(transactions.closest('details')?.className).toBe('group mt-6');
         detail.budget.configuration.categories = [{ id: 'food', original_id: 'food', name: 'Food', is_archived: false }];
         rerender(<BudgetDetails {...props} />);
         expect(screen.getByText('Categories: Food')).toBeTruthy();
@@ -91,7 +93,7 @@ describe('budget controls and feedback', () => {
         expect(history.querySelector('details')).toBeNull();
         expect(within(history).queryByText('By source')).toBeNull();
         expect(within(history).queryAllByRole('link')).toHaveLength(0);
-        expect(screen.queryByText('Current transactions')).toBeNull();
+        expect(screen.queryByRole('heading', { name: 'Transactions' })).toBeNull();
         fireEvent.click(within(history).getByRole('button', { name: 'Next history page' }));
         expect(nextHistory).toHaveBeenCalledWith(2);
         rerender(<BudgetDetails {...props} loadError="Could not load budgets" />);
