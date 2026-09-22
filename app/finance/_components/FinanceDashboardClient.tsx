@@ -127,8 +127,7 @@ export function FinanceDashboardClient({ month, summary }: FinanceDashboardClien
                             : <p className="-mt-36 text-center text-sm text-text-muted">No activity this month.</p>}
                     </section>
                     <section aria-labelledby="category-net-heading" className="flex h-full flex-col">
-                        <h2 id="category-net-heading" className="text-base font-bold">Net spending by category</h2>
-                        <p className="mt-1 text-sm text-text-muted">Expenses minus income</p>
+                        <h2 id="category-net-heading" className="text-base font-bold">Spending by category</h2>
                         {positiveCategoryTotals.length > 0 ? (
                             <div className="mt-3 h-64 w-full">
                                 <ResponsiveContainer width="100%" height="100%">

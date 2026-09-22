@@ -124,7 +124,8 @@ describe('server-rendered Finance dashboard', () => {
             { category_id: 'refund', label: 'Refunded', amount: 0 },
             { category_id: 'salary', label: 'Salary', amount: -90 },
         ] }} />);
-        expect(screen.getByRole('heading', { name: 'Net spending by category' })).toBeTruthy();
+        expect(screen.getByRole('heading', { name: 'Spending by category' })).toBeTruthy();
+        expect(screen.queryByText('Expenses minus income')).toBeNull();
         expect(screen.getByRole('link', { name: /Food/ }).textContent).toContain('15.00');
         expect(screen.getByRole('link', { name: /Refunded/ }).textContent).toContain('0.00');
         expect(screen.getByRole('link', { name: /Salary/ }).textContent).toMatch(/-RM\s90\.00/);
