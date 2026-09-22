@@ -106,7 +106,13 @@ test('create, edit, archive, frozen history and restore', async ({ page }, testI
     await dialog.getByRole('button', { name: 'Create budget', exact: true }).click();
     await page.getByRole('button', { name: 'View Everyday spending' }).click();
     await expect(page.getByRole('region', { name: 'Everyday spending details' })).toBeVisible();
-    const transactionsToggle = page.locator('summary').filter({ hasText: 'Current transactions' });
+    const transactionsToggle = page.getByRole('region', { name: 'Everyday spending details' }).locator('summary');
+    await expect(transactionsToggle).toHaveCSS('padding-left', '12px');
+    await expect(transactionsToggle).toHaveCSS('padding-right', '12px');
+    await transactionsToggle.hover();
+    await expect(transactionsToggle).toHaveCSS('padding-left', '12px');
+    await expect(transactionsToggle).toHaveCSS('padding-right', '12px');
+    await transactionsToggle.screenshot({ path: testInfo.outputPath('transactions-hover.png') });
     await expect(page.getByText('No matching transactions this cycle.')).not.toBeVisible();
     await transactionsToggle.focus();
     await page.keyboard.press('Enter');
