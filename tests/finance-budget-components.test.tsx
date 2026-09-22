@@ -54,6 +54,28 @@ describe('budget controls and feedback', () => {
         expect(screen.getByRole('meter').getAttribute('aria-valuenow')).toBe('125');
         expect(screen.getByText('Over budget').className).toBe('sr-only');
     });
+    it.each([false, true])('fills a darker overflow bar only above the limit (compact: %s)', (compact) => {
+        const budget = budgetFixture();
+        const { rerender } = render(<BudgetProgress budget={budget} compact={compact} />);
+        for (const usage of [0, 75, 100, 100.5, 125, 200, 350, 80]) {
+            budget.status = usage > 100 ? 'over_budget' : usage === 100 ? 'limit_reached' : 'on_track';
+            budget.current_cycle!.metrics.usage_percentage = String(usage);
+            rerender(<BudgetProgress budget={budget} compact={compact} />);
+            const meter = screen.getByRole('meter');
+            expect(meter.getAttribute('aria-valuenow')).toBe(String(usage));
+            expect(meter.getAttribute('aria-valuemax')).toBe(String(Math.max(100, usage)));
+            expect(meter.children).toHaveLength(usage > 100 ? 2 : 1);
+            const base = meter.children[0].firstElementChild as HTMLElement;
+            expect(base.style.width).toBe(`${Math.min(usage, 100)}%`);
+            expect(meter.children[0].children).toHaveLength(compact ? 1 : 2);
+            if (usage > 100) {
+                const overflow = meter.children[1].firstElementChild as HTMLElement;
+                expect(overflow.style.width).toBe(`${Math.min(usage - 100, 100)}%`);
+                expect(overflow.className).toContain('bg-error brightness-75');
+                expect(meter.children[1].getAttribute('aria-hidden')).toBe('true');
+            }
+        }
+    });
     it('retains edits on revision conflicts and provides reload', async () => {
         mocks.request.mockRejectedValue(new FinanceApiError('Reload and retry', 409));
         const reload = vi.fn();

@@ -47,6 +47,33 @@ test('simple calendar budget defaults and optional customization', async ({ page
     expect(body).toMatchObject({ configuration: { cycle_type: 'monthly', start_date: '2026-09-01', anchor_day: 1, amount: '500.00', source_ids: [], category_ids: [] } });
 });
 
+test('over-budget spending fills a second darker bar', async ({ page }, testInfo) => {
+    await references(page);
+    const budget = budgetFixture({ status: 'over_budget' });
+    budget.current_cycle!.metrics = { ...budget.current_cycle!.metrics, net_spending: '125.00', used_amount: '125.00', over_amount: '25.00', remaining: '0.00', usage_percentage: '125.000000' };
+    await page.addInitScript((detail) => { (window as unknown as { budgetInitial: unknown }).budgetInitial = {
+        list: { data: [detail.budget], page: 1, page_size: 20, total: 1 }, detail,
+    }; }, budgetDetailFixture(budget));
+    await page.goto('/finance/budgets');
+    const details = page.getByRole('region', { name: 'Everyday spending details' });
+    const meter = details.getByRole('meter');
+    const tracks = meter.locator(':scope > div');
+    await expect(tracks).toHaveCount(2);
+    const firstFill = tracks.nth(0).locator('div');
+    const overflowFill = tracks.nth(1).locator('div');
+    await expect(firstFill).toHaveAttribute('style', 'width: 100%;');
+    await expect(overflowFill).toHaveAttribute('style', 'width: 25%;');
+    await expect(overflowFill).toHaveCSS('filter', 'brightness(0.75)');
+    const firstBounds = await tracks.nth(0).boundingBox();
+    const overflowBounds = await overflowFill.boundingBox();
+    expect(overflowBounds!.width).toBeCloseTo(firstBounds!.width / 4, 0);
+    expect(overflowBounds!.y).toBeGreaterThan(firstBounds!.y + firstBounds!.height);
+    await expect(details.getByText('125% used')).toBeVisible();
+    await expect(details.getByText('RM 25.00 over')).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
+    await details.screenshot({ path: testInfo.outputPath('budget-overflow.png') });
+});
+
 test('custom dates and durations remain available without losing edits', async ({ page }) => {
     await references(page);
     await page.goto('/finance/budgets');
