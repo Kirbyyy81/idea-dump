@@ -252,7 +252,7 @@ export function FinanceTransactionEntry({ initialMode }: { initialMode: FinanceE
     };
 
     return <AppShell contentClassName="p-5 md:p-8" pageTitle="Add transaction"><div className="mx-auto max-w-2xl">
-        <FinanceShareExperience />
+        <FinanceShareExperience>
         {sharedFiles.length === 0 && <>
         <div className="grid grid-cols-2 border border-border-default p-1" role="group" aria-label="Transaction entry method"><button type="button" aria-pressed={mode === 'manual'} disabled={isSaving} onClick={() => setMode('manual')} className={`flex h-10 items-center justify-center gap-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${mode === 'manual' ? 'bg-action-primary text-action-primary-text' : 'text-text-secondary hover:bg-bg-hover'}`}><DocumentDoodleIcon size={16} />Manual</button><button type="button" aria-pressed={mode === 'screenshot'} disabled={isSaving} onClick={() => setMode('screenshot')} className={`flex h-10 items-center justify-center gap-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${mode === 'screenshot' ? 'bg-action-primary text-action-primary-text' : 'text-text-secondary hover:bg-bg-hover'}`}><ScanDoodleIcon size={16} />Screenshot</button></div>
 
@@ -291,5 +291,6 @@ export function FinanceTransactionEntry({ initialMode }: { initialMode: FinanceE
             <Button type="submit" className="w-full" isLoading={isSaving} disabled={isSaving}>Add transaction</Button>
         </form> : <form onSubmit={submitScreenshot} className="mt-6"><FileUpload label="Transaction screenshot" aria-describedby="finance-upload-help" accept="image/png,image/jpeg,image/webp" value={file} onChange={selectScreenshot} disabled={isSaving} /><p id="finance-upload-help" className="mt-2 text-sm text-text-muted">PNG, JPEG, or WebP · Max 4 MB</p>{ocrPhase !== 'idle' && <OcrProgress phase={ocrPhase} uploadProgress={uploadProgress} />}<Button type="submit" className="mt-5 w-full" isLoading={isSaving} disabled={!file || isSaving}>Process screenshot</Button></form>}
         </>}
+        </FinanceShareExperience>
     </div></AppShell>;
 }
