@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
+import { FinanceTransactionRow } from '../../_components/FinanceTransactionRow';
 import { Archive, ChevronDown, History, Pencil } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
 import { ActionMenu } from '@/components/molecules/ActionMenu';
@@ -64,15 +64,21 @@ export function BudgetDetails({ detail, onEdit, onArchive, onRestore, onHistoryP
                 </tr>}
             </tbody>
         </table>
-        {budget.state === 'active' && <details key={budget.id} className="group mt-6 border-t border-border-default pt-2">
-            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-md py-2 font-semibold outline-none hover:bg-bg-hover focus-visible:ring-2 focus-visible:ring-accent-rose [&::-webkit-details-marker]:hidden">
-                <h3>Current transactions</h3><ChevronDown size={18} className="shrink-0 transition-transform group-open:rotate-180" aria-hidden="true" />
+        {budget.state === 'active' && <details key={budget.id} className="group mt-6">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-md px-3 py-2 font-semibold outline-none hover:bg-bg-hover focus-visible:ring-2 focus-visible:ring-accent-rose [&::-webkit-details-marker]:hidden">
+                <h3 className="min-w-0 break-words">Transactions</h3><ChevronDown size={18} className="shrink-0 transition-transform group-open:rotate-180" aria-hidden="true" />
             </summary>
             <ul className="mt-2 divide-y divide-border-default">{transactions.data.map((item) => <li key={item.id}>
-                <Link href={`/finance/transactions/edit?id=${item.id}`} className="flex min-h-12 flex-wrap items-center justify-between gap-2 rounded-md py-3 text-sm hover:bg-bg-hover">
-                    <span className="min-w-0"><span className="block break-words font-medium">{item.merchant || 'Transaction'}</span><span className="text-xs text-text-muted">{item.transaction_date} · {item.source_name} · {item.category_name}</span></span>
-                    <span className={`break-all ${item.direction === 'income' ? 'text-success' : 'text-text-primary'}`}>{item.direction === 'income' ? 'Income ' : 'Expense '}{formatBudgetMoney(item.amount)}</span>
-                </Link></li>)}</ul>
+                <FinanceTransactionRow
+                    density="compact"
+                    href={`/finance/transactions/edit?id=${encodeURIComponent(item.id)}`}
+                    merchant={item.merchant}
+                    sourceName={item.source_name}
+                    categoryName={item.category_name}
+                    date={item.transaction_date}
+                    direction={item.direction}
+                    formattedAmount={formatBudgetMoney(item.amount)}
+                /></li>)}</ul>
             {transactions.data.length === 0 && <p className="mt-3 text-sm text-text-muted">No matching transactions this cycle.</p>}
             <BudgetPagination page={transactions} onPage={onTransactionsPage} label="Transactions" disabled={busy} />
         </details>}

@@ -13,7 +13,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const output = await mkdtemp(path.join(tmpdir(), 'finance-budget-browser-'));
 await build({ entryPoints: [path.join(root, 'tests/browser/harness.tsx')], outfile: path.join(output, 'app.js'), bundle: true, jsx: 'automatic',
     define: { 'process.env.NODE_ENV': '"development"' },
-    alias: { '@': root, '@/components/organisms/AppShell': path.join(root, 'tests/browser/shell.tsx'), 'next/link': path.join(root, 'tests/browser/link.tsx') } });
+    alias: { '@': root, '@/components/organisms/AppShell': path.join(root, 'tests/browser/shell.tsx'), 'next/link': path.join(root, 'tests/browser/link.tsx'), 'next/navigation': path.join(root, 'tests/browser/navigation.ts') } });
 const css = await postcss([tailwind(tailwindConfig), autoprefixer]).process(await readFile(path.join(root, 'app/globals.css'), 'utf8'), { from: path.join(root, 'app/globals.css') });
 await writeFile(path.join(output, 'styles.css'), css.css);
 const server = createServer(async (request, response) => {

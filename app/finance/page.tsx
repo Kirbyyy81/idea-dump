@@ -3,6 +3,7 @@ import { FinanceDashboardClient } from '@/app/finance/_components/FinanceDashboa
 import { resolveFinanceDashboardMonth } from '@/lib/finance/dashboard';
 import { requireFinancePageAccess } from '@/lib/finance/core/pageAccess';
 import { getFinanceDashboard } from '@/lib/finance/core/service';
+import { FINANCE_TIME_ZONE, getFinanceDateInTimeZone } from '@/lib/finance/core/values';
 
 interface FinancePageProps {
     searchParams: Promise<{
@@ -23,5 +24,5 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
 
     const summary = await getFinanceDashboard(session.user.id, month);
 
-    return <FinanceDashboardClient month={month} summary={summary} />;
+    return <FinanceDashboardClient month={month} today={getFinanceDateInTimeZone(FINANCE_TIME_ZONE)} summary={summary} />;
 }

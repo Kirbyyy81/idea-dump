@@ -5,6 +5,7 @@ export function BudgetProgress({ budget, compact = false }: { budget: FinanceBud
     const cycle = budget.current_cycle;
     const metrics = cycle?.metrics;
     const usage = Number(metrics?.usage_percentage ?? 0);
+    const overflow = Math.max(0, usage - 100);
     const pace = Number(metrics?.pace_percentage ?? 0);
     const warning = budget.status === 'over_budget' || budget.status === 'limit_reached';
     return <div className="space-y-3">
@@ -18,10 +19,15 @@ export function BudgetProgress({ budget, compact = false }: { budget: FinanceBud
                 <p className="break-all text-lg font-bold">{formatBudgetMoney(metrics.net_spending)}<span className="ml-1 text-xs font-normal text-text-muted">net spent</span></p>
                 <span className="text-sm font-semibold">{usage.toLocaleString('en-MY', { maximumFractionDigits: 1 })}% used</span>
             </div>
-            <div className="relative h-2.5 overflow-hidden rounded-full bg-bg-subtle" role="meter" aria-label={`${budget.name} budget usage`}
+            <div key={`${budget.id}:${cycle.id}`} className="space-y-1.5" role="meter" aria-label={`${budget.name} budget usage`}
                 aria-valuemin={0} aria-valuemax={Math.max(100, usage)} aria-valuenow={usage} aria-valuetext={`${metrics.usage_percentage}% of budget used`}>
-                <div className={`h-full rounded-full ${warning ? 'bg-error' : 'bg-action-primary'}`} style={{ width: `${Math.min(usage, 100)}%` }} />
-                {!compact && <span className="absolute top-0 h-full w-0.5 bg-text-muted" style={{ left: `${Math.min(pace, 99.5)}%` }} aria-hidden="true" />}
+                <div className="relative h-2.5 overflow-hidden rounded-full bg-bg-subtle" aria-hidden="true">
+                    <div className={`h-full origin-left rounded-full motion-safe:animate-budget-fill ${warning ? 'bg-error' : 'bg-action-primary'}`} style={{ width: `${Math.min(usage, 100)}%` }} />
+                    {!compact && <span className="absolute top-0 h-full w-0.5 bg-text-muted" style={{ left: `${Math.min(pace, 99.5)}%` }} />}
+                </div>
+                {overflow > 0 && <div className="h-2.5 overflow-hidden rounded-full bg-bg-subtle" aria-hidden="true">
+                    <div className="h-full origin-left rounded-full bg-error brightness-75 motion-safe:animate-budget-fill" style={{ width: `${Math.min(overflow, 100)}%` }} />
+                </div>}
             </div>
             <div className="flex justify-end text-xs text-text-secondary">
                 <span>{budget.status === 'over_budget' ? `${formatBudgetMoney(metrics.over_amount)} over` : `${formatBudgetMoney(metrics.remaining)} remaining`}</span>

@@ -348,7 +348,8 @@ describe('Finance share target contracts', () => {
         expect(experience).toMatch(/prepareAttemptRef/);
         expect(experience).toMatch(/fingerprint:\s*fileFingerprint/);
         expect(experience).toMatch(/showSuccess\('You may leave the app\.',\s*'Images queued'\)/);
-        expect(experience).toMatch(/Ready - you may close the app/);
+        expect(experience).not.toMatch(/Ready - you may close the app/);
+        expect(experience).toMatch(/Processing images/);
         expect(experience).not.toMatch(/The batch disappears after processing/);
         expect(experience).not.toMatch(/Every selected image is stored privately/);
         expect(experience).not.toMatch(/Processing has not started/);
