@@ -2,19 +2,7 @@ export const APP_ROLE_SLUGS = ['owner', 'admin', 'member'] as const;
 export type BuiltInAppRoleSlug = (typeof APP_ROLE_SLUGS)[number];
 export type AppRoleSlug = string;
 
-export const APP_MODULE_SLUGS = [
-    'dashboard',
-    'projects',
-    'tickets',
-    'logs',
-    'log_viewer',
-    'access_control',
-    'article_creation',
-    'film_journal',
-    'finance',
-    'documentation',
-    'settings',
-] as const;
-export type AppModuleSlug = (typeof APP_MODULE_SLUGS)[number];
+// The trusted dim_modules catalog defines module identities at runtime.
+export type AppModuleSlug = string;
 
 export const DEFAULT_APP_ROLE: BuiltInAppRoleSlug = 'member';

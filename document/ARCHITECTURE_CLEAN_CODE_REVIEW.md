@@ -2,7 +2,7 @@
 
 Original review date: 2026-07-31
 
-Progress tracker last verified: 2026-08-12
+Progress tracker last verified: 2026-09-23
 
 ## Purpose
 
@@ -618,6 +618,7 @@ Summary as of 2026-08-12:
 | AC-020 | Global Finance share-target provider | **Done** | Accepted file state lives under the protected Finance layout and is discarded when that layout unmounts. A narrow global rejection bridge handles signed-out and unauthorized shares without adding Finance behavior to `AccessProvider`. Automated React lifecycle and service-worker tests cover authenticated success, signed-out and unauthorized rejection, expiry, navigation disposal, and multi-tab isolation. | 2026-08-11 |
 | AC-021 | OCR service source coupling | **Not started** | The OCR TypeScript and bundler aliases point to the application root. Done when both runtimes depend on an explicit shared package and OCR builds without application-source aliases. | 2026-08-02 |
 | AC-022 | Untyped service-worker workflow | **Done** | `service-worker/sw.ts` consumes the shared Finance protocol and runtime client-message parser, passes its Web Worker-specific typecheck, and bundles reproducibly into generated `public/sw.js`. Build and test scripts verify source/output drift, the workflow is documented, and focused tests cover valid and invalid messages, acknowledgement, duplicate prevention, expiry, invalid submissions, navigation disposal, and multi-tab isolation. | 2026-08-12 |
+| AC-023 | Compiled module allowlist hides database catalog entries | **Done** | Module metadata comes from the validated `dim_modules` catalog without a compiled slug list. Role grants and overrides resolve against enabled catalog entries; visibility writes validate against the full catalog. Explicit route guards remain in code. Eighteen focused authorization/catalog tests, all 416 application tests, both audits, lint, typecheck and production build pass on Node 22.22.0. | 2026-09-23 |
 
 ## Final Assessment
 
