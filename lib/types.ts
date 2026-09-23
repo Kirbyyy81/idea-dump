@@ -1,5 +1,51 @@
 // Database types matching Supabase schema
 
+export interface DocumentationPage {
+    id: string;
+    title: string;
+    type: string | null;
+    version: string | null;
+    lastEditedTime: string;
+    projectId: string | null;
+    projectName: string | null;
+    notionUrl: string;
+}
+
+export interface DocumentationRichText {
+    text: string;
+    href: string | null;
+    bold: boolean;
+    italic: boolean;
+    underline: boolean;
+    strikethrough: boolean;
+    code: boolean;
+}
+
+export interface DocumentationBlock {
+    id: string;
+    type: string;
+    hasChildren: boolean;
+    richText: DocumentationRichText[];
+    language?: string;
+    checked?: boolean;
+    icon?: string;
+    url?: string;
+    isAsset?: boolean;
+    title?: string;
+    tableWidth?: number;
+    tableHeader?: boolean;
+    cells?: DocumentationRichText[][];
+}
+
+export interface DocumentationTreeBlock extends DocumentationBlock {
+    children: DocumentationTreeBlock[];
+}
+
+export interface DocumentationBlockPage {
+    blocks: DocumentationBlock[];
+    nextCursor: string | null;
+}
+
 export type Status = 'ideation' | 'development' | 'deployed' | 'archived';
 
 export type Priority = 'low' | 'medium' | 'high';
