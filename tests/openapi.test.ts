@@ -22,6 +22,10 @@ describe('OpenAPI composition', () => {
             '/api/film/cameras',
             '/api/film/dashboard',
             '/api/film/integrations/google/sync',
+            '/api/documentation',
+            '/api/documentation/{pageId}',
+            '/api/documentation/{pageId}/content',
+            '/api/documentation/{pageId}/assets/{blockId}',
         ]);
         expect(spec.components.schemas.Ticket.properties.status.type).toBe('string');
         expect(spec.paths['/api/film/rolls'].post.summary).toBe('Create a film roll');
@@ -34,6 +38,7 @@ describe('OpenAPI composition', () => {
         expect(index).toMatch(/from '\.\/projects'/);
         expect(index).toMatch(/from '\.\/tickets'/);
         expect(index).toMatch(/from '\.\/film'/);
+        expect(index).toMatch(/from '\.\/documentation'/);
         expect(index).not.toMatch(/'\/api\/logs'/);
     });
 });

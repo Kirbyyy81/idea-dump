@@ -2,7 +2,6 @@ import { User } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import {
-    APP_MODULE_SLUGS,
     AppModuleSlug,
     AppRoleSlug,
     DEFAULT_APP_ROLE,
@@ -105,12 +104,13 @@ export async function getUserAppAccess(userId: string): Promise<UserAppAccess> {
     }
 
     const alwaysAllowed = modules.filter((moduleRow) => moduleRow.isAlwaysAllowed).map((moduleRow) => moduleRow.slug);
+    const availableModules = new Set(modules.map((moduleRow) => moduleRow.slug));
     const allowed = new Set<AppModuleSlug>(alwaysAllowed);
     const roleModules = (roleModulesResult.data || []) as RoleModuleRow[];
 
     for (const row of roleModules) {
         const moduleSlug = unwrapMaybeArray(row.dim_modules)?.modules;
-        if (isAppModuleSlug(moduleSlug)) {
+        if (moduleSlug && availableModules.has(moduleSlug)) {
             allowed.add(moduleSlug);
         }
     }
@@ -118,7 +118,7 @@ export async function getUserAppAccess(userId: string): Promise<UserAppAccess> {
     const overrides: Partial<Record<AppModuleSlug, ModuleOverrideEffect>> = {};
     for (const row of (overridesResult.data || []) as OverrideRow[]) {
         const moduleSlug = unwrapMaybeArray(row.dim_modules)?.modules;
-        if (!isAppModuleSlug(moduleSlug)) continue;
+        if (!moduleSlug || !availableModules.has(moduleSlug)) continue;
 
         overrides[moduleSlug] = row.effect;
         if (row.effect === 'allow') {
@@ -174,9 +174,10 @@ export async function getRoleModuleAssignments(): Promise<AccessAdminRoleRecord[
     }
 
     const modulesByRoleId = new Map<string, Set<AppModuleSlug>>();
+    const managedSlugs = new Set(managedModules.map((moduleRow) => moduleRow.slug));
     for (const row of (roleModules || []) as RoleModuleRow[]) {
         const moduleSlug = unwrapMaybeArray(row.dim_modules)?.modules;
-        if (!isManagedModuleSlug(moduleSlug)) continue;
+        if (!moduleSlug || !managedSlugs.has(moduleSlug)) continue;
 
         if (!modulesByRoleId.has(row.role_id)) {
             modulesByRoleId.set(row.role_id, new Set<AppModuleSlug>());
@@ -248,12 +249,9 @@ export function normalizeRoleSlug(value?: string | null): AppRoleSlug {
     return value?.trim() || DEFAULT_APP_ROLE;
 }
 
-export function isAppModuleSlug(value?: string | null): value is AppModuleSlug {
-    return APP_MODULE_SLUGS.includes(value as AppModuleSlug);
-}
-
-export function isManagedModuleSlug(value?: string | null): value is AppModuleSlug {
-    return isAppModuleSlug(value);
+function isValidModuleSlug(value?: string | null): value is AppModuleSlug {
+    // Syntax validation only. Access and mutations must check catalog membership.
+    return typeof value === 'string' && /^[a-z][a-z0-9_]*$/.test(value);
 }
 
 export function getDisplayName(user: User) {
@@ -273,7 +271,7 @@ function unwrapMaybeArray<T>(value: T | T[] | null | undefined): T | null {
 }
 
 function toModuleMetadata(row: ModuleRow): AppModuleMetadata | null {
-    if (!isAppModuleSlug(row.modules) || !isSafeInternalPath(row.path)) {
+    if (!isValidModuleSlug(row.modules) || !isSafeInternalPath(row.path)) {
         return null;
     }
 
@@ -291,5 +289,6 @@ function toModuleMetadata(row: ModuleRow): AppModuleMetadata | null {
 }
 
 function isSafeInternalPath(value?: string | null): value is string {
-    return Boolean(value && value.startsWith('/') && !value.startsWith('//') && !value.includes('://'));
+    return typeof value === 'string' && /^\/(?!\/)/.test(value)
+        && !/[\\\s?#%]/.test(value) && !value.includes('://');
 }

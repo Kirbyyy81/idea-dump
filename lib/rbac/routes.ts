@@ -18,6 +18,7 @@ export const MODULE_ROUTE_RULES: readonly ModuleRouteRule[] = [
     { prefix: '/article-creation', module: 'article_creation' },
     { prefix: '/film', module: 'film_journal' },
     { prefix: '/finance', module: 'finance' },
+    { prefix: '/documentation', module: 'documentation' },
     { prefix: '/settings', module: 'settings' },
 ];
 
