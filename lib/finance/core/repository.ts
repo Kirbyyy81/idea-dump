@@ -35,18 +35,13 @@ const FINANCE_RULE_SELECT = [
 ].join(', ');
 const FINANCE_RULE_INTERNAL_SELECT =
     'id, source_id, category_id, direction, is_active, source';
-const FINANCE_RULE_SUGGESTION_SELECT = [
-    'id, name, pattern, match_type, category_id, source_id, direction, priority, evidence_count',
-    'category:dim_finance_categories(name)',
-    'finance_source:dim_finance_sources(name)',
-].join(', ');
 const FINANCE_REVIEW_QUEUE_SELECT = [
     'id, payload, confidence, duplicate_outcome, duplicate_signals, duplicate_explanation',
     'intake:finance_intake_items(ocr_text,ocr_raw_text,ocr_normalized_text,ocr_confidence,normalizer_version)',
 ].join(', ');
 const FINANCE_REVIEW_INTERNAL_SELECT = [
     'id, intake_item_id, payload, status',
-    'intake:finance_intake_items(ocr_text,ocr_normalized_text,original_filename,ocr_text_hash)',
+    'intake:finance_intake_items(ocr_text,ocr_normalized_text,original_filename,ocr_text_hash,receipt_processing)',
 ].join(', ');
 
 export async function listFinanceCategories(userId: string) {
@@ -163,7 +158,7 @@ export async function listRuntimeFinanceSourceTemplates(userId: string) {
     return createAdminClient()
         .from('finance_parser_templates')
         .select([
-            'id, user_id, target_source_id, scope_source_id, field_name, template_type, configuration',
+            'id, user_id, target_source_id, scope_source_id, scope_receipt_format, field_name, template_type, configuration',
             'algorithm_version, template_version, status, evidence_count, contradiction_count',
             'evaluation_count, precision, coverage, predecessor_template_id, status_reason',
             'created_at, evaluated_at, activated_at, disabled_at, updated_at',
@@ -182,7 +177,7 @@ export async function listRuntimeFinanceFieldTemplates(userId: string) {
     return createAdminClient()
         .from('finance_parser_templates')
         .select([
-            'id, user_id, target_source_id, scope_source_id, field_name, template_type, configuration',
+            'id, user_id, target_source_id, scope_source_id, scope_receipt_format, field_name, template_type, configuration',
             'algorithm_version, template_version, status, evidence_count, contradiction_count',
             'evaluation_count, precision, coverage, predecessor_template_id, status_reason',
             'created_at, evaluated_at, activated_at, disabled_at, updated_at',
@@ -285,7 +280,8 @@ export async function listActiveFinanceRules(userId: string) {
         .from('finance_rules')
         .select('id, name, match_type, pattern, category_id, source_id, direction, priority, is_active, source, auto_created_at, created_at')
         .eq('user_id', userId)
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .eq('source', 'manual');
 }
 
 export async function listActiveFinancePayees(userId: string) {
@@ -295,17 +291,6 @@ export async function listActiveFinancePayees(userId: string) {
         .eq('user_id', userId)
         .eq('is_archived', false)
         .order('name');
-}
-
-export async function listActiveFinanceFieldLearningRules(userId: string) {
-    return createAdminClient()
-        .from('finance_field_learning_rules')
-        .select('id, source_id, field_name, transform_type, transform_value, evidence_count, is_active, created_at')
-        .eq('user_id', userId)
-        .eq('is_active', true)
-        .order('evidence_count', { ascending: false })
-        .order('created_at')
-        .order('id');
 }
 
 export async function findFinanceRule(userId: string, ruleId: string, select = FINANCE_RULE_INTERNAL_SELECT) {
@@ -341,59 +326,6 @@ export async function deleteFinanceRule(userId: string, ruleId: string) {
         .delete()
         .eq('id', ruleId)
         .eq('user_id', userId);
-}
-
-export async function listFinanceRuleSuggestions(userId: string) {
-    return createAdminClient()
-        .from('finance_rule_suggestions')
-        .select(FINANCE_RULE_SUGGESTION_SELECT)
-        .eq('user_id', userId)
-        .eq('status', 'pending')
-        .order('evidence_count', { ascending: false })
-        .order('created_at', { ascending: false });
-}
-
-export async function findPendingFinanceRuleSuggestion(userId: string, suggestionId: string) {
-    return createAdminClient()
-        .from('finance_rule_suggestions')
-        .select('id, category_id, source_id')
-        .eq('id', suggestionId)
-        .eq('user_id', userId)
-        .eq('status', 'pending')
-        .maybeSingle();
-}
-
-export async function updateFinanceRuleSuggestion(
-    userId: string,
-    suggestionId: string,
-    updates: Record<string, unknown>
-) {
-    return createAdminClient()
-        .from('finance_rule_suggestions')
-        .update(updates)
-        .eq('id', suggestionId)
-        .eq('user_id', userId)
-        .eq('status', 'pending')
-        .select(FINANCE_RULE_SUGGESTION_SELECT)
-        .maybeSingle();
-}
-
-export async function acceptFinanceRuleSuggestion(userId: string, suggestionId: string) {
-    return createAdminClient().rpc('finance_accept_rule_suggestion', {
-        p_user_id: userId,
-        p_suggestion_id: suggestionId,
-    }).single();
-}
-
-export async function rejectFinanceRuleSuggestion(userId: string, suggestionId: string) {
-    return createAdminClient()
-        .from('finance_rule_suggestions')
-        .update({ status: 'rejected', updated_at: new Date().toISOString() })
-        .eq('id', suggestionId)
-        .eq('user_id', userId)
-        .eq('status', 'pending')
-        .select('id')
-        .maybeSingle();
 }
 
 export async function listFinanceTransactions(

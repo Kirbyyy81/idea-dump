@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { FinanceTransactionRow } from '../../_components/FinanceTransactionRow';
 import { AppShell } from '@/components/organisms/AppShell';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
@@ -30,7 +31,7 @@ import {
     FinanceFormErrorSummary,
     focusFirstFinanceError,
 } from '@/app/finance/_components/FinanceFormValidation';
-import { cn, formatCurrency } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils';
 import {
     getFinanceReferenceCategoryOptions,
 } from '@/lib/finance/catalog';
@@ -352,13 +353,24 @@ export function FinanceReviewClient({
                             {candidates.map((candidate) => {
                                 const outcome = duplicateOutcome(candidate);
                                 return (
-                                    <button key={candidate.id} type="button" aria-pressed={candidate.id === selectedId} onClick={() => setSelectedId(candidate.id)} className={cn('w-full border-l-4 border-l-transparent px-5 py-4 text-left transition-colors hover:bg-bg-hover', candidate.id === selectedId && 'border-l-accent-blue bg-bg-hover')}>
-                                        <div className="flex items-center justify-between gap-3"><p className="break-words font-semibold">{candidate.payload.payee_name || candidate.payload.merchant || 'Unknown counterparty'}</p><span className="shrink-0 text-sm font-bold">{candidate.payload.amount ? formatCurrency(candidate.payload.amount, candidate.payload.currency || 'MYR') : 'No amount'}</span></div>
-                                        {candidate.payload.payee_name && candidate.payload.merchant && <p className="mt-1 break-words text-sm text-text-secondary">Merchant: {candidate.payload.merchant}</p>}
-                                        {candidate.id === selectedId && <span className="mt-1 block text-xs font-semibold text-accent-blue">Selected</span>}
-                                        <div className="mt-1 flex items-center justify-between gap-3 text-sm text-text-muted"><span>{candidate.payload.transaction_date || 'No date'}</span><span>{Math.round((candidate.confidence || 0) * 100)}%</span></div>
-                                        {outcome !== 'none' && <p className="mt-2 flex items-center gap-1 text-xs font-semibold text-warning"><WarningDoodleIcon size={13} />{outcome === 'strong' ? 'Strong duplicate match' : 'Possible duplicate'}</p>}
-                                    </button>
+                                    <FinanceTransactionRow
+                                        key={candidate.id}
+                                        density="compact"
+                                        onSelect={() => setSelectedId(candidate.id)}
+                                        selected={candidate.id === selectedId}
+                                        payeeName={candidate.payload.payee_name}
+                                        merchant={candidate.payload.merchant}
+                                        sourceName={sources.find((source) => source.id === candidate.payload.source_id)?.name}
+                                        categoryName={candidate.payload.category_id ? categories.find((category) => category.id === candidate.payload.category_id)?.name || 'Category unavailable' : null}
+                                        date={candidate.payload.transaction_date}
+                                        direction={candidate.payload.direction}
+                                        formattedAmount={candidate.payload.amount != null ? formatCurrency(candidate.payload.amount, candidate.payload.currency || 'MYR') : null}
+                                        status={<>
+                                            {candidate.id === selectedId && <span className="mb-1 block font-semibold text-accent-blue">Selected</span>}
+                                            <span className="block text-text-muted">Confidence {Math.round((candidate.confidence || 0) * 100)}%</span>
+                                            {outcome !== 'none' && <span className="mt-1 flex items-center gap-1 font-semibold text-warning"><WarningDoodleIcon size={13} />{outcome === 'strong' ? 'Strong duplicate match' : 'Possible duplicate'}</span>}
+                                        </>}
+                                    />
                                 );
                             })}
                             {!candidates.length && <p className="px-5 py-12 text-center text-sm text-text-muted">Review queue is clear.</p>}
@@ -387,7 +399,17 @@ export function FinanceReviewClient({
                                         <p className="font-semibold">{duplicateOutcome(selected) === 'strong' ? 'Strong duplicate match' : 'Possible duplicate match'}</p>
                                         {selected.duplicate_explanation && <p className="mt-1">{selected.duplicate_explanation}</p>}
                                         {selected.duplicate_signals?.length > 0 && <div className="mt-2 flex flex-wrap gap-2">{selected.duplicate_signals.map((signal) => <span key={signal} className="border border-warning px-2 py-1 text-xs font-semibold">{DUPLICATE_SIGNAL_LABELS[signal]}</span>)}</div>}
-                                        {selected.duplicate_transaction && <div className="mt-3 border-t border-warning pt-3"><p className="font-semibold">Existing transaction</p><p className="mt-1">{selected.duplicate_transaction.finance_payee?.name || selected.duplicate_transaction.merchant || 'Untitled'} · {formatCurrency(selected.duplicate_transaction.amount, selected.duplicate_transaction.currency || 'MYR')} · {selected.duplicate_transaction.transaction_date} · {selected.duplicate_transaction.finance_source?.name || 'Unknown source'}</p>{selected.duplicate_transaction.finance_payee?.name && selected.duplicate_transaction.merchant && <p className="mt-1 text-sm">Merchant: {selected.duplicate_transaction.merchant}</p>}</div>}
+                                        {selected.duplicate_transaction && <div className="mt-3 border-t border-warning pt-3">
+                                            <p className="font-semibold">Existing transaction</p>
+                                            <FinanceTransactionRow
+                                                density="compact"
+                                                payeeName={selected.duplicate_transaction.finance_payee?.name}
+                                                merchant={selected.duplicate_transaction.merchant}
+                                                sourceName={selected.duplicate_transaction.finance_source?.name}
+                                                date={selected.duplicate_transaction.transaction_date}
+                                                formattedAmount={formatCurrency(selected.duplicate_transaction.amount, selected.duplicate_transaction.currency || 'MYR')}
+                                            />
+                                        </div>}
                                         <Toggle id="review-allow-duplicate" toggleLabel="Confirm anyway" containerClassName="mt-3" errorMessage={fieldErrors.allow_duplicate} data-finance-field="allow_duplicate" checked={form.allow_duplicate} onChange={(allow_duplicate) => setReviewField('allow_duplicate', allow_duplicate)} />
                                         {form.allow_duplicate && <Textarea id="review-duplicate-reason" label="Override reason" containerClassName="mt-3" required={duplicateOutcome(selected) === 'strong'} errorMessage={fieldErrors.duplicate_override_reason} data-finance-field="duplicate_override_reason" maxLength={500} value={form.duplicate_override_reason} onChange={(event) => setReviewField('duplicate_override_reason', event.target.value)} placeholder="Why is this a separate transaction?" />}
                                     </div>

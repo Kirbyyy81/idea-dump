@@ -1,0 +1,126 @@
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { BudgetForm } from '@/app/finance/budgets/_components/BudgetForm';
+import { BudgetDetails } from '@/app/finance/budgets/_components/BudgetDetails';
+import { BudgetProgress } from '@/app/finance/budgets/_components/BudgetProgress';
+import { FinanceApiError } from '@/lib/finance/core/client';
+import { budgetDetailFixture, budgetFixture } from './fixtures/finance-budgets';
+
+const mocks = vi.hoisted(() => ({ request: vi.fn() }));
+vi.mock('@/lib/finance/core/client', async (original) => ({ ...await original<typeof import('@/lib/finance/core/client')>(), financeApiRequest: mocks.request }));
+vi.mock('@/app/finance/_components/FinanceReferenceData', () => ({ useFinanceReferenceData: () => ({ status: 'ready', sources: [], categories: [], refresh: vi.fn() }) }));
+beforeEach(() => vi.clearAllMocks());
+describe('budget controls and feedback', () => {
+    it('shows only applied filter groups and combines their matching logic', () => {
+        const detail = budgetDetailFixture();
+        const props = { detail, busy: false, onEdit: vi.fn(), onArchive: vi.fn(), onRestore: vi.fn(), onHistoryPage: vi.fn(), onTransactionsPage: vi.fn() };
+        const { rerender } = render(<BudgetDetails {...props} />);
+        expect(screen.queryByRole('rowheader', { name: 'Filters' })).toBeNull();
+        expect(screen.getByText('14 to 20 Sept 2026')).toBeTruthy();
+        expect(screen.queryByText('Budget RM 100.00')).toBeNull();
+        expect(screen.getByText('Needs attention').className).toBe('sr-only');
+        const transactions = screen.getByRole('heading', { name: 'Transactions' });
+        expect(transactions.closest('details')?.className).toBe('group mt-6');
+        detail.budget.configuration.categories = [{ id: 'food', original_id: 'food', name: 'Food', is_archived: false }];
+        rerender(<BudgetDetails {...props} />);
+        expect(screen.getByText('Categories: Food')).toBeTruthy();
+        expect(screen.queryByText(/Sources:/)).toBeNull();
+        expect(screen.queryByText('and', { exact: true })).toBeNull();
+        detail.budget.configuration.sources = [{ id: null, original_id: 'bank', name: 'Bank', is_archived: false }];
+        detail.budget.configuration.include_uncategorised = true;
+        rerender(<BudgetDetails {...props} />);
+        expect(screen.getByText('Sources: Bank (deleted)')).toBeTruthy();
+        expect(screen.getByText('Categories: Food or Uncategorised')).toBeTruthy();
+        expect(screen.getByText('and', { exact: true })).toBeTruthy();
+        detail.budget.configuration.filter_logic = 'or';
+        rerender(<BudgetDetails {...props} />);
+        expect(screen.getByText('or', { exact: true })).toBeTruthy();
+    });
+    it('starts with only basic controls and reveals customization on request', () => {
+        render(<BudgetForm onClose={vi.fn()} onSaved={vi.fn()} onReload={vi.fn()} />);
+        expect(screen.queryByText('Start date')).toBeNull();
+        expect(screen.queryByText('Sources', { exact: true })).toBeNull();
+        fireEvent.click(screen.getByRole('button', { name: 'Customize' }));
+        expect(screen.getByText('Start date')).toBeTruthy();
+        expect(screen.getByText('Sources', { exact: true })).toBeTruthy();
+        expect(screen.getByText('Match sources and categories')).toBeTruthy();
+    });
+    it('displays uncapped usage and exact money with an accessible status', () => {
+        const budget = budgetFixture({ status: 'over_budget' });
+        budget.current_cycle!.metrics = { ...budget.current_cycle!.metrics, net_spending: '125.00', used_amount: '125.00', over_amount: '25.00', usage_percentage: '125.000000' };
+        render(<BudgetProgress budget={budget} />);
+        expect(screen.getByText('125% used')).toBeTruthy();
+        expect(screen.getByText('RM 25.00 over')).toBeTruthy();
+        expect(screen.getByRole('meter').getAttribute('aria-valuenow')).toBe('125');
+        expect(screen.getByText('Over budget').className).toBe('sr-only');
+    });
+    it.each([false, true])('fills a darker overflow bar only above the limit (compact: %s)', (compact) => {
+        const budget = budgetFixture();
+        const { rerender } = render(<BudgetProgress budget={budget} compact={compact} />);
+        for (const usage of [0, 75, 100, 100.5, 125, 200, 350, 80]) {
+            budget.status = usage > 100 ? 'over_budget' : usage === 100 ? 'limit_reached' : 'on_track';
+            budget.current_cycle!.metrics.usage_percentage = String(usage);
+            rerender(<BudgetProgress budget={budget} compact={compact} />);
+            const meter = screen.getByRole('meter');
+            expect(meter.getAttribute('aria-valuenow')).toBe(String(usage));
+            expect(meter.getAttribute('aria-valuemax')).toBe(String(Math.max(100, usage)));
+            expect(meter.children).toHaveLength(usage > 100 ? 2 : 1);
+            const base = meter.children[0].firstElementChild as HTMLElement;
+            expect(base.style.width).toBe(`${Math.min(usage, 100)}%`);
+            expect(meter.children[0].children).toHaveLength(compact ? 1 : 2);
+            if (usage > 100) {
+                const overflow = meter.children[1].firstElementChild as HTMLElement;
+                expect(overflow.style.width).toBe(`${Math.min(usage - 100, 100)}%`);
+                expect(overflow.className).toContain('bg-error brightness-75');
+                expect(meter.children[1].getAttribute('aria-hidden')).toBe('true');
+            }
+        }
+    });
+    it('retains edits on revision conflicts and provides reload', async () => {
+        mocks.request.mockRejectedValue(new FinanceApiError('Reload and retry', 409));
+        const reload = vi.fn();
+        render(<BudgetForm budget={budgetFixture()} onClose={vi.fn()} onSaved={vi.fn()} onReload={reload} />);
+        fireEvent.change(screen.getByRole('textbox', { name: /^Name/ }), { target: { value: 'Changed name' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+        await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('Reload and retry'));
+        expect((screen.getByRole('textbox', { name: /^Name/ }) as HTMLInputElement).value).toBe('Changed name');
+        fireEvent.click(screen.getByRole('button', { name: 'Reload budget' }));
+        expect(reload).toHaveBeenCalledOnce();
+        const body = JSON.parse(mocks.request.mock.calls[0][1].body);
+        expect(body).toMatchObject({ revision: 1, configuration: { name: 'Changed name', start_date: '2026-09-14' } });
+    });
+    it('makes missing selections visible and removable during restore', () => {
+        const budget = budgetFixture({ state: 'archived', status: 'archived' });
+        budget.configuration.sources = [{ id: null, original_id: 'b0110000-0000-4000-8000-000000000099', name: 'Old bank', is_archived: false }];
+        render(<BudgetForm budget={budget} restore onClose={vi.fn()} onSaved={vi.fn()} onReload={vi.fn()} />);
+        const selection = screen.getByRole('switch', { name: 'Old bank (deleted)' });
+        expect(selection.getAttribute('aria-checked')).toBe('true');
+        fireEvent.click(selection);
+        expect(selection.getAttribute('aria-checked')).toBe('false');
+    });
+    it('shows frozen aggregate history without historical transaction links', () => {
+        const budget = budgetFixture({ state: 'archived', status: 'archived', current_cycle: null });
+        const detail = budgetDetailFixture(budget);
+        detail.history.data = [{ ...budgetFixture().current_cycle!, frozen_at: '2026-09-21T00:00Z', state: 'completed', close_reason: 'completed' }];
+        detail.history.total = 21;
+        const nextHistory = vi.fn();
+        const props = { detail, busy: false, onEdit: vi.fn(), onArchive: vi.fn(), onRestore: vi.fn(), onHistoryPage: nextHistory, onTransactionsPage: vi.fn() };
+        const { rerender } = render(<BudgetDetails {...props} />);
+        expect(screen.queryByRole('dialog', { name: 'Cycle history' })).toBeNull();
+        fireEvent.click(screen.getByRole('button', { name: 'Budget actions' }));
+        fireEvent.click(screen.getByRole('menuitem', { name: 'Cycle history' }));
+        const history = screen.getByRole('dialog', { name: 'Cycle history' });
+        expect(within(history).getByText(/RM 40.00 net spent/)).toBeTruthy();
+        expect(within(history).getByText('RM 60.00 remaining')).toBeTruthy();
+        expect(history.querySelector('details')).toBeNull();
+        expect(within(history).queryByText('By source')).toBeNull();
+        expect(within(history).queryAllByRole('link')).toHaveLength(0);
+        expect(screen.queryByRole('heading', { name: 'Transactions' })).toBeNull();
+        fireEvent.click(within(history).getByRole('button', { name: 'Next history page' }));
+        expect(nextHistory).toHaveBeenCalledWith(2);
+        rerender(<BudgetDetails {...props} loadError="Could not load budgets" />);
+        expect(within(history).getByRole('alert').textContent).toBe('Could not load budgets');
+        fireEvent.click(within(history).getByRole('button', { name: 'Close' }));
+        expect(screen.queryByRole('dialog', { name: 'Cycle history' })).toBeNull();
+    });
+});

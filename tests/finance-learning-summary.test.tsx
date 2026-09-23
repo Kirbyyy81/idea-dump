@@ -86,6 +86,8 @@ describe('LearningSummaryPanel', () => {
         expect(screen.queryByRole('heading', { name: 'Compatibility rules' })).toBeNull();
         expect(screen.queryByText(/active reference transforms/)).toBeNull();
         expect(screen.queryByText('2 created, 2 updated, 1 disabled')).toBeNull();
+        expect(screen.queryByText('8 active reference transforms')).toBeNull();
+        expect(screen.queryByText('Compatibility rules')).toBeNull();
         expect(screen.getByText(/Reference number: 100% precision, 75% coverage/)).toBeTruthy();
         expect(screen.queryByRole('heading', { name: 'Recent outcomes' })).toBeNull();
         expect(screen.queryByText(/Amount disabled/)).toBeNull();

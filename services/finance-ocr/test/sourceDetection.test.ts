@@ -132,7 +132,6 @@ describe('Finance source evidence', () => {
             [ryt],
             'Screenshot.png',
             [],
-            [],
             [template],
         );
 

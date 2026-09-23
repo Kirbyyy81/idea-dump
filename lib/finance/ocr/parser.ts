@@ -1,7 +1,8 @@
+import { isRytPartyNoise, rytTransactionText } from '@/lib/finance/ocr/receiptFormat';
 import { hasReceiptToday, screenshotFilenameDate } from '@/lib/finance/ocr/receiptPatterns';
 import {
     FinanceCandidatePayload,
-    FinanceOcrFieldLearningRule,
+    FinanceReceiptProcessing,
     FinanceOcrFieldTemplate,
     FinanceOcrPayee,
     FinanceOcrRule,
@@ -10,7 +11,6 @@ import {
     FinanceTransactionDirection,
 } from '@/lib/types';
 import { FINANCE_V1_CURRENCY } from '@/lib/finance/core/constants';
-import { applyLearnedReferenceRules } from '@/lib/finance/ocr/fieldLearning';
 import { applyFinanceCriticalFieldTemplates } from '@/lib/finance/ocr/fieldTemplates';
 import { normalizeFinanceMerchantKey, normalizeFinancePayeeKey } from '@/lib/finance/ocr/normalizer';
 import { extractFinanceReferenceNumber } from '@/lib/finance/ocr/reference';
@@ -133,12 +133,14 @@ function matchSavedPayee(value: string | null, payees: FinanceOcrPayee[]) {
     )) || null;
 }
 
-function parseParties(lines: string[], payees: FinanceOcrPayee[]) {
-    const explicitMerchant = labeledPartyValue(lines, /^merchant(?:\s+name)?\s*[:\-]?\s*(.*)$/i);
-    const explicitPayee = labeledPartyValue(
+function parseParties(lines: string[], payees: FinanceOcrPayee[], sharedReceipt = false) {
+    let explicitMerchant = labeledPartyValue(lines, /^merchant(?:\s+name)?\s*[:\-]?\s*(.*)$/i);
+    let explicitPayee = labeledPartyValue(
         lines,
         /^(?:payee|recipient|transfer\s+(?:recipient|to)|to)\b(?!\s+(?:reference|ref))(?:\s+name)?\s*[:\-]?\s*(.*)$/i,
     );
+    if (sharedReceipt && explicitMerchant && isRytPartyNoise(explicitMerchant)) explicitMerchant = null;
+    if (sharedReceipt && explicitPayee && isRytPartyNoise(explicitPayee)) explicitPayee = null;
     const savedExplicitPayee = matchSavedPayee(explicitPayee, payees);
 
     if (explicitMerchant || explicitPayee) {
@@ -149,6 +151,7 @@ function parseParties(lines: string[], payees: FinanceOcrPayee[]) {
         };
     }
 
+    if (sharedReceipt) return { merchant: null, payeeId: null, payeeName: null };
     for (const line of lines) {
         const value = cleanParty(line);
         if (!validParty(value)) continue;
@@ -196,11 +199,13 @@ export function parseFinanceText(
     rules: FinanceOcrRule[],
     sources: FinanceOcrSource[],
     filename: string | null = null,
-    fieldLearningRules: FinanceOcrFieldLearningRule[] = [],
     payees: FinanceOcrPayee[] = [],
     sourceTemplates: FinanceOcrSourceTemplate[] = [],
     fieldTemplates: FinanceOcrFieldTemplate[] = [],
+    receiptProcessing?: FinanceReceiptProcessing,
 ): ParsedCandidate {
+    const sharedReceipt = receiptProcessing?.format === 'ryt_shared_v1';
+    if (sharedReceipt) normalizedText = rytTransactionText(normalizedText);
     const lines = normalizedText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
     const normalized = lines.join('\n').toLowerCase();
     const sourceDetection = detectFinanceSource(
@@ -211,7 +216,7 @@ export function parseFinanceText(
     );
     const sourceDetectionSignals = [...sourceDetection.signals];
     const sourceSignalsConflict = sourceDetection.hasConflict;
-    const parties = parseParties(lines, payees);
+    const parties = parseParties(lines, payees, sharedReceipt);
     const recipientReference = extractFinanceRecipientReference(normalizedText);
     const payload: FinanceCandidatePayload = {
         amount: parseAmount(lines),
@@ -240,7 +245,7 @@ export function parseFinanceText(
     let categoryAssigned = false;
     let directionAssigned = false;
     let merchantAssigned = false;
-    for (const rule of [...rules].filter((rule) => rule.is_active).sort(compareFinanceRules)) {
+    for (const rule of [...rules].filter((rule) => rule.is_active && rule.source === 'manual').sort(compareFinanceRules)) {
         if (!ruleMatches(rule, normalized, parsedMerchant)) continue;
         if (rule.auto_created_at && rule.source_id && rule.source_id !== inferredSourceId) continue;
         if (rule.auto_created_at && inferredDirection && rule.direction && rule.direction !== inferredDirection) continue;
@@ -283,22 +288,20 @@ export function parseFinanceText(
         }
     }
 
-    const learnedReference = applyLearnedReferenceRules(
-        payload.reference_number,
-        payload.source_id,
-        fieldLearningRules,
-    );
-    payload.reference_number = learnedReference.referenceNumber;
-    payload.learned_field_rule_ids = learnedReference.matchedRuleIds;
-
     payload.parser_template_baseline = {
         reference_number: payload.reference_number, merchant: payload.merchant,
         transaction_date: payload.transaction_date, direction: payload.direction,
         payee_name: payload.payee_name, notes: payload.notes, recipient_reference: recipientReference,
     };
     const fieldTemplateResult = applyFinanceCriticalFieldTemplates(
-        normalizedText, payload, payload.source_id, fieldTemplates, payees, filename,
+        normalizedText,
+        payload,
+        payload.source_id,
+        fieldTemplates,
+        payees,
+        filename,
         merchantAssigned ? ['merchant'] : [],
+        receiptProcessing?.format,
     );
     Object.assign(payload, fieldTemplateResult.payload);
     if (fieldTemplateResult.evaluations.length > 0) {
@@ -308,6 +311,16 @@ export function parseFinanceText(
             .map((evaluation) => evaluation.template_id);
     }
 
+    if (receiptProcessing) {
+        payload.receipt_processing = receiptProcessing;
+        for (const field of receiptProcessing.conflicts) payload[field] = null;
+        if (receiptProcessing.conflicts.includes('payee_name')) { payload.payee_id = null; payload.merchant = null; }
+        for (const evaluation of payload.parser_template_evaluations ?? []) {
+            if (receiptProcessing.conflicts.some((field) => field === evaluation.field_name
+                || field === 'notes' && evaluation.field_name === 'recipient_reference')) evaluation.outcome = 'conflict';
+        }
+        payload.matched_parser_template_ids = payload.parser_template_evaluations?.filter((item) => item.outcome === 'applied').map((item) => item.template_id) ?? [];
+    }
     let confidence = 0;
     if (payload.amount) confidence += 0.35;
     if (payload.transaction_date) confidence += 0.2;

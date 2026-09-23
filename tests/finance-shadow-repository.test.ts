@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { listFinanceShadowRules, listFinanceShadowRuleSources } from '@/lib/finance/core/repository';
+import { listFinanceShadowRules, listFinanceShadowRuleSources, listActiveFinanceRules } from '@/lib/finance/core/repository';
 
 const query = vi.hoisted(() => ({
     from: vi.fn(), select: vi.fn(), eq: vi.fn(), in: vi.fn(), order: vi.fn(), limit: vi.fn(),
@@ -11,6 +11,11 @@ beforeEach(() => {
 });
 
 describe('shadow metadata queries', () => {
+    it('loads only active manual rules for the verified owner', async () => {
+        await listActiveFinanceRules('verified-user');
+        expect(query.from).toHaveBeenCalledWith('finance_rules');
+        expect(query.eq.mock.calls).toEqual([['user_id', 'verified-user'], ['is_active', true], ['source', 'manual']]);
+    });
     it('filters by verified user and shadow status, bounds and orders the safe projection', async () => {
         await listFinanceShadowRules('verified-user');
         expect(query.from).toHaveBeenCalledWith('finance_parser_templates');

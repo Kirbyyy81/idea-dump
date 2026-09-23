@@ -2,7 +2,7 @@
 
 ## Document purpose
 
-This document describes the Finance module as implemented in the repository on 2026-08-17. It is intended for engineers, reviewers, operators, and future maintainers who need to understand the module without reconstructing its behavior from individual pages, route handlers, migrations, and OCR service files.
+This document describes the Finance module, including budgeting added on 2026-09-14. It is intended for engineers, reviewers, operators, and future maintainers who need to understand the module without reconstructing its behavior from individual pages, route handlers, migrations, and OCR service files.
 
 The code and forward database migrations remain the source of truth. When behavior changes, update this document in the same change.
 
@@ -16,6 +16,7 @@ Finance is a personal transaction ledger with two entry paths:
 The module provides:
 
 - Monthly cash-flow reporting.
+- Recurring personal budgets with current progress and frozen cycle history.
 - Expense breakdowns by category.
 - A searchable and editable confirmed transaction ledger.
 - A review queue for OCR candidates and duplicate decisions.
@@ -25,6 +26,105 @@ The module provides:
 - Correction recording and narrowly scoped rule learning.
 
 The current product is not a bank integration, bookkeeping system, or multi-currency accounting platform. Finance v1 supports MYR only.
+
+## Personal budgets
+
+`/finance/budgets` supports weekly, monthly, and custom 1-to-365-day MYR budgets. The Finance sidebar links to it. The server-rendered Finance dashboard adds `active_budgets` through its existing service, independently of the selected reporting month. It ranks all active budgets by over budget, limit reached, needs attention, on track, then exact usage, and returns at most three. No dashboard HTTP endpoint is reintroduced.
+
+Budget creation opens with name, amount and weekly/monthly cycle only. Monthly defaults to the 1st of the current month; weekly defaults to the current week's Monday, both in the captured time zone. Spending earlier in that current period counts immediately. Customize exposes dates, custom durations, source/category selections and filter logic. Dates within the current calendar period or later are accepted for new and scheduled weekly/monthly budgets. Custom durations and restoration retain today-or-later starts. Editing an existing budget preserves its schedule unless the user changes it.
+
+### Storage and lifecycle
+
+`finance_budgets` holds owner, stable identity, current settings, optimistic revision, creation request UUID and lifecycle. `finance_budget_filters` holds source and category selections in one table. Each row has a `kind`, its matching nullable reference, original ID and saved label. Composite foreign keys enforce tenant ownership; constraints prevent mixing reference kinds. Deleted archived selections retain their kind, original ID and label so restoration requires explicit repair. There is no configuration-version table. Cycles have one open row per budget. Completed and partial cycles retain an immutable `configuration_snapshot` alongside frozen totals. These three tables are the complete budget storage model; source/category breakdown storage is removed. Open cycles read current settings, and configuration edits recalculate them. Closed cycles read their own settings, including their original amount, without consulting the current budget. They contain no transaction snapshots.
+
+Confirmed transactions count by their ledger date within inclusive-start/exclusive-end boundaries. Selection OR applies within each dimension; configured AND/OR applies only when both dimensions have selections. Empty filters match everything, including Uncategorised. Selected archived dimensions continue to count. Net spending is expenses minus income; negative net remains visible, with zero usage and remaining capped at the limit. Money uses exact decimal strings across budgeting APIs and BigInt minor units in browser formatting. Status comparisons use exact values before percentage rounding.
+
+Stored IANA time zones determine local today. Pace counts completed calendar days, so first-day pace is zero. Monthly boundaries clamp to month end while retaining their original anchor. Editing a monthly renewal day starts today with a shorter first cycle if needed. Name, amount and filter edits retain the open cycle's start and recalculate it. Schedule edits freeze through yesterday; zero-day partials are discarded. Archive freezes through today from the ledger visible during the atomic operation, excluding future dates. Same-day restoration is supported and starts an independent schedule. Deleted selections must be explicitly repaired before restore.
+
+`lib/finance/budgets/` owns validation, pure calculations, services and server-only RPC access. All mutations and reconciliation coordinate through the existing per-user Finance ledger advisory lock before locking budgets and references. The row-lock, FK and deletion-trigger combination prevents reference deletion from racing successful creation or restore. Budget creation is idempotent per user/request UUID; changed payload reuse conflicts. Edits, archive and restore require the current revision. Budget reads reconcile overdue cycles before calculating current data. Frozen history cannot be updated or extended afterward, including after late or edited ledger entries. Existing account-deletion retention cascades remain supported.
+
+Budget details present schedule and applied filter selections in a two-column table. Unrestricted dimensions are omitted; selected sources/categories share one Filters row with AND/OR wording only when both dimensions apply. Budget progress omits visible status badges across list cards, details and the dashboard, retaining accessible status text. Dates use readable inclusive ranges, such as 14 to 20 Sept 2026, and the progress section omits the configured budget amount. Current transactions use a keyboard-accessible disclosure that starts collapsed for each selected budget. The shared `ActionMenu` exposes Edit, Archive and Cycle history; frozen history opens in `FormDialog` as simple cycle cards with dates, status, net spending, limit and remaining or over amount. It retains independent pagination and shows read errors inside the dialog. Restore remains available for archived budgets. Successful saves and archival use the shared dismissible `Toast`, which expires after five seconds and pauses while hovered or focused. Progress retains its pace marker without a separate elapsed-days sentence.
+
+The authorized server page collects all budget summaries across states using the existing `state=all` list contract in batches of at most 100. The client filters Active, Scheduled and Archived locally and paginates each section at 20 items without network requests. It loads no detail by default; selecting a budget displays a skeleton matching its detail panel while requesting only its detail endpoint, while an explicit budget URL remains supported on the server. Loading announcements remain available to screen readers, and skeleton animation respects reduced motion. History and transaction pagination also request only details, keeping the existing panel and history dialog mounted. Switching sections cancels pending details and ignores late responses. Summaries remain in component memory until page navigation, an explicit Refresh budgets action, or a successful mutation refreshes the list. Failed refreshes retain the last loaded summaries with a retryable error. Opening details reconciles the selected budget and updates its summary; all server reads retain authorization and database reconciliation.
+
+### Budget interfaces
+
+| Interface | Request and response |
+|---|---|
+| `GET /api/finance/budgets` | `state=active\|scheduled\|archived\|all`, `page`, `page_size`; returns `{ data, page, page_size, total }` |
+| `POST /api/finance/budgets` | `{ request_id, configuration }`; returns `{ data: budget }` |
+| `PUT /api/finance/budgets` | `{ id, revision, configuration }`; returns `{ data: budget }` |
+| `GET /api/finance/budgets/[id]` | Independent `history_page`, `history_page_size`, `transactions_page`, `transactions_page_size`; returns `{ data: { budget, history, transactions } }` |
+| `PATCH /api/finance/budgets/[id]` | Archive: `{ action: 'archive', revision }`. Restore: `{ action: 'restore', revision, configuration }` |
+
+Configuration includes `name`, decimal-string `amount`, `cycle_type`, `start_date`, nullable `custom_days` and `anchor_day`, captured `time_zone`, `filter_logic`, `source_ids`, `category_ids`, and `include_uncategorised`. Time zone is preserved on edits/restores. Server services derive ownership from `authorizeFinance`; browser-provided user IDs, calculated fields and cycle states are not accepted. Field validation uses safe 422 errors, stale writes/name conflicts use 409, and other users' IDs return 404. Defaults are 20 budgets/history items and 50 transactions, with a maximum page size of 100.
+
+### Budget rollout and operations
+
+The current three-table model requires `20260915165526_finance_budget_filters_and_cycle_totals.sql`, after the current-settings migration below. Back up the five existing budget tables with verified encryption, preview only this forward migration, apply and verify it before deploying the application. It copies both selection tables into typed filters, checks every copied selection, all cycle rows and current settings, then removes the old selection and breakdown tables without `CASCADE`. Existing cycle dates, settings snapshots and exact frozen totals remain unchanged. RPCs return an empty legacy `breakdowns` array for older release 15 clients; new application types and UI no longer consume it. The existing cron job and privileges are preserved. Historical breakdown detail is intentionally retired; recovery requires the pre-migration backup. No release version bump is included.
+
+Apply `20260914093154_finance_budgets.sql` using the versioned CLI workflow in `supabase/README.md`, then deploy the application. The migration requires the existing approved Cron installation and registers one hourly `finance-budget-closure` job. Its global worker is operator-only, coordinates overlapping invocations, skips busy owners for retry, and logs only a budget ID and SQLSTATE on per-budget failure. Application reads also catch up missed cycles. No new browser secrets are required.
+
+The simplified creation form also requires `20260915034305_finance_budget_calendar_starts.sql`. This forward migration relaxes only the new/scheduled weekly and monthly start-date guard to the current period boundary. It keeps existing schedules, ledger data, frozen history, function privileges, idempotency and restoration behavior unchanged. Apply it before using the updated form.
+
+Release 15 simplifies storage through `20260915095835_finance_budget_current_settings.sql`. It copies current settings onto budgets, copies current source/category selections into direct relationships, and snapshots each closed cycle's original settings before removing the three version tables and version IDs. In one transaction it verifies settings, every selection row, cycle snapshots, and all pre-existing frozen fields/results before dropping old storage without `CASCADE`. Historical selection labels use recorded breakdown labels when available, otherwise their saved selection labels. Intermediate configuration edit records are intentionally retired. The optimistic `revision` counter remains for conflicting writes.
+
+Prepare and validate the application first, confirm a usable backup of the six pre-migration budget tables, preview only this migration against the linked project, then apply it and verify the five-table schema, snapshots, privileges and cron. The migration retains the existing summary `version` JSON field as a compatibility alias to current settings for older deployed clients. New code reads `configuration`; its server adapter accepts the older field while awaiting the migration. The alias has no backing version table or configuration history. Cycle responses include `configuration`, which is frozen for closed cycles and current for open ones; older RPCs omit that field during rollout. Apply this migration before relying on cycle configuration snapshots. No package version bump is part of this change.
+
+RPCs execute as the trusted server role. Two trigger-only guards use a fixed empty search path and definer privileges solely to enforce immutability/reference integrity while allowing existing Auth account-deletion cascades, without granting the service role access to `auth.users`.
+
+Before rollout, verify table grants, restrictive RLS policies, function execution grants, and the active cron command. Monitor `cron.job_run_details` through [Supabase Cron monitoring](https://supabase.com/docs/guides/cron), PostgreSQL closure warnings and the worker's overdue-cycle count warnings, since a successful job status alone does not establish that every budget closed. An operator backlog query is:
+
+```sql
+select count(*) as overdue_cycles
+from public.finance_budget_cycles c
+join public.finance_budgets b on b.id = c.budget_id and b.user_id = c.user_id
+where c.frozen_at is null and c.end_date <= (now() at time zone b.time_zone)::date;
+```
+
+Rollback disables the budgeting page/sidebar/dashboard integration and cron job before reverting application usage. Preserve budget tables and frozen cycle snapshots. Never replay the adopted schema baseline over production.
+
+### Budget validation
+
+Use Node 22.22.0. `npm run test:finance-budgets` runs domain, route, service and component tests. `npm run test:finance-budgets:browser` runs real controls and styles in a test-only local harness on port 4179, with synthetic REST responses and a sans-serif fallback font. It covers desktop/mobile lifecycle actions, deleted selections, conflicts, keyboard focus and 200 percent CSS scaling. It does not authenticate to or write production data. Install its pinned browser using `npx playwright install chromium`.
+
+`npm run test:finance-budgets:db` runs rollback-only SQL lifecycle/security tests plus independent PostgreSQL sessions for concurrent creation, stale edits, closure overlap and deletion races. Set `FINANCE_BUDGET_TEST_DATABASE_URL` to a disposable loopback database with the adopted baseline and forward migrations applied, and `FINANCE_BUDGET_TEST_PSQL` to a compatible psql executable. The runner refuses non-loopback connections and removes its committed synthetic concurrency user afterward. The same lifecycle SQL can be run manually on isolated Supabase staging.
+
+Before testing the settings migration, initialize a separate disposable database through the calendar-start migration. Run `psql -X -v ON_ERROR_STOP=1 -f supabase/tests/finance_budget_settings_migration.test.sql` with that database selected through standard PostgreSQL environment variables. The fixture creates synthetic active, scheduled and archived budgets, edits an amount, closes cycles, deletes an archived reference, applies the forward migration, verifies preservation and closure, and removes its synthetic account. For the subsequent filter migration, run `supabase/tests/finance_budget_filters_migration.test.sql` on a disposable current-settings baseline. It verifies shared UUIDs across dimensions, deleted selections, populated frozen history, cycle-only closure, invalid filter kinds and restoration. Then point the normal database runner at the fully migrated database. Do not run this upgrade fixture on production or on a database that already has the settings migration.
+
+Local validation used PostgreSQL 17 with the adopted Finance schema and the forward budgeting migration. Hosted Auth/Storage metadata and Cron were local scaffolding; the cron registration and callable worker were checked, but no real cron scheduler ran. Hosted Supabase scheduling, platform advisors and representative-volume query plans remain deployment checks. Run all repository checks in addition to these feature suites.
+
+Validation on 2026-09-16 used Node 22.22.0. All 329 repository tests passed, including 66 budgeting unit/route/service/component/page tests and four shared toast/action-menu tests. Fourteen desktop/mobile browser tests, Finance security/idempotency/ordering/share regressions, lint, TypeScript checking and production build passed. The isolated database lifecycle/concurrency suite and the settings migration preservation fixture also passed on 2026-09-16. The settings migration was tested on a fresh clone of the adopted-baseline PostgreSQL 17 budgeting database; platform Auth/Storage/Cron remain local scaffolding. Calendar tests cover current-week/month starts, time zones, earlier spending, rejected prior periods, custom options and preserved restore boundaries. UI checks cover collapsed transactions, keyboard menu navigation, dialog focus return, history pagination with failed reads, and local section switching and pagination, summary refresh failures, explicit detail loading, and ignored out-of-order responses. Both dependency audits reported zero vulnerabilities.
+
+### Filter and cycle simplification validation, 2026-09-16
+
+The three-table migration and simplified history passed the 66 budgeting tests, all 329 repository tests, 14 desktop/mobile browser checks, both dependency audits (zero vulnerabilities), lint, TypeScript checking and production build using Node 22.22.0. The migration upgrade fixture passed against a disposable PostgreSQL 17 clone through the current-settings migration, including populated frozen breakdowns, unchanged cycle responses apart from the empty compatibility field, same-ID source/category selections and deleted-reference repair. The normal lifecycle/security/concurrency suite passed against the migrated schema. Local Cron remains metadata scaffolding, so actual hosted scheduling of this replacement code has not been tested.
+
+The isolated CLI deployment preview listed only `20260915165526_finance_budget_filters_and_cycle_totals.sql`, excluding unrelated pending migrations. Its repository and deployment-copy SHA-256 both equal `F0BE38DEB1525F5BAC449F9F848D0B2C6AE334953B748BE233E99ACE1057A283`. After explicit user approval for the connector export, encrypted backup and live migration, the CLI applied only this migration to project `xcaxukhjkqqnmzziqrkc`. The migration ledger confirms it is applied. The five original tables were backed up outside the repository to `%LOCALAPPDATA%/IdeaDump/backups/finance-budget-before-filters-20260916-011507.json.dpapi`, encrypted with Windows DPAPI CurrentUser scope and verified by decrypting and comparing bytes before deployment. Recovery uses the same Windows account and DPAPI procedure documented below.
+
+Live verification confirmed exactly three tables: `finance_budgets`, `finance_budget_filters` and `finance_budget_cycles`. Both budgets, both open cycles and all three category selections are preserved; there were no closed cycles or breakdown rows at deployment. All three tables retain RLS and deny browser access. No budget function is browser-callable, server mutation access remains available and global closure stays operator-only. The hourly cron job is active, with no recorded failures and no overdue cycles; the next scheduled run of the replacement code remains normal operational monitoring. Live Data API list/dashboard reads passed for both owners and detail reads passed for both budgets using the repository server client. The hosted security advisor reported no budgeting findings; budgeting performance findings were informational [unused indexes](https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index). No release version files were changed.
+
+### Settings migration deployment status, 2026-09-16
+
+After explicit user approval, the CLI applied `20260915095835_finance_budget_current_settings.sql` to linked project `xcaxukhjkqqnmzziqrkc`. Both deployment previews and the apply output listed only this migration; unrelated pending OCR migrations were excluded. The deployed migration's SHA-256 matched the reviewed repository file (`AD0757275E5CA765B9B1090546198FB2986E3063A1C985349CAD1AD6A544E543`). The migration had already passed the disposable-database upgrade fixture and lifecycle/concurrency suite. No release version files were changed, and this work uses `fix:` commits within release 15.
+
+Before deployment, all six pre-migration budget tables were exported into `%LOCALAPPDATA%/IdeaDump/backups/finance-budget-before-settings-20260916-002724.json.dpapi`, outside the repository. The JSON backup includes the project reference, migration identifier and original rows, encrypted through Windows DPAPI with `CurrentUser` scope. Decryption and byte-for-byte verification passed before applying the migration. Recovery requires that Windows account and its DPAPI keys; use `ProtectedData.Unprotect` with null entropy and `CurrentUser` scope to recover the UTF-8 JSON, then restore only through a reviewed schema/data recovery procedure.
+
+Live verification confirmed the migration ledger entry and exactly five budgeting tables. The three version tables are gone; both budgets, both open cycles and all three category selections remain. There were no closed cycles at deployment. All five tables retain RLS and deny anonymous/authenticated table access; no budget function is browser-callable, server mutation access remains available, and global closure remains operator-only. The hourly cron job is active, with zero recorded failures and no overdue cycles. Scheduled execution of the replacement closure code remains part of normal monitoring.
+
+Using the repository's existing server client, live Data API list and dashboard reads passed for both budget owners, and detail reads passed for both budgets with current configuration present. The hosted security advisor reported no budgeting findings. The performance advisor's budgeting findings were only informational [unused indexes](https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index); the earlier composite foreign-key index suggestions are resolved. The compatibility alias remains for previously deployed clients.
+
+### Production database deployment, 2026-09-15
+
+With explicit user approval, the CLI applied only `20260914093154_finance_budgets.sql` to `xcaxukhjkqqnmzziqrkc`. The subsequent dry run reported no pending migrations. This resolves the local app's `PGRST202` failure caused by the previously absent budgeting functions. The app's server credentials successfully called both list and dashboard RPC variants over the Data API with HTTP 200, using a nonexistent test owner and creating no user data.
+
+The CLI subsequently applied `20260915034305_finance_budget_calendar_starts.sql` for the simplified creation form. The main-branch merge had introduced an unrelated pending OCR migration, so an isolated deployment directory contained exact repository copies of the recorded remote migrations and only this new budgeting migration. Its preview and apply output both listed only the calendar-start migration. Remote verification confirmed the migration record, updated date guard, invoker security, empty search path, denied browser execution and permitted service-role execution. The unrelated OCR migration remains pending.
+
+All six budget tables have RLS enabled and deny browser table access. All 18 budget functions deny browser execution, the server can mutate budgets, and the global worker remains operator-only. Cron job 3, `finance-budget-closure`, is active hourly with a 90-second timeout. Its first scheduled execution had not occurred at verification time; monitoring `cron.job_run_details` remains necessary.
+
+After the calendar-start deployment, the hourly job remained active and the closure backlog was zero. No scheduled execution was recorded yet. The advisor results remained unchanged, with no budgeting security findings and the performance follow-ups below.
+
+The hosted security advisor reported no budgeting findings. Its performance advisor reported four informational [composite foreign-key index suggestions](https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys), for the cycle-to-budget, breakdown-to-cycle, and two selection-to-version relationships. These are follow-up performance review items, alongside representative-volume query plans. Newly created indexes were also reported unused, which is expected before budget traffic. This deployment changed the database only; production application deployment remains separate.
 
 ## System context
 
@@ -414,7 +514,7 @@ OCR text is normalized before parsing and hashing. The normalizer provides stabl
 - Exact normalized OCR-text duplicate detection.
 - Review retry behavior.
 
-The parser is pure TypeScript shared by the Next.js application and the OCR service. Review's `Retry rules` action reparses stored normalized OCR text using the user's current active sources, rules, learned reference transforms, and payees.
+The parser is pure TypeScript shared by the Next.js application and the OCR service. Review's `Retry rules` action reparses stored normalized OCR text using the user's current active sources, manual rules, algorithm 2/3 parser templates, and payees.
 
 ### Amount extraction
 
@@ -571,36 +671,15 @@ Review confirmation records differences between the original candidate and the c
 
 Transaction edits also record payee-name changes. Corrections store the text payee name, not the opaque payee ID.
 
-### Category learning
+### Parser learning and retired legacy rules
 
-The database schedules `finance_refresh_rule_suggestions()` daily at 03:15 database time. For category learning, it considers the latest correction for each confirmed transaction and groups evidence by:
+The daily learning job continues to refresh algorithm 2 and 3 parser templates. Templates retain the existing source/receipt-format scopes, upload cutoff, shadow evidence, contradiction handling, and explicit promotion requirements. Algorithm 3 transforms consume recorded parser baselines; new baselines are captured after standard parsing and manual rules.
 
-- User.
-- Exact normalized merchant.
-- Direction.
-- Source.
-- Confirmed category.
+Legacy category/direction rules and reference transforms are retired by the forward migration `20260915172224_retire_legacy_finance_learning.sql`. Existing rows are disabled and retained, including accepted suggestions. The database prevents new legacy rules, reactivation, and conversion into manual rules. The compatibility legacy refresh returns zero without generating rules. No replacement category learner is included.
 
-After at least three distinct supporting transactions and no competing category for the same key, the refresh creates or maintains a narrow learned merchant-alias rule. Unsupported generated rules are paused. Manual compatible rules take precedence over generating redundant learned rules.
+Rules settings shows legacy category rules as read-only retired entries. Manual rules remain editable. Suggestion lists return empty and authorized suggestion mutations return HTTP 410. Historical candidates, traces, baselines, corrections and confirmed transactions are retained. The existing 90-day learning-run retention still applies; new runs report zero legacy activity.
 
-The Settings UI also supports pending `finance_rule_suggestions`: users can edit, activate, or dismiss them. Accepted suggestions become learning rules. Learned rules can be paused or resumed, but their core learned fields cannot be edited and they cannot be permanently deleted through the normal rule API.
-
-Each scheduled refresh records a durable business result in `finance_learning_runs` and bounded user counts in `finance_learning_run_user_summaries`. The Rules settings section reads those aggregates through a server-only summary function. It never returns OCR text, filenames, correction values, transaction values, or parser-template configuration. Detailed completed runs are retained for 90 days.
-
-Version 2 parser learning generates source-scoped reference, merchant, date, direction, canonical payee, notes, and recipient-reference templates from reviewed corrections. Historical support enters shadow evaluation; new reviewed shadow outcomes and explicit operator promotion are required before activation. Contradictions disable active templates during refresh. Existing category learning and reference transforms remain available as the baseline. See [the Phase 4 and 5 rollout guide](FINANCE_PARSER_LEARNING_ROLLOUT.md) for bounds, promotion gates, verification, and deployment status.
-
-### Reference-number learning
-
-Reference learning is source-specific and supports four deterministic transforms:
-
-- Strip a repeated prefix.
-- Strip a repeated suffix.
-- Keep digits only.
-- Keep alphanumeric characters only.
-
-A transform becomes eligible only after at least three distinct corrected transactions and zero contradictory reviewed outcomes. During parsing, eligible active rules are ordered by evidence count, transform rank, creation time, and ID. At most one transform is applied. The transformed result must differ from the original and remain between 5 and 200 characters.
-
-Learning currently changes category selection and transaction-reference cleanup. It does not learn arbitrary payee aliases, notes transformations, date formats, or merchant-to-payee reclassification.
+See [the retirement rollout instructions](FINANCE_PARSER_LEARNING_ROLLOUT.md#legacy-learning-retirement) for migration order and validation.
 
 ## Automatic confirmation
 
@@ -657,6 +736,14 @@ sequenceDiagram
 - MIME signature and image dimensions are validated before upload.
 
 The service worker and Finance UI communicate through the shared protocol in [`lib/finance/share/protocol.ts`](../lib/finance/share/protocol.ts). Message types cover ready, claim, payload, acknowledgement, missing payload, and error. Runtime parsers reject malformed messages.
+
+The receiver prefers attachments in `finance_images`. If that field contains no files, it recovers actual file entries from other multipart fields. It never converts shared text or `content://` links into files or fetches them. Recovered files still pass the existing type, signature, size and dimension validation before upload. Both ready and claim messages return the same error for a failed handoff, rather than delivering an empty file list.
+
+The manifest accepts `image/*` as well as explicit PNG/JPEG/WebP types and extensions so Android image providers using generic labels can reach the receiver. This does not add supported OCR formats: Finance still requires PNG, JPEG or WebP signatures, successful decoding and existing size/dimension limits. Empty, `image/*` and `application/octet-stream` labels are resolved from those signatures; `image/jpg` and `image/x-png` aliases must match JPEG and PNG bytes respectively. Other explicit types and mismatched declarations remain invalid. Both the upload reservation and Storage upload use the validated canonical MIME type, with the original bytes, filename and modification time preserved.
+
+This manifest compatibility change requires the installed Android app's manifest to update as well as the web deployment. A page refresh updates the worker but does not prove the installed share filter has updated. Verify with a new share on the affected phone. Chrome can also omit files when the Android provider supplies no MIME type or filename; accepting generic image types cannot fix missing native metadata. See [Chrome 153 file handoff](https://chromium.googlesource.com/chromium/src/+/refs/tags/153.0.8010.37/chrome/android/java/src/org/chromium/chrome/browser/webapps/WebApkShareTargetUtil.java) and [MIME matching](https://chromium.googlesource.com/chromium/src/+/refs/tags/153.0.8010.37/net/android/java/src/org/chromium/net/MimeTypeFilter.java).
+
+Share failures show a fixed support code without exposing filenames or shared text: `SHARE_EMPTY` means the parsed form had no entries, `SHARE_TEXT_ONLY` means it contained only strings, and `SHARE_UNREADABLE` means parsing failed. These failures precede batch creation and OCR. If a phone still fails after deployment, record the code and Chrome version; an empty incoming request cannot be repaired by OCR or by scanning alternative fields. Direct image upload remains the fallback. Deploy the application with the regenerated `public/sw.js`; no database or OCR-service deployment is needed for this receiver change. Desktop handoff tests do not establish success on Android's native share path.
 
 ### Durable batch behavior
 
@@ -718,12 +805,12 @@ Share batch items move from queued to processing and then to one terminal state:
 | `finance_intake_items` | OCR intake lifecycle, hashes, text, source evidence, leases, and failures. |
 | `finance_candidate_transactions` | Parsed review candidates, confidence, rules, and duplicate assessment. |
 | `finance_rules` | Manual and learned matching rules. |
-| `finance_rule_suggestions` | Pending, accepted, and rejected learning suggestions. |
+| `finance_rule_suggestions` | Retained legacy suggestion history; activation is retired. |
 | `finance_learning_runs` | Privacy-safe business outcomes for scheduled learning refreshes. |
 | `finance_learning_run_user_summaries` | User-scoped learning counts used by Finance settings. |
 | `finance_parser_templates` | Versioned bounded OCR parser-template definitions for later phases. |
 | `finance_template_evidence` | Tenant-safe evidence relationships without duplicated OCR or correction values. |
-| `finance_field_learning_rules` | Source-specific deterministic reference transforms. |
+| `finance_field_learning_rules` | Retained, disabled legacy reference transforms. |
 | `finance_corrections` | Original and corrected field values tied to review or transaction lineage. |
 | `finance_processing_events` | Safe processing and state-transition audit events. |
 
@@ -765,8 +852,8 @@ All Finance API handlers are dynamic and return JSON.
 | `/api/finance/review` | POST | Confirm, retry, duplicate, and reject mutations. Queue reads are server-rendered. |
 | `/api/finance/sources` | GET, POST, PATCH or PUT, DELETE | Source library management. |
 | `/api/finance/categories` | GET, POST, PUT or PATCH, DELETE | Category library management. |
-| `/api/finance/rules` | GET, POST, PUT, DELETE | Rule library management. GET also returns pending suggestions and the safe learning summary so Settings needs one read. |
-| `/api/finance/rule-suggestions` | PATCH, POST | Edit, activate, or dismiss learning suggestions. |
+| `/api/finance/rules` | GET, POST, PUT, DELETE | Rule library management. GET also returns an empty suggestions array and the safe learning summary so Settings needs one read. |
+| `/api/finance/rule-suggestions` | PATCH, POST | Retired endpoint; authorized mutations return HTTP 410. |
 | `/api/finance/share-batches/prepare` | POST | Reserve a batch and return signed upload details. |
 | `/api/finance/share-batches/commit` | POST | Verify uploads, queue them, and return 202. |
 | `/api/finance/share-batches/active` | GET | Return the verified user's current active transient batch. |
@@ -1010,7 +1097,7 @@ See [`ARCHITECTURE_CLEAN_CODE_REVIEW.md`](./ARCHITECTURE_CLEAN_CODE_REVIEW.md) f
 - Source detection: [`lib/finance/ocr/sourceDetection.ts`](../lib/finance/ocr/sourceDetection.ts)
 - Transaction reference extraction: [`lib/finance/ocr/reference.ts`](../lib/finance/ocr/reference.ts)
 - Recipient-reference handling: [`lib/finance/ocr/recipientReference.ts`](../lib/finance/ocr/recipientReference.ts)
-- Learned reference transforms: [`lib/finance/ocr/fieldLearning.ts`](../lib/finance/ocr/fieldLearning.ts)
+- Legacy reference transforms: retired; historical rows remain in `finance_field_learning_rules`.
 - Duplicate policy: [`lib/finance/transactions/duplicates.ts`](../lib/finance/transactions/duplicates.ts)
 - Payee form classification: [`lib/finance/transactions/payeeClassification.ts`](../lib/finance/transactions/payeeClassification.ts)
 - Dashboard aggregation: [`lib/finance/dashboard.ts`](../lib/finance/dashboard.ts)

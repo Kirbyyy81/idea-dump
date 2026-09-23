@@ -92,9 +92,9 @@ select pg_temp.check_parser_test(not has_function_privilege('service_role','publ
 select pg_temp.check_parser_test(not has_function_privilege('authenticated','public.finance_refresh_parser_templates_v2(uuid)','EXECUTE'),'browser cannot refresh');
 
 -- Failed and canceled refreshes retain a safe business outcome.
-create or replace function public.finance_refresh_rule_suggestions_legacy_v1()
-returns integer language plpgsql as $slow$
-begin perform pg_sleep(0.5); return 0; end;
+create or replace function public.finance_refresh_parser_templates_v2(p_run_id uuid)
+returns jsonb language plpgsql as $slow$
+begin perform pg_sleep(0.5); return '{}'::jsonb; end;
 $slow$;
 set local statement_timeout='50ms';
 select public.finance_refresh_rule_suggestions('a1000000-0000-4000-8000-000000000007');

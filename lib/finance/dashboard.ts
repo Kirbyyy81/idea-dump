@@ -49,7 +49,7 @@ const ZERO = BigInt(0);
 export function aggregateFinanceDashboard(rows: FinanceDashboardRow[]) {
     let totalExpenseMinorUnits = ZERO;
     let totalIncomeMinorUnits = ZERO;
-    const expensesByCategory = new Map<string, CategoryAccumulator>();
+    const netByCategory = new Map<string, CategoryAccumulator>();
     const dailyCashFlow = new Map<string, DailyAccumulator>();
 
     for (const item of rows) {
@@ -67,20 +67,19 @@ export function aggregateFinanceDashboard(rows: FinanceDashboardRow[]) {
         if (item.direction === 'expense') {
             totalExpenseMinorUnits += amountMinorUnits;
             daily.expenseMinorUnits += amountMinorUnits;
-            const category = Array.isArray(item.category) ? item.category[0] : item.category;
-            const label = category?.name || 'Uncategorised';
-            const categoryKey = item.category_id ? `category:${item.category_id}` : 'uncategorised';
-            const current = expensesByCategory.get(categoryKey) || {
-                category_id: item.category_id,
-                label,
-                amountMinorUnits: ZERO,
-            };
-            current.amountMinorUnits += amountMinorUnits;
-            expensesByCategory.set(categoryKey, current);
         } else if (item.direction === 'income') {
             totalIncomeMinorUnits += amountMinorUnits;
             daily.incomeMinorUnits += amountMinorUnits;
         }
+        const category = Array.isArray(item.category) ? item.category[0] : item.category;
+        const categoryKey = item.category_id ? `category:${item.category_id}` : 'uncategorised';
+        const current = netByCategory.get(categoryKey) || {
+            category_id: item.category_id,
+            label: category?.name || 'Uncategorised',
+            amountMinorUnits: ZERO,
+        };
+        current.amountMinorUnits += item.direction === 'expense' ? amountMinorUnits : -amountMinorUnits;
+        netByCategory.set(categoryKey, current);
         dailyCashFlow.set(day, daily);
     }
 
@@ -88,7 +87,7 @@ export function aggregateFinanceDashboard(rows: FinanceDashboardRow[]) {
         total_expense: financeMinorUnitsToNumber(totalExpenseMinorUnits),
         total_income: financeMinorUnitsToNumber(totalIncomeMinorUnits),
         net_cash_flow: financeMinorUnitsToNumber(totalIncomeMinorUnits - totalExpenseMinorUnits),
-        expense_by_category: Array.from(expensesByCategory.values())
+        net_by_category: Array.from(netByCategory.values())
             .map((item) => ({
                 category_id: item.category_id,
                 label: item.label,

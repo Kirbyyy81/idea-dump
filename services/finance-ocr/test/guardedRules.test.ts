@@ -14,7 +14,7 @@ const sources: FinanceOcrSource[] = [
 ];
 const active = { status: 'active' as const, activated_at: '2026-09-02T00:00:00Z' };
 const parse = (text: string, templates = [guardedTemplate()], rules: FinanceOcrRule[] = []) =>
-    parseFinanceText(text, rules, sources, 'Example Bank.png', [], [], [], templates);
+    parseFinanceText(text, rules, sources, 'Example Bank.png', [], [], templates);
 
 describe('generic guarded rule runtime', () => {
     it.each(guardedParityCases)('$name', ({ config, text, value }) => {

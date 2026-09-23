@@ -71,7 +71,6 @@ function repository(overrides: Record<string, unknown> = {}) {
             sourceTemplates: [],
             fieldTemplates: [],
             rules: [],
-            fieldLearningRules: [],
             payees: [],
         }),
         assessDuplicate: vi.fn().mockResolvedValue({

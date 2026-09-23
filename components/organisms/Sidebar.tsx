@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Project } from '@/lib/types';
+import { MoneyDoodleIcon } from '@/components/atoms/DoodleIcons';
 import { cn } from '@/lib/utils';
 import { AppModuleSlug } from '@/lib/rbac/constants';
 import { matchesModuleRoute } from '@/lib/rbac/routes';
@@ -376,6 +377,12 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
                                 icon: <ClipboardCheck size={14} />,
                                 isActive: isExactPath(pathname, '/finance/review'),
                                 label: 'Review',
+                            })}
+                            {renderSubItem({
+                                href: '/finance/budgets',
+                                icon: <MoneyDoodleIcon size={14} />,
+                                isActive: isExactPath(pathname, '/finance/budgets'),
+                                label: 'Budgets',
                             })}
                             {renderSubItem({
                                 href: '/finance/settings',

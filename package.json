@@ -1,6 +1,6 @@
 {
   "name": "idea-dump",
-  "version": "0.13.0",
+  "version": "0.15.3",
   "private": true,
   "engines": {
     "node": ">=22.22.0 <23.0.0"
@@ -16,10 +16,13 @@
     "test:log-viewer": "vitest run tests/log-viewer.test.ts",
     "test:finance-security": "vitest run tests/finance-security.test.ts",
     "test:finance-validation": "vitest run tests/finance-validation.test.ts",
+    "test:finance-budgets": "vitest run tests/finance-budget",
+    "test:finance-budgets:browser": "playwright test",
+    "test:finance-budgets:db": "node scripts/test-finance-budget-db.mjs",
     "test:finance-payees": "vitest run tests/finance-payees-contract.test.ts tests/finance-payee-classification.test.ts",
     "test:finance-idempotency": "vitest run tests/finance-idempotency.test.ts",
     "test:finance-ordering": "vitest run tests/finance-ordering.test.ts",
-    "test:finance-share": "npm run check:service-worker && vitest run tests/finance-share-contract.test.ts tests/finance-share-migration-contract.test.ts tests/finance-share-target.test.tsx",
+    "test:finance-share": "npm run check:service-worker && vitest run tests/finance-share-",
     "test:logs-api": "vitest run tests/log-schemas.test.ts",
     "test:notes-api": "vitest run tests/note-schemas.test.ts",
     "test:api-contract": "vitest run tests/api-contract.test.ts",
@@ -43,6 +46,7 @@
     "tailwind-merge": "^2.2.0"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/react": "^16.3.2",
     "@types/node": "22.20.1",

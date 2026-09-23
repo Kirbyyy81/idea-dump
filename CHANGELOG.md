@@ -1,5 +1,106 @@
 # Changelog
 
+## [0.15.3](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.15.2...idea-dump-v0.15.3) (2026-09-21)
+
+
+### Bug Fixes
+
+* accept generic image labels in shared receipts ([2f11210](https://github.com/Kirbyyy81/idea-dump/commit/2f11210654969e2960a3cdf29cadb55736f8fd6c))
+* deduct category income from dashboard spending ([dc5ec8a](https://github.com/Kirbyyy81/idea-dump/commit/dc5ec8a6931f794ad057122c102cd97ba46fbdc8))
+
+## [0.15.2](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.15.1...idea-dump-v0.15.2) (2026-09-17)
+
+
+### Bug Fixes
+
+* remove budget status badges ([c269901](https://github.com/Kirbyyy81/idea-dump/commit/c269901cdcfc7f5543ba3e0f48456e8a22bd8ed9))
+* show budget detail skeleton ([514c36b](https://github.com/Kirbyyy81/idea-dump/commit/514c36b7ee935e471419f0e6b9a95703c4423676))
+
+## [0.15.1](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.15.0...idea-dump-v0.15.1) (2026-09-15)
+
+
+### Bug Fixes
+
+* record budget migration ([23ab048](https://github.com/Kirbyyy81/idea-dump/commit/23ab048ff0c0321dca7199bbdc90ac0e24f5030b))
+* record budget schema deployment ([c66de88](https://github.com/Kirbyyy81/idea-dump/commit/c66de88f10b46de05ef13b433786ffe5de1dfc51))
+* simplify budget storage ([dd73c2c](https://github.com/Kirbyyy81/idea-dump/commit/dd73c2c5ae8074188d3c7e9af09cef643458bca1))
+* simplify budget tables ([20d0d93](https://github.com/Kirbyyy81/idea-dump/commit/20d0d933c8d0cfa97b3ef1fe69ef5a6b8faaa6f8))
+* simplify cycle history ([62081e4](https://github.com/Kirbyyy81/idea-dump/commit/62081e4e85f0a002dcd92149a72d694d736460fa))
+* use current budget settings ([2b66ba9](https://github.com/Kirbyyy81/idea-dump/commit/2b66ba91f1f47282408cff0e5681a58ffd25738f))
+
+## [0.15.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.14.3...idea-dump-v0.15.0) (2026-09-15)
+
+
+### Features
+
+* add budget lifecycle ([84b11d2](https://github.com/Kirbyyy81/idea-dump/commit/84b11d2f17ce839aa363ce674797de11cbc7d70f))
+* add budgeting interface ([3ead909](https://github.com/Kirbyyy81/idea-dump/commit/3ead909ce338ef0d52ad1f6c05f61400d0795c68))
+* simplify budget setup ([fcd3a06](https://github.com/Kirbyyy81/idea-dump/commit/fcd3a0641853dd940a5ee19f8cd80b0d33085897))
+
+
+### Bug Fixes
+
+* align mobile budget header ([f5052c2](https://github.com/Kirbyyy81/idea-dump/commit/f5052c25228538b783f15fa40ed59bf3dc0bf326))
+* clarify budget cycle labels ([f3ef9ab](https://github.com/Kirbyyy81/idea-dump/commit/f3ef9abf6ffc34aadc32b8a7402726fa3bf5bb0c))
+* collapse budget transactions ([4db6b77](https://github.com/Kirbyyy81/idea-dump/commit/4db6b77b38d9121fc6a5209e1f6329999db416ae))
+* group budget actions ([122b274](https://github.com/Kirbyyy81/idea-dump/commit/122b274a09c5a0744b9ac3dc1cd55a6cf773b40b))
+* load budget details on demand ([a243beb](https://github.com/Kirbyyy81/idea-dump/commit/a243beb89a6b2152ddd290b3de1b3b0ff54b48bb))
+* make budget tabs responsive ([f48fb23](https://github.com/Kirbyyy81/idea-dump/commit/f48fb237d5fb3802f06c42cf7238deb9133f6dac))
+* merge main while preserving receipt format learning ([a2bb5e4](https://github.com/Kirbyyy81/idea-dump/commit/a2bb5e4a84b1a92316ee8f31113eed3356ec59f6))
+* reorder finance sidebar ([0b62e3b](https://github.com/Kirbyyy81/idea-dump/commit/0b62e3b9baeb830e172661e89f229b05974a41fa))
+* simplify budget progress ([2cad8b0](https://github.com/Kirbyyy81/idea-dump/commit/2cad8b0f79ec229b062ddf04e0e28fd2cf16f030))
+* sync remote OCR branch ([1fa0e20](https://github.com/Kirbyyy81/idea-dump/commit/1fa0e20a1582a3b7d8bcba3c73f43ea7a164331e))
+* tabulate budget configuration ([1a07d16](https://github.com/Kirbyyy81/idea-dump/commit/1a07d16d036276871926edb89e32d17c3d771dc3))
+* toast budget confirmations ([3a8ff4d](https://github.com/Kirbyyy81/idea-dump/commit/3a8ff4d7dad4e356651fb32936a7b7bc81af753a))
+
+## [0.14.3](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.14.2...idea-dump-v0.14.3) (2026-09-14)
+
+
+### Bug Fixes
+
+* compact shadow rule rows ([c4bd9ea](https://github.com/Kirbyyy81/idea-dump/commit/c4bd9ea623f62ffab062aeb48bfa74b5e0445fb7))
+* remove recent outcomes section ([0d0c5f4](https://github.com/Kirbyyy81/idea-dump/commit/0d0c5f4e63fcdbc79e6a4225434c2cd18bc9fd91))
+* show shadow learning rules ([41615c7](https://github.com/Kirbyyy81/idea-dump/commit/41615c754e395a3732254b7c336aacc778e4ee99))
+* trim shadow rule copy ([73ec284](https://github.com/Kirbyyy81/idea-dump/commit/73ec284a563446b4c32e46f5a63c7b10bce02c50))
+
+## [0.14.2](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.14.1...idea-dump-v0.14.2) (2026-09-14)
+
+
+### Bug Fixes
+
+* patch vulnerable dependencies ([055e207](https://github.com/Kirbyyy81/idea-dump/commit/055e20771279f6a629674d0e5cb1bf04bc591cd2))
+
+## [0.14.1](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.14.0...idea-dump-v0.14.1) (2026-09-08)
+
+
+### Bug Fixes
+
+* align mobile finance headers ([e6cd857](https://github.com/Kirbyyy81/idea-dump/commit/e6cd85710ed7bafad9f419df461a31447b7ee882))
+
+## [0.14.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.13.0...idea-dump-v0.14.0) (2026-09-06)
+
+
+### Features
+
+* add approved receipt parsing rules ([e5e79aa](https://github.com/Kirbyyy81/idea-dump/commit/e5e79aa6258322aa87517264a2771f05d6d28531))
+* add observable finance learning schema ([7f28968](https://github.com/Kirbyyy81/idea-dump/commit/7f289684d8bc19cff28736062a2eadede6b5c1ed))
+* apply learned finance ocr fields ([776fe2a](https://github.com/Kirbyyy81/idea-dump/commit/776fe2a353bca2dc5f3bd92909f3755325ee9c93))
+* apply learned ocr sources ([dca0521](https://github.com/Kirbyyy81/idea-dump/commit/dca05216378e638343c7a40e29cd83f24d3d07ac))
+* apply remaining finance OCR field templates ([ca6a481](https://github.com/Kirbyyy81/idea-dump/commit/ca6a4812d1ffaa743f5cd419a7ce452b95ca28ab))
+* guard finance template learning and activation ([aef6789](https://github.com/Kirbyyy81/idea-dump/commit/aef67893dd8b1127889647fdc6d49ecc54ace45f))
+* learn critical finance ocr fields ([718c730](https://github.com/Kirbyyy81/idea-dump/commit/718c73005c3f23d768473eff664fa7ffe6eec01e))
+* learn finance ocr sources ([a76f665](https://github.com/Kirbyyy81/idea-dump/commit/a76f665351f5f9718aaa88a5597aa6c358c58675))
+* learn from reviewed receipt sources and layouts ([c58bc69](https://github.com/Kirbyyy81/idea-dump/commit/c58bc69a92c92aa9c7fdbd5df075c4cf0ec63f56))
+* scope parser learning to an upload cutoff ([95aef9c](https://github.com/Kirbyyy81/idea-dump/commit/95aef9c4b9cd1850c8bd659ac1a10d31e0c5870b))
+* show finance learning summary ([7155a8f](https://github.com/Kirbyyy81/idea-dump/commit/7155a8fd26fe46c7732bf2bf54f29680fe359c53))
+
+
+### Bug Fixes
+
+* update vulnerable OCR service dependencies ([bf24b8f](https://github.com/Kirbyyy81/idea-dump/commit/bf24b8fa91b8a7793d3efdbb15e54075ba61493e))
+* update vulnerable web tooling dependencies ([d39d1b3](https://github.com/Kirbyyy81/idea-dump/commit/d39d1b38d4e5d4613655ce3f82463584f3291f12))
+* use portable finance learning sql ([41b6c6b](https://github.com/Kirbyyy81/idea-dump/commit/41b6c6b07d1d2fbb22cfd3dd75c057de3dcbe458))
+
 ## [0.13.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.12.0...idea-dump-v0.13.0) (2026-09-01)
 
 

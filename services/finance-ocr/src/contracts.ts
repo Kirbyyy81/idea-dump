@@ -1,9 +1,9 @@
 import type {
     FinanceCandidatePayload,
+    FinanceReceiptProcessing,
     FinanceCandidateTransaction,
     FinanceDuplicateOutcome,
     FinanceDuplicateSignal,
-    FinanceOcrFieldLearningRule,
     FinanceOcrFieldTemplate,
     FinanceOcrPayee,
     FinanceOcrRule,
@@ -23,7 +23,6 @@ export interface FinanceContext {
     sourceTemplates: FinanceOcrSourceTemplate[];
     fieldTemplates: FinanceOcrFieldTemplate[];
     rules: FinanceOcrRule[];
-    fieldLearningRules: FinanceOcrFieldLearningRule[];
     payees: FinanceOcrPayee[];
 }
 
@@ -54,6 +53,7 @@ export interface FinalizeInput {
     ocrConfidence: number | null;
     ocrTextHash: string;
     normalizerVersion: number;
+    receiptProcessing?: FinanceReceiptProcessing;
     detectedSourceId: string | null;
     sourceDetectionSignals: FinanceSourceDetectionSignal[];
     candidatePayload: FinanceCandidatePayload;

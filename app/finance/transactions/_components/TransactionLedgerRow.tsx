@@ -2,26 +2,10 @@
 
 import { useEffect, useId, useRef, useState } from 'react';
 import Link from 'next/link';
-import {
-    CategoryDoodleIcon,
-    DeleteDoodleIcon,
-    EditDoodleIcon,
-    FoodDoodleIcon,
-    HealthDoodleIcon,
-    HomeDoodleIcon,
-    MoneyDoodleIcon,
-    MoreDoodleIcon,
-    ShoppingDoodleIcon,
-    SourceDoodleIcon,
-    SparkleDoodleIcon,
-    TransportDoodleIcon,
-} from '@/components/atoms/DoodleIcons';
+import { DeleteDoodleIcon, EditDoodleIcon, MoreDoodleIcon } from '@/components/atoms/DoodleIcons';
 import type { FinanceTransactionView } from '@/lib/types';
-import { cn, formatCurrency } from '@/lib/utils';
-import {
-    getFinanceLedgerCategoryIcon,
-} from './transactionLedger';
-import type { FinanceLedgerCategoryIcon } from './transactionLedger';
+import { formatCurrency } from '@/lib/utils';
+import { FinanceTransactionRow } from '../../_components/FinanceTransactionRow';
 
 interface TransactionLedgerRowProps {
     transaction: FinanceTransactionView;
@@ -32,28 +16,15 @@ export function getFinanceTransactionRecipient(transaction: FinanceTransactionVi
     return transaction.finance_payee?.name || transaction.merchant || 'Untitled transaction';
 }
 
-function LedgerCategoryIcon({ kind }: { kind: FinanceLedgerCategoryIcon }) {
-    if (kind === 'food') return <FoodDoodleIcon size={19} />;
-    if (kind === 'transport') return <TransportDoodleIcon size={19} />;
-    if (kind === 'shopping') return <ShoppingDoodleIcon size={19} />;
-    if (kind === 'home') return <HomeDoodleIcon size={19} />;
-    if (kind === 'health') return <HealthDoodleIcon size={19} />;
-    if (kind === 'income') return <MoneyDoodleIcon size={19} />;
-    if (kind === 'entertainment') return <SparkleDoodleIcon size={19} />;
-    return <CategoryDoodleIcon size={19} />;
-}
-
 export function TransactionLedgerRow({
     transaction,
     onDelete,
 }: TransactionLedgerRowProps) {
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
     const popoverId = useId();
-    const containerRef = useRef<HTMLDivElement>(null);
+    const containerRef = useRef<HTMLSpanElement>(null);
     const triggerRef = useRef<HTMLButtonElement>(null);
-    const isIncome = transaction.direction === 'income';
     const recipient = getFinanceTransactionRecipient(transaction);
-    const categoryIcon = getFinanceLedgerCategoryIcon(transaction.category?.name);
 
     useEffect(() => {
         if (!isPopoverOpen) return;
@@ -86,44 +57,15 @@ export function TransactionLedgerRow({
     };
 
     return (
-        <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-5">
-            <div className="flex min-w-0 items-start gap-3 sm:items-center">
-                <span
-                    aria-hidden="true"
-                    data-ledger-category-icon={categoryIcon}
-                    className={cn(
-                        'mt-0.5 grid size-9 shrink-0 place-items-center rounded-md border sm:mt-0',
-                        isIncome
-                            ? 'border-success/30 bg-success-bg text-success'
-                            : 'border-error/30 bg-error-bg text-error'
-                    )}
-                >
-                    <LedgerCategoryIcon kind={categoryIcon} />
-                </span>
-                <div className="min-w-0">
-                    <p className="truncate font-semibold">{recipient}</p>
-                    {transaction.finance_payee?.name && transaction.merchant && (
-                        <p className="truncate text-sm text-text-secondary">
-                            Merchant: {transaction.merchant}
-                        </p>
-                    )}
-                    <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2">
-                        <span className="inline-flex min-h-7 max-w-full items-center gap-1.5 rounded-full border border-border-subtle bg-bg-subtle px-2.5 py-1 text-xs font-semibold text-text-secondary">
-                            <SourceDoodleIcon size={13} className="shrink-0" />
-                            <span className="truncate">{transaction.finance_source?.name || 'Unknown source'}</span>
-                        </span>
-                        <span className="inline-flex min-h-7 max-w-full items-center gap-1.5 rounded-full border border-border-subtle bg-bg-subtle px-2.5 py-1 text-xs font-semibold text-text-secondary">
-                            <CategoryDoodleIcon size={13} className="shrink-0" />
-                            <span className="truncate">{transaction.category?.name || 'Uncategorised'}</span>
-                        </span>
-                    </div>
-                </div>
-            </div>
-            <div className="flex items-center justify-between gap-3 pl-12 sm:shrink-0 sm:justify-end sm:pl-0">
-                <p className={isIncome ? 'font-bold text-success' : 'font-bold text-error'}>
-                    {isIncome ? '+' : '-'}{formatCurrency(transaction.amount, transaction.currency || 'MYR')}
-                </p>
-                <div ref={containerRef} className="relative">
+        <FinanceTransactionRow
+            payeeName={transaction.finance_payee?.name}
+            merchant={transaction.merchant}
+            sourceName={transaction.finance_source?.name}
+            categoryName={transaction.category?.name ?? null}
+            direction={transaction.direction}
+            formattedAmount={formatCurrency(transaction.amount, transaction.currency || 'MYR')}
+            actions={
+                <span ref={containerRef} className="relative">
                     <button
                         ref={triggerRef}
                         type="button"
@@ -136,7 +78,7 @@ export function TransactionLedgerRow({
                         <MoreDoodleIcon size={20} />
                     </button>
                     {isPopoverOpen && (
-                        <div
+                        <span
                             id={popoverId}
                             role="group"
                             aria-label={`Actions for ${recipient}`}
@@ -161,10 +103,10 @@ export function TransactionLedgerRow({
                                 <DeleteDoodleIcon size={16} />
                                 Delete
                             </button>
-                        </div>
+                        </span>
                     )}
-                </div>
-            </div>
-        </div>
+                </span>
+            }
+        />
     );
 }

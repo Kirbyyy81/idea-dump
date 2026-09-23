@@ -6,6 +6,9 @@ import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface DatePickerProps {
+    id?: string;
+    ariaDescribedBy?: string;
+    error?: boolean;
     value: string;
     onChange: (value: string) => void;
     placeholder?: string;
@@ -47,6 +50,9 @@ function formatDisplayDate(value: string) {
 }
 
 export function DatePicker({
+    id,
+    ariaDescribedBy,
+    error,
     value,
     onChange,
     placeholder = 'Select date',
@@ -195,6 +201,8 @@ export function DatePicker({
         <div ref={containerRef} className={cn('relative', className)}>
             <button
                 ref={buttonRef}
+                id={id}
+                aria-describedby={ariaDescribedBy}
                 type="button"
                 disabled={disabled}
                 aria-haspopup="dialog"
@@ -205,6 +213,7 @@ export function DatePicker({
                 className={cn(
                     'input flex h-10 items-center justify-between gap-2 pr-10 text-left',
                     disabled && 'cursor-not-allowed opacity-60',
+                    error && 'border-error',
                     buttonClassName
                 )}
             >

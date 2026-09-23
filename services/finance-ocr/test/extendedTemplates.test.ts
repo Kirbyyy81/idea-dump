@@ -21,6 +21,15 @@ function template(config: FinanceParserTemplateConfiguration, overrides: Partial
 }
 
 describe('algorithm 3 extraction', () => {
+    it.each(['unknown', 'ryt_screenshot_v1', 'ryt_shared_v1'] as const)('isolates scoped algorithm 3 rules for %s', (format) => {
+        const payload = { reference_number: 'OCR-12345', parser_template_baseline: { reference_number: 'OCR-12345' } } as FinanceCandidatePayload;
+        const scoped = template({ type: 'strip_prefix', value: 'OCR-' }, { scope_receipt_format: 'ryt_shared_v1' });
+        const result = applyFinanceFieldTemplates('', payload, source, [scoped], [], null, format);
+        expect(result.payload.reference_number).toBe(format === 'ryt_shared_v1' ? '12345' : 'OCR-12345');
+        expect(result.evaluations).toHaveLength(format === 'ryt_shared_v1' ? 1 : 0);
+        const unscoped = applyFinanceFieldTemplates('', payload, source, [template({ type: 'strip_prefix', value: 'OCR-' })], [], null, format);
+        expect(unscoped.evaluations).toHaveLength(format === 'ryt_shared_v1' ? 0 : 1);
+    });
     it.each(extendedCases)('$name', ({ field, config, text, baseline, payees, expected }) => {
         expect(evaluateFinanceExtendedTemplate(template(config, { field_name: field }), text, payees, baseline)).toEqual(expected);
     });

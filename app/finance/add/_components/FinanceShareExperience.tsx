@@ -1,9 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/atoms/Button';
 import {
-    CheckDoodleIcon,
     DeleteDoodleIcon,
     OcrDoodleIcon,
     ScanDoodleIcon,
@@ -46,19 +45,20 @@ const statusLabels: Record<string, string> = {
 
 function countValue(batch: FinanceShareBatch, key: keyof FinanceShareBatch) {
     const value = batch[key];
-    return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+    return typeof value === 'number' && Number.isFinite(value) ? Math.max(0, value) : 0;
 }
 
 function ActiveBatchPanel({ batch }: { batch: FinanceShareBatch }) {
     const items = Array.isArray(batch.items) ? batch.items : [];
-    const stats = [
-        ['Queued', countValue(batch, 'queued_files')],
-        ['Processing', countValue(batch, 'processing_files')],
+    const outcomes = [
         ['Added', countValue(batch, 'completed_files')],
         ['Review', countValue(batch, 'review_files')],
         ['Duplicates', countValue(batch, 'duplicate_files')],
         ['Failed', countValue(batch, 'failed_files')],
-    ];
+    ] as const;
+    const total = countValue(batch, 'total_files');
+    const finished = Math.min(total, outcomes.reduce((sum, [, value]) => sum + value, 0));
+    const visibleOutcomes = outcomes.filter(([, value]) => value > 0);
 
     return (
         <section className="mt-6 rounded-card border border-border-default bg-bg-elevated p-5" aria-labelledby="active-share-batch-title">
@@ -67,18 +67,23 @@ function ActiveBatchPanel({ batch }: { batch: FinanceShareBatch }) {
                     <OcrDoodleIcon size={19} />
                 </span>
                 <div className="min-w-0">
-                    <h2 id="active-share-batch-title" className="text-lg font-bold">Shared images in progress</h2>
+                    <h2 id="active-share-batch-title" className="text-lg font-bold">{batch.status === 'CLEANING_UP' ? 'Finishing up' : 'Processing images'}</h2>
                 </div>
             </div>
 
-            <dl className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {stats.map(([label, value]) => (
-                    <div key={label} className="border border-border-default bg-bg-subtle px-3 py-2">
-                        <dt className="text-xs text-text-muted">{label}</dt>
-                        <dd className="mt-1 text-sm font-bold">{value}</dd>
-                    </div>
-                ))}
-            </dl>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm" role="status">
+                <span className="font-semibold">{finished} of {total} finished</span>
+                <span className="text-text-muted">{countValue(batch, 'processing_files')} processing · {countValue(batch, 'queued_files')} queued</span>
+            </div>
+            <div className="mt-2 h-2 overflow-hidden rounded-full bg-bg-subtle" role="progressbar" aria-label="Images processed"
+                aria-valuemin={0} aria-valuemax={total || 1} aria-valuenow={finished} aria-valuetext={`${finished} of ${total} finished`}>
+                <div className="h-full rounded-full bg-action-primary" style={{ width: `${total ? finished / total * 100 : 0}%` }} />
+            </div>
+            {visibleOutcomes.length > 0 && <dl className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                {visibleOutcomes.map(([label, value]) => <div key={label} className="flex items-center gap-1">
+                    <dt className="text-text-muted">{label}</dt><dd className="font-semibold">{value}</dd>
+                </div>)}
+            </dl>}
 
             {batch.status === 'CLEANING_UP' && (
                 <p className="mt-4 text-sm font-semibold text-text-secondary">Removing temporary images…</p>
@@ -102,22 +107,35 @@ function ActiveBatchPanel({ batch }: { batch: FinanceShareBatch }) {
     );
 }
 
-export function FinanceShareExperience() {
+export function FinanceShareExperience({ children }: { children?: ReactNode }) {
     const { files, clearFiles, removeFile } = useFinanceShareTarget();
     const { showSuccess } = useAlert();
     const [validations, setValidations] = useState<Record<string, FinanceSharedFileValidation>>({});
     const [phase, setPhase] = useState<HandoffPhase>('idle');
     const [uploadedCount, setUploadedCount] = useState(0);
     const [submissionError, setSubmissionError] = useState<string | null>(null);
-    const [readyBatchId, setReadyBatchId] = useState<string | null>(null);
     const [activeBatch, setActiveBatch] = useState<FinanceShareBatch | null>(null);
+    const [checkingBatch, setCheckingBatch] = useState(true);
+    const [statusError, setStatusError] = useState(false);
+    const statusRequestRef = useRef(0);
     const pollingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const prepareAttemptRef = useRef<{ fingerprint: string; requestId: string } | null>(null);
 
     const loadActiveBatch = useCallback(async (signal?: AbortSignal) => {
-        const payload = await getActiveFinanceShareBatch(signal);
-        setActiveBatch(payload.data);
-        return payload.data;
+        const request = ++statusRequestRef.current;
+        try {
+            const payload = await getActiveFinanceShareBatch(signal);
+            if (!signal?.aborted && request === statusRequestRef.current) {
+                setActiveBatch(payload.data);
+                setStatusError(false);
+            }
+            return payload.data;
+        } catch (error) {
+            if (!signal?.aborted && request === statusRequestRef.current) setStatusError(true);
+            throw error;
+        } finally {
+            if (!signal?.aborted && request === statusRequestRef.current) setCheckingBatch(false);
+        }
     }, []);
 
     useEffect(() => {
@@ -135,6 +153,8 @@ export function FinanceShareExperience() {
         const poll = async () => {
             try {
                 await loadActiveBatch();
+            } catch {
+                // Keep the last known batch visible while retrying status updates.
             } finally {
                 if (!cancelled) pollingRef.current = setTimeout(poll, 3_000);
             }
@@ -200,18 +220,26 @@ export function FinanceShareExperience() {
         if (prepareAttemptRef.current?.fingerprint !== fileFingerprint) {
             prepareAttemptRef.current = null;
         }
-        if (files.length) setReadyBatchId(null);
     }, [fileFingerprint, files.length]);
 
     const confirmShare = async () => {
         if (!validFiles.length || invalidCount || isValidationPending) return;
         setSubmissionError(null);
-        setReadyBatchId(null);
         setUploadedCount(0);
         setPhase('preparing');
 
         try {
-            const uploadFiles = validFiles.map(({ id, file }) => ({ clientId: id, file }));
+            const uploadFiles = validFiles.map(({ id, file, validation }) => {
+                const type = validation?.detectedMimeType;
+                if (!type) throw new Error('The shared image has not finished validation. Try again.');
+                return {
+                    clientId: id,
+                    file: file.type === type ? file : new File([file], file.name, {
+                        type,
+                        lastModified: file.lastModified,
+                    }),
+                };
+            });
             const prepareAttempt = prepareAttemptRef.current?.fingerprint === fileFingerprint
                 ? prepareAttemptRef.current
                 : {
@@ -237,7 +265,15 @@ export function FinanceShareExperience() {
             if (!committed.data.safe_to_close) {
                 throw new Error('Finance did not confirm durable background handoff. Keep this page open and try again.');
             }
-            setReadyBatchId(committed.data.batch_id);
+            // Preserve the acknowledged handoff until the server status can be refreshed.
+            statusRequestRef.current += 1;
+            setCheckingBatch(false);
+            setActiveBatch({
+                id: committed.data.batch_id, status: 'QUEUED', total_files: uploadFiles.length,
+                queued_files: uploadFiles.length, processing_files: 0, completed_files: 0,
+                review_files: 0, duplicate_files: 0, failed_files: 0,
+                items: uploadFiles.map(({ clientId, file }) => ({ id: clientId, original_filename: file.name, status: 'QUEUED' })),
+            });
             setPhase('ready');
             prepareAttemptRef.current = null;
             clearFiles();
@@ -257,15 +293,12 @@ export function FinanceShareExperience() {
     return (
         <>
             {activeBatch && <ActiveBatchPanel batch={activeBatch} />}
-
-            {readyBatchId && (
-                <section className="mt-6 rounded-card border border-success bg-bg-elevated p-5" role="status">
-                    <div className="flex items-start gap-3">
-                        <CheckDoodleIcon className="mt-0.5 shrink-0 text-success" size={21} />
-                        <h2 className="text-lg font-bold">Ready - you may close the app</h2>
-                    </div>
-                </section>
-            )}
+            {checkingBatch && files.length === 0 && <p className="mt-4 text-sm text-text-muted" role="status">Checking image processing…</p>}
+            {statusError && <div className="mt-3 flex flex-wrap items-center gap-3 text-sm" role="alert">
+                <p>Unable to refresh processing status.</p>
+                <Button type="button" variant="secondary" onClick={() => { void loadActiveBatch().catch(() => null); }}>Retry</Button>
+            </div>}
+            {!checkingBatch && !activeBatch && !isSubmitting && files.length === 0 && children}
 
             {files.length > 0 && (
                 <section className="mt-6 rounded-card border border-border-strong bg-bg-elevated p-5" aria-labelledby="shared-images-title">

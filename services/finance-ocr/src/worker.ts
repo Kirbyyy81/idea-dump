@@ -1,5 +1,5 @@
 import engData from '@tesseract.js-data/eng';
-import { createWorker, OEM, type Worker } from 'tesseract.js';
+import { createWorker, OEM, PSM, type Worker, type RecognizeOptions, type WorkerParams } from 'tesseract.js';
 
 export interface OcrResult {
     rawText: string;
@@ -40,10 +40,23 @@ export async function resetWorker() {
     }
 }
 
-export async function recognizeScreenshot(image: Buffer): Promise<OcrResult> {
-    const worker = await ensureWorkerReady();
+export async function recognizeScreenshot(image: Buffer, mode?: 'block'): Promise<OcrResult> {
+    const blockOptions: Partial<RecognizeOptions> & Pick<WorkerParams, 'tessedit_pageseg_mode'> = { tessedit_pageseg_mode: PSM.SINGLE_BLOCK };
+    let timer: ReturnType<typeof setTimeout> | undefined;
     try {
-        const result = await worker.recognize(image);
+        // Regional passes reuse the worker established by full-image OCR.
+        // After a failure, leave reinitialisation to the next normal request.
+        const ready = mode === 'block' ? workerPromise : ensureWorkerReady();
+        if (!ready) throw new Error('Receipt region worker is unavailable');
+        const recognition = ready.then((worker) => mode === 'block'
+            // Per-recognition parameters are saved and restored by Tesseract.
+            // Leave the existing full-image defaults untouched.
+            ? worker.recognize(image, blockOptions)
+            : worker.recognize(image));
+        const result = mode === 'block' ? await Promise.race([
+            recognition,
+            new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('Receipt region OCR timed out')), 15_000); }),
+        ]) : await recognition;
         return {
             rawText: result.data.text,
             confidence: Number.isFinite(result.data.confidence) ? result.data.confidence : null,
@@ -51,6 +64,8 @@ export async function recognizeScreenshot(image: Buffer): Promise<OcrResult> {
     } catch (error) {
         await resetWorker();
         throw error;
+    } finally {
+        clearTimeout(timer);
     }
 }
 

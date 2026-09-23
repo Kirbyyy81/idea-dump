@@ -18,7 +18,7 @@ export interface AppDependencies {
     repository: FinanceRepository;
     queueRepository?: ShareQueueRepository;
     ensureWorkerReady(): Promise<unknown>;
-    recognize(image: Buffer): Promise<OcrResult>;
+    recognize(image: Buffer, mode?: 'block'): Promise<OcrResult>;
     terminateWorker(): Promise<void>;
 }
 

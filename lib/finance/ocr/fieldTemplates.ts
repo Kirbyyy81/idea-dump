@@ -1,9 +1,10 @@
+import { isRytPartyNoise, receiptFormatMatches } from '@/lib/finance/ocr/receiptFormat';
 import { hasReceiptToday, screenshotFilenameDate, receiptReferenceValue, approvedReceiptValue, receiptDirectionConflict } from '@/lib/finance/ocr/receiptPatterns';
 import { evaluateFinanceExtendedTemplate } from './extendedTemplates';
 import { extractFinanceGuardedMerchant } from './guardedRules';
 import { templateValueHash } from '@/lib/finance/ocr/templateHash';
 import type {
-    FinanceCandidatePayload, FinanceParserTemplateBaseline, FinanceOcrFieldTemplate, FinanceOcrPayee,
+    FinanceCandidatePayload, FinanceParserTemplateBaseline, FinanceOcrFieldTemplate, FinanceOcrPayee, FinanceReceiptFormat,
     FinanceParserTemplateEvaluation, FinanceParserTemplateField,
 } from '@/lib/types';
 import { isFinanceParserTemplateContract, orderFinanceParserTemplates, selectFinanceParserTemplateProposal } from '@/lib/finance/ocr/templateContract';
@@ -75,11 +76,19 @@ export function extractFinanceTemplateValue(
 export function applyFinanceFieldTemplates(
     text: string, payload: FinanceCandidatePayload, sourceId: string | null,
     templates: FinanceOcrFieldTemplate[], payees: FinanceOcrPayee[] = [], filename: string | null = null,
-    protectedFields: FinanceParserTemplateField[] = [],
+    formatOrProtectedFields: FinanceReceiptFormat | FinanceParserTemplateField[] = 'unknown',
+    protectedFieldsOrFormat: FinanceParserTemplateField[] | FinanceReceiptFormat = [],
 ) {
+    const format = Array.isArray(formatOrProtectedFields)
+        ? typeof protectedFieldsOrFormat === 'string' ? protectedFieldsOrFormat : 'unknown'
+        : formatOrProtectedFields;
+    const protectedFields = Array.isArray(formatOrProtectedFields)
+        ? formatOrProtectedFields
+        : Array.isArray(protectedFieldsOrFormat) ? protectedFieldsOrFormat : [];
     if (!sourceId || !templates.length) return { payload, evaluations: [] as FinanceParserTemplateEvaluation[] };
     const eligible = orderFinanceParserTemplates(templates.filter((template) => (
         isFinanceParserTemplateContract(template) && template.scope_source_id === sourceId
+        && receiptFormatMatches(template.scope_receipt_format, format)
         && (template.status === 'active' || template.status === 'shadow')
     )), sourceId);
     const nextPayload = { ...payload };
@@ -90,8 +99,9 @@ export function applyFinanceFieldTemplates(
         for (const template of eligible.filter((item) => item.field_name === field).slice(0, 20)) {
             const extended = template.algorithm_version === 3
                 ? evaluateFinanceExtendedTemplate(template, text, payees, payload.parser_template_baseline) : null;
-            const value = extended ? (extended.outcome === 'value' ? extended.value : extended.outcome === 'invalid_output' ? null : undefined)
+            let value = extended ? (extended.outcome === 'value' ? extended.value : extended.outcome === 'invalid_output' ? null : undefined)
                 : extractFinanceTemplateValue(template, text, payees, filename);
+            if (format === 'ryt_shared_v1' && (field === 'payee_name' || field === 'merchant') && value && isRytPartyNoise(value)) value = null;
             const evaluation: FinanceParserTemplateEvaluation = {
                 template_id: template.id, field_name: field,
                 status: template.status as 'active' | 'shadow',

@@ -513,11 +513,12 @@ export interface FinanceDashboardRecentTransaction {
 }
 
 export interface FinanceDashboardSummary {
+    active_budgets?: FinanceBudgetSummary[];
     total_expense: number;
     total_income: number;
     net_cash_flow: number;
     recent_transactions: FinanceDashboardRecentTransaction[];
-    expense_by_category: Array<{
+    net_by_category: Array<{
         category_id: string | null;
         label: string;
         amount: number;
@@ -530,6 +531,108 @@ export interface FinanceDashboardSummary {
     }>;
 }
 
+export type FinanceBudgetCycleType = 'weekly' | 'monthly' | 'custom';
+export type FinanceBudgetState = 'active' | 'scheduled' | 'archived';
+export type FinanceBudgetStatus = FinanceBudgetState | 'over_budget' | 'limit_reached' | 'needs_attention' | 'on_track';
+export type FinanceBudgetMoney = string;
+export interface FinanceBudgetFilters {
+    filter_logic: 'and' | 'or';
+    source_ids: string[];
+    category_ids: string[];
+    include_uncategorised: boolean;
+}
+export interface FinanceBudgetConfiguration extends FinanceBudgetFilters {
+    name: string;
+    amount: FinanceBudgetMoney;
+    cycle_type: FinanceBudgetCycleType;
+    start_date: string;
+    custom_days: number | null;
+    anchor_day: number | null;
+    time_zone: string;
+}
+export interface FinanceBudgetSelection {
+    id: string | null;
+    original_id: string;
+    name: string;
+    is_archived: boolean;
+}
+export interface FinanceBudgetSettings extends FinanceBudgetConfiguration {
+    sources: FinanceBudgetSelection[];
+    categories: FinanceBudgetSelection[];
+}
+export interface FinanceBudgetMetrics {
+    expense: FinanceBudgetMoney;
+    income: FinanceBudgetMoney;
+    net_spending: FinanceBudgetMoney;
+    used_amount: FinanceBudgetMoney;
+    remaining: FinanceBudgetMoney;
+    over_amount: FinanceBudgetMoney;
+    amount: FinanceBudgetMoney;
+    usage_percentage: string;
+    pace_percentage: string;
+    status: FinanceBudgetStatus;
+}
+export interface FinanceBudgetCycle {
+    id: string;
+    start_date: string;
+    end_date: string;
+    state: 'scheduled' | 'active' | 'completed' | 'partial';
+    close_reason: 'completed' | 'schedule' | 'archived' | null;
+    frozen_at: string | null;
+    // Older RPCs omit cycle settings during the release 15 migration rollout.
+    configuration?: FinanceBudgetSettings;
+    metrics: FinanceBudgetMetrics;
+}
+export interface FinanceBudgetSummary {
+    id: string;
+    name: string;
+    revision: number;
+    state: FinanceBudgetState;
+    status: FinanceBudgetStatus;
+    today: string;
+    configuration: FinanceBudgetSettings;
+    current_cycle: FinanceBudgetCycle | null;
+}
+export interface FinanceBudgetPage<T> {
+    data: T[];
+    page: number;
+    page_size: number;
+    total: number;
+}
+export interface FinanceBudgetTransaction {
+    id: string;
+    transaction_date: string;
+    direction: FinanceTransactionDirection;
+    amount: FinanceBudgetMoney;
+    merchant: string | null;
+    source_name: string;
+    category_name: string;
+}
+export interface FinanceBudgetDetail {
+    budget: FinanceBudgetSummary;
+    history: FinanceBudgetPage<FinanceBudgetCycle>;
+    transactions: FinanceBudgetPage<FinanceBudgetTransaction>;
+}
+export interface FinanceBudgetListQuery {
+    state: FinanceBudgetState | 'all';
+    page: number;
+    page_size: number;
+}
+export interface FinanceBudgetDetailQuery {
+    history_page: number;
+    history_page_size: number;
+    transactions_page: number;
+    transactions_page_size: number;
+}
+export interface FinanceBudgetMutation {
+    action: 'create' | 'update' | 'archive' | 'restore';
+    id: string | null;
+    revision: number | null;
+    request_id: string | null;
+    configuration: FinanceBudgetConfiguration | null;
+}
+export type FinanceBudgetFieldErrors = Partial<Record<keyof FinanceBudgetConfiguration | 'request_id' | 'revision', string>>;
+
 export type FinanceIntakeStatus =
     | 'pending'
     | 'processing'
@@ -538,6 +641,15 @@ export type FinanceIntakeStatus =
     | 'duplicate'
     | 'failed'
     | 'rejected';
+
+export type FinanceReceiptFormat = 'unknown' | 'ryt_screenshot_v1' | 'ryt_shared_v1';
+export type FinanceReceiptConflictField = 'amount' | 'transaction_date' | 'payee_name' | 'reference_number' | 'direction' | 'notes';
+export interface FinanceReceiptProcessing {
+    format: FinanceReceiptFormat;
+    detector_version: 1;
+    failed_regions: Array<'header' | 'recipient' | 'details'>;
+    conflicts: FinanceReceiptConflictField[];
+}
 
 export interface FinanceIntakeItem {
     id: string;
@@ -554,6 +666,10 @@ export interface FinanceIntakeItem {
     ocr_confidence: number | null;
     ocr_text_hash: string | null;
     normalizer_version: number | null;
+    receipt_format?: FinanceReceiptFormat;
+    receipt_format_eligible?: boolean;
+    receipt_detector_version?: number | null;
+    receipt_processing?: FinanceReceiptProcessing | null;
     processing_attempt_id: string | null;
     processing_started_at: string | null;
     processing_lease_expires_at: string | null;
@@ -587,6 +703,7 @@ export interface FinanceCandidatePayload {
     matched_parser_template_ids?: string[];
     parser_template_evaluations?: FinanceParserTemplateEvaluation[];
     parser_template_baseline?: FinanceParserTemplateBaseline;
+    receipt_processing?: FinanceReceiptProcessing;
     duplicate_transaction_id: string | null;
 }
 
@@ -971,6 +1088,7 @@ export interface FinanceParserTemplateContract {
     user_id: string;
     target_source_id: string | null;
     scope_source_id: string | null;
+    scope_receipt_format?: Exclude<FinanceReceiptFormat, 'unknown'> | null;
     field_name: FinanceParserTemplateField;
     template_type: FinanceParserTemplateType;
     configuration: FinanceParserTemplateConfiguration;

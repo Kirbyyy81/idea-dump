@@ -362,7 +362,8 @@ const contractKeys = [
 export function getFinanceParserTemplateContractErrors(value: unknown) {
     if (!isPlainObject(value)) return ['Parser template must be an object.'];
     const errors: string[] = [];
-    if (!hasExactKeys(value, contractKeys)) errors.push('Parser template fields are incomplete or unknown.');
+    if (!hasExactKeys(value, 'scope_receipt_format' in value ? [...contractKeys, 'scope_receipt_format'] : contractKeys)) errors.push('Parser template fields are incomplete or unknown.');
+    if (value.scope_receipt_format != null && (!['ryt_shared_v1', 'ryt_screenshot_v1'].includes(String(value.scope_receipt_format)) || value.field_name === 'source_id' || ![2, 3].includes(Number(value.algorithm_version)))) errors.push('Receipt format scope is invalid.');
     if (!isUuid(value.id)) errors.push('Template ID must be a UUID.');
     if (!isUuid(value.user_id)) errors.push('Template user ID must be a UUID.');
     if (!isNullableUuid(value.target_source_id)) errors.push('Target source ID must be null or a UUID.');

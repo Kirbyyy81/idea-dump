@@ -28,7 +28,6 @@ function repository(overrides: Partial<FinanceRepository> = {}) {
             sourceTemplates: [],
             fieldTemplates: [],
             rules: [],
-            fieldLearningRules: [],
             payees: [],
         }),
         assessDuplicate: vi.fn().mockResolvedValue({
@@ -178,7 +177,6 @@ describe('fenced screenshot processing', () => {
                     updated_at: '2026-01-03T00:00:00Z',
                 }],
                 rules: [],
-                fieldLearningRules: [],
                 payees: [],
             }),
             finalize: vi.fn().mockResolvedValue({
@@ -241,5 +239,37 @@ describe('fenced screenshot processing', () => {
             failureStage: 'ocr',
             errorMessage: 'Screenshot reading was interrupted. Please retry.',
         });
+    });
+});
+
+describe('new-intake receipt format rollout', () => {
+    it.each([false, true])('preserves baseline processing for historical uploads with flag %s', async (enabled) => {
+        const repo = repository({
+            beginIntake: vi.fn().mockResolvedValue({ state: 'recovered', shouldProcess: true, intake: { id: 'old', receipt_format_eligible: false }, attemptId: 'attempt' }),
+            finalize: vi.fn().mockResolvedValue({ intake: { id: 'old' }, candidate: { id: 'candidate' }, transaction: null, auto_confirmed: false }),
+        });
+        const recognize = vi.fn().mockResolvedValue({ rawText: 'Paid RM 17.25\n9 Sep 2026', confidence: 90 });
+        await processScreenshot('user-1', image, { ...config, rytSharedReceiptOcrEnabled: enabled }, { repository: repo, recognize });
+        expect(recognize).toHaveBeenCalledTimes(1);
+        expect(vi.mocked(repo.finalize).mock.calls[0][0].receiptProcessing).toBeUndefined();
+    });
+
+    it('persists reconstructed text and bounded metadata while retaining original full-image OCR', async () => {
+        const { sharedImage, receiptContext, baselineText, regionTexts } = await import('./fixtures/rytShared.js');
+        const repo = repository({
+            beginIntake: vi.fn().mockResolvedValue({ state: 'started', shouldProcess: true, intake: { id: 'new', receipt_format_eligible: true }, attemptId: 'attempt' }),
+            loadContext: vi.fn().mockResolvedValue(receiptContext),
+            finalize: vi.fn().mockResolvedValue({ intake: { id: 'new' }, candidate: { id: 'candidate' }, transaction: null, auto_confirmed: false }),
+        });
+        let index = 0;
+        const texts = [baselineText, ...regionTexts];
+        const recognize = vi.fn(async () => ({ rawText: texts[index++], confidence: 85 }));
+        await processScreenshot('user-1', await sharedImage(), { ...config, rytSharedReceiptOcrEnabled: true }, { repository: repo, recognize });
+        const input = vi.mocked(repo.finalize).mock.calls[0][0];
+        expect(input.ocrRawText).toBe(baselineText);
+        expect(input.ocrNormalizedText).toContain('RM 17.25');
+        expect(input.ocrNormalizedText).not.toContain('paid daily');
+        expect(input.receiptProcessing).toEqual({ format: 'ryt_shared_v1', detector_version: 1, failed_regions: [], conflicts: [] });
+        expect(input.candidatePayload).toMatchObject({ amount: 17.25, payee_name: 'SYNTHETIC CORNER SHOP', direction: null, receipt_processing: input.receiptProcessing });
     });
 });

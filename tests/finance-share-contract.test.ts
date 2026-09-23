@@ -319,7 +319,7 @@ describe('Finance share target contracts', () => {
             source: invalidTab.source,
         });
         expect(invalidTab.posted[0].type).toBe(types.error);
-        expect(invalidTab.posted[0].message).toMatch(/No image files were received/);
+        expect(invalidTab.posted[0].message).toMatch(/SHARE_EMPTY/);
         await invalid.lifetimePromise;
     });
 
@@ -329,6 +329,7 @@ describe('Finance share target contracts', () => {
         expect(source).toMatch(/method:\s*['"]POST['"]/);
         expect(source).toMatch(/enctype:\s*['"]multipart\/form-data['"]/);
         expect(source).toMatch(/name:\s*['"]finance_images['"]/);
+        expect(source).toContain("'image/*'");
         expect(source).toMatch(/image\/png/);
         expect(source).toMatch(/image\/jpeg/);
         expect(source).toMatch(/image\/webp/);
@@ -347,7 +348,8 @@ describe('Finance share target contracts', () => {
         expect(experience).toMatch(/prepareAttemptRef/);
         expect(experience).toMatch(/fingerprint:\s*fileFingerprint/);
         expect(experience).toMatch(/showSuccess\('You may leave the app\.',\s*'Images queued'\)/);
-        expect(experience).toMatch(/Ready - you may close the app/);
+        expect(experience).not.toMatch(/Ready - you may close the app/);
+        expect(experience).toMatch(/Processing images/);
         expect(experience).not.toMatch(/The batch disappears after processing/);
         expect(experience).not.toMatch(/Every selected image is stored privately/);
         expect(experience).not.toMatch(/Processing has not started/);
