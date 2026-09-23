@@ -51,6 +51,8 @@ The current app is organized around these modules:
 - `Log Viewer`  
   Interactive viewer for logs and productivity entries.
 
+- `Documentation`: Read and search the current private Notion Document Hub. Notion projects are optional read-only labels and are independent of app projects. See [Notion viewer setup](document/NOTION_VIEWER_SETUP.md).
+
 - `Settings`  
   Profile details, sign-out flow, version/build metadata, access administration, and the OpenAPI/Swagger reference.
 
@@ -82,6 +84,7 @@ Notes:
 - `APP_ORIGIN` is the trusted absolute origin used for production Auth redirects. Production defaults to `https://idea-dump-alpha.vercel.app`, but the environment value should be set explicitly and updated with any domain change.
 - `NEXT_PUBLIC_FINANCE_OCR_URL` is the public Render Finance OCR origin without a trailing slash.
 - `FINANCE_QUEUE_WAKE_SECRET` is a server-only secret shared by Vercel and Render. Use the same random value of at least 32 bytes in both environments.
+- `NOTION_API_TOKEN` and `NOTION_DOCUMENTS_DATA_SOURCE_ID` configure the separate server-only, read-only Documentation integration. See [Notion viewer setup](document/NOTION_VIEWER_SETUP.md).
 - Optional build metadata can also be set if you want the Settings page to show custom version info:
 
 ```env

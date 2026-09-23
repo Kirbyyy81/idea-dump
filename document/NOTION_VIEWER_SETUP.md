@@ -1,0 +1,12 @@
+# Notion Document Hub viewer setup
+
+The Documentation module reads the current pages in the owner's private Document Hub. It has a separate connection from Codex's Notion MCP session. The website does not edit Notion pages or their project relationships.
+
+1. Create an internal Notion integration with read-content capability. Share the Document Hub database with it. Also share the related Notion Projects database if project titles should appear in the catalog. Do not publish either database publicly.
+2. Set `NOTION_API_TOKEN` and `NOTION_DOCUMENTS_DATA_SOURCE_ID` in the trusted application environment. The selected data source ID is `3e4bb9f9-e5f9-8086-81f8-000be9e74ae7`. Keep the token outside `NEXT_PUBLIC_*` variables and source control.
+3. Apply the forward migration `20260923034630_notion_documentation_module.sql` through the normal Supabase migration workflow. It enables Documentation for the owner role. Grant other roles or individual users access in Idea Dump's Access Control screen as needed.
+4. Open `/documentation` as an authorized user. Check the Hybrid Postpaid Technical Documentation page, including its tables, appendices, diagrams, Versions link, and Refresh action. Run library search with a phrase from the document body, then find that phrase in the open document.
+
+If the token or data source is missing, the API returns an unavailable state. If the Notion integration has not been shared with Document Hub, it cannot list or read those pages. The optional Notion project title may be unavailable if the related database is not shared.
+
+The site uses Notion API version `2026-03-11`. API responses and assets are private and never cached. Library search reads each matching current document on submission, so larger collections take longer; the browser shows progress and can cancel the scan. An open reader keeps its last successful body in memory only until navigation or sign-out, and labels it stale after a transient refresh failure.
