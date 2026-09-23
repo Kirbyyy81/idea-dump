@@ -13,6 +13,8 @@ export const financeTemplateFieldLabels: Record<FinanceParserTemplateField, stri
 
 export const financeTemplateTypeLabels: Record<FinanceParserTemplateType, string> = {
     source_phrase: 'Recognize a source phrase',
+    source_signature: 'Recognize a source layout',
+    guarded_merchant: 'Read a conditional merchant',
     same_line_label: 'Read the value beside a label',
     next_non_empty_line: 'Read the next non-empty line',
     bounded_line_window: 'Read nearby lines around a label',

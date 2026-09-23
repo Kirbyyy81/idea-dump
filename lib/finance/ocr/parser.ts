@@ -300,6 +300,7 @@ export function parseFinanceText(
         fieldTemplates,
         payees,
         filename,
+        merchantAssigned ? ['merchant'] : [],
         receiptProcessing?.format,
     );
     Object.assign(payload, fieldTemplateResult.payload);

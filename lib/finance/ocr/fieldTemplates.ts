@@ -1,6 +1,7 @@
 import { isRytPartyNoise, receiptFormatMatches } from '@/lib/finance/ocr/receiptFormat';
 import { hasReceiptToday, screenshotFilenameDate, receiptReferenceValue, approvedReceiptValue, receiptDirectionConflict } from '@/lib/finance/ocr/receiptPatterns';
 import { evaluateFinanceExtendedTemplate } from './extendedTemplates';
+import { extractFinanceGuardedMerchant } from './guardedRules';
 import { templateValueHash } from '@/lib/finance/ocr/templateHash';
 import type {
     FinanceCandidatePayload, FinanceParserTemplateBaseline, FinanceOcrFieldTemplate, FinanceOcrPayee, FinanceReceiptFormat,
@@ -29,6 +30,7 @@ export function extractFinanceTemplateValue(
     }
     const lines = templateLines(text);
     const config = template.configuration;
+    if (config.type === 'guarded_merchant') return extractFinanceGuardedMerchant(text, config);
     if (config.type === 'receipt_pattern') return approvedReceiptValue(text, config.pattern);
     if (config.type === 'filename_date') return hasReceiptToday(text) ? screenshotFilenameDate(filename) : undefined;
     if (config.type === 'reference_label') return receiptReferenceValue(text, config);
@@ -74,8 +76,15 @@ export function extractFinanceTemplateValue(
 export function applyFinanceFieldTemplates(
     text: string, payload: FinanceCandidatePayload, sourceId: string | null,
     templates: FinanceOcrFieldTemplate[], payees: FinanceOcrPayee[] = [], filename: string | null = null,
-    format: FinanceReceiptFormat = 'unknown',
+    formatOrProtectedFields: FinanceReceiptFormat | FinanceParserTemplateField[] = 'unknown',
+    protectedFieldsOrFormat: FinanceParserTemplateField[] | FinanceReceiptFormat = [],
 ) {
+    const format = Array.isArray(formatOrProtectedFields)
+        ? typeof protectedFieldsOrFormat === 'string' ? protectedFieldsOrFormat : 'unknown'
+        : formatOrProtectedFields;
+    const protectedFields = Array.isArray(formatOrProtectedFields)
+        ? formatOrProtectedFields
+        : Array.isArray(protectedFieldsOrFormat) ? protectedFieldsOrFormat : [];
     if (!sourceId || !templates.length) return { payload, evaluations: [] as FinanceParserTemplateEvaluation[] };
     const eligible = orderFinanceParserTemplates(templates.filter((template) => (
         isFinanceParserTemplateContract(template) && template.scope_source_id === sourceId
@@ -104,8 +113,13 @@ export function applyFinanceFieldTemplates(
             };
             // Retain every bounded observation, including losing proposals and misses.
             if (value && template.status === 'active') {
-                proposals.push({ template, value });
-                evaluation.outcome = 'not_applicable';
+                if (template.template_type === 'guarded_merchant' && protectedFields.includes(field)) {
+                    evaluation.outcome = templateText(payload.merchant ?? '').toLowerCase() === templateText(value).toLowerCase()
+                        ? 'not_applicable' : 'conflict';
+                } else {
+                    proposals.push({ template, value });
+                    evaluation.outcome = 'not_applicable';
+                }
             }
             evaluations.push(evaluation);
         }
@@ -119,7 +133,12 @@ export function applyFinanceFieldTemplates(
             }
         }
     }
-    if (selected.has('merchant') && (selected.has('payee_name') || payload.payee_id || payload.payee_name)) {
+    const merchantProposal = selected.get('merchant');
+    const merchantConfig = merchantProposal?.template.configuration;
+    const clearMatchingPayee = merchantConfig?.type === 'guarded_merchant' && merchantConfig.clear_matching_payee
+        && !selected.has('payee_name') && Boolean(payload.payee_name)
+        && templateText(payload.payee_name!).toLowerCase() === templateText(merchantProposal!.value).toLowerCase();
+    if (selected.has('merchant') && (selected.has('payee_name') || payload.payee_id || payload.payee_name) && !clearMatchingPayee) {
         for (const field of ['merchant', 'payee_name'] as const) {
             const proposal = selected.get(field);
             if (proposal) {
@@ -142,6 +161,10 @@ export function applyFinanceFieldTemplates(
             nextPayload.direction = proposal.value as 'expense' | 'income';
         } else if (field === 'reference_number' || field === 'merchant' || field === 'transaction_date' || field === 'notes') {
             nextPayload[field] = proposal.value;
+            if (field === 'merchant' && clearMatchingPayee) {
+                nextPayload.payee_id = null;
+                nextPayload.payee_name = null;
+            }
         }
         if (evaluation) evaluation.outcome = 'applied';
     }

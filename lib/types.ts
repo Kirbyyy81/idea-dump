@@ -933,7 +933,9 @@ export type FinanceParserTemplateType =
     | 'saved_payee_match'
     | 'filename_date'
     | 'reference_label'
-    | 'receipt_pattern';
+    | 'receipt_pattern'
+    | 'source_signature'
+    | 'guarded_merchant';
 
 export type FinanceParserTemplateSourceLocation =
     | 'filename'
@@ -959,6 +961,26 @@ export interface FinanceSourcePhraseTemplateConfiguration {
     type: 'source_phrase';
     phrase: string;
     location: FinanceParserTemplateSourceLocation;
+}
+
+export interface FinanceTemplateLineCondition {
+    mode: 'exact' | 'prefix' | 'label';
+    text: string;
+}
+
+export interface FinanceSourceSignatureTemplateConfiguration {
+    type: 'source_signature';
+    conditions: FinanceTemplateLineCondition[];
+    replaces_source_id: string;
+}
+
+export interface FinanceGuardedMerchantTemplateConfiguration {
+    type: 'guarded_merchant';
+    conditions: FinanceTemplateLineCondition[];
+    extraction:
+        | { type: 'same_line_label'; label: string }
+        | { type: 'before_label'; label: string; strip_prefixes: string[] };
+    clear_matching_payee: boolean;
 }
 
 export interface FinanceSameLineLabelTemplateConfiguration {
@@ -1044,6 +1066,8 @@ export interface FinanceReceiptPatternTemplateConfiguration {
 
 export type FinanceParserTemplateConfiguration =
     | FinanceSourcePhraseTemplateConfiguration
+    | FinanceSourceSignatureTemplateConfiguration
+    | FinanceGuardedMerchantTemplateConfiguration
     | FinanceSameLineLabelTemplateConfiguration
     | FinanceNextNonEmptyLineTemplateConfiguration
     | FinanceBoundedLineWindowTemplateConfiguration

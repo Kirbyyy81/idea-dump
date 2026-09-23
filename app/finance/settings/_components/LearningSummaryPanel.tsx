@@ -72,19 +72,17 @@ export function LearningSummaryPanel({ isLoading, summary, shadowRules, onRefres
                     </dl>
 
                     <div className="text-sm">
-                        <div>
-                            <h3 className="font-semibold">Active template metrics</h3>
-                            {summary.active_metrics.length ? (
-                                <ul className="mt-1 space-y-1 text-text-secondary">
-                                    {summary.active_metrics.map((metric) => (
-                                        <li key={metric.field_name}>
-                                            {fieldLabels[metric.field_name]}: {formatPercentage(metric.minimum_precision)} precision,{' '}
-                                            {formatPercentage(metric.average_coverage)} coverage
-                                        </li>
-                                    ))}
-                                </ul>
-                            ) : <p className="mt-1 text-text-muted">No active parser templates.</p>}
-                        </div>
+                        <h3 className="font-semibold">Active template metrics</h3>
+                        {summary.active_metrics.length ? (
+                            <ul className="mt-1 space-y-1 text-text-secondary">
+                                {summary.active_metrics.map((metric) => (
+                                    <li key={metric.field_name}>
+                                        {fieldLabels[metric.field_name]}: {formatPercentage(metric.minimum_precision)} precision,{' '}
+                                        {formatPercentage(metric.average_coverage)} coverage
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : <p className="mt-1 text-text-muted">No active parser templates.</p>}
                     </div>
                 </div>
             ) : null}
