@@ -13,7 +13,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const output = await mkdtemp(path.join(tmpdir(), 'finance-budget-browser-'));
 await build({ entryPoints: [path.join(root, 'tests/browser/harness.tsx')], outfile: path.join(output, 'app.js'), bundle: true, jsx: 'automatic',
     define: { 'process.env.NODE_ENV': '"development"' },
-    alias: { '@': root, '@/components/organisms/AppShell': path.join(root, 'tests/browser/shell.tsx'), 'next/link': path.join(root, 'tests/browser/link.tsx'), 'next/navigation': path.join(root, 'tests/browser/navigation.ts') } });
+    alias: { '@': root, '@/lib/finance/ocr/client': path.join(root, 'tests/browser/ocr-client.ts'), '@/components/organisms/AppShell': path.join(root, 'tests/browser/shell.tsx'), 'next/link': path.join(root, 'tests/browser/link.tsx'), 'next/navigation': path.join(root, 'tests/browser/navigation.ts') } });
 await build({ entryPoints: [path.join(root, 'tests/browser/documentation-harness.tsx')], outfile: path.join(output, 'documentation-app.js'), bundle: true, jsx: 'automatic',
     define: { 'process.env.NODE_ENV': '"development"' },
     alias: { '@': root, '@/components/organisms/AppShell': path.join(root, 'tests/browser/shell.tsx'), 'next/link': path.join(root, 'tests/browser/link.tsx'), 'next/image': path.join(root, 'tests/browser/image.tsx') } });
