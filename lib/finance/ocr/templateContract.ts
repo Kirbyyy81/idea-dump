@@ -31,6 +31,8 @@ export const FINANCE_PARSER_TEMPLATE_PATTERN_IDS = [
 ] as const satisfies readonly FinanceParserTemplatePatternId[];
 
 const templateTypes = [
+    'source_signature',
+    'guarded_merchant',
     'source_phrase',
     'same_line_label',
     'next_non_empty_line',
@@ -71,6 +73,8 @@ const templateStatuses = [
 const extractionFields = templateFields.filter((field) => field !== 'source_id');
 
 const allowedFieldsByType: Record<FinanceParserTemplateType, readonly FinanceParserTemplateField[]> = {
+    source_signature: ['source_id'],
+    guarded_merchant: ['merchant'],
     source_phrase: ['source_id'],
     same_line_label: extractionFields,
     next_non_empty_line: extractionFields,
@@ -196,6 +200,20 @@ function hasValidPhraseList(value: unknown) {
 
 function getConfigurationShapeError(configuration: Record<string, unknown>) {
     switch (configuration.type) {
+        case 'source_signature':
+            return hasExactKeys(configuration, ['type', 'conditions', 'replaces_source_id'])
+                && isUuid(configuration.replaces_source_id) && validConditions(configuration.conditions)
+                ? null : 'Source signature configuration is invalid.';
+        case 'guarded_merchant': {
+            const extraction = configuration.extraction;
+            return hasExactKeys(configuration, ['type', 'conditions', 'extraction', 'clear_matching_payee'])
+                && validConditions(configuration.conditions) && typeof configuration.clear_matching_payee === 'boolean'
+                && isPlainObject(extraction) && isBoundedText(extraction.label)
+                && ((extraction.type === 'same_line_label' && hasExactKeys(extraction, ['type', 'label']))
+                    || (extraction.type === 'before_label' && hasExactKeys(extraction, ['type', 'label', 'strip_prefixes'])
+                        && hasValidPhraseList(extraction.strip_prefixes)))
+                ? null : 'Guarded merchant configuration is invalid.';
+        }
         case 'source_phrase':
             return hasExactKeys(configuration, ['type', 'phrase', 'location'])
                 && isBoundedText(configuration.phrase)
@@ -269,6 +287,13 @@ function getConfigurationShapeError(configuration: Record<string, unknown>) {
         default:
             return 'Template type is not supported.';
     }
+}
+
+function validConditions(value: unknown) {
+    return Array.isArray(value) && value.length >= 1 && value.length <= 5
+        && value.every((condition) => isPlainObject(condition)
+            && hasExactKeys(condition, ['mode', 'text']) && ['exact', 'prefix', 'label'].includes(String(condition.mode))
+            && isBoundedText(condition.text));
 }
 
 export function getFinanceParserTemplateConfigurationErrors(
@@ -351,6 +376,13 @@ export function getFinanceParserTemplateContractErrors(value: unknown) {
     }
     if (value.algorithm_version !== 1 && value.algorithm_version !== 2 && value.algorithm_version !== FINANCE_PARSER_TEMPLATE_ALGORITHM_VERSION) {
         errors.push('Template algorithm version is not supported.');
+    }
+    if (['source_signature', 'guarded_merchant'].includes(String(value.template_type)) && value.algorithm_version !== 2) {
+        errors.push('Guarded rule types require algorithm 2.');
+    }
+    if (isPlainObject(value.configuration) && value.configuration.type === 'source_signature'
+        && value.configuration.replaces_source_id === value.target_source_id) {
+        errors.push('A source signature must refine a different source.');
     }
     if (value.algorithm_version === 3 && (
         value.field_name === 'source_id' || value.field_name === 'amount'
@@ -441,6 +473,9 @@ interface TemplateSpecificity {
 
 function getTemplateSpecificity(configuration: FinanceParserTemplateConfiguration): TemplateSpecificity {
     switch (configuration.type) {
+        case 'source_signature':
+        case 'guarded_merchant':
+            return { scopeRank: 6, anchorLength: configuration.conditions.reduce((sum, item) => sum + item.text.length, 0), lineWindow: 1 };
         case 'source_phrase':
             return {
                 scopeRank: configuration.location === 'filename'
