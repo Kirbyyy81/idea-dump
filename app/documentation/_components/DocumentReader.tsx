@@ -177,6 +177,11 @@ export function DocumentReader({ pageId, initialQuery }: { pageId: string; initi
             {(loading || refreshing) && <p role="status">{refreshing ? 'Refreshing' : 'Loading'} document…</p>}
             {error && <div className="documentation-notice" role="alert">{error} {stale && <strong>Showing the last loaded copy.</strong>} <button className="btn-secondary" type="button" onClick={fetchCurrent}>Retry</button></div>}
             {metadata && <div className="documentation-reader-grid">
+                {sections.length > 0 && <nav className="documentation-toc" aria-label="On this page">
+                    <strong>On this page</strong>
+                    {!content.complete && <small>Sections appear as content loads.</small>}
+                    {sections.map((section) => <a key={section.id} href={`#section-${section.id}`} className={`documentation-toc-${section.type}`}>{section.richText.map((part) => part.text).join('')}</a>)}
+                </nav>}
                 <article className="documentation-paper">
                     <div className="documentation-find">
                         <Input aria-label="Find in this document" placeholder="Find in this document" value={query} maxLength={120} onValueChange={setQuery} onKeyDown={(event) => {
@@ -198,11 +203,6 @@ export function DocumentReader({ pageId, initialQuery }: { pageId: string; initi
                     </DocumentLoadingContext.Provider>
                     {!blocks.length && content.complete && !loading && <p>This document has no page content.</p>}
                 </article>
-                {sections.length > 0 && <nav className="documentation-toc" aria-label="On this page">
-                    <strong>On this page</strong>
-                    {!content.complete && <small>Sections appear as content loads.</small>}
-                    {sections.map((section) => <a key={section.id} href={`#section-${section.id}`} className={`documentation-toc-${section.type}`}>{section.richText.map((part) => part.text).join('')}</a>)}
-                </nav>}
             </div>}
         </div>
     </AppShell>;
