@@ -1303,3 +1303,8 @@ export interface FinanceNotificationParseResult {
     payload: FinanceCandidatePayload | null;
     date_provenance: FinanceNotificationDateProvenance;
 }
+
+export interface CompanionDevice {
+    id: string; label: string; created_at: string; last_seen_at: string | null; revoked_at: string | null;
+}
+export type CompanionPairingResult = { status: "pending" } | { status: "paired"; device_id: string; user_id: string };
