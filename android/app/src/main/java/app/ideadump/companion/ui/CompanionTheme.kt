@@ -9,7 +9,8 @@ private val colors = lightColorScheme(
     primary = Color(0xFF191917), onPrimary = Color(0xFFFFFDF6),
     background = Color(0xFFF3ECD9), surface = Color(0xFFFFFDF6),
     onSurface = Color(0xFF1B1B18), onBackground = Color(0xFF1B1B18),
-    outline = Color(0xFFD7D0C1), secondaryContainer = Color(0xFFDFE8C2),
+    outline = Color(0xFFD7D0C1), outlineVariant = Color(0xFFD7D0C1),
+    secondary = Color(0xFF191917), onSecondary = Color(0xFFFFFDF6), secondaryContainer = Color(0xFFDFE8C2),
     tertiaryContainer = Color(0xFFFAE0EE), error = Color(0xFF9A3838),
 )
 
