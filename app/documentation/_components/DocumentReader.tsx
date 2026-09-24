@@ -116,7 +116,6 @@ export function DocumentReader({ pageId, initialQuery }: { pageId: string; initi
                 <div className="documentation-kicker">{metadata.type || 'Document'} {metadata.version && <span> · {metadata.version}</span>}</div>
                 <h1>{metadata.title}</h1>
                 <div className="documentation-meta">
-                    {metadata.projectName && <span>Notion project: {metadata.projectName}</span>}
                     <span>Edited {dateTime(metadata.lastEditedTime)}</span>
                     {fetchedAt && <span>Fetched {dateTime(fetchedAt)}</span>}
                 </div>

@@ -27,7 +27,6 @@ export default function DocumentationLibrary() {
     const [error, setError] = useState('');
     const [query, setQuery] = useState('');
     const [activeQuery, setActiveQuery] = useState('');
-    const [project, setProject] = useState('');
     const [type, setType] = useState('');
     const [results, setResults] = useState<SearchResult[]>([]);
     const [scanned, setScanned] = useState(0);
@@ -44,9 +43,8 @@ export default function DocumentationLibrary() {
     }, []);
 
     const visible = useMemo(() => documents.filter((page) =>
-        (!project || page.projectId === project) && (!type || page.type === type)
-    ), [documents, project, type]);
-    const projects = useMemo(() => [...new Map(documents.filter((page) => page.projectId).map((page) => [page.projectId!, page.projectName || 'Untitled project'])).entries()], [documents]);
+        !type || page.type === type
+    ), [documents, type]);
     const types = useMemo(() => [...new Set(documents.map((page) => page.type).filter((value): value is string => Boolean(value)))], [documents]);
 
     const cancelSearch = () => {
@@ -55,7 +53,6 @@ export default function DocumentationLibrary() {
         setSearching(false);
     };
 
-    const changeProject = (value: string) => { cancelSearch(); setProject(value); setActiveQuery(''); setResults([]); };
     const changeType = (value: string) => { cancelSearch(); setType(value); setActiveQuery(''); setResults([]); };
 
     async function runSearch(event: FormEvent<HTMLFormElement>) {
@@ -98,7 +95,6 @@ export default function DocumentationLibrary() {
                 {searching && <button className="btn-secondary" type="button" onClick={cancelSearch}><X size={16} /> Cancel</button>}
             </form>
             <div className="documentation-filters">
-                <Select ariaLabel="Filter by Notion project" value={project} onChange={changeProject} options={[{ value: '', label: 'All Notion projects' }, ...projects.map(([value, label]) => ({ value, label }))]} />
                 <Select ariaLabel="Filter by document type" value={type} onChange={changeType} options={[{ value: '', label: 'All types' }, ...types.map((value) => ({ value, label: value }))]} />
             </div>
             {loading && <p role="status">Loading documents…</p>}
@@ -118,7 +114,6 @@ export default function DocumentationLibrary() {
                     return <Link key={page.id} href={href} className="documentation-card">
                         <div className="documentation-card-top"><span>{page.type || 'Document'}</span><span>{page.version || ''}</span></div>
                         <h2>{page.title}</h2>
-                        <p>{page.projectName || 'No Notion project'}</p>
                         {result?.snippets.map((snippet, index) => <p className="documentation-snippet" key={index}>{snippet}</p>)}
                         <div className="documentation-card-bottom"><span>Edited {readableDate(page.lastEditedTime)}</span>{result && <span>{result.matches} matches</span>}</div>
                     </Link>;
