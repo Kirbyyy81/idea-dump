@@ -22,7 +22,7 @@ export function PairCompanion({ code, label, account }: { code: string; label: s
             <p className="font-mono text-3xl tracking-widest">{code}</p>
             <p>Check that this code matches your phone. The companion can send captured bank notifications to Finance review and read source names.</p>
             <p>You can disconnect it in Finance settings at any time.</p>
-            {error && <p role="alert" className="text-status-danger-text">{error}</p>}
+            {error && <p role="alert" className="text-error">{error}</p>}
             <Button onClick={approve} isLoading={state === 'pending'}>Connect this device</Button>
         </>}
     </section>;

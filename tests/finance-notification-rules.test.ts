@@ -10,7 +10,7 @@ const payload: FinanceCandidatePayload = {
 const rule = (overrides: Partial<FinanceOcrRule> = {}): FinanceOcrRule => ({
     id: 'rule-1', name: 'Transfers', pattern: 'transferred', match_type: 'keyword', source: 'manual',
     source_id: 'tng', category_id: 'income', direction: null, priority: 10, is_active: true,
-    created_at: '2026-09-25', ...overrides,
+    created_at: '2026-09-25', auto_created_at: null, ...overrides,
 });
 describe('notification rules', () => {
     it('applies manual rules while preserving the explicit source and parser fields', () => {

@@ -30,4 +30,3 @@ export function compareFinanceParserRules(left: FinanceOcrRule, right: FinanceOc
         || left.created_at.localeCompare(right.created_at)
         || left.id.localeCompare(right.id);
 }
-

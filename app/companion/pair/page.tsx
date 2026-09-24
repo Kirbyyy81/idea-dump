@@ -5,8 +5,9 @@ import { getPairingLabel } from '@/lib/companion/core/repository';
 import { AppShell } from '@/components/organisms/AppShell';
 import { PairCompanion } from './_components/PairCompanion';
 
-export default async function PairPage({ searchParams }: { searchParams: Promise<{ code?: string }> }) {
-    const { code = '' } = await searchParams;
+export default async function PairPage({ searchParams }: { searchParams: Promise<{ code?: string | string[] }> }) {
+    const params = await searchParams;
+    const code = typeof params.code === 'string' ? params.code : '';
     const session = await getSessionUserAppAccess();
     if (!session) redirect('/login?next=' + encodeURIComponent('/companion/pair?code=' + encodeURIComponent(code)));
     if (!canAccessModule(session.access, 'finance')) redirect('/dashboard');
