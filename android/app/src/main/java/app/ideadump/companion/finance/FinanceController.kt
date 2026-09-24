@@ -47,19 +47,21 @@ class FinanceController(
         val data=JSONObject(it);DeviceCredential(data.getString("token"),data.getString("device_id"),data.getString("user_id"))
     }
     private fun secret(): String = ByteArray(32).also { SecureRandom().nextBytes(it) }.joinToString("") { "%02x".format(it) }
-    suspend fun beginPairing() = mutex.withLock {
-        settings.finance(false)
-        val pending=JSONObject().put("verifier",secret()).put("token","idc_"+secret())
-        vault.write("pairing",pending.toString())
-        val response=api.request("/api/companion/pair","POST",JSONObject()
-            .put("verifier_hash",NotificationFilter.hash(pending.getString("verifier")))
-            .put("device_label","Android "+android.os.Build.VERSION.RELEASE+" "+android.os.Build.MODEL.take(50)))
-        for(key in listOf("id","user_code","verification_uri","expires_at")) pending.put(key,response.getString(key))
-        val uri=java.net.URI(pending.getString("verification_uri"))
-        val origin=java.net.URI(app.ideadump.companion.BuildConfig.IDEADUMP_ORIGIN)
-        check(uri.scheme==origin.scheme && uri.authority==origin.authority && uri.path=="/companion/pair") { "Unexpected pairing address" }
-        vault.write("pairing",pending.toString())
-        state.update { it.copy(pairingCode=pending.getString("user_code"),pairingUri=uri.toString(),message="Approve this code in your browser") }
+    suspend fun beginPairing() {
+        setEnabled(false)
+        mutex.withLock {
+            val pending=JSONObject().put("verifier",secret()).put("token","idc_"+secret())
+            vault.write("pairing",pending.toString())
+            val response=api.request("/api/companion/pair","POST",JSONObject()
+                .put("verifier_hash",NotificationFilter.hash(pending.getString("verifier")))
+                .put("device_label","Android "+android.os.Build.VERSION.RELEASE+" "+android.os.Build.MODEL.take(50)))
+            for(key in listOf("id","user_code","verification_uri","expires_at")) pending.put(key,response.getString(key))
+            val uri=java.net.URI(pending.getString("verification_uri"))
+            val origin=java.net.URI(app.ideadump.companion.BuildConfig.IDEADUMP_ORIGIN)
+            check(uri.scheme==origin.scheme && uri.authority==origin.authority && uri.path=="/companion/pair") { "Unexpected pairing address" }
+            vault.write("pairing",pending.toString())
+            state.update { it.copy(pairingCode=pending.getString("user_code"),pairingUri=uri.toString(),message="Approve this code in your browser") }
+        }
     }
     suspend fun finishPairing(): Boolean = mutex.withLock {
         val pending=vault.read("pairing")?.let(::JSONObject) ?: return@withLock false
@@ -92,7 +94,6 @@ class FinanceController(
         if(enabled) {
             val device=credential() ?: error("Connect your account first")
             check(queue.dao().foreignCount(device.userId)==0) { "Queued events belong to another account" }
-            check(queue.dao().count()<1000) { "Queue is full. Upload or discard queued events first." }
             check(settings.flow.first().mappings.isNotEmpty()) { "Choose at least one app and source" }
             check(androidx.core.app.NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName)) { "Grant notification access first" }
         }
@@ -113,8 +114,8 @@ class FinanceController(
             .put("captured_at",Instant.ofEpochMilli(capturedAt).toString()).put("notification_key_hash",NotificationFilter.hash("$pkg|$key|$postedAt"))
             .put("notification",JSONObject().put("title",title?:JSONObject.NULL).put("text",body).put("subtext",subtext?:JSONObject.NULL).put("posted_at",Instant.ofEpochMilli(postedAt).toString()))
         if(!queue.enqueue(QueuedNotification(eventId,device.userId,vault.encrypt(payload.toString(),"$eventId:${device.userId}"),capturedAt))) {
-            settings.finance(false)
-            state.update { it.copy(message="Queue full (1000). Capture stopped. Upload or discard events before enabling it again.") }
+            state.update { it.copy(message="Queue full (1000). New capture is paused while queued uploads continue.") }
+            schedule()
             return
         }
         schedule()
@@ -130,7 +131,7 @@ class FinanceController(
             val device=credential() ?: return@withLock false
             val item=queue.dao().next() ?: return@withLock false
             if(item.ownerId!=device.userId) { state.update { it.copy(message="Queued events belong to another account") };return@withLock false }
-            if(item.blockedStatus!=null) { state.update { it.copy(message="An upload needs attention (${item.blockedStatus}). Check sources, retry, or discard queued events.") };return@withLock false }
+            if(item.blockedStatus!=null) { state.update { it.copy(message=uploadIssue(item.blockedStatus)) };return@withLock false }
             try {
                 val body=JSONObject(vault.decrypt(item.encryptedPayload,"${item.eventId}:${item.ownerId}"))
                 api.request("/api/companion/notifications","POST",body,device.token)
@@ -146,7 +147,7 @@ class FinanceController(
                 }
                 if(failure.status==429 || failure.status>=500) { state.update { it.copy(message="Server unavailable. Uploads will retry.") };return@withLock true }
                 queue.dao().block(item.eventId,failure.status)
-                state.update { it.copy(message="Upload needs attention (${failure.status}). Check sources or discard queued events.") }
+                state.update { it.copy(message=uploadIssue(failure.status)) }
                 return@withLock false
             } catch(_: java.io.IOException) { state.update { it.copy(message="Offline. Uploads will retry.") };return@withLock true }
         }
@@ -154,14 +155,20 @@ class FinanceController(
     }
     suspend fun retry() { queue.dao().unblock();schedule() }
     suspend fun discard() = mutex.withLock { queue.dao().discard();state.update { it.copy(message="Queued notifications discarded") } }
-    suspend fun disconnect() = mutex.withLock {
-        settings.finance(false)
-        WorkManager.getInstance(context).cancelUniqueWork("finance-upload")
-        val device=credential()
-        val revoked=device==null || runCatching { api.request("/api/companion/devices/${device.deviceId}","DELETE",token=device.token) }.isSuccess
-        vault.write("device",null);vault.write("pairing",null)
-        state.update { it.copy(connected=false,pairingCode=null,pairingUri=null,sources=emptyList(),
-            message=if(revoked) "Disconnected. Queued notifications kept." else "Disconnected locally. Revoke this device in Finance settings when online.") }
+    suspend fun disconnect() {
+        setEnabled(false)
+        mutex.withLock {
+            val device=credential()
+            val revoked=device==null || runCatching { api.request("/api/companion/devices/${device.deviceId}","DELETE",token=device.token) }.isSuccess
+            vault.write("device",null);vault.write("pairing",null)
+            state.update { it.copy(connected=false,pairingCode=null,pairingUri=null,sources=emptyList(),
+                message=if(revoked) "Disconnected. Queued notifications kept." else "Disconnected locally. Revoke this device in Finance settings when online.") }
+        }
+    }
+    private fun uploadIssue(status: Int): String = when(status) {
+        422 -> "The original Finance source is unavailable. Restore it in IdeaDump, then retry, or discard the queue."
+        409 -> "An upload conflicts with an existing event. The queue is kept for review or explicit discard."
+        else -> "A queued notification could not be accepted. Retry after checking the connection or discard the queue."
     }
     fun reportFailure() { state.update { it.copy(message="Finance operation failed. Your queued events are kept.") } }
 }
