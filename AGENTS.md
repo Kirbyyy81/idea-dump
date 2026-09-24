@@ -68,3 +68,9 @@
 - Use short, atomic commits that describe one coherent result.
 - After completing and validating task changes, commit them automatically in focused atomic commits. Do not ask again whether to commit. Include only task changes and preserve unrelated user edits. Push only when requested.
 - Document required environment or deployment changes without committing secrets.
+
+## Android companion
+
+- Native Android code lives in `android/`. Read its scoped `AGENTS.md` before editing.
+- Use JDK 17 and Android SDK 36. From `android/`, run `./gradlew testDebugUnitTest lintDebug assembleDebug` (Windows: `gradlew.bat`).
+- Android 13 and 16 phones and the target Android Auto head unit require physical acceptance testing.
