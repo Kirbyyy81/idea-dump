@@ -203,7 +203,7 @@ The dashboard accepts a `YYYY-MM` month and computes:
 - Number of intake items awaiting review.
 - Expense totals grouped by category, including Uncategorised.
 - Daily income and expense totals.
-- Six most recent confirmed transactions.
+- Six most recent confirmed transactions, using compact summary rows with category icons and amounts aligned on the right. Source and category badges are hidden on the dashboard; category names remain available to screen readers. The ledger, review, and budget rows retain their existing details.
 
 The cash-flow and category panels have equal layout height. Their charts are navigation controls:
 

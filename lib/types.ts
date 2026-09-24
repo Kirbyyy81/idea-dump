@@ -566,6 +566,7 @@ export interface FinanceTransactionView {
 }
 
 export interface FinanceDashboardRecentTransaction {
+    category?: Pick<FinanceReferenceOption, 'name'> | null;
     id: string;
     direction: FinanceTransactionDirection;
     amount: number;

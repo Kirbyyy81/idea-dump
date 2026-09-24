@@ -75,6 +75,7 @@ describe('Finance browser payloads', () => {
             amount: 12.5,
             merchant: 'Merchant',
             transaction_date: '2026-08-18',
+            category: { name: 'Food' },
             finance_source: { name: 'Bank' },
             finance_payee: { name: 'Recipient' },
         });

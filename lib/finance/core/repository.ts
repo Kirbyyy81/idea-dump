@@ -19,6 +19,7 @@ const FINANCE_TRANSACTION_INTERNAL_SELECT =
     'id, source_id, category_id, direction, amount, currency, merchant, payee_id, reference_number, transaction_date, notes, source, status';
 const FINANCE_DASHBOARD_RECENT_SELECT = [
     'id, direction, amount, merchant, transaction_date',
+    'category:dim_finance_categories(name)',
     'finance_source:dim_finance_sources(name)',
     'finance_payee:dim_finance_payees(name)',
 ].join(', ');

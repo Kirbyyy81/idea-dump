@@ -113,6 +113,8 @@ export function FinanceDashboardClient({ month, today, summary }: FinanceDashboa
 
                 <section className="mt-6"><div className="flex items-center justify-between"><h2 className="text-base font-bold">Recent transactions</h2><Link href="/finance/transactions" className="text-sm font-semibold text-accent-blue hover:underline">View all</Link></div><ul className="mt-3 divide-y divide-border-default border-y border-border-default">{summary.recent_transactions.map((transaction) => <li key={transaction.id}>
                     <FinanceTransactionRow
+                        density="summary"
+                        categoryName={transaction.category?.name ?? null}
                         payeeName={transaction.finance_payee?.name}
                         merchant={transaction.merchant}
                         sourceName={transaction.finance_source?.name}

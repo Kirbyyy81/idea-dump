@@ -10,6 +10,11 @@ test('dashboard rows share ledger styling without overflow', async ({ page }, te
     await page.goto('/finance');
     const rows = page.locator('[data-finance-transaction-row]');
     await expect(rows).toHaveCount(2);
+    await expect(rows.first()).toHaveAttribute('data-finance-transaction-row', 'summary');
+    await expect(rows.first().locator('[data-ledger-category-icon="food"]')).toHaveCount(1);
+    await expect(rows.last().locator('[data-ledger-category-icon="income"]')).toHaveCount(1);
+    await expect(rows.first()).not.toContainText('Bank');
+    await expect(rows.last()).not.toContainText('Unknown source');
     await expect(rows.first()).toContainText('Merchant: Sample cafe');
     await expect(rows.first()).toContainText('-RM 12.30');
     await expect(rows.last()).toContainText('+RM 1,234.56');

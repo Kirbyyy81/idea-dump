@@ -12,7 +12,7 @@ export const dashboardFixture: FinanceDashboardSummary = {
         category_id: `20000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`, label, amount: 1000 / (index + 1),
     })),
     recent_transactions: [
-        { id: 'recent-1', merchant: 'Sample cafe', finance_payee: { name: 'Alex' }, finance_source: { name: 'Bank' }, direction: 'expense', amount: 12.3, transaction_date: '2026-09-21' },
-        { id: 'recent-2', merchant: 'Refund', direction: 'income', amount: 1234.56, transaction_date: '2026-09-20' },
+        { id: 'recent-1', merchant: 'Sample cafe', finance_payee: { name: 'Alex' }, finance_source: { name: 'Bank' }, category: { name: 'Food' }, direction: 'expense', amount: 12.3, transaction_date: '2026-09-21' },
+        { id: 'recent-2', merchant: 'Refund', category: { name: 'Income' }, direction: 'income', amount: 1234.56, transaction_date: '2026-09-20' },
     ],
 };
