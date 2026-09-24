@@ -4,6 +4,21 @@ insert into auth.users(id) values ('20000000-0000-4000-8000-000000000001'),('200
 do $$
 declare r jsonb; d uuid; n int;
 begin
+    for n in 1..30 loop
+        if not public.companion_claim_pairing_attempt_v1('20000000-0000-4000-8000-000000000001') then
+            raise exception 'pairing allowance exhausted early';
+        end if;
+    end loop;
+    if public.companion_claim_pairing_attempt_v1('20000000-0000-4000-8000-000000000001') then
+        raise exception 'pairing guesses not limited';
+    end if;
+    if not public.companion_claim_pairing_attempt_v1('20000000-0000-4000-8000-000000000002') then
+        raise exception 'pairing limit crossed accounts';
+    end if;
+    if has_function_privilege('authenticated','public.companion_claim_pairing_attempt_v1(uuid)','EXECUTE')
+        or has_table_privilege('anon','public.companion_pairing_attempts','SELECT') then
+        raise exception 'pairing allowance permissions leaked';
+    end if;
     r := public.companion_begin_pairing_v1('20000000-0000-4000-8000-000000000010',repeat('a',64),'ABCD1234','Android 13');
     if r->>'user_code' <> 'ABCD1234' then raise exception 'start failed'; end if;
     r := public.companion_complete_pairing_v1('20000000-0000-4000-8000-000000000010',repeat('a',64),repeat('b',64));

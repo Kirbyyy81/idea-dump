@@ -23,7 +23,14 @@ export function beginPairing(verifierHash: string, label: string) {
         p_user_code: randomBytes(4).toString('hex').toUpperCase(), p_device_label: label,
     });
 }
-export function approvePairing(userId: string, code: string) {
+async function claimPairingAttempt(userId: string) {
+    // A separate RPC commits the allowance even if the subsequent lookup fails.
+    if (!await rpc<boolean>('companion_claim_pairing_attempt_v1', { p_user_id: userId })) {
+        throw new CompanionError('Too many pairing attempts. Try again in a minute.', 429);
+    }
+}
+export async function approvePairing(userId: string, code: string) {
+    await claimPairingAttempt(userId);
     return rpc<void>('companion_approve_pairing_v1', { p_user_id: userId, p_user_code: code });
 }
 export function completePairing(id: string, verifier: string, token: string) {
@@ -47,7 +54,8 @@ export async function revokeCompanionDevice(userId: string, id: string) {
         .update({ revoked_at: new Date().toISOString() }).eq('id', id).eq('user_id', userId).is('revoked_at', null);
     if (error) throw new CompanionError('Could not disconnect companion', 503);
 }
-export async function getPairingLabel(code: string) {
+export async function getPairingLabel(userId: string, code: string) {
+    await claimPairingAttempt(userId);
     const { data, error } = await createAdminClient().from('companion_pairing_requests')
         .select('device_label').eq('user_code', code).gt('expires_at', new Date().toISOString()).is('device_id', null).maybeSingle();
     if (error) throw new CompanionError('Could not load pairing request', 503);
