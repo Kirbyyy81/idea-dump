@@ -205,9 +205,10 @@ The dashboard accepts a `YYYY-MM` month and computes:
 - Daily income and expense totals.
 - Six most recent confirmed transactions, using compact summary rows with category icons and amounts aligned on the right. Source and category badges are hidden on the dashboard; category names remain available to screen readers. The ledger, review, and budget rows retain their existing details.
 
-The cash-flow and category panels have equal layout height. Their charts are navigation controls:
+The daily calendar and category chart control which transactions are shown:
 
-- Selecting an income bar, expense bar, or date tick opens the ledger filtered to that exact date.
+- Selecting a calendar day updates `/finance?month=YYYY-MM&date=YYYY-MM-DD` without resetting the scroll position. The recent-transactions section queries that day's six most recent confirmed transactions on the server, rather than filtering only the previously loaded six. Monthly totals, calendar amounts, and category totals remain unchanged.
+- The selected-day card has no separate transaction link. The transactions section shows the selected date, an empty-day message when appropriate, and a Clear day filter action. Its View all link opens the ledger for the selected date. Clearing the filter or switching months restores the monthly recent list. Future dates are disabled; invalid dates or dates outside the selected month redirect to the unfiltered month.
 - Selecting a category segment or category row opens the ledger filtered to that category.
 - Selecting Uncategorised filters for transactions whose `category_id` is null.
 - Chart interactions include keyboard activation and accessible labels.

@@ -40,6 +40,20 @@ beforeEach(() => {
 });
 
 describe('Finance transaction repository filters', () => {
+    it('filters only recent transactions by day while keeping monthly aggregation and tenant scope', async () => {
+        await getFinanceDashboard('user-1', '2026-09', '2026-09-17');
+        expect(database.eq.mock.calls).toEqual([
+            ['user_id', 'user-1'], ['status', 'confirmed'],
+            ['user_id', 'user-1'], ['status', 'confirmed'], ['transaction_date', '2026-09-17'],
+        ]);
+        expect(database.limit).toHaveBeenCalledWith(6);
+        expect(database.gte.mock.calls).toEqual([['transaction_date', '2026-09-01'], ['transaction_date', '2026-09-01']]);
+    });
+
+    it.each(['2026-09-31', '2026-10-01', 'bad-date'])('rejects an invalid day before querying: %s', async (date) => {
+        await expect(getFinanceDashboard('user-1', '2026-09', date)).rejects.toThrow('Date must be a valid day in the selected month');
+        expect(database.from).not.toHaveBeenCalled();
+    });
     it.each([
         ['2026-09', '2026-09-01', '2026-10-01'],
         ['2026-12', '2026-12-01', '2027-01-01'],

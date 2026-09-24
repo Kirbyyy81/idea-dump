@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { FinanceActivityCalendar } from '@/app/finance/_components/FinanceActivityCalendar';
 
 describe('daily activity calendar', () => {
@@ -12,8 +12,9 @@ describe('daily activity calendar', () => {
         expect(screen.getByText('No transactions this day.')).toBeTruthy();
     });
 
-    it('keeps both flows, displays exact selected amounts and links to the selected date', () => {
-        render(<FinanceActivityCalendar month="2026-09" today="2026-09-22" items={[
+    it('keeps both flows and notifies the dashboard when a day is selected', () => {
+        const select = vi.fn();
+        render(<FinanceActivityCalendar onSelectDate={select} month="2026-09" today="2026-09-22" items={[
             { date: '2026-09-17', label: '17', income: 1234567.89, expense: 987.65 },
             { date: '2026-09-18', label: '18', income: 0.01, expense: 0.09 },
         ]} />);
@@ -25,10 +26,12 @@ describe('daily activity calendar', () => {
         const details = screen.getByRole('region', { name: 'Selected day' });
         expect(details.textContent).toMatch(/\+RM\s1,234,567\.89/);
         expect(details.textContent).toMatch(/−RM\s987\.65/);
-        expect(within(details).getByRole('link').getAttribute('href')).toBe('/finance/transactions?date=2026-09-17');
+        expect(within(details).queryByRole('link')).toBeNull();
+        expect(select).toHaveBeenLastCalledWith('2026-09-17');
         const small = screen.getByRole('button', { name: /^18 Sept 2026, income/ });
         expect(small.textContent).toContain('+<0.1');
         fireEvent.click(small);
+        expect(select).toHaveBeenLastCalledWith('2026-09-18');
         expect(details.textContent).toMatch(/\+RM\s0\.01/);
         expect(details.textContent).toMatch(/−RM\s0\.09/);
     });

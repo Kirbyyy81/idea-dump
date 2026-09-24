@@ -25,9 +25,10 @@ const CHART_COLORS = ['#e76f51', '#2a9d8f', '#457b9d', '#e9c46a', '#8d6e63', '#6
 interface FinanceDashboardClientProps {
     month: string;
     today: string;
+    selectedDate?: string | null;
     summary: FinanceDashboardSummary;
 }
-export function FinanceDashboardClient({ month, today, summary }: FinanceDashboardClientProps) {
+export function FinanceDashboardClient({ month, today, selectedDate = null, summary }: FinanceDashboardClientProps) {
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
     const [expandedCategoryMonth, setExpandedCategoryMonth] = useState<string | null>(null);
@@ -46,6 +47,14 @@ export function FinanceDashboardClient({ month, today, summary }: FinanceDashboa
             router.push(`/finance?month=${encodeURIComponent(nextMonth)}`);
         });
     };
+    const selectDay = (date: string | null) => {
+        startTransition(() => {
+            router.push(`/finance?month=${encodeURIComponent(month)}${date ? `&date=${encodeURIComponent(date)}` : ''}`, { scroll: false });
+        });
+    };
+    const selectedDayLabel = selectedDate ? new Intl.DateTimeFormat('en-MY', {
+        day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC',
+    }).format(new Date(`${selectedDate}T00:00:00Z`)) : null;
     const activateTransactionsLink = (
         event: React.KeyboardEvent<SVGElement>,
         href: string
@@ -88,7 +97,7 @@ export function FinanceDashboardClient({ month, today, summary }: FinanceDashboa
                                 <h3 className="mb-3 break-words font-semibold">{budget.name}</h3><BudgetProgress budget={budget} compact />
                             </Link></li>)}</ul> : <p className="text-sm text-text-muted">No active budgets.</p>}
                     </section>
-                    <FinanceActivityCalendar key={month} month={month} today={today} items={summary.daily_cash_flow} />
+                    <FinanceActivityCalendar key={month} month={month} today={today} items={summary.daily_cash_flow} selectedDate={selectedDate} onSelectDate={selectDay} pending={isPending} />
                     <section aria-labelledby="category-net-heading" className="flex min-w-0 flex-col">
                         <h2 id="category-net-heading" className="text-base font-bold">Spending by category</h2>
                         {positiveCategoryTotals.length > 0 ? (
@@ -111,7 +120,15 @@ export function FinanceDashboardClient({ month, today, summary }: FinanceDashboa
                     </section>
                 </div>
 
-                <section className="mt-6"><div className="flex items-center justify-between"><h2 className="text-base font-bold">Recent transactions</h2><Link href="/finance/transactions" className="text-sm font-semibold text-accent-blue hover:underline">View all</Link></div><ul className="mt-3 divide-y divide-border-default border-y border-border-default">{summary.recent_transactions.map((transaction) => <li key={transaction.id}>
+                <section className="mt-6" aria-labelledby="recent-transactions-heading" aria-busy={isPending}>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                        <h2 id="recent-transactions-heading" className="text-base font-bold">{selectedDayLabel ? `Transactions for ${selectedDayLabel}` : 'Recent transactions'}</h2>
+                        <div className="flex items-center gap-3">
+                            {selectedDate && <Button variant="ghost" type="button" disabled={isPending} onClick={() => selectDay(null)}>Clear day filter</Button>}
+                            <Link href={financeTransactionsHref(selectedDate ? { date: selectedDate } : {})} className="text-sm font-semibold text-accent-blue hover:underline">View all</Link>
+                        </div>
+                    </div>
+                    {isPending ? <p className="py-6 text-sm text-text-muted" role="status">Loading transactions…</p> : <ul className="mt-3 divide-y divide-border-default border-y border-border-default">{summary.recent_transactions.map((transaction) => <li key={transaction.id}>
                     <FinanceTransactionRow
                         density="summary"
                         categoryName={transaction.category?.name ?? null}
@@ -122,7 +139,7 @@ export function FinanceDashboardClient({ month, today, summary }: FinanceDashboa
                         direction={transaction.direction}
                         formattedAmount={formatCurrencyMYR(transaction.amount)}
                     />
-                </li>)}{!summary.recent_transactions.length && <li className="py-10 text-center text-sm text-text-muted">No transactions this month.</li>}</ul></section>
+                </li>)}{!summary.recent_transactions.length && <li className="py-10 text-center text-sm text-text-muted">{selectedDate ? 'No transactions for this day.' : 'No transactions this month.'}</li>}</ul>}</section>
             </div>
         </AppShell>
     );

@@ -469,9 +469,10 @@ export async function listFinanceDashboardMonthTransactions(
 export async function listFinanceDashboardRecentTransactions(
     userId: string,
     monthStart: string,
-    nextMonthStart: string
+    nextMonthStart: string,
+    selectedDate: string | null = null
 ) {
-    return createAdminClient()
+    const query = createAdminClient()
         .from('finance_transactions')
         .select(FINANCE_DASHBOARD_RECENT_SELECT)
         .eq('user_id', userId)
@@ -481,6 +482,8 @@ export async function listFinanceDashboardRecentTransactions(
         .order('transaction_date', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(6);
+    if (selectedDate) query.eq('transaction_date', selectedDate);
+    return query;
 }
 
 export async function listFinanceReviewQueue(userId: string) {
