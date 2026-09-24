@@ -41,6 +41,21 @@ export interface DocumentationTreeBlock extends DocumentationBlock {
     children: DocumentationTreeBlock[];
 }
 
+export interface DocumentationBranchState {
+    status: 'idle' | 'loading' | 'error';
+    complete: boolean;
+    hasLoaded: boolean;
+    error: string | null;
+}
+
+export interface DocumentationContentSnapshot {
+    blocks: DocumentationTreeBlock[];
+    branches: Record<string, DocumentationBranchState>;
+    count: number;
+    complete: boolean;
+    failures: number;
+}
+
 export interface DocumentationBlockPage {
     blocks: DocumentationBlock[];
     nextCursor: string | null;

@@ -36,7 +36,9 @@ export default function DocumentationLibrary() {
 
     useEffect(() => {
         const abort = new AbortController();
-        loadCatalog(abort.signal).then(setDocuments).catch((cause) => {
+        loadCatalog(abort.signal, setDocuments).then((pages) => {
+            if (!abort.signal.aborted) setDocuments(pages);
+        }).catch((cause) => {
             if (!abort.signal.aborted) setError(cause instanceof Error ? cause.message : 'Could not load documents.');
         }).finally(() => { if (!abort.signal.aborted) setLoading(false); });
         return () => { abort.abort(); controller.current?.abort(); };

@@ -1,5 +1,6 @@
-import type { DocumentationBlock, DocumentationBlockPage, DocumentationPage, DocumentationTreeBlock } from '@/lib/types';
+import type { DocumentationBlock, DocumentationPage, DocumentationTreeBlock } from '@/lib/types';
 import { requestApi } from '@/lib/api/client';
+import { DocumentContentLoader } from './loader';
 
 export interface DocumentationCatalogPage {
     documents: DocumentationPage[];
@@ -51,13 +52,14 @@ export function searchDocument(blocks: DocumentationTreeBlock[], query: string) 
     return { matches, snippets };
 }
 
-export async function loadCatalog(signal?: AbortSignal): Promise<DocumentationPage[]> {
+export async function loadCatalog(signal?: AbortSignal, onPage?: (documents: DocumentationPage[]) => void): Promise<DocumentationPage[]> {
     const documents: DocumentationPage[] = [];
     let cursor: string | null = null;
     do {
         const url = cursor ? `/api/documentation?cursor=${encodeURIComponent(cursor)}` : '/api/documentation';
         const page: DocumentationCatalogPage = await requestApi(url, { cache: 'no-store', signal });
         documents.push(...page.documents);
+        if (!signal?.aborted) onPage?.([...documents]);
         cursor = page.nextCursor;
     } while (cursor);
     return documents;
@@ -68,30 +70,11 @@ export async function loadDocumentTree(
     signal?: AbortSignal,
     onProgress?: (blocks: number) => void
 ): Promise<DocumentationTreeBlock[]> {
-    let count = 0;
-    async function loadChildren(parentId: string, depth: number): Promise<DocumentationTreeBlock[]> {
-        if (depth > 32) throw new Error('Document nesting is too deep.');
-        const children: DocumentationTreeBlock[] = [];
-        let cursor: string | null = null;
-        do {
-            const query = new URLSearchParams({ parentId });
-            if (cursor) query.set('cursor', cursor);
-            const page: DocumentationBlockPage = await requestApi(
-                `/api/documentation/${pageId}/content?${query}`,
-                { cache: 'no-store', signal }
-            );
-            for (const block of page.blocks) {
-                const item: DocumentationTreeBlock = { ...block, children: [] };
-                children.push(item);
-                count += 1;
-                onProgress?.(count);
-                if (block.hasChildren && block.type !== 'child_page') {
-                    item.children = await loadChildren(block.id, depth + 1);
-                }
-            }
-            cursor = page.nextCursor;
-        } while (cursor);
-        return children;
-    }
-    return loadChildren(pageId, 0);
+    const abort = signal ?? new AbortController().signal;
+    const loader = new DocumentContentLoader(pageId, abort, (snapshot) => onProgress?.(snapshot.count));
+    await loader.loadAll();
+    abort.throwIfAborted();
+    const snapshot = loader.snapshot();
+    if (snapshot.failures) throw new Error('Some document sections could not be searched.');
+    return snapshot.blocks;
 }

@@ -30,7 +30,8 @@
 .documentation-find span{font-size:12px;color:var(--text-secondary);white-space:nowrap}
 .documentation-find .btn-secondary{min-width:40px;padding:0 8px}
 .documentation-toc{position:sticky;top:20px;max-height:calc(100vh - 40px);overflow:auto;display:flex;flex-direction:column;gap:9px;font-size:12px}
-.documentation-toc strong{font-size:13px;margin-bottom:6px}
+.documentation-toc strong{display:block;font-size:13px;margin-bottom:6px}
+.documentation-toc small{display:block;color:var(--text-secondary);line-height:1.5}
 .documentation-toc a{color:var(--text-secondary);text-decoration:none;line-height:1.35}
 .documentation-toc a:hover{text-decoration:underline;color:var(--text-primary)}
 .documentation-toc-heading_2{padding-left:10px}.documentation-toc-heading_3{padding-left:20px}
@@ -55,3 +56,11 @@
 .documentation-blocks mark{background:var(--pastel-yellow);color:inherit;border-radius:2px}.documentation-blocks mark.documentation-match-active{outline:2px solid var(--accent-coral);background:var(--pastel-peach)}
 @media(max-width:960px){.documentation-reader-grid{grid-template-columns:1fr}.documentation-toc{position:static;max-height:none;order:-1;display:block;padding:12px;border:1px solid var(--border-default);border-radius:10px}.documentation-toc a{display:inline-block;margin:4px 10px 4px 0}.documentation-paper{order:1}}
 @media(max-width:640px){.documentation-library,.documentation-reader{padding:16px 12px 52px}.documentation-find .input{width:100%}.documentation-document-header h1{font-size:30px}.documentation-paper{padding:15px}}
+.documentation-pending {
+    min-height: 64px;
+    margin: 12px 0;
+    padding: 12px;
+    border: 1px dashed var(--border-default);
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+}
