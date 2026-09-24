@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.16.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.15.3...idea-dump-v0.16.0) (2026-09-24)
+
+
+### Features
+
+* add Notion document viewer ([e54d214](https://github.com/Kirbyyy81/idea-dump/commit/e54d2143c22c8ecb402786e0ad0248844f86652f))
+* show budget overflow ([04c85aa](https://github.com/Kirbyyy81/idea-dump/commit/04c85aa02f367f7e1dfa87b7e10d55b0d69853b4))
+
+
+### Bug Fixes
+
+* align documentation search ([70a2bd6](https://github.com/Kirbyyy81/idea-dump/commit/70a2bd66bc1b6272196e126366be4f2c9b87e078))
+* animate budget bars ([619d77c](https://github.com/Kirbyyy81/idea-dump/commit/619d77c94378503bb919720a3199e93df0ff2523))
+* changes ([2210f30](https://github.com/Kirbyyy81/idea-dump/commit/2210f30d60ce19ce638190f5145fa1f8622aa728))
+* clarify batch progress ([158de62](https://github.com/Kirbyyy81/idea-dump/commit/158de625281dca3ec9505d40597bfd3290750dd9))
+* hide documentation projects ([857c9db](https://github.com/Kirbyyy81/idea-dump/commit/857c9db145cf64ab0cc01377f3fb9bb919e912bb))
+* load database module catalog ([e9b871b](https://github.com/Kirbyyy81/idea-dump/commit/e9b871baf97cc23b48aad12ab8d6cbde172e4091))
+* load database module catalog ([ce6e99c](https://github.com/Kirbyyy81/idea-dump/commit/ce6e99c5e4a6053b6ab86a73712122c725e0b489))
+* pad transaction toggle ([3f4ef6c](https://github.com/Kirbyyy81/idea-dump/commit/3f4ef6c773647879d5f3dbfbbf692b7778853382))
+* show daily activity calendar ([85234cd](https://github.com/Kirbyyy81/idea-dump/commit/85234cd189e54a4ffa934eac470a7c3d123bb08c))
+* simplify spending heading ([0010b67](https://github.com/Kirbyyy81/idea-dump/commit/0010b67c53dbae7e03382737655e4b472dc959f5))
+* simplify transaction heading ([970e62d](https://github.com/Kirbyyy81/idea-dump/commit/970e62d6eb6b39502bee26595da7df506fa66009))
+* unify finance transaction rows ([15d27ba](https://github.com/Kirbyyy81/idea-dump/commit/15d27bacca95afcac69dfd9173c9da12e03f4b71))
+* unify screenshot processing popup ([03f4956](https://github.com/Kirbyyy81/idea-dump/commit/03f4956783561a685b939956b827321c83abde27))
+
 ## [0.15.3](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.15.2...idea-dump-v0.15.3) (2026-09-21)
 
 
