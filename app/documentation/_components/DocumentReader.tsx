@@ -12,11 +12,6 @@ import { DocumentBlocks } from './DocumentBlocks';
 import { BranchLoader, DocumentLoadingContext } from './DocumentLoading';
 import '../documentation.css';
 
-function dateTime(value: string) {
-    const date = new Date(value);
-    return Number.isNaN(date.valueOf()) ? 'Unknown' : new Intl.DateTimeFormat('en-MY', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
-}
-
 function headings(blocks: DocumentationTreeBlock[]): DocumentationTreeBlock[] {
     const result: DocumentationTreeBlock[] = [];
     const visit = (items: DocumentationTreeBlock[]) => {
@@ -44,7 +39,6 @@ export function DocumentReader({ pageId, initialQuery }: { pageId: string; initi
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState('');
     const [stale, setStale] = useState(false);
-    const [fetchedAt, setFetchedAt] = useState('');
     const [query, setQuery] = useState(initialQuery);
     const [matchIds, setMatchIds] = useState<string[]>([]);
     const [activeIndex, setActiveIndex] = useState(0);
@@ -82,14 +76,11 @@ export function DocumentReader({ pageId, initialQuery }: { pageId: string; initi
             const freshMetadata = await requestApi<DocumentationPage>(`/api/documentation/${pageId}`, { cache: 'no-store', signal: abort.signal });
             if (abort.signal.aborted) return;
             if (!loaded.current) setMetadata(freshMetadata);
-            let publishedFirstBatch = false;
             const loader = new DocumentContentLoader(pageId, abort.signal, (snapshot) => {
                 if (abort.signal.aborted) return;
                 if (!loaded.current || snapshot.branches[pageId]?.hasLoaded) setContent(snapshot);
                 if (snapshot.branches[pageId]?.hasLoaded) {
                     setMetadata(freshMetadata);
-                    if (!publishedFirstBatch) setFetchedAt(new Date().toISOString());
-                    publishedFirstBatch = true;
                     setStale(false);
                     loaded.current = true;
                 }
@@ -164,10 +155,6 @@ export function DocumentReader({ pageId, initialQuery }: { pageId: string; initi
             {metadata && <header className="documentation-document-header">
                 <div className="documentation-kicker">{metadata.type || 'Document'} {metadata.version && <span> · {metadata.version}</span>}</div>
                 <h1>{metadata.title}</h1>
-                <div className="documentation-meta">
-                    <span>Edited {dateTime(metadata.lastEditedTime)}</span>
-                    {fetchedAt && <span>Fetched {dateTime(fetchedAt)}</span>}
-                </div>
                 <div className="documentation-actions">
                     <button className="btn-secondary" type="button" onClick={fetchCurrent} disabled={refreshing}><RefreshCw size={16} /> {refreshing ? 'Refreshing…' : 'Refresh'}</button>
                     <a className="btn-secondary" href={metadata.notionUrl} target="_blank" rel="noopener noreferrer"><ExternalLink size={16} /> Open in Notion</a>
@@ -177,6 +164,11 @@ export function DocumentReader({ pageId, initialQuery }: { pageId: string; initi
             {(loading || refreshing) && <p role="status">{refreshing ? 'Refreshing' : 'Loading'} document…</p>}
             {error && <div className="documentation-notice" role="alert">{error} {stale && <strong>Showing the last loaded copy.</strong>} <button className="btn-secondary" type="button" onClick={fetchCurrent}>Retry</button></div>}
             {metadata && <div className="documentation-reader-grid">
+                {sections.length > 0 && <nav className="documentation-toc" aria-label="On this page">
+                    <strong>On this page</strong>
+                    {!content.complete && <small>Sections appear as content loads.</small>}
+                    {sections.map((section) => <a key={section.id} href={`#section-${section.id}`} className={`documentation-toc-${section.type}`}>{section.richText.map((part) => part.text).join('')}</a>)}
+                </nav>}
                 <article className="documentation-paper">
                     <div className="documentation-find">
                         <Input aria-label="Find in this document" placeholder="Find in this document" value={query} maxLength={120} onValueChange={setQuery} onKeyDown={(event) => {
@@ -198,11 +190,6 @@ export function DocumentReader({ pageId, initialQuery }: { pageId: string; initi
                     </DocumentLoadingContext.Provider>
                     {!blocks.length && content.complete && !loading && <p>This document has no page content.</p>}
                 </article>
-                {sections.length > 0 && <nav className="documentation-toc" aria-label="On this page">
-                    <strong>On this page</strong>
-                    {!content.complete && <small>Sections appear as content loads.</small>}
-                    {sections.map((section) => <a key={section.id} href={`#section-${section.id}`} className={`documentation-toc-${section.type}`}>{section.richText.map((part) => part.text).join('')}</a>)}
-                </nav>}
             </div>}
         </div>
     </AppShell>;
