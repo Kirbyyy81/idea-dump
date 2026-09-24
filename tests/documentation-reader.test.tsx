@@ -17,6 +17,50 @@ const content = { blocks: [{ id: '22222222-2222-2222-2222-222222222222', type: '
 afterEach(() => vi.unstubAllGlobals());
 
 describe('documentation reader refresh', () => {
+    it('shows metadata and initial text early, then searches unloaded pages and retries a failed table', async () => {
+        Element.prototype.scrollIntoView = vi.fn();
+        let releaseRoot!: (response: Response) => void;
+        let failTable = true;
+        const tableId = 'table';
+        const makeBlock = (blockId: string, type: string, text: string, hasChildren = false) => ({
+            ...content.blocks[0], id: blockId, type, hasChildren,
+            richText: [{ ...content.blocks[0].richText[0], text }],
+        });
+        const fetchMock = vi.fn(async (url: string) => {
+            if (!url.includes('/content')) return Response.json({ data: metadata });
+            if (url.includes('parentId=table')) return failTable
+                ? Response.json({ message: 'Table temporarily unavailable' }, { status: 502 })
+                : Response.json({ data: { blocks: [{ ...makeBlock('row', 'table_row', ''),
+                    cells: [[{ ...content.blocks[0].richText[0], text: 'needle in table' }]] }], nextCursor: null } });
+            if (url.includes('parentId=toggle')) return Response.json({ data: {
+                blocks: [makeBlock('inside', 'paragraph', 'needle inside toggle')], nextCursor: null,
+            } });
+            if (url.includes('cursor=')) return Response.json({ data: {
+                blocks: [makeBlock('last', 'paragraph', 'needle on final page')], nextCursor: null,
+            } });
+            return new Promise<Response>((resolve) => { releaseRoot = resolve; });
+        });
+        vi.stubGlobal('fetch', fetchMock);
+        render(<DocumentReader pageId={id} initialQuery="" />);
+        await screen.findByRole('heading', { name: metadata.title });
+        expect(screen.queryByText('Current technical details')).toBeNull();
+        releaseRoot(Response.json({ data: { blocks: [content.blocks[0],
+            makeBlock(tableId, 'table', '', true), makeBlock('toggle', 'toggle', 'Closed details', true)], nextCursor: 'next' } }));
+        await screen.findByText('Current technical details');
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+        expect(screen.queryByText('needle on final page')).toBeNull();
+        fireEvent.change(screen.getByRole('textbox', { name: 'Find in this document' }), { target: { value: 'needle' } });
+        await screen.findByText('Search incomplete. Some sections could not be checked.');
+        await screen.findByText(/inside toggle/);
+        expect(screen.queryByText('No matches')).toBeNull();
+        expect(screen.getByText('Current technical details')).toBeTruthy();
+        failTable = false;
+        fireEvent.click(screen.getByRole('button', { name: 'Retry table' }));
+        await waitFor(() => expect(screen.queryByText('Search incomplete. Some sections could not be checked.')).toBeNull());
+        await screen.findByText(/^[1-3] of 3$/);
+        expect(fetchMock.mock.calls.filter(([url]) => url.includes('/content') && url.includes(`parentId=${id}`))).toHaveLength(2);
+    });
+
     it('retains stale content after a provider failure and clears it after access is revoked', async () => {
         let metadataReads = 0;
         vi.stubGlobal('fetch', vi.fn(async (url: string) => {

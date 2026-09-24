@@ -1,9 +1,10 @@
 'use client';
 
-import { ReactNode, useEffect, useId, useState } from 'react';
+import { ReactNode, useContext, useEffect, useId, useRef, useState } from 'react';
 import Image from 'next/image';
 import type { DocumentationRichText, DocumentationTreeBlock } from '@/lib/types';
 import { findTextOffsets } from '@/lib/documentation/core/content';
+import { BranchLoader, DocumentLoadingContext } from './DocumentLoading';
 
 function RichText({ parts, query, prefix, activeId }: {
     parts: DocumentationRichText[];
@@ -55,7 +56,18 @@ function MermaidDiagram({ source }: { source: string }) {
     const id = useId().replace(/[^a-zA-Z0-9]/g, '');
     const [svg, setSvg] = useState('');
     const [error, setError] = useState(false);
+    const target = useRef<HTMLDivElement>(null);
+    const [visible, setVisible] = useState(false);
     useEffect(() => {
+        if (typeof IntersectionObserver === 'undefined') { setVisible(true); return; }
+        const observer = new IntersectionObserver((entries) => {
+            if (entries.some((entry) => entry.isIntersecting)) { setVisible(true); observer.disconnect(); }
+        }, { rootMargin: '400px' });
+        if (target.current) observer.observe(target.current);
+        return () => observer.disconnect();
+    }, []);
+    useEffect(() => {
+        if (!visible) return;
         let active = true;
         if (source.length > 50_000) { setError(true); return; }
         import('mermaid').then(async ({ default: mermaid }) => {
@@ -64,8 +76,9 @@ function MermaidDiagram({ source }: { source: string }) {
             if (active) setSvg(output.svg);
         }).catch(() => { if (active) setError(true); });
         return () => { active = false; };
-    }, [id, source]);
-    return <div className="documentation-diagram">
+    }, [id, source, visible]);
+    return <div ref={target} className="documentation-diagram">
+        {!svg && !error && <p className="documentation-pending">{visible ? 'Rendering diagram…' : 'Diagram loads when you reach this section.'}</p>}
         {svg && <div className="documentation-diagram-image" role="img" aria-label="Diagram" dangerouslySetInnerHTML={{ __html: svg }} />}
         {error && <p>Diagram preview unavailable. The source is below.</p>}
         <details><summary>Diagram source</summary><pre>{source}</pre></details>
@@ -73,8 +86,13 @@ function MermaidDiagram({ source }: { source: string }) {
 }
 
 function Block({ block, query, activeId }: { block: DocumentationTreeBlock; query: string; activeId: string | null }) {
+    const loading = useContext(DocumentLoadingContext);
+    const [expanded, setExpanded] = useState(false);
     const rich = <RichText parts={block.richText} query={query} prefix={block.id} activeId={activeId} />;
-    const children = block.children.length > 0 && <DocumentBlocks blocks={block.children} query={query} activeId={activeId} />;
+    const children = <>
+        {block.children.length > 0 && <DocumentBlocks blocks={block.children} query={query} activeId={activeId} />}
+        {block.hasChildren && block.type !== 'child_page' && <BranchLoader parentId={block.id} />}
+    </>;
     const source = block.richText.map((part) => part.text).join('');
     const headingId = `section-${block.id}`;
     switch (block.type) {
@@ -86,15 +104,19 @@ function Block({ block, query, activeId }: { block: DocumentationTreeBlock; quer
         case 'to_do': return <div className="documentation-todo"><span aria-hidden="true">{block.checked ? '☑' : '☐'}</span><span>{rich}</span>{children}</div>;
         case 'quote': return <blockquote>{rich}{children}</blockquote>;
         case 'callout': return <aside className="documentation-callout"><span aria-hidden="true">{block.icon}</span><div>{rich}{children}</div></aside>;
-        case 'toggle': return <details open={Boolean(query.trim())}><summary>{rich}</summary>{children}</details>;
+        case 'toggle': return <details open={expanded || Boolean(query.trim())} onToggle={(event) => {
+            const open = event.currentTarget.open;
+            setExpanded(open);
+            if (open && loading?.enabled) loading.load(block.id);
+        }}><summary>{rich}</summary>{children}</details>;
         case 'divider': return <hr />;
         case 'code': return block.language?.toLowerCase() === 'mermaid'
             ? <div>{query && <pre className="documentation-code-search"><RichText parts={block.richText} query={query} prefix={block.id} activeId={activeId} /></pre>}<MermaidDiagram source={source} /></div>
             : <pre className="documentation-code"><code>{rich}</code></pre>;
-        case 'table': return <div className="documentation-table-wrap"><table><tbody>{block.children.map((row, rowIndex) => <tr key={row.id}>{row.cells?.map((cell, cellIndex) => {
+        case 'table': return <><div className="documentation-table-wrap"><table><tbody>{block.children.map((row, rowIndex) => <tr key={row.id}>{row.cells?.map((cell, cellIndex) => {
             const Tag = rowIndex === 0 && block.tableHeader ? 'th' : 'td';
             return <Tag key={cellIndex}><RichText parts={cell} query={query} prefix={`${row.id}-cell-${cellIndex}`} activeId={activeId} /></Tag>;
-        })}</tr>)}</tbody></table></div>;
+        })}</tr>)}</tbody></table></div><BranchLoader parentId={block.id} label="table" /></>;
         case 'table_row': return null;
         case 'image': return block.url ? <figure><Image unoptimized src={block.url} alt={source || 'Document image'} width={1200} height={800} referrerPolicy="no-referrer" className="documentation-image" /><figcaption>{rich}</figcaption></figure> : <p>Image unavailable.</p>;
         case 'file': case 'pdf': case 'audio': case 'video': return block.url

@@ -23,6 +23,17 @@ beforeEach(() => {
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
 describe('Notion read boundary', () => {
+    it('does not resolve unused project names for the list or a document', async () => {
+        const page = { ...notionPage(pageId), properties: { ...notionPage(pageId).properties,
+            Projects: { relation: [{ id: otherId }] } } };
+        const fetchMock = vi.fn(async (url: string) => url.includes('/query')
+            ? Response.json({ results: [page], next_cursor: null }) : Response.json(page));
+        vi.stubGlobal('fetch', fetchMock);
+        expect((await listDocuments(null)).documents[0]).toMatchObject({ projectId: otherId, projectName: null });
+        expect(await getDocument(pageId)).toMatchObject({ projectId: otherId, projectName: null });
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+        expect(fetchMock.mock.calls.some(([url]) => url.includes(otherId))).toBe(false);
+    });
     it('lists only current pages and maps metadata', async () => {
         const fetchMock = vi.fn(async (_url: string) => Response.json({ results: [notionPage(pageId), notionPage(otherId, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')], next_cursor: null }));
         vi.stubGlobal('fetch', fetchMock);

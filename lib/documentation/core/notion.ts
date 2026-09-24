@@ -108,16 +108,7 @@ function pageTitle(page: RecordValue): string {
     return 'Untitled document';
 }
 
-async function projectName(id: string, signal?: AbortSignal): Promise<string | null> {
-    try {
-        const page = await notion(`pages/${id}`, { signal });
-        return pageTitle(page);
-    } catch {
-        return null;
-    }
-}
-
-async function normalizePage(page: RecordValue, signal?: AbortSignal, projectLabel?: string | null): Promise<DocumentationPage> {
+function normalizePage(page: RecordValue): DocumentationPage {
     const properties = record(page.properties);
     const relation = array(record(properties.Projects).relation);
     const projectId = string(record(relation[0]).id) || null;
@@ -132,7 +123,7 @@ async function normalizePage(page: RecordValue, signal?: AbortSignal, projectLab
         version,
         lastEditedTime: string(page.last_edited_time),
         projectId,
-        projectName: projectId ? projectLabel === undefined ? await projectName(projectId, signal) : projectLabel : null,
+        projectName: null,
         notionUrl: string(page.url) || `https://www.notion.so/${id.replace(/-/g, '')}`,
     };
 }
@@ -144,7 +135,7 @@ function isCurrentDocument(page: RecordValue): boolean {
 }
 
 export async function getDocument(pageId: string, signal?: AbortSignal): Promise<DocumentationPage> {
-    return normalizePage(await currentPage(pageId, signal), signal);
+    return normalizePage(await currentPage(pageId, signal));
 }
 
 async function currentPage(pageId: string, signal?: AbortSignal): Promise<RecordValue> {
@@ -162,16 +153,7 @@ export async function listDocuments(cursor: string | null, signal?: AbortSignal)
     });
     if (!Array.isArray(result.results)) throw new DocumentationError(502, 'Notion returned an invalid document list.');
     const pages = array(result.results).map(record).filter(isCurrentDocument);
-    const projects = new Map<string, string | null>();
-    for (const page of pages) {
-        const id = string(record(array(record(record(page.properties).Projects).relation)[0]).id);
-        if (id && !projects.has(id)) projects.set(id, await projectName(id, signal));
-    }
-    const documents = await Promise.all(pages.map(async (page) => {
-        const properties = record(page.properties);
-        const projectId = string(record(array(record(properties.Projects).relation)[0]).id);
-        return normalizePage(page, signal, projectId ? projects.get(projectId) ?? null : null);
-    }));
+    const documents = pages.map(normalizePage);
     return { documents, nextCursor: string(result.next_cursor) || null };
 }
 
@@ -253,7 +235,7 @@ export async function getBlockPage(pageId: string, parentId: string, cursor: str
         throw new DocumentationError(400, 'Invalid block request.');
     }
     if (parentId !== pageId) await verifyDescendant(pageId, parentId, signal);
-    const parameters = new URLSearchParams({ page_size: '100' });
+    const parameters = new URLSearchParams({ page_size: parentId === pageId ? '50' : '100' });
     if (cursor) parameters.set('start_cursor', cursor);
     const result = await notion(`blocks/${parentId}/children?${parameters}`, { signal });
     if (!Array.isArray(result.results)) throw new DocumentationError(502, 'Notion returned invalid document content.');
