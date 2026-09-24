@@ -17,19 +17,27 @@ function transactionDate(value: string): string | null {
     return named ? toIsoDate(Number(named[3]), months.indexOf(named[2].slice(0, 3).toLowerCase()) + 1, Number(named[1])) : null;
 }
 
+function explicitNotificationDate(text: string): { found: boolean; date: string | null } {
+    const matches = [...text.matchAll(/\b(?:20\d{2}-\d{2}-\d{2}|\d{1,2}[/-]\d{1,2}[/-]20\d{2}|\d{1,2}\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+20\d{2})\b/gi)];
+    if (!matches.length) return { found: false, date: null };
+    const dates = new Set(matches.map(match => transactionDate(match[0])));
+    return { found: true, date: dates.size === 1 ? [...dates][0] : null };
+}
+
 export function parseFinanceNotification(event: FinanceNotificationEventInput): FinanceNotificationParseResult {
     const text = [event.notification.title, event.notification.text, event.notification.subtext].filter(Boolean).join('\n');
     if (sensitive.test(text)) return { status: 'ignored', failure_code: 'sensitive_notification', payload: null, date_provenance: 'unavailable' };
     if (irrelevant.test(text) || !transaction.test(text) || !new RegExp(amountPattern, 'i').test(text)) {
         return { status: 'ignored', failure_code: 'not_transaction', payload: null, date_provenance: 'unavailable' };
     }
+    const explicitDate = explicitNotificationDate(event.notification.text);
     const payload: FinanceCandidatePayload = {
         amount: null, currency: 'MYR', merchant: null, payee_id: null, payee_name: null,
-        direction: null, transaction_date: getFinanceDateInTimeZone(FINANCE_TIME_ZONE, new Date(event.notification.posted_at)),
+        direction: null, transaction_date: explicitDate.found ? explicitDate.date : getFinanceDateInTimeZone(FINANCE_TIME_ZONE, new Date(event.notification.posted_at)),
         source_id: event.source_id, category_id: null, reference_number: null, notes: null,
         matched_rule_names: [], duplicate_transaction_id: null,
     };
-    let provenance: FinanceNotificationParseResult['date_provenance'] = 'posted_at';
+    let provenance: FinanceNotificationParseResult['date_provenance'] = explicitDate.found ? (explicitDate.date ? 'notification_text' : 'unavailable') : 'posted_at';
     const body = event.notification.text.replace(/\s+/g, ' ').trim();
     const incoming = new RegExp('^(.+?) has transferred ' + amountPattern + ' to you(?:[.! ]|$)', 'i').exec(body);
     const outgoing = new RegExp("^(?:You've|You have) sent " + amountPattern + ' to (.+?) on (.+?),\\s*\\d{1,2}:\\d{2}\\s*(?:am|pm)\\s*\\(GMT\\+8\\) using your main account[.!]?$', 'i').exec(body);

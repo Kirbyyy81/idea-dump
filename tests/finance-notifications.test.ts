@@ -66,3 +66,17 @@ describe('Finance notification intake', () => {
         expect(notificationPayloadDigest({ ...first.data, source_id: '00000000-0000-4000-8000-000000000003' })).not.toBe(notificationPayloadDigest(first.data));
     });
 });
+
+describe('notification date validation', () => {
+    it('does not normalize impossible capture timestamps into another day', () => {
+        expect(parseFinanceNotificationRequest({ ...fixture(), captured_at: '2026-02-30T01:00:00Z' })).toHaveProperty('error');
+    });
+    it('prefers explicit dates even in partial transaction wording', () => {
+        expect(parseFinanceNotification(fixture('Payment of RM 12.30 on 24/09/2026'))).toMatchObject({ date_provenance: 'notification_text', payload: { transaction_date: '2026-09-24' } });
+    });
+    it('keeps malformed or conflicting explicit dates unset', () => {
+        for (const text of ['Payment of RM 12.30 on 31/02/2026', 'Payment of RM 12.30 on 24/09/2026 posted 25/09/2026']) {
+            expect(parseFinanceNotification(fixture(text))).toMatchObject({ date_provenance: 'unavailable', payload: { transaction_date: null } });
+        }
+    });
+});

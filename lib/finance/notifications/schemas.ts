@@ -1,4 +1,5 @@
 import type { FinanceNotificationEventInput } from '@/lib/types';
+import { toIsoDate } from '@/shared/date';
 
 export const NOTIFICATION_PACKAGES = {
     'my.rytbank.app': { name: 'Ryt', enabled: true },
@@ -13,7 +14,9 @@ function object(value: unknown): value is Record<string, unknown> {
     return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 function date(value: unknown): value is string {
-    return typeof value === 'string' && timestamp.test(value) && Number.isFinite(Date.parse(value));
+    if (typeof value !== 'string' || !timestamp.test(value) || !Number.isFinite(Date.parse(value))) return false;
+    const [year, month, day] = value.slice(0, 10).split('-').map(Number);
+    return toIsoDate(year, month, day) === value.slice(0, 10);
 }
 function bounded(value: unknown, max: number): value is string | null {
     return value === null || (typeof value === 'string' && value.length <= max && !value.includes('\0'));
