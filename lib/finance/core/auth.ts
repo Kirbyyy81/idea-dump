@@ -14,7 +14,7 @@ import {
 import { getFinanceMutationRequestError } from '@/lib/finance/core/requestSecurity';
 
 const transactionDirections: FinanceTransactionDirection[] = ['expense', 'income'];
-const transactionSources: FinanceTransactionSource[] = ['manual', 'screenshot'];
+const transactionSources: FinanceTransactionSource[] = ['manual', 'screenshot', 'notification'];
 const transactionStatuses: FinanceTransactionStatus[] = ['confirmed', 'review', 'duplicate', 'rejected'];
 
 export async function authorizeFinance(
