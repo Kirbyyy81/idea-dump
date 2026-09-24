@@ -1287,3 +1287,19 @@ export interface FinanceShareBatch {
     failed_files: number;
     items: FinanceShareBatchItem[];
 }
+
+export interface FinanceNotificationEventInput {
+    client_event_id: string;
+    source_id: string;
+    source_package: 'my.rytbank.app' | 'my.com.tngdigital.ewallet' | 'com.uob.mightymy';
+    captured_at: string;
+    notification_key_hash: string;
+    notification: { title: string | null; text: string; subtext: string | null; posted_at: string };
+}
+export type FinanceNotificationDateProvenance = 'notification_text' | 'posted_at' | 'unavailable';
+export interface FinanceNotificationParseResult {
+    status: 'review' | 'ignored';
+    failure_code: 'sensitive_notification' | 'not_transaction' | null;
+    payload: FinanceCandidatePayload | null;
+    date_provenance: FinanceNotificationDateProvenance;
+}
