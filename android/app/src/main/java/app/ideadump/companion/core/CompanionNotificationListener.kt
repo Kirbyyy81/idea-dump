@@ -8,6 +8,12 @@ import kotlinx.coroutines.*
 
 class CompanionNotificationListener : NotificationListenerService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    override fun onListenerConnected() {
+        (application as CompanionApplication).scope.launch { (application as CompanionApplication).lyrics.accessChanged() }
+    }
+    override fun onListenerDisconnected() {
+        (application as CompanionApplication).scope.launch { (application as CompanionApplication).lyrics.accessLost() }
+    }
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         val app=application as CompanionApplication
         val settings=app.snapshot.value

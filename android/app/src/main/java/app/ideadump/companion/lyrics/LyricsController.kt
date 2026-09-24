@@ -17,7 +17,7 @@ data class LyricsState(
     val track: SpotifyTrack? = null,val pair: CuePair? = null,val anchor: PlaybackAnchor? = null,
     val playing: Boolean = false,val actions: Long = 0,val status: String = "Lyrics disabled",
 )
-class LyricsController(private val context: Context) {
+class LyricsController(private val context: Context) : LyricsTransport {
     private val scope=CoroutineScope(SupervisorJob()+Dispatchers.Main.immediate)
     private val manager=context.getSystemService(MediaSessionManager::class.java)
     private val listenerComponent=ComponentName(context,CompanionNotificationListener::class.java)
@@ -75,7 +75,10 @@ class LyricsController(private val context: Context) {
         if(!enabled) return
         val spotify=active.filter { it.packageName=="com.spotify.music" }
             .sortedByDescending { it.playbackState?.state==PlaybackState.STATE_PLAYING }.firstOrNull()
-        if(controller?.sessionToken==spotify?.sessionToken) { refresh();return }
+        if(controller?.sessionToken==spotify?.sessionToken) {
+            if(spotify==null) reset("Waiting for Spotify") else refresh()
+            return
+        }
         controller?.unregisterCallback(callback);controller=spotify
         reset(if(spotify==null) "Waiting for Spotify" else "Reading Spotify")
         spotify?.registerCallback(callback,Handler(Looper.getMainLooper()))
@@ -121,7 +124,7 @@ class LyricsController(private val context: Context) {
         val status=if(current.track!=null && position==null) "Playback timing unavailable" else resultStatus
         if(current.pair!=pair || current.status!=status) state.value=current.copy(pair=pair,status=status)
     }
-    fun playPause(play: Boolean) {
+    override fun playPause(play: Boolean) {
         val source=controller ?: return
         val actions=source.playbackState?.actions ?: 0
         val action=if(play) PlaybackState.ACTION_PLAY else PlaybackState.ACTION_PAUSE
@@ -129,9 +132,9 @@ class LyricsController(private val context: Context) {
             if(play) source.transportControls.play() else source.transportControls.pause()
         }
     }
-    fun next() { if(state.value.actions and PlaybackState.ACTION_SKIP_TO_NEXT!=0L) controller?.transportControls?.skipToNext() }
-    fun previous() { if(state.value.actions and PlaybackState.ACTION_SKIP_TO_PREVIOUS!=0L) controller?.transportControls?.skipToPrevious() }
-    fun seek(position: Long) {
+    override fun next() { if(state.value.actions and PlaybackState.ACTION_SKIP_TO_NEXT!=0L) controller?.transportControls?.skipToNext() }
+    override fun previous() { if(state.value.actions and PlaybackState.ACTION_SKIP_TO_PREVIOUS!=0L) controller?.transportControls?.skipToPrevious() }
+    override fun seek(position: Long) {
         if(state.value.actions and PlaybackState.ACTION_SEEK_TO!=0L) controller?.transportControls?.seekTo(position.coerceAtLeast(0).let {
             state.value.track?.durationMs?.let { duration -> it.coerceAtMost(duration) } ?: it
         })
