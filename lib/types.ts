@@ -49,6 +49,8 @@ export interface DocumentationBranchState {
 }
 
 export interface DocumentationContentSnapshot {
+    outlineComplete: boolean;
+    outlineFailures: number;
     blocks: DocumentationTreeBlock[];
     branches: Record<string, DocumentationBranchState>;
     count: number;

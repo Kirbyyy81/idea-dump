@@ -9,6 +9,47 @@ const block = (id: string, type = 'paragraph', hasChildren = false) => ({ id, ty
 afterEach(() => vi.unstubAllGlobals());
 
 describe('progressive document requests', () => {
+    it('discovers late and nested headings before table rows and skips historical pages', async () => {
+        const reads: string[] = [];
+        vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+            const query = new URL(url, 'http://local').searchParams;
+            const parent = query.get('parentId')!;
+            reads.push(parent + (query.has('cursor') ? ':next' : ''));
+            return Response.json({ data: parent === root
+                ? query.has('cursor') ? { blocks: [block('late heading', 'heading_1')], nextCursor: null }
+                    : { blocks: [block('table', 'table', true), block('toggle', 'toggle', true), block('history', 'child_page', true)], nextCursor: 'next' }
+                : { blocks: [block('nested heading', 'heading_2')], nextCursor: null } });
+        }));
+        const loader = new DocumentContentLoader(root, new AbortController().signal);
+        await loader.loadOutline();
+        expect(reads).toEqual(['root', 'root:next', 'toggle']);
+        expect(loader.snapshot()).toMatchObject({ outlineComplete: true, outlineFailures: 0, complete: false });
+        expect(loader.snapshot().blocks[1].children[0].type).toBe('heading_2');
+        await loader.loadAll();
+        expect(reads).toEqual(['root', 'root:next', 'toggle', 'table']);
+    });
+
+    it('keeps partial headings after an outline failure and retries only failed branches', async () => {
+        let fail = true;
+        const reads: string[] = [];
+        vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+            const query = new URL(url, 'http://local').searchParams;
+            reads.push(query.get('parentId')!);
+            if (query.get('parentId') === 'toggle') return fail
+                ? Response.json({ message: 'Unavailable' }, { status: 502 })
+                : Response.json({ data: { blocks: [block('nested heading', 'heading_2')], nextCursor: null } });
+            return Response.json({ data: { blocks: [block('heading', 'heading_1'), block('toggle', 'toggle', true), block('table', 'table', true)], nextCursor: null } });
+        }));
+        const loader = new DocumentContentLoader(root, new AbortController().signal);
+        await loader.loadOutline();
+        expect(loader.snapshot()).toMatchObject({ outlineComplete: false, outlineFailures: 1 });
+        expect(loader.snapshot().blocks[0].id).toBe('heading');
+        fail = false;
+        await loader.retryOutline();
+        expect(loader.snapshot()).toMatchObject({ outlineComplete: true, outlineFailures: 0, complete: false });
+        expect(reads).toEqual(['root', 'toggle', 'toggle']);
+    });
+
     it('publishes library cards before the remaining catalog pages arrive', async () => {
         let release!: (response: Response) => void;
         vi.stubGlobal('fetch', vi.fn(async (url: string) => url.includes('cursor=')
