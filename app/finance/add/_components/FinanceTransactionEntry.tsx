@@ -6,6 +6,7 @@ import { AppShell } from '@/components/organisms/AppShell';
 import { Button } from '@/components/atoms/Button';
 import { DocumentDoodleIcon, ScanDoodleIcon } from '@/components/atoms/DoodleIcons';
 import { FileUpload } from '@/components/molecules/FileUpload';
+import { FormDialog } from '@/components/molecules/FormDialog';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
@@ -19,6 +20,7 @@ import { persistVirtualDefaultCategory } from '@/lib/finance/catalogClient';
 import {
     FinanceOcrClientError,
     FinanceOcrPhase,
+    type FinanceOcrSuccess,
     uploadFinanceScreenshot,
     warmFinanceOcr,
 } from '@/lib/finance/ocr/client';
@@ -55,6 +57,11 @@ const MAX_FINANCE_UPLOAD_BYTES = 4 * 1024 * 1024;
 const FINANCE_UPLOAD_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
 const initialForm = { source_id: '', category_id: '', direction: 'expense' as FinanceTransactionDirection, amount: '', merchant: '', has_payee: false, payee_name: '', reference_number: '', transaction_date: getLocalFinanceDate(), notes: '' };
 
+type ScreenshotDialogState =
+    | { status: 'processing' }
+    | { status: 'complete'; result: FinanceOcrSuccess }
+    | { status: 'error'; message: string };
+
 function financeOcrErrorMessage(error: unknown) {
     if (!(error instanceof FinanceOcrClientError)) {
         return error instanceof Error ? error.message : 'Could not process screenshot';
@@ -76,7 +83,7 @@ export function FinanceTransactionEntry({ initialMode }: { initialMode: FinanceE
         upsertSource,
         upsertCategory,
     } = useFinanceReferenceData();
-    const { showAlert, showError, showSuccess } = useAlert();
+    const { showError, showSuccess } = useAlert();
     const [mode, setMode] = useState<FinanceEntryMode>(initialMode);
     const [form, setForm] = useState(initialForm);
     const [newSource, setNewSource] = useState('');
@@ -85,6 +92,7 @@ export function FinanceTransactionEntry({ initialMode }: { initialMode: FinanceE
     const [fieldErrors, setFieldErrors] = useState<FinanceFieldErrors>({});
     const [ocrPhase, setOcrPhase] = useState<FinanceOcrPhase>('idle');
     const [uploadProgress, setUploadProgress] = useState(0);
+    const [screenshotDialog, setScreenshotDialog] = useState<ScreenshotDialogState | null>(null);
     const uploadControllerRef = useRef<AbortController | null>(null);
     const manualAttemptRef = useRef<{ fingerprint: string; key: string } | null>(null);
 
@@ -185,9 +193,9 @@ export function FinanceTransactionEntry({ initialMode }: { initialMode: FinanceE
         finally { setIsSaving(false); }
     };
 
-    const submitScreenshot = async (event: FormEvent) => {
-        event.preventDefault();
-        if (!file) return;
+    const processScreenshot = async () => {
+        if (!file || uploadControllerRef.current) return;
+        setScreenshotDialog({ status: 'processing' });
         setIsSaving(true);
         setUploadProgress(0);
         setOcrPhase('uploading');
@@ -205,26 +213,12 @@ export function FinanceTransactionEntry({ initialMode }: { initialMode: FinanceE
             setOcrPhase('preparing');
             await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
             setFile(null);
-
-            if (payload.data.auto_confirmed && payload.data.transaction?.id) {
-                showSuccess('Transaction confirmed automatically');
-                router.push('/finance/transactions');
-                return;
-            }
-
-            if (payload.warning) {
-                showAlert(payload.warning, 'Review needed', 'warning');
-            } else {
-                showSuccess(payload.data.recovered
-                    ? 'Existing screenshot result opened for review'
-                    : 'Screenshot sent to review');
-            }
-            router.push(`/finance/review?candidate=${encodeURIComponent(payload.data.candidate.id)}`);
+            setScreenshotDialog({ status: 'complete', result: payload });
         } catch (error) {
             if (controller.signal.aborted) return;
             setOcrPhase('idle');
             setUploadProgress(0);
-            showError(financeOcrErrorMessage(error));
+            setScreenshotDialog({ status: 'error', message: financeOcrErrorMessage(error) });
         } finally {
             if (uploadControllerRef.current === controller) {
                 uploadControllerRef.current = null;
@@ -232,6 +226,25 @@ export function FinanceTransactionEntry({ initialMode }: { initialMode: FinanceE
             setIsSaving(false);
         }
     };
+
+    const submitScreenshot = (event: FormEvent) => {
+        event.preventDefault();
+        void processScreenshot();
+    };
+
+    const continueScreenshot = () => {
+        if (screenshotDialog?.status !== 'complete') return;
+        const { data } = screenshotDialog.result;
+        setScreenshotDialog(null);
+        setOcrPhase('idle');
+        router.push(data.auto_confirmed && data.transaction?.id
+            ? '/finance/transactions'
+            : `/finance/review?candidate=${encodeURIComponent(data.candidate.id)}`);
+    };
+
+    const screenshotConfirmed = screenshotDialog?.status === 'complete'
+        && screenshotDialog.result.data.auto_confirmed
+        && Boolean(screenshotDialog.result.data.transaction?.id);
 
     const selectScreenshot = (nextFile: File | null) => {
         if (!nextFile) {
@@ -289,8 +302,33 @@ export function FinanceTransactionEntry({ initialMode }: { initialMode: FinanceE
             <Input id="manual-date" label="Date" required errorMessage={fieldErrors.transaction_date} data-finance-field="transaction_date" type="date" max={getLocalFinanceDate()} value={form.transaction_date} onChange={(event) => setManualField('transaction_date', event.target.value)} />
             <Textarea id="manual-notes" label="Notes" errorMessage={fieldErrors.notes} data-finance-field="notes" maxLength={MAX_FINANCE_NOTES_LENGTH} value={form.notes} onChange={(event) => setManualField('notes', event.target.value)} />
             <Button type="submit" className="w-full" isLoading={isSaving} disabled={isSaving}>Add transaction</Button>
-        </form> : <form onSubmit={submitScreenshot} className="mt-6"><FileUpload label="Transaction screenshot" aria-describedby="finance-upload-help" accept="image/png,image/jpeg,image/webp" value={file} onChange={selectScreenshot} disabled={isSaving} /><p id="finance-upload-help" className="mt-2 text-sm text-text-muted">PNG, JPEG, or WebP · Max 4 MB</p>{ocrPhase !== 'idle' && <OcrProgress phase={ocrPhase} uploadProgress={uploadProgress} />}<Button type="submit" className="mt-5 w-full" isLoading={isSaving} disabled={!file || isSaving}>Process screenshot</Button></form>}
+        </form> : <form onSubmit={submitScreenshot} className="mt-6"><FileUpload label="Transaction screenshot" previewSize="large" aria-describedby="finance-upload-help" accept="image/png,image/jpeg,image/webp" value={file} onChange={selectScreenshot} disabled={isSaving} /><p id="finance-upload-help" className="mt-2 text-sm text-text-muted">PNG, JPEG, or WebP · Max 4 MB</p><Button type="submit" className="mt-5 w-full" isLoading={isSaving} disabled={!file || isSaving}>Process screenshot</Button></form>}
         </>}
         </FinanceShareExperience>
+        {screenshotDialog && <FormDialog
+            title={screenshotDialog.status === 'processing' ? 'Processing screenshot'
+                : screenshotDialog.status === 'error' ? 'Screenshot could not be processed'
+                    : screenshotConfirmed ? 'Transaction added' : 'Ready for review'}
+            busy={screenshotDialog.status === 'processing'}
+            onClose={() => { setScreenshotDialog(null); setOcrPhase('idle'); }}
+        >
+            {screenshotDialog.status === 'processing' && <>
+                <p className="mb-4 text-sm text-text-secondary">Keep this page open while your screenshot is processed.</p>
+                <OcrProgress phase={ocrPhase === 'idle' ? 'uploading' : ocrPhase} uploadProgress={uploadProgress} />
+            </>}
+            {screenshotDialog.status === 'complete' && <>
+                <div role="status" className="space-y-3 text-sm text-text-secondary">
+                    <p>{screenshotConfirmed ? 'Your transaction was added automatically.'
+                        : 'Your screenshot result is saved. You can review the transaction now or later.'}</p>
+                    {screenshotDialog.result.warning && <p className="text-warning">{screenshotDialog.result.warning}</p>}
+                    <p className="font-semibold text-text-primary">You may leave the app.</p>
+                </div>
+                <Button type="button" className="mt-5 w-full" onClick={continueScreenshot}>Continue</Button>
+            </>}
+            {screenshotDialog.status === 'error' && <>
+                <p role="alert" className="text-sm text-error">{screenshotDialog.message}</p>
+                <Button type="button" className="mt-5 w-full" onClick={() => { void processScreenshot(); }}>Retry</Button>
+            </>}
+        </FormDialog>}
     </div></AppShell>;
 }

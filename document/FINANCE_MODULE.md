@@ -885,6 +885,8 @@ All Finance API handlers are dynamic and return JSON.
 - Image bytes remain in browser, request, and OCR process memory only.
 - The service does not persist direct image bytes to Storage.
 - The image hash, OCR output, parser result, and processing lineage are persisted in Finance tables.
+- The add form shows a large, uncropped image preview. Submitting opens one dialog for upload, reading, preparation, errors and the saved result; retry retains the selected file.
+- The dialog tells the user they may leave only after the server returns a saved candidate or transaction. A candidate can remain pending review. Continue closes the dialog and opens that candidate in Review, or the transactions page for an already confirmed result. No automatic redirect occurs before Continue.
 
 ### Android share batch
 

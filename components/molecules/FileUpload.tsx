@@ -11,6 +11,7 @@ interface FileUploadProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 't
     onChange: (file: File | null) => void;
     error?: boolean;
     previewUrl?: string | null;
+    previewSize?: 'compact' | 'large';
 }
 
 export function FileUpload({
@@ -19,6 +20,7 @@ export function FileUpload({
     onChange,
     error,
     previewUrl,
+    previewSize = 'compact',
     accept,
     disabled,
     className,
@@ -75,7 +77,7 @@ export function FileUpload({
                     disabled && 'opacity-60'
                 )}
             >
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className={cn('flex flex-col gap-3', previewSize === 'compact' && 'sm:flex-row sm:items-center')}>
                     <label
                         htmlFor={inputId}
                         className={cn(
@@ -97,9 +99,11 @@ export function FileUpload({
                     </label>
 
                     {displayPreviewUrl && (
-                        <div className="h-24 w-full overflow-hidden rounded-lg border border-border-default bg-bg-hover sm:w-32">
+                        <div className={cn('w-full overflow-hidden rounded-lg border border-border-default bg-bg-hover',
+                            previewSize === 'large' ? 'h-[min(65svh,36rem)] min-h-64' : 'h-24 sm:w-32')}>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={displayPreviewUrl} alt="" className="h-full w-full object-cover" />
+                            <img src={displayPreviewUrl} alt={previewSize === 'large' ? `${label} preview` : ''}
+                                className={cn('h-full w-full', previewSize === 'large' ? 'object-contain' : 'object-cover')} />
                         </div>
                     )}
                 </div>

@@ -16,7 +16,10 @@ export function FormDialog({ title, children, onClose, busy = false }: {
         const previous = document.activeElement as HTMLElement | null;
         const overflow = document.body.style.overflow;
         document.body.style.overflow = 'hidden';
-        const frame = requestAnimationFrame(() => panel.current?.querySelector<HTMLElement>('input,button')?.focus());
+        const frame = requestAnimationFrame(() => {
+            const target = panel.current?.querySelector<HTMLElement>('input:not([disabled]),button:not([disabled])') ?? panel.current;
+            target?.focus();
+        });
         const keydown = (event: KeyboardEvent) => {
             if (event.defaultPrevented) return;
             const active = document.activeElement as HTMLElement | null;
