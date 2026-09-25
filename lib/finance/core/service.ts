@@ -82,7 +82,7 @@ import {
 } from '@/lib/finance/core/schemas';
 import { normalizeFinanceTransaction } from '@/lib/finance/core/auth';
 import { financeShadowSourceIds, toFinanceShadowRules } from '@/lib/finance/shadowRules';
-import { FinanceFieldErrors, getFinanceMonthRange, getLocalFinanceMonth } from '@/lib/finance/core/values';
+import { FinanceFieldErrors, getFinanceMonthRange, getLocalFinanceMonth, normalizeFinanceDate } from '@/lib/finance/core/values';
 import { parseFinanceText } from '@/lib/finance/ocr/parser';
 import { FINANCE_V1_CURRENCY } from '@/lib/finance/core/constants';
 import { getFinanceCandidateReference } from '@/lib/finance/core/auth';
@@ -570,12 +570,15 @@ export async function deleteFinanceTransactionForUser(userId: string, transactio
     if (!data) fail('Transaction not found', 404);
 }
 
-export async function getFinanceDashboard(userId: string, requestedMonth: string | null) {
+export async function getFinanceDashboard(userId: string, requestedMonth: string | null, selectedDate: string | null = null) {
     const monthRange = getFinanceMonthRange(requestedMonth || getLocalFinanceMonth());
     if (!monthRange) fail('Month must use YYYY-MM format');
+    if (selectedDate !== null && (normalizeFinanceDate(selectedDate) !== selectedDate || !selectedDate.startsWith(`${monthRange.month}-`))) {
+        fail('Date must be a valid day in the selected month');
+    }
     const [monthRows, recentResult, activeBudgets] = await Promise.all([
         listFinanceDashboardMonthTransactions(userId, monthRange.monthStart, monthRange.nextMonthStart, DASHBOARD_PAGE_SIZE),
-        listFinanceDashboardRecentTransactions(userId, monthRange.monthStart, monthRange.nextMonthStart),
+        listFinanceDashboardRecentTransactions(userId, monthRange.monthStart, monthRange.nextMonthStart, selectedDate),
         getFinanceDashboardBudgets(userId),
     ]);
     if (recentResult.error) throw recentResult.error;
