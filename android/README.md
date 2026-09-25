@@ -16,6 +16,21 @@ On Linux/macOS use `./gradlew`. The debug APK is `app/build/outputs/apk/debug/ap
 
 The HTTPS origin defaults to `https://idea-dump-alpha.vercel.app`. For a compatible preview deployment, add `-PcompanionOrigin=https://your-preview.example` to Gradle. The origin must match the web application's `APP_ORIGIN`. No server secret belongs in the APK. Finance pairing requires the web changes and all migrations in [the rollout guide](../document/ANDROID_COMPANION.md).
 
+## Download from GitHub
+
+Android Studio is not needed to install a prebuilt APK.
+
+1. Sign in to GitHub and open [the validation runs](https://github.com/Kirbyyy81/idea-dump/actions/workflows/validate.yml?query=branch%3Afeat%2Fandroid-companion-app).
+2. Open the latest successful run for this branch and find **Artifacts**.
+3. Download **ideadump-companion-debug** and extract the ZIP.
+4. On an Android 13 or newer phone, open **app-debug.apk**. Allow installation from that browser or file manager if Android asks, then install.
+
+GitHub requires a signed-in account with repository read access to download workflow artifacts. See [GitHub's download instructions](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/download-workflow-artifacts).
+
+Each build is a debug APK. Stable release signing is not configured, so APKs built on different machines or CI runs may not install as updates over each other. Do not uninstall an existing installation with pending uploads just to bypass a signing mismatch.
+
+Finance pairing still requires the companion backend and migrations at the configured origin.
+
 ## Use
 
 - **Home:** grant notification access and enable Lyrics and Finance independently. Both start disabled.
