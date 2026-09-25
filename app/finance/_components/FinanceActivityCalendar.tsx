@@ -38,10 +38,7 @@ export function FinanceActivityCalendar({ month, today, items, selectedDate: con
     const expense = selected?.expense ?? 0;
 
     return <section aria-labelledby="activity-calendar-heading" className="min-w-0">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 id="activity-calendar-heading" className="text-base font-bold">Daily activity</h2>
-            <p className="flex gap-3 text-xs"><span className="text-success">+ Income</span><span className="text-error">− Spent</span><span className="text-text-muted">MYR</span></p>
-        </div>
+        <h2 id="activity-calendar-heading" className="text-base font-bold">Daily activity</h2>
         <div className="mt-3 overflow-x-auto pb-1">
             <div className="min-w-[280px]">
                 <div className="grid grid-cols-7 py-2 text-center text-xs text-text-muted" aria-hidden="true">
