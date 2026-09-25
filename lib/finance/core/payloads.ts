@@ -272,6 +272,8 @@ export function toFinanceReviewCandidate(candidate: FinanceCandidateTransaction)
         duplicate_signals: candidate.duplicate_signals || [],
         duplicate_explanation: candidate.duplicate_explanation || null,
         intake: candidate.intake ? {
+            source: candidate.intake.source,
+            notification: candidate.intake.notification || null,
             ocr_text: candidate.intake.ocr_text || null,
             ocr_raw_text: candidate.intake.ocr_raw_text || null,
             ocr_normalized_text: candidate.intake.ocr_normalized_text || null,

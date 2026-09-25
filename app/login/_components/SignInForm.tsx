@@ -7,7 +7,7 @@ import { AuthNotice } from '@/app/login/_components/AuthNotice';
 import { Button } from '@/components/atoms/Button';
 import { LoaderOne } from '@/components/atoms/Loader';
 import { buildCachedProfile, clearCachedProfile, setCachedProfile } from '@/lib/auth/profileCache';
-import { AUTH_PATHS } from '@/lib/auth/routes';
+import { AUTH_PATHS, getSafeNextPath } from '@/lib/auth/routes';
 import { createClient } from '@/lib/supabase/client';
 
 type AuthMethod = 'otp' | 'password';
@@ -26,7 +26,8 @@ export function SignInForm({ queryError }: SignInFormProps) {
     const [isSent, setIsSent] = useState(false);
     const [error, setError] = useState<string | null>(queryError ?? null);
 
-    const redirectToApp = () => window.location.assign('/');
+    const nextPath = () => getSafeNextPath(new URLSearchParams(window.location.search).get('next'));
+    const redirectToApp = () => window.location.assign(nextPath());
 
     const switchAuthMethod = () => {
         setAuthMethod((current) => (current === 'otp' ? 'password' : 'otp'));
@@ -46,7 +47,7 @@ export function SignInForm({ queryError }: SignInFormProps) {
                 const { error: signInError } = await supabase.auth.signInWithOtp({
                     email,
                     options: {
-                        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/')}`,
+                        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath())}`,
                     },
                 });
 
@@ -120,7 +121,7 @@ export function SignInForm({ queryError }: SignInFormProps) {
                 email,
                 options: {
                     shouldCreateUser: true,
-                    emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/')}`,
+                    emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath())}`,
                 },
             });
 

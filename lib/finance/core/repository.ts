@@ -37,11 +37,11 @@ const FINANCE_RULE_INTERNAL_SELECT =
     'id, source_id, category_id, direction, is_active, source';
 const FINANCE_REVIEW_QUEUE_SELECT = [
     'id, payload, confidence, duplicate_outcome, duplicate_signals, duplicate_explanation',
-    'intake:finance_intake_items(ocr_text,ocr_raw_text,ocr_normalized_text,ocr_confidence,normalizer_version)',
+    'intake:finance_intake_items(source,ocr_text,ocr_raw_text,ocr_normalized_text,ocr_confidence,normalizer_version,notification:finance_notification_events(title,body,subtext,source_package,posted_at,date_provenance))',
 ].join(', ');
 const FINANCE_REVIEW_INTERNAL_SELECT = [
     'id, intake_item_id, payload, status',
-    'intake:finance_intake_items(ocr_text,ocr_normalized_text,original_filename,ocr_text_hash,receipt_processing)',
+    'intake:finance_intake_items(source,ocr_text,ocr_normalized_text,original_filename,ocr_text_hash,receipt_processing)',
 ].join(', ');
 
 export async function listFinanceCategories(userId: string) {

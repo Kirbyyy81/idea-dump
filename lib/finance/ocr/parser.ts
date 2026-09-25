@@ -1,3 +1,4 @@
+import { financeRuleMatches, compareFinanceParserRules } from '@/lib/finance/core/ruleMatching';
 import { isRytPartyNoise, rytTransactionText } from '@/lib/finance/ocr/receiptFormat';
 import { hasReceiptToday, screenshotFilenameDate } from '@/lib/finance/ocr/receiptPatterns';
 import {
@@ -12,7 +13,7 @@ import {
 } from '@/lib/types';
 import { FINANCE_V1_CURRENCY } from '@/lib/finance/core/constants';
 import { applyFinanceCriticalFieldTemplates } from '@/lib/finance/ocr/fieldTemplates';
-import { normalizeFinanceMerchantKey, normalizeFinancePayeeKey } from '@/lib/finance/ocr/normalizer';
+import { normalizeFinancePayeeKey } from '@/lib/finance/ocr/normalizer';
 import { extractFinanceReferenceNumber } from '@/lib/finance/ocr/reference';
 import {
     extractFinanceRecipientReference,
@@ -164,36 +165,6 @@ function parseParties(lines: string[], payees: FinanceOcrPayee[], sharedReceipt 
     return { merchant: fallbackParty(lines), payeeId: null, payeeName: null };
 }
 
-function ruleMatches(rule: FinanceOcrRule, text: string, merchant: string | null) {
-    const pattern = rule.pattern.trim().toLowerCase();
-    if (!pattern) return false;
-    if (rule.match_type === 'merchant_alias') {
-        if (rule.auto_created_at) {
-            return Boolean(
-                merchant
-                && normalizeFinanceMerchantKey(merchant) === normalizeFinanceMerchantKey(rule.pattern)
-            );
-        }
-        return Boolean(merchant?.toLowerCase().includes(pattern));
-    }
-    return text.includes(pattern);
-}
-
-const matchTypeRank: Record<FinanceOcrRule['match_type'], number> = {
-    exact_phrase: 0,
-    merchant_alias: 1,
-    keyword: 2,
-    account_hint: 3,
-};
-
-function compareFinanceRules(left: FinanceOcrRule, right: FinanceOcrRule) {
-    return left.priority - right.priority
-        || matchTypeRank[left.match_type] - matchTypeRank[right.match_type]
-        || (left.source === right.source ? 0 : left.source === 'manual' ? -1 : 1)
-        || left.created_at.localeCompare(right.created_at)
-        || left.id.localeCompare(right.id);
-}
-
 export function parseFinanceText(
     normalizedText: string,
     rules: FinanceOcrRule[],
@@ -245,8 +216,8 @@ export function parseFinanceText(
     let categoryAssigned = false;
     let directionAssigned = false;
     let merchantAssigned = false;
-    for (const rule of [...rules].filter((rule) => rule.is_active && rule.source === 'manual').sort(compareFinanceRules)) {
-        if (!ruleMatches(rule, normalized, parsedMerchant)) continue;
+    for (const rule of [...rules].filter((rule) => rule.is_active && rule.source === 'manual').sort(compareFinanceParserRules)) {
+        if (!financeRuleMatches(rule, normalized, parsedMerchant)) continue;
         if (rule.auto_created_at && rule.source_id && rule.source_id !== inferredSourceId) continue;
         if (rule.auto_created_at && inferredDirection && rule.direction && rule.direction !== inferredDirection) continue;
         firstMatchedRuleId ??= rule.id;

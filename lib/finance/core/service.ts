@@ -1,3 +1,4 @@
+import { retryFinanceNotification } from '@/lib/finance/notifications/service';
 import { PostgrestError } from '@supabase/supabase-js';
 import { canonicalFinanceCategoryName } from '@/lib/finance/catalog';
 import { aggregateFinanceDashboard, FinanceDashboardRow } from '@/lib/finance/dashboard';
@@ -716,6 +717,12 @@ export async function resolveFinanceReviewCandidateForUser(
 
     if (action === 'retry') {
         if (candidate.status !== 'pending') fail('Only pending review items can be retried', 409);
+        if (candidate.intake?.source === 'notification') {
+            const { data, error } = await retryFinanceNotification(userId, candidateId, candidate.intake_item_id);
+            if (error) throw error;
+            const [withDuplicate] = await attachDuplicateTransactions(userId, [data as unknown as FinanceCandidateTransaction]);
+            return { kind: 'candidate' as const, data: toFinanceReviewCandidate(withDuplicate) };
+        }
         const [sourcesResult, sourceTemplatesResult, fieldTemplatesResult, rulesResult, payeesResult] = await Promise.all([
             listActiveFinanceSources(userId),
             listRuntimeFinanceSourceTemplates(userId),

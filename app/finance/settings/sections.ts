@@ -1,4 +1,4 @@
-export const FINANCE_SETTINGS_SECTIONS = ['sources', 'categories', 'rules'] as const;
+export const FINANCE_SETTINGS_SECTIONS = ['sources', 'categories', 'rules', 'devices'] as const;
 
 export type FinanceSettingsSection = typeof FINANCE_SETTINGS_SECTIONS[number];
 
