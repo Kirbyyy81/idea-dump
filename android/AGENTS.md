@@ -4,6 +4,7 @@
 - Keep Kotlin domain types in their native owning feature. Web domain types remain in lib/types.ts.
 - Use the checked-in Gradle wrapper, JDK 17 or 21, SDK 36, and pinned dependencies.
 - Run ./gradlew :app:lintDebug :app:testDebugUnitTest :app:assembleDebug before handing off Android changes (gradlew.bat on Windows).
+- For device validation, build assembleDebugAndroidTest and run the instrumentation runner on the explicitly selected adb serial, following README.md. Prefer the user-selected connected phone. Do not enable notification capture or inspect unrelated phone data as part of synthetic tests.
 - Keep Finance and Lyrics data, network clients, storage, and failures isolated.
 - Never commit local.properties, credentials, signing keys, build output, or captured bank notifications.
 - Use Android Keystore for secrets and notification-payload encryption. Never log notification text or tokens.
