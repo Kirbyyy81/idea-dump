@@ -48,7 +48,7 @@ import {
     MAX_FINANCE_REFERENCE_LENGTH,
     toPositiveFinanceAmount,
 } from '@/lib/finance/core/values';
-import { useFinanceShareTarget } from '@/app/finance/_components/FinanceShareTargetProvider';
+import { IncomingFinanceShareFile, useFinanceShareTarget } from '@/app/finance/_components/FinanceShareTargetProvider';
 import { FinanceReferenceDataState, useFinanceReferenceData } from '@/app/finance/_components/FinanceReferenceData';
 import type { FinanceEntryMode } from '@/lib/types';
 
@@ -88,6 +88,7 @@ export function FinanceTransactionEntry({ initialMode }: { initialMode: FinanceE
     const [form, setForm] = useState(initialForm);
     const [newSource, setNewSource] = useState('');
     const [file, setFile] = useState<File | null>(null);
+    const [selectedFiles, setSelectedFiles] = useState<IncomingFinanceShareFile[]>([]);
     const [isSaving, setIsSaving] = useState(false);
     const [fieldErrors, setFieldErrors] = useState<FinanceFieldErrors>({});
     const [ocrPhase, setOcrPhase] = useState<FinanceOcrPhase>('idle');
@@ -97,6 +98,13 @@ export function FinanceTransactionEntry({ initialMode }: { initialMode: FinanceE
     const manualAttemptRef = useRef<{ fingerprint: string; key: string } | null>(null);
 
     useEffect(() => () => uploadControllerRef.current?.abort(), []);
+
+    useEffect(() => {
+        if (sharedFiles.length > 0) {
+            setSelectedFiles([]);
+            setFile(null);
+        }
+    }, [sharedFiles]);
 
     useEffect(() => {
         if (mode === 'screenshot') void warmFinanceOcr();
@@ -264,8 +272,25 @@ export function FinanceTransactionEntry({ initialMode }: { initialMode: FinanceE
         setFile(nextFile);
     };
 
+    const selectScreenshots = (nextFiles: File[]) => {
+        if (nextFiles.length === 0) return;
+        if (nextFiles.length === 1) {
+            selectScreenshot(nextFiles[0]);
+            return;
+        }
+        setFile(null);
+        setSelectedFiles(nextFiles.map((nextFile) => ({
+            id: window.crypto.randomUUID(),
+            file: nextFile,
+        })));
+    };
+
     return <AppShell contentClassName="p-5 md:p-8" pageTitle="Add transaction"><div className="mx-auto max-w-2xl">
-        <FinanceShareExperience>
+        <FinanceShareExperience
+            selectedFiles={selectedFiles}
+            onRemoveSelectedFile={(id) => setSelectedFiles((current) => current.filter((entry) => entry.id !== id))}
+            onClearSelectedFiles={() => setSelectedFiles([])}
+        >
         {sharedFiles.length === 0 && <>
         <div className="grid grid-cols-2 border border-border-default p-1" role="group" aria-label="Transaction entry method"><button type="button" aria-pressed={mode === 'manual'} disabled={isSaving} onClick={() => setMode('manual')} className={`flex h-10 items-center justify-center gap-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${mode === 'manual' ? 'bg-action-primary text-action-primary-text' : 'text-text-secondary hover:bg-bg-hover'}`}><DocumentDoodleIcon size={16} />Manual</button><button type="button" aria-pressed={mode === 'screenshot'} disabled={isSaving} onClick={() => setMode('screenshot')} className={`flex h-10 items-center justify-center gap-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${mode === 'screenshot' ? 'bg-action-primary text-action-primary-text' : 'text-text-secondary hover:bg-bg-hover'}`}><ScanDoodleIcon size={16} />Screenshot</button></div>
 
@@ -302,7 +327,7 @@ export function FinanceTransactionEntry({ initialMode }: { initialMode: FinanceE
             <Input id="manual-date" label="Date" required errorMessage={fieldErrors.transaction_date} data-finance-field="transaction_date" type="date" max={getLocalFinanceDate()} value={form.transaction_date} onChange={(event) => setManualField('transaction_date', event.target.value)} />
             <Textarea id="manual-notes" label="Notes" errorMessage={fieldErrors.notes} data-finance-field="notes" maxLength={MAX_FINANCE_NOTES_LENGTH} value={form.notes} onChange={(event) => setManualField('notes', event.target.value)} />
             <Button type="submit" className="w-full" isLoading={isSaving} disabled={isSaving}>Add transaction</Button>
-        </form> : <form onSubmit={submitScreenshot} className="mt-6"><FileUpload label="Transaction screenshot" previewSize="large" aria-describedby="finance-upload-help" accept="image/png,image/jpeg,image/webp" value={file} onChange={selectScreenshot} disabled={isSaving} /><p id="finance-upload-help" className="mt-2 text-sm text-text-muted">PNG, JPEG, or WebP · Max 4 MB</p><Button type="submit" className="mt-5 w-full" isLoading={isSaving} disabled={!file || isSaving}>Process screenshot</Button></form>}
+        </form> : <form onSubmit={submitScreenshot} className="mt-6"><FileUpload label="Transaction screenshot" previewSize="large" aria-describedby="finance-upload-help" accept="image/png,image/jpeg,image/webp" multiple value={file} onChange={selectScreenshot} onFilesChange={selectScreenshots} disabled={isSaving} /><p id="finance-upload-help" className="mt-2 text-sm text-text-muted">PNG, JPEG, or WebP · Up to 10 images, 4 MB each</p><Button type="submit" className="mt-5 w-full" isLoading={isSaving} disabled={!file || isSaving}>Process screenshot</Button></form>}
         </>}
         </FinanceShareExperience>
         {screenshotDialog && <FormDialog
