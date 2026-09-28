@@ -29,7 +29,7 @@ function versionsPage(blocks: DocumentationTreeBlock[]): string | null {
     return page ? `https://www.notion.so/${page.id.replace(/-/g, '')}` : null;
 }
 
-const EMPTY_CONTENT: DocumentationContentSnapshot = { blocks: [], branches: {}, count: 0, complete: false, failures: 0 };
+const EMPTY_CONTENT: DocumentationContentSnapshot = { blocks: [], branches: {}, count: 0, complete: false, failures: 0, outlineComplete: false, outlineFailures: 0 };
 
 export function DocumentReader({ pageId, initialQuery }: { pageId: string; initialQuery: string }) {
     const [metadata, setMetadata] = useState<DocumentationPage | null>(null);
@@ -91,6 +91,7 @@ export function DocumentReader({ pageId, initialQuery }: { pageId: string; initi
             if (abort.signal.aborted) return;
             const root = loader.snapshot().branches[pageId];
             if (loaded.current && !root.hasLoaded && root.error) throw new Error(root.error);
+            void loader.loadOutline().catch(() => {});
         } catch (cause) {
             if (abort.signal.aborted) return;
             if (isDocumentAccessError(cause)) { invalidate(cause); return; }
@@ -120,13 +121,20 @@ export function DocumentReader({ pageId, initialQuery }: { pageId: string; initi
         if (refreshing || stale) return;
         const loader = session.current;
         void loader?.loadNext(parentId, retry).then(() => {
-            if (queryRef.current.trim()) return loader.loadAll(() => Boolean(queryRef.current.trim()));
+            return queryRef.current.trim() ? loader.loadAll(() => Boolean(queryRef.current.trim())) : loader.loadOutline();
         }).catch(() => {});
     }, [refreshing, stale]);
 
     const retrySearch = () => {
         const loader = session.current;
         void loader?.retryFailed().then(() => loader.loadAll(() => Boolean(queryRef.current.trim()))).catch(() => {});
+    };
+
+    const retryOutline = () => {
+        const loader = session.current;
+        void loader?.retryOutline().then(() => {
+            if (queryRef.current.trim()) return loader.loadAll(() => Boolean(queryRef.current.trim()));
+        }).catch(() => {});
     };
 
     useEffect(() => {
@@ -164,10 +172,17 @@ export function DocumentReader({ pageId, initialQuery }: { pageId: string; initi
             {(loading || refreshing) && <p role="status">{refreshing ? 'Refreshing' : 'Loading'} document…</p>}
             {error && <div className="documentation-notice" role="alert">{error} {stale && <strong>Showing the last loaded copy.</strong>} <button className="btn-secondary" type="button" onClick={fetchCurrent}>Retry</button></div>}
             {metadata && <div className="documentation-reader-grid">
-                {sections.length > 0 && <nav className="documentation-toc" aria-label="On this page">
+                {(sections.length > 0 || !content.outlineComplete) && <nav className="documentation-toc" aria-label="On this page">
                     <strong>On this page</strong>
-                    {!content.complete && <small>Sections appear as content loads.</small>}
-                    {sections.map((section) => <a key={section.id} href={`#section-${section.id}`} className={`documentation-toc-${section.type}`}>{section.richText.map((part) => part.text).join('')}</a>)}
+                    {!content.outlineComplete && <small role="status">{stale ? 'Showing previously loaded sections.' : content.outlineFailures ? 'Some sections could not be listed.' : 'Loading table of contents…'}</small>}
+                    {content.outlineFailures > 0 && !stale && <button className="btn-secondary" type="button" disabled={refreshing} onClick={retryOutline}>Retry contents</button>}
+                    {sections.map((section) => <a key={section.id} href={`#section-${section.id}`} className={`documentation-toc-${section.type}`} onClick={() => {
+                        let ancestor = document.getElementById(`section-${section.id}`)?.parentElement;
+                        while (ancestor) {
+                            if (ancestor instanceof HTMLDetailsElement) ancestor.open = true;
+                            ancestor = ancestor.parentElement;
+                        }
+                    }}>{section.richText.map((part) => part.text).join('')}</a>)}
                 </nav>}
                 <article className="documentation-paper">
                     <div className="documentation-find">
@@ -184,7 +199,7 @@ export function DocumentReader({ pageId, initialQuery }: { pageId: string; initi
                             : content.failures ? 'Search incomplete. Some sections could not be checked.' : 'Searching remaining sections…'}
                         {content.failures > 0 && !stale && <button className="btn-secondary" type="button" onClick={retrySearch} disabled={refreshing}>Retry search</button>}
                     </div>}
-                    <DocumentLoadingContext.Provider value={{ branches: content.branches, enabled: !refreshing && !stale, load: loadBranch }}>
+                    <DocumentLoadingContext.Provider value={{ branches: content.branches, enabled: !refreshing && !stale && (content.outlineComplete || content.outlineFailures > 0), load: loadBranch }}>
                         <div ref={contentRef}><DocumentBlocks blocks={blocks} query={query} activeId={activeId} /></div>
                         <BranchLoader parentId={pageId} label="document" />
                     </DocumentLoadingContext.Provider>

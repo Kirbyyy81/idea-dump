@@ -49,6 +49,8 @@ export interface DocumentationBranchState {
 }
 
 export interface DocumentationContentSnapshot {
+    outlineComplete: boolean;
+    outlineFailures: number;
     blocks: DocumentationTreeBlock[];
     branches: Record<string, DocumentationBranchState>;
     count: number;
@@ -564,6 +566,7 @@ export interface FinanceTransactionView {
 }
 
 export interface FinanceDashboardRecentTransaction {
+    category?: Pick<FinanceReferenceOption, 'name'> | null;
     id: string;
     direction: FinanceTransactionDirection;
     amount: number;

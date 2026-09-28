@@ -219,6 +219,7 @@ export function toFinanceDashboardRecentTransaction(
         amount: Number(transaction.amount),
         merchant: transaction.merchant || null,
         transaction_date: transaction.transaction_date,
+        category: namedReference(transaction.category),
         finance_source: namedReference(transaction.finance_source),
         finance_payee: namedReference(transaction.finance_payee),
     };

@@ -17,6 +17,27 @@ const content = { blocks: [{ id: '22222222-2222-2222-2222-222222222222', type: '
 afterEach(() => vi.unstubAllGlobals());
 
 describe('documentation reader refresh', () => {
+    it('resumes active search after retrying an outline branch containing an unloaded table', async () => {
+        Element.prototype.scrollIntoView = vi.fn();
+        let fail = true;
+        vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+            if (!url.includes('/content')) return Response.json({ data: metadata });
+            if (url.includes('parentId=toggle')) return fail
+                ? Response.json({ message: 'Unavailable' }, { status: 502 })
+                : Response.json({ data: { blocks: [{ ...content.blocks[0], id: 'table', type: 'table', hasChildren: true }], nextCursor: null } });
+            if (url.includes('parentId=table')) return Response.json({ data: { blocks: [{
+                ...content.blocks[0], id: 'row', type: 'table_row', cells: [content.blocks[0].richText],
+            }], nextCursor: null } });
+            return Response.json({ data: { blocks: [{ ...content.blocks[0], id: 'toggle', type: 'toggle', hasChildren: true, richText: [] }], nextCursor: null } });
+        }));
+        render(<DocumentReader pageId={id} initialQuery="technical" />);
+        await screen.findByText('Some sections could not be listed.');
+        fail = false;
+        fireEvent.click(screen.getByRole('button', { name: 'Retry contents' }));
+        await screen.findByText('1 of 1');
+        expect(screen.queryByText('Searching remaining sections…')).toBeNull();
+    });
+
     it('shows metadata and initial text early, then searches unloaded pages and retries a failed table', async () => {
         Element.prototype.scrollIntoView = vi.fn();
         let releaseRoot!: (response: Response) => void;
@@ -47,8 +68,8 @@ describe('documentation reader refresh', () => {
         releaseRoot(Response.json({ data: { blocks: [content.blocks[0],
             makeBlock(tableId, 'table', '', true), makeBlock('toggle', 'toggle', 'Closed details', true)], nextCursor: 'next' } }));
         await screen.findByText('Current technical details');
-        expect(fetchMock).toHaveBeenCalledTimes(2);
-        expect(screen.queryByText('needle on final page')).toBeNull();
+        await screen.findByText('needle on final page');
+        expect(fetchMock.mock.calls.some(([url]) => url.includes('parentId=table'))).toBe(false);
         fireEvent.change(screen.getByRole('textbox', { name: 'Find in this document' }), { target: { value: 'needle' } });
         await screen.findByText('Search incomplete. Some sections could not be checked.');
         await screen.findByText(/inside toggle/);

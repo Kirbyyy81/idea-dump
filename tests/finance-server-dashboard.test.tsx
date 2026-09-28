@@ -158,15 +158,39 @@ describe('server-rendered Finance dashboard', () => {
         expect(screen.getByRole('region', { name: 'Selected day' }).textContent).toContain('21 Jun 2026');
     });
 
+    it('filters the dashboard by a clicked date and clears that filter without scrolling', () => {
+        const { rerender } = render(<FinanceDashboardClient month="2026-05" today="2026-05-21" summary={summary} />);
+        fireEvent.click(screen.getByRole('button', { name: /^12 May 2026,/ }));
+        expect(routerPush).toHaveBeenLastCalledWith('/finance?month=2026-05&date=2026-05-12', { scroll: false });
+        rerender(<FinanceDashboardClient month="2026-05" today="2026-05-21" selectedDate="2026-05-12" summary={summary} />);
+        expect(screen.getByRole('heading', { name: 'Transactions for 12 May 2026' })).toBeTruthy();
+        expect(screen.getByText('No transactions for this day.')).toBeTruthy();
+        expect(screen.queryByRole('link', { name: 'View transactions' })).toBeNull();
+        expect(screen.getByRole('link', { name: 'View all' }).getAttribute('href')).toBe('/finance/transactions?date=2026-05-12');
+        fireEvent.click(screen.getByRole('button', { name: 'Clear day filter' }));
+        expect(routerPush).toHaveBeenLastCalledWith('/finance?month=2026-05', { scroll: false });
+    });
+
+    it('passes a valid selected date to the authorized server query', async () => {
+        const page = await FinancePage({ searchParams: Promise.resolve({ month: '2026-05', date: '2026-05-12' }) });
+        expect(dashboardService).toHaveBeenCalledWith('user-1', '2026-05', '2026-05-12');
+        expect(page.props.selectedDate).toBe('2026-05-12');
+    });
+
+    it.each([['2026-05', '2026-05-32'], ['2026-05', '2026-06-01'], ['9999-01', '9999-01-01']])('rejects invalid, out-of-month or future days: %s %s', async (month, date) => {
+        await expect(FinancePage({ searchParams: Promise.resolve({ month, date }) })).rejects.toThrow(`redirect:/finance?month=${month}`);
+        expect(dashboardService).not.toHaveBeenCalled();
+    });
+
     it('authorizes before loading the tenant-scoped dashboard summary', async () => {
         const page = await FinancePage({
             searchParams: Promise.resolve({ month: '2026-05' }),
         });
 
         expect(pageAccess).toHaveBeenCalledOnce();
-        expect(dashboardService).toHaveBeenCalledWith('user-1', '2026-05');
+        expect(dashboardService).toHaveBeenCalledWith('user-1', '2026-05', null);
         expect(page.type).toBe(FinanceDashboardClient);
-        expect(page.props).toEqual({ month: '2026-05', today: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), summary });
+        expect(page.props).toEqual({ month: '2026-05', today: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), selectedDate: null, summary });
     });
 
     it('authorizes before redirecting an invalid month', async () => {
@@ -203,7 +227,7 @@ describe('server-rendered Finance dashboard', () => {
         const accessSource = fs.readFileSync(path.join(root, 'lib', 'finance', 'core', 'pageAccess.ts'), 'utf8');
 
         expect(pageSource).not.toMatch(/^['"]use client['"]/);
-        expect(pageSource).toContain('getFinanceDashboard(session.user.id, month)');
+        expect(pageSource).toContain('getFinanceDashboard(session.user.id, month, selectedDate)');
         expect(clientSource).not.toContain('financeApiRequest');
         expect(clientSource).not.toContain('useEffect');
         expect(layoutSource).toContain('requireFinancePageAccess');

@@ -6,6 +6,7 @@ interface Branch extends DocumentationBranchState {
     cursor: string | null;
     cursors: Set<string>;
     depth: number;
+    outline: boolean;
 }
 
 export function isDocumentAccessError(error: unknown): boolean {
@@ -25,12 +26,12 @@ export class DocumentContentLoader {
         private onChange: (snapshot: DocumentationContentSnapshot) => void = () => {},
         private onAccessError: (error: unknown) => void = () => {},
     ) {
-        this.addBranch(pageId, 0);
+        this.addBranch(pageId, 0, true);
     }
 
-    private addBranch(id: string, depth: number) {
+    private addBranch(id: string, depth: number, outline: boolean) {
         if (!this.branches.has(id)) this.branches.set(id, {
-            blocks: [], cursor: null, cursors: new Set(), depth,
+            blocks: [], cursor: null, cursors: new Set(), depth, outline,
             status: 'idle', complete: false, hasLoaded: false, error: null,
         });
     }
@@ -44,13 +45,17 @@ export class DocumentContentLoader {
         let count = 0;
         let failures = 0;
         let complete = true;
+        let outlineComplete = true;
+        let outlineFailures = 0;
         for (const [id, branch] of this.branches) {
             branches[id] = { status: branch.status, complete: branch.complete, hasLoaded: branch.hasLoaded, error: branch.error };
             count += branch.blocks.length;
             if (branch.error) failures++;
             if (!branch.complete) complete = false;
+            if (branch.outline && !branch.complete) outlineComplete = false;
+            if (branch.outline && branch.error) outlineFailures++;
         }
-        return { blocks: tree(this.pageId), branches, count, complete, failures };
+        return { blocks: tree(this.pageId), branches, count, complete, failures, outlineComplete, outlineFailures };
     }
 
     private publish() {
@@ -82,7 +87,9 @@ export class DocumentContentLoader {
                     if (known.has(block.id)) continue;
                     known.add(block.id);
                     branch.blocks.push(block);
-                    if (block.hasChildren && block.type !== 'child_page') this.addBranch(block.id, branch.depth + 1);
+                    if (block.hasChildren && block.type !== 'child_page') {
+                        this.addBranch(block.id, branch.depth + 1, branch.outline && block.type !== 'table');
+                    }
                 }
                 if (page.nextCursor) branch.cursors.add(page.nextCursor);
                 branch.cursor = page.nextCursor;
@@ -109,8 +116,26 @@ export class DocumentContentLoader {
         return task;
     }
 
+    /** Discover headings through structural branches before fetching table rows. */
+    async loadOutline(shouldContinue: () => boolean = () => true): Promise<void> {
+        while (!this.signal.aborted && !this.fatal && shouldContinue()) {
+            const next = [...this.branches].find(([, branch]) => branch.outline && !branch.complete && !branch.error);
+            if (!next) break;
+            await this.loadNext(next[0]);
+        }
+        if (this.fatal) throw this.fatal;
+    }
+
+    async retryOutline(): Promise<void> {
+        for (const [id, branch] of this.branches) {
+            if (branch.outline && branch.error) await this.loadNext(id, true);
+        }
+        await this.loadOutline();
+    }
+
     /** Search consumes all remaining branches, including closed toggles, but never Versions. */
     async loadAll(shouldContinue: () => boolean = () => true): Promise<void> {
+        await this.loadOutline(shouldContinue);
         while (!this.signal.aborted && !this.fatal && shouldContinue()) {
             const next = [...this.branches].find(([, branch]) => !branch.complete && !branch.error);
             if (!next) break;
