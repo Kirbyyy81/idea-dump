@@ -107,8 +107,26 @@ function ActiveBatchPanel({ batch }: { batch: FinanceShareBatch }) {
     );
 }
 
-export function FinanceShareExperience({ children }: { children?: ReactNode }) {
-    const { files, clearFiles, removeFile } = useFinanceShareTarget();
+interface FinanceShareExperienceProps {
+    children?: ReactNode;
+    selectedFiles?: IncomingFinanceShareFile[];
+    onRemoveSelectedFile?: (id: string) => void;
+    onClearSelectedFiles?: () => void;
+}
+
+const emptySelectedFiles: IncomingFinanceShareFile[] = [];
+
+export function FinanceShareExperience({
+    children,
+    selectedFiles = emptySelectedFiles,
+    onRemoveSelectedFile,
+    onClearSelectedFiles,
+}: FinanceShareExperienceProps) {
+    const { files: sharedFiles, clearFiles: clearSharedFiles, removeFile: removeSharedFile } = useFinanceShareTarget();
+    const isSharedSelection = sharedFiles.length > 0;
+    const files = isSharedSelection ? sharedFiles : selectedFiles;
+    const clearFiles = isSharedSelection ? clearSharedFiles : onClearSelectedFiles;
+    const removeFile = isSharedSelection ? removeSharedFile : onRemoveSelectedFile;
     const { showSuccess } = useAlert();
     const [validations, setValidations] = useState<Record<string, FinanceSharedFileValidation>>({});
     const [phase, setPhase] = useState<HandoffPhase>('idle');
@@ -231,7 +249,7 @@ export function FinanceShareExperience({ children }: { children?: ReactNode }) {
         try {
             const uploadFiles = validFiles.map(({ id, file, validation }) => {
                 const type = validation?.detectedMimeType;
-                if (!type) throw new Error('The shared image has not finished validation. Try again.');
+                if (!type) throw new Error('The image has not finished validation. Try again.');
                 return {
                     clientId: id,
                     file: file.type === type ? file : new File([file], file.name, {
@@ -276,14 +294,14 @@ export function FinanceShareExperience({ children }: { children?: ReactNode }) {
             });
             setPhase('ready');
             prepareAttemptRef.current = null;
-            clearFiles();
+            clearFiles?.();
             showSuccess('You may leave the app.', 'Images queued');
             await loadActiveBatch().catch(() => null);
         } catch (error) {
             setPhase('idle');
             setSubmissionError(error instanceof Error
                 ? error.message
-                : 'The shared images could not be handed off. Nothing was confirmed as queued.');
+                : 'The images could not be handed off. Nothing was confirmed as queued.');
             if (error instanceof FinanceApiError && error.status === 409) {
                 setSubmissionError(error.message);
             }
@@ -301,13 +319,13 @@ export function FinanceShareExperience({ children }: { children?: ReactNode }) {
             {!checkingBatch && !activeBatch && !isSubmitting && files.length === 0 && children}
 
             {files.length > 0 && (
-                <section className="mt-6 rounded-card border border-border-strong bg-bg-elevated p-5" aria-labelledby="shared-images-title">
+                <section className="mt-6 rounded-card border border-border-strong bg-bg-elevated p-5" aria-labelledby="selected-images-title">
                     <div className="flex items-start gap-3">
                         <span className="grid size-10 shrink-0 place-items-center rounded-full bg-bg-hover text-text-secondary">
                             <ScanDoodleIcon size={19} />
                         </span>
                         <div>
-                            <h2 id="shared-images-title" className="text-lg font-bold">Review shared images</h2>
+                            <h2 id="selected-images-title" className="text-lg font-bold">Review {isSharedSelection ? 'shared' : 'selected'} images</h2>
                         </div>
                     </div>
 
@@ -340,7 +358,7 @@ export function FinanceShareExperience({ children }: { children?: ReactNode }) {
                                         variant="ghost"
                                         className="shrink-0"
                                         icon={<DeleteDoodleIcon size={15} />}
-                                        onClick={() => removeFile(id)}
+                                        onClick={() => removeFile?.(id)}
                                         disabled={isSubmitting}
                                         aria-label={`Remove ${file.name || `image ${index + 1}`}`}
                                     >

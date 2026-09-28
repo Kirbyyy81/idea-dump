@@ -458,9 +458,9 @@ Deletion calls the tenant-scoped `finance_delete_transaction` RPC. Concurrent le
 
 ## Screenshot OCR
 
-### Direct upload flow
+### In-app screenshot upload
 
-The browser sends one multipart `screenshot` file directly to Render with the current Supabase access token.
+The Finance Screenshot picker accepts one or multiple images. A single image keeps the immediate direct upload flow: the browser sends one multipart `screenshot` file to Render with the current Supabase access token. Selecting two or more images opens the batch review and uses the durable signed-upload queue described below, with one independent OCR item and transaction outcome per image. This in-app selection avoids the Android share target when Chrome cannot pass Gallery images to the installed PWA.
 
 ```mermaid
 sequenceDiagram
@@ -728,13 +728,15 @@ sequenceDiagram
     OCR->>Storage: Delete and verify temporary objects
 ```
 
-### Browser-side share limits
+### Browser-side batch limits
 
 - Maximum 10 files.
 - Maximum 4 MB per file.
 - Maximum 40 MB per batch.
 - PNG, JPEG, and WebP only.
 - MIME signature and image dimensions are validated before upload.
+
+These limits and the per-image review and removal controls apply to both Android shares and multi-image selections in the Screenshot picker. Removing images until one remains keeps that selection in the background batch flow. Removing all images returns to the Screenshot picker. An incoming Android share takes priority over an unsubmitted picker selection.
 
 The service worker and Finance UI communicate through the shared protocol in [`lib/finance/share/protocol.ts`](../lib/finance/share/protocol.ts). Message types cover ready, claim, payload, acknowledgement, missing payload, and error. Runtime parsers reject malformed messages.
 

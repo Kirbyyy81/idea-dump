@@ -5,19 +5,21 @@ import { ImagePlus, X } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
 import { cn } from '@/lib/utils';
 
-interface FileUploadProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'value' | 'onChange'> {
+type FileUploadProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'value' | 'onChange' | 'multiple'> & {
     label: string;
     value: File | null;
     onChange: (file: File | null) => void;
     error?: boolean;
     previewUrl?: string | null;
     previewSize?: 'compact' | 'large';
-}
+} & ({ multiple?: false; onFilesChange?: never } | { multiple: true; onFilesChange: (files: File[]) => void });
 
 export function FileUpload({
     label,
     value,
     onChange,
+    multiple,
+    onFilesChange,
     error,
     previewUrl,
     previewSize = 'compact',
@@ -47,6 +49,12 @@ export function FileUpload({
     const displayPreviewUrl = localPreviewUrl || previewUrl;
 
     const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
+        if (multiple && onFilesChange) {
+            const selectedFiles = Array.from(event.target.files ?? []);
+            if (selectedFiles.length > 0) onFilesChange(selectedFiles);
+            event.target.value = '';
+            return;
+        }
         onChange(event.target.files?.[0] ?? null);
     };
 
@@ -61,6 +69,7 @@ export function FileUpload({
                 ref={inputRef}
                 id={inputId}
                 type="file"
+                multiple={multiple}
                 accept={accept}
                 disabled={disabled}
                 tabIndex={-1}
@@ -111,7 +120,7 @@ export function FileUpload({
                 <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
                     <div className="flex gap-2">
                         <Button type="button" variant="ghost" aria-describedby={describedBy} onClick={() => inputRef.current?.click()} disabled={disabled}>
-                            {value ? 'Change file' : 'Choose file'}
+                            {value ? 'Change file' : multiple ? 'Choose images' : 'Choose file'}
                         </Button>
                         {value && (
                             <Button type="button" variant="secondary" icon={<X size={14} />} onClick={clearFile} disabled={disabled}>
