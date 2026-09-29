@@ -242,3 +242,7 @@ The application build regenerates the worker before Next.js compilation. The roo
 ## License
 
 MIT
+
+## Android companion
+
+The native Android subproject lives in [android/](android/README.md). It targets Android 13 and newer; use JDK 17 and Android SDK 36. See its README for builds and device acceptance checks.
