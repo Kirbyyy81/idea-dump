@@ -1,6 +1,6 @@
 import { toIsoDate } from '@/shared/date';
 import { templateLines, templateValue } from '@/lib/finance/ocr/templateValues';
-import type { FinanceReferenceLabelTemplateConfiguration, FinanceApprovedReceiptPattern } from '@/lib/types';
+import type { FinanceReferenceLabelTemplateConfiguration, FinanceApprovedReceiptPattern, FinanceTemplateExtraction } from '@/lib/types';
 
 export function hasReceiptToday(text: string) {
     return templateLines(text).some((line) => /^today(?:,?\s+(?:[01]?\d|2[0-3]):[0-5]\d(?:\s*[ap]m)?)?$/i.test(line));
@@ -11,6 +11,16 @@ export function screenshotFilenameDate(filename: string | null) {
     const match = /^Screenshot[_ -](20\d{2})[-_]?([01]\d)[-_]?([0-3]\d)[_ -]([0-2]\d)[-_:]?([0-5]\d)[-_:]?([0-5]\d)(?:[_ .-]|$)/i.exec(basename);
     if (!match || Number(match[4]) > 23) return null;
     return toIsoDate(Number(match[1]), Number(match[2]), Number(match[3]));
+}
+
+// Algorithm 4 distinguishes absent capture context from malformed capture dates.
+export function evaluateFinanceFilenameDate(text: string, filename: string | null): FinanceTemplateExtraction {
+    if (!hasReceiptToday(text)) return { outcome: 'not_applicable' };
+    const basename = (filename ?? '').split(/[\\/]/).pop() ?? '';
+    const capture = /^Screenshot[_ -](20\d{2})[-_]?(\d{2})[-_]?(\d{2})[_ -](\d{2})[-_:]?(\d{2})[-_:]?(\d{2})(?:[_ .-]|$)/i.exec(basename);
+    if (!capture) return { outcome: 'unresolved_missing_context' };
+    const value = screenshotFilenameDate(filename);
+    return value ? { outcome: 'value', value } : { outcome: 'invalid_output' };
 }
 
 // A reference chunk must contain digits and cannot consume ordinary field labels.

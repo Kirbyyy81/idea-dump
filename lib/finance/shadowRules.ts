@@ -75,7 +75,7 @@ export function toFinanceShadowRules(
         if (!record(row) || typeof row.id !== 'string' || !row.id || row.id.length > 128
             || typeof row.field_name !== 'string' || !Object.hasOwn(financeTemplateFieldLabels, row.field_name)
             || typeof row.template_type !== 'string' || !Object.hasOwn(financeTemplateTypeLabels, row.template_type)
-            || !count(row.algorithm_version) || ![1, 2, 3].includes(row.algorithm_version)
+            || !count(row.algorithm_version) || ![1, 2, 3, 4].includes(row.algorithm_version)
             || !count(row.template_version) || row.template_version < 1
             || !count(row.evidence_count) || !count(row.evaluation_count) || !count(row.contradiction_count)
             || ratio(row.precision) === undefined || ratio(row.coverage) === undefined
