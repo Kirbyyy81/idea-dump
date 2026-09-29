@@ -35,7 +35,7 @@
   npm run build
   ```
 
-- Run `npm run test:log-viewer` when changing the log-viewer parser or fixtures.
+- Run `npm run test:log-viewer` when changing Log Viewer UI, parsing, pairing, or fixtures. Run `npx playwright test tests/browser/log-viewer.spec.ts` for Log Viewer interaction changes. See `document/LOG_VIEWER.md` for source and dictionary rules.
 - Run the budgeting unit, browser and isolated database suites documented in `lib/finance/AGENTS.md` when changing budgets. Browser fixtures live under `tests/browser/` and do not ship in application routes.
 - Run `npm run check:service-worker` when changing the PWA worker or Finance share-message protocol. Regenerate the checked-in artifact with `npm run build:service-worker`.
 - Validate Finance OCR changes from `services/finance-ocr/` with:
