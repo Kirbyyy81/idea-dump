@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.16.1](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.16.0...idea-dump-v0.16.1) (2026-09-28)
+
+
+### Bug Fixes
+
+* compact dashboard transaction rows ([5fd8aa5](https://github.com/Kirbyyy81/idea-dump/commit/5fd8aa5497bdcea4e82608c669612550af3287a8))
+* filter transactions by day ([e6a01d1](https://github.com/Kirbyyy81/idea-dump/commit/e6a01d1dacacd558d6b59ef15fe999ba2712218f))
+* prioritize table of contents ([61ae612](https://github.com/Kirbyyy81/idea-dump/commit/61ae6124ff2375901e8495d86602997b7824b113))
+* remove calendar legend ([3f9c231](https://github.com/Kirbyyy81/idea-dump/commit/3f9c2316fc0cb3c0477df650beb72322534b6078))
+* support batch screenshot upload ([244e01e](https://github.com/Kirbyyy81/idea-dump/commit/244e01e6001bfab62d9645acf18c328fd8d3a867))
+
 ## [0.16.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.15.3...idea-dump-v0.16.0) (2026-09-24)
 
 
