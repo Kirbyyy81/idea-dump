@@ -74,3 +74,4 @@
 - Native Android code lives in `android/`. Read its scoped `AGENTS.md` before editing.
 - Use JDK 17 and Android SDK 36. From `android/`, run `./gradlew testDebugUnitTest lintDebug assembleDebug` (Windows: `gradlew.bat`).
 - Android 13 and 16 phones and the target Android Auto head unit require physical acceptance testing.
+- CI builds Android only for changes under `android/`, changes to `.github/workflows/validate.yml`, or a manual `workflow_dispatch` run. Runs that skip Android do not publish an APK; web and Finance OCR checks still run.
