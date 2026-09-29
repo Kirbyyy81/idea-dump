@@ -42,10 +42,10 @@ begin for n in 1..3 loop
 end;
 $corrections$;
 select public.finance_refresh_rule_suggestions();
-select pg_temp.check_receipt((select count(*)=1 from public.finance_parser_templates where template_type='filename_date' and status='shadow' and evidence_count=3),'Today learns the filename date, not the upload date');
+select pg_temp.check_receipt((select count(*)=2 and count(distinct algorithm_version)=2 from public.finance_parser_templates where template_type='filename_date' and algorithm_version in (2,4) and status='shadow' and evidence_count=3),'Both date versions learn the filename date, not the upload date');
 select pg_temp.check_receipt((select count(*)=1 from public.finance_parser_templates where template_type='reference_label' and status='shadow' and evidence_count=3),'wrapped wallet references generate and replay consistently');
 select public.finance_refresh_rule_suggestions();
-select pg_temp.check_receipt((select count(*)=3 from public.finance_parser_templates),'repeat refresh does not duplicate proposals');
+select pg_temp.check_receipt((select count(*)=4 from public.finance_parser_templates),'repeat refresh does not duplicate proposals');
 select pg_temp.check_receipt(not public.finance_parser_template_configuration_is_valid('{"type":"reference_label","label":"anything","placement":"inline","max_lines":3,"join":"concat"}'),'reference labels remain allowlisted');
 select pg_temp.check_receipt(not public.finance_parser_template_configuration_is_valid('{"type":"reference_label","label":"wallet ref","placement":"inline","max_lines":30,"join":"concat"}'),'reference windows remain bounded');
 select pg_temp.check_receipt(not has_function_privilege('service_role','public.finance_parser_receipt_configs_v2(text,text,text,text,jsonb)','execute'),'receipt proposal generator is operator-only');

@@ -33,6 +33,25 @@ Validation includes `services/finance-ocr/test/guardedRules.test.ts` and `supaba
 
 Validation results on Node 22.22.0: root lint, TypeScript, 257 tests and production build passed; OCR typecheck, all 483 tests (including all SQL parity cases) and build passed. Both projects' full and production-only audits reported zero vulnerabilities. All six rollback-only SQL lifecycle suites passed on isolated PostgreSQL 17; the new suite also passed with the later receipt-format migrations applied. The local Supabase security advisor reported no issues, and catalog checks confirmed operator-only helper execution and retained RLS. pgTAP was unavailable, so its separate RLS suite remains a validation gap. The local database uses synthetic Supabase prerequisites and is not a hosted staging or production performance test.
 
+## Pending rollout: filename-date context, algorithm 4
+
+`20260929055515_finance_filename_date_context.sql` adds only algorithm 4 filename-date rules. Deploy the compatible application and OCR service before applying this migration. This change has not been deployed to production, and no templates are activated by the migration.
+
+- A receipt with `Today` but no recognised screenshot timestamp returns `unresolved_missing_context`. The runtime preserves the baseline date. It never infers the screenshot date from upload time or the current date.
+- Recognised timestamps with impossible dates or times remain `invalid_output`. Receipts without a standalone `Today` marker remain `not_applicable`.
+- Algorithms 2 and 3 keep their evaluator semantics, identities and evidence. Normal refresh can generate new algorithm 4 proposals from three distinct accepted, confirmed and date-corrected transactions within the upload cutoff. Old rejected rules are not silently reactivated.
+- Missing-context evidence is retained without a value hash and excluded from precision, contradictions, applicable evaluation counts and fresh supporting reviews. Coverage still reflects skipped cases. For algorithm 4, the five-case promotion gate counts applicable cases, not abstentions.
+- The existing refresh transaction includes algorithm 4, with invocation idempotency, safe failure recording and unchanged cron/retention. Cutoff resets, operator controls, format isolation and combined capacity limits include all three runtime field versions. Promotion still requires three fresh successful reviewed shadow transactions, no contradictions and no overlap with an active rule.
+- Payee missing-context policy and Wallet Ref extraction are unchanged.
+
+Validate on an isolated migrated database with `supabase/tests/finance_filename_date_context.test.sql`, all existing parser/receipt lifecycle suites and the OCR parity suite using `FINANCE_PARSER_TEST_DATABASE_URL` and `FINANCE_PARSER_TEST_PSQL`. Do not use a production database for these fixture tests.
+
+Local validation on 29 September: the adopted schema and all subsequent migrations, including this exact migration, applied in a disposable PostgreSQL database. Hosted Auth, Storage, Cron and queue prerequisites used metadata scaffolding, not hosted services. All nine parser/receipt lifecycle suites passed, including algorithm 4 replay, retries, capacity, promotion, disable and cutoff checks. Date-context runtime/SQL parity passed. Direct catalog checks verified RLS, server-only reads and denied execution of the three new helpers by browser and service roles.
+
+Application lint, TypeScript, 449 tests and production build passed. OCR unit tests, typecheck and build passed, as did the final 73 date-context/contract checks including SQL parity. Both production and development dependency audits reported zero vulnerabilities for the application and OCR service.
+
+The full optional parity run on PostgreSQL's built-in `C.UTF-8` locale retains one unrelated algorithm 2 failure: 150 `ß` characters remain 150 characters under SQL `upper`, while JavaScript expands them to 300 `S` characters and rejects the reference length. This migration does not change algorithm 2 normalization. That locale-dependent reference issue remains a separate validation gap; no production accuracy or full hosted-platform validation is claimed.
+
 For the current deployment state, see [Production rollout, 14 September 2026](#production-rollout-14-september-2026). The [Algorithm 3](#algorithm-3-non-amount-completion-7-september-2026) section describes the six-type contract. Earlier rollout sections record historical states, including migrations that were pending at that time.
 
 ## Production rollout, 14 September 2026
