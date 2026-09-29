@@ -34,7 +34,7 @@ function template(
         field_name: 'reference_number',
         template_type: 'strip_prefix',
         configuration: { type: 'strip_prefix', value: 'OCR-' },
-        algorithm_version: FINANCE_PARSER_TEMPLATE_ALGORITHM_VERSION,
+        algorithm_version: 3,
         template_version: 1,
         status: 'active',
         evidence_count: 3,
@@ -120,7 +120,7 @@ describe('Finance parser template configuration contract', () => {
     });
 
     it('locks the reviewed v1 guardrails', () => {
-        expect(FINANCE_PARSER_TEMPLATE_ALGORITHM_VERSION).toBe(3);
+        expect(FINANCE_PARSER_TEMPLATE_ALGORITHM_VERSION).toBe(4);
         expect(FINANCE_PARSER_TEMPLATE_GUARDRAILS).toEqual({
             minimumEvidenceCount: 3,
             minimumEvaluationCount: 5,
@@ -213,7 +213,7 @@ describe('Finance parser template record contract', () => {
             template_type: 'strip_suffix',
         }))).toContain('Template type must match the configuration discriminator.');
         expect(getFinanceParserTemplateContractErrors(template({
-            algorithm_version: 4,
+            algorithm_version: 5,
             template_version: 0,
         }))).toEqual(expect.arrayContaining([
             'Template algorithm version is not supported.',

@@ -15,6 +15,12 @@ const sources = [{ id: 'bank-1', name: 'Example bank' }];
 const unavailable = { availability: 'unavailable' };
 
 describe('shadow-rule browser projection', () => {
+    it('includes algorithm 4 date rules in the shadow list', () => {
+        const summary = toFinanceShadowRules([{ ...row, algorithm_version: 4,
+            field_name: 'transaction_date', template_type: 'filename_date' }], sources, 1);
+        expect(summary.availability).toBe('available');
+        if (summary.availability === 'available') expect(summary.rules[0].algorithm_version).toBe(4);
+    });
     it('exposes only display metadata, with normalized metrics and no raw configuration', () => {
         const summary = toFinanceShadowRules([{
             ...row, configuration: { anchor: 'SECRET' }, status_reason: 'SECRET',
@@ -41,7 +47,7 @@ describe('shadow-rule browser projection', () => {
     });
 
     it.each([
-        { algorithm_version: 4 }, { template_version: 0 }, { field_name: 'constructor' },
+        { algorithm_version: 5 }, { template_version: 0 }, { field_name: 'constructor' },
         { template_type: '__proto__' }, { evidence_count: -1 }, { evaluation_count: null },
         { contradiction_count: 0.5 }, { precision: 1.1 }, { coverage: '' },
         { precision: false }, { evaluated_at: 'invalid' }, { shadow_started_at: undefined },

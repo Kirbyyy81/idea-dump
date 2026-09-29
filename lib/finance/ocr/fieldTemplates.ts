@@ -1,5 +1,5 @@
 import { isRytPartyNoise, receiptFormatMatches } from '@/lib/finance/ocr/receiptFormat';
-import { hasReceiptToday, screenshotFilenameDate, receiptReferenceValue, approvedReceiptValue, receiptDirectionConflict } from '@/lib/finance/ocr/receiptPatterns';
+import { evaluateFinanceFilenameDate, hasReceiptToday, screenshotFilenameDate, receiptReferenceValue, approvedReceiptValue, receiptDirectionConflict } from '@/lib/finance/ocr/receiptPatterns';
 import { evaluateFinanceExtendedTemplate } from './extendedTemplates';
 import { templateValueHash } from '@/lib/finance/ocr/templateHash';
 import type {
@@ -23,6 +23,10 @@ export function extractFinanceTemplateValue(
     template: FinanceOcrFieldTemplate, text: string, payees: FinanceOcrPayee[] = [], filename: string | null = null,
     baseline?: FinanceParserTemplateBaseline,
 ): string | null | undefined {
+    if (template.algorithm_version === 4) {
+        const result = evaluateFinanceFilenameDate(text, filename);
+        return result.outcome === 'value' ? result.value : result.outcome === 'invalid_output' ? null : undefined;
+    }
     if (template.algorithm_version === 3) {
         const result = evaluateFinanceExtendedTemplate(template, text, payees, baseline);
         return result.outcome === 'value' ? result.value : result.outcome === 'invalid_output' ? null : undefined;
@@ -88,7 +92,7 @@ export function applyFinanceFieldTemplates(
     for (const field of FINANCE_TEMPLATE_FIELDS) {
         const proposals: Array<{ template: FinanceOcrFieldTemplate; value: string }> = [];
         for (const template of eligible.filter((item) => item.field_name === field).slice(0, 20)) {
-            const extended = template.algorithm_version === 3
+            const extended = template.algorithm_version === 4 ? evaluateFinanceFilenameDate(text, filename) : template.algorithm_version === 3
                 ? evaluateFinanceExtendedTemplate(template, text, payees, payload.parser_template_baseline) : null;
             let value = extended ? (extended.outcome === 'value' ? extended.value : extended.outcome === 'invalid_output' ? null : undefined)
                 : extractFinanceTemplateValue(template, text, payees, filename);
