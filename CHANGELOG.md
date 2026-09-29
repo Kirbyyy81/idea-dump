@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.2](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.16.1...idea-dump-v0.16.2) (2026-09-29)
+
+
+### Bug Fixes
+
+* abstain without screenshot dates ([9097ca3](https://github.com/Kirbyyy81/idea-dump/commit/9097ca34b582d844d84cd997dc029277ceb37852))
+
 ## [0.16.1](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.16.0...idea-dump-v0.16.1) (2026-09-28)
 
 
