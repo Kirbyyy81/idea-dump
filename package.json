@@ -13,7 +13,7 @@
     "start": "next start",
     "lint": "next lint",
     "test": "npm run check:service-worker && vitest run",
-    "test:log-viewer": "vitest run tests/log-viewer.test.ts",
+    "test:log-viewer": "vitest run tests/log-viewer",
     "test:finance-security": "vitest run tests/finance-security.test.ts",
     "test:finance-validation": "vitest run tests/finance-validation.test.ts",
     "test:finance-budgets": "vitest run tests/finance-budget",

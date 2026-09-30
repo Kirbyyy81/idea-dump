@@ -1,0 +1,32 @@
+2026-04-06 10:36:00.000 POST REQUEST >>>>>>> https://example.test/ussp/tablet/ws/v1/json/getUpdatedCustomerDetail >>>>>> {"sessionId":"session-a"}
+2026-04-06 10:36:00.010 RESPONSE SUCCESS >>>>>>> https://example.test/ussp/tablet/ws/v1/json/getUpdatedCustomerDetail >>>>>> {"responseCode":0}
+2026-04-06 10:36:01.000 JSON DATA String - {"requestId":"notification-1"}
+2026-04-06 10:36:01.010 JSON DATA String - {"configName":"CHECK_CONFIG"}
+2026-04-06 10:36:01.020 POST REQUEST >>>>>>> https://example.test/ussp/tablet/ws/v1/json/getUserWorkFlowNotifications >>>>>> {"contentData":"encoded-notification","sessionId":"session-a"}
+2026-04-06 10:36:01.030 POST REQUEST >>>>>>> https://example.test/ussp/tablet/ws/v1/json/getMasterConfig >>>>>> {"contentData":"encoded-config","sessionId":"session-a"}
+2026-04-06 10:36:01.040 RESPONSE SUCCESS >>>>>>> https://example.test/ussp/tablet/ws/v1/json/getMasterConfig >>>>>> {"configValue":true,"responseCode":0}
+2026-04-06 10:36:01.050 RESPONSE SUCCESS >>>>>>> https://example.test/ussp/tablet/ws/v1/json/getUserWorkFlowNotifications >>>>>> {"responseId":"notification-1","responseCode":0}
+2026-04-06 10:36:02.000 JSON DATA String - {"amount":12,"requestId":"balance-1"}
+2026-04-06 10:36:02.010 RESPONSE SUCCESS >>>>>>> https://example.test/ussp/tablet/ws/v1/json/eodclosing/validateOpeningAndClosingBalanceAmount >>>>>> {"responseCode":0}
+2026-04-06 10:36:03.000 JSON DATA String - {"manualCategoryName":"Training"}
+2026-04-06 10:36:03.010 POST REQUEST >>>>>>> https://example.test/ussp/tablet/ws/v1/json/getManuals >>>>>> {"contentData":"encoded-manual","sessionId":"session-a"}
+2026-04-06 10:36:03.020 RESPONSE SUCCESS >>>>>>> https://example.test/ussp/tablet/ws/v1/json/getManuals >>>>>> {"manuals":[],"responseCode":0}
+2026-04-06 10:36:04.000 JSON DATA String - {"isEpp":false,"partNo":"part-a","planType":"PREPAID","securityId":"person-a","securityType":"ID"}
+2026-04-06 10:36:04.010 RESPONSE SUCCESS >>>>>>> https://example.test/ussp/tablet/ws/v1/json/getPlanListByDevice >>>>>> {"planList":[],"responseCode":0}
+2026-04-06 10:36:05.000 JSON DATA String - {"functionName":"PREPAID_CUSTOMER_ID_IMAGE","requestId":"upload-1"}
+2026-04-06 10:36:05.010 RESPONSE SUCCESS >>>>>>> https://example.test/ussp/tablet/ws/v1/json/eodclosing/uploadSupportingDocumentToDb >>>>>> {"responseId":"upload-1","responseCode":0}
+2026-04-06 10:36:06.000 JSON DATA String - {"requestId":"notification-2"}
+2026-04-06 10:36:06.010 POST REQUEST >>>>>>> https://example.test/ussp/tablet/ws/v1/json/getUpdatedCustomerDetail >>>>>> {"sessionId":"session-a"}
+2026-04-06 10:36:06.020 POST REQUEST >>>>>>> https://example.test/ussp/tablet/ws/v1/json/getUserWorkFlowNotifications >>>>>> {"contentData":"encoded-notification-2","sessionId":"session-a"}
+2026-04-06 10:36:06.030 RESPONSE SUCCESS >>>>>>> https://example.test/ussp/tablet/ws/v1/json/getUserWorkFlowNotifications >>>>>> {"responseId":"notification-2","responseCode":0}
+2026-04-06 10:36:06.040 RESPONSE SUCCESS >>>>>>> https://example.test/ussp/tablet/ws/v1/json/getUpdatedCustomerDetail >>>>>> {"responseCode":0}
+2026-04-06 10:36:07.000 POST REQUEST >>>>>>> https://example.test/ussp/tablet/ws/v1/json/getUserWorkFlowNotifications >>>>>> {"contentData":"encoded-error","sessionId":"session-a"}
+2026-04-06 10:36:07.010 RESPONSE ERROR >>>>>>> https://example.test/ussp/tablet/ws/v1/json/getUserWorkFlowNotifications >>>>>> Response{protocol=h2, code=500, message=, url=https://example.test/ussp/tablet/ws/v1/json/getUserWorkFlowNotifications}{
+  "message":"An unexpected error occurred",
+  "request_id":"transport-1"
+}
+2026-04-06 10:36:08.000 JSON DATA String - {"payload":"{ "customer":{ "name": "Sample"}}"}
+2026-04-06 10:36:08.010 POST REQUEST >>>>>>> https://example.test/ussp/tablet/ws/v1/json/redirectToCashierPayment >>>>>> {"contentData":"encoded-payment","sessionId":"session-a"}
+2026-04-06 10:36:08.020 RESPONSE SUCCESS >>>>>>> https://example.test/ussp/tablet/ws/v1/json/redirectToCashierPayment >>>>>> {"responseCode":0}
+2026-04-06 10:36:09.000 JSON DATA String - {"paidAmount":"0.00","payload":"{ "customer":{ "name": "Sample"}}"}
+2026-04-06 10:36:09.010 RESPONSE SUCCESS >>>>>>> https://example.test/ussp/tablet/ws/v1/json/paymentProcessForQueue >>>>>> {"responseCode":0}

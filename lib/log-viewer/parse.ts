@@ -1,4 +1,5 @@
-import { LogBodyKind, LogEvent, LogLineType } from '@/lib/log-viewer/types';
+import { LogBodyKind, LogEvent, LogLineType, LogViewerSource } from '@/lib/log-viewer/types';
+import { resolveSources, sourceFromUrl, sourceParsers } from './sources';
 
 const HTTP_METHODS = new Set([
   'GET',
@@ -31,7 +32,8 @@ function markerText(text: string): string {
 }
 
 function classifyLine(rest: string, hasTimestamp: boolean): LogLineType {
-  const marker = markerText(rest).toUpperCase();
+  const marker = markerText(rest).split(/\s+>{2,}/)[0]
+    .replace(/\s+(?:URL:\s*)?https?:\/\/[\s\S]*$/i, '').trim().toUpperCase();
 
   if (/^CONTENT\s+DATA\b/.test(marker)) return 'content_data';
   if (/^JSON\s+DATA\s+STRING\b/.test(marker)) return 'content_data';
@@ -40,7 +42,7 @@ function classifyLine(rest: string, hasTimestamp: boolean): LogLineType {
     /^AUTH_REQUEST\b/.test(marker) ||
     /^EKYC\s+BASIC\s+AUTH\s+REQUEST\b/.test(marker) ||
     /^(?:GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+REQUEST\b/.test(marker) ||
-    /\bREQUEST(?:_|[\s>])/.test(marker)
+    /\bREQUEST(?:_|[\s>]|$)/.test(marker)
   ) {
     return 'request';
   }
@@ -106,8 +108,14 @@ function parseBody(bodyText: string | undefined): {
   const trimmed = bodyText.trim();
   if (!trimmed || trimmed === '(No Body)') return { kind: 'none', raw: trimmed || undefined };
 
+  try {
+    return { kind: 'json', raw: trimmed, json: JSON.parse(trimmed) as unknown };
+  } catch { /* Some loggers append metadata after the JSON body. */ }
   const jsonCandidate = extractJsonCandidate(trimmed);
-  if (!jsonCandidate) return { kind: 'text', raw: trimmed };
+  if (!jsonCandidate) {
+    if (/^[\[{]/.test(trimmed)) return { kind: 'text', raw: trimmed, parseError: true };
+    return { kind: 'text', raw: trimmed };
+  }
 
   try {
     const parsed = JSON.parse(jsonCandidate) as unknown;
@@ -147,11 +155,6 @@ function getUrlParts(url: string | undefined): { host?: string; path?: string; e
     const path = segments.length > 0 ? `/${segments.join('/')}` : withoutQuery;
     return { path, endpointKey: path };
   }
-}
-
-function extractContentDataFunction(rest: string): string | undefined {
-  const match = rest.match(/CONTENT\s+DATA\s*>>\s*([^>]+?)\s*>>/i);
-  return match?.[1]?.trim();
 }
 
 function extractCrashContext(rest: string): string | undefined {
@@ -224,7 +227,9 @@ function findStringField(value: unknown, fieldName: string): string | undefined 
   return undefined;
 }
 
-export function parseLogLine(line: string, lineNumber: number, endLineNumber?: number): LogEvent {
+export function parseLogLine(
+  line: string, lineNumber: number, endLineNumber?: number, inheritedSource?: LogViewerSource,
+): LogEvent {
   const rawLine = line;
   const tsMatch = line.match(TIMESTAMP_PATTERN);
 
@@ -238,7 +243,7 @@ export function parseLogLine(line: string, lineNumber: number, endLineNumber?: n
     .map((p) => p.trim())
     .filter(Boolean);
 
-  const defaultEventType = markerText(parts[0] ?? rest).trim();
+  const defaultEventType = markerText(parts[0] ?? rest).replace(/\s+(?:URL:\s*)?https?:\/\/[\s\S]*$/i, '').trim();
   const eventType = lineType === 'crash'
     ? 'CRASH'
     : lineType === 'info'
@@ -247,13 +252,18 @@ export function parseLogLine(line: string, lineNumber: number, endLineNumber?: n
 
   const url = lineType === 'content_data' || lineType === 'info' ? undefined : extractUrl(rest);
   const urlParts = getUrlParts(url);
+  const explicitSource = sourceFromUrl(url);
+  const source = explicitSource === 'unknown' ? inheritedSource ?? 'unknown' : explicitSource;
+  const record = sourceParsers[source](rest, lineType, url);
+  const endpointName = urlParts.path?.split('/').filter(Boolean).at(-1) ?? record.endpointName;
   const method = extractMethod(rest, parts, eventType);
-  const body = parseBody(rest);
+  const body = parseBody(record.bodyText);
+  const header = record.bodyText ? rest.slice(0, rest.lastIndexOf(record.bodyText)) : rest;
   const requestId = findStringField(body.json, 'requestId');
   const responseId = findStringField(body.json, 'responseId');
   const clientRequestId = findStringField(body.json, 'clientRequestId');
   const functionName = lineType === 'content_data'
-    ? extractContentDataFunction(rest)
+    ? record.functionName
     : lineType === 'crash'
       ? extractCrashContext(rest)
       : undefined;
@@ -267,6 +277,8 @@ export function parseLogLine(line: string, lineNumber: number, endLineNumber?: n
     timestampMs,
     lineType,
     eventType,
+    source,
+    endpointName,
     method,
     url,
     endpointKey: lineType === 'crash'
@@ -275,10 +287,10 @@ export function parseLogLine(line: string, lineNumber: number, endLineNumber?: n
         ? 'Error'
         : lineType === 'info'
           ? eventType
-          : urlParts.endpointKey,
+          : urlParts.endpointKey ?? endpointName,
     host: urlParts.host,
     path: urlParts.path,
-    httpStatus: extractHttpStatus(rest, parts),
+    httpStatus: record.httpStatus ?? extractHttpStatus(header, header.split(/\s+>{2,}\s*/)),
     functionName,
     requestId,
     responseId,
@@ -315,5 +327,12 @@ export function parseLogText(text: string): LogEvent[] {
     i = endIndex;
   }
 
-  return events;
+  const sources = resolveSources(events);
+  let sourceSegment = 0;
+  return events.map((event, i) => {
+    if (i > 0 && sources[i] !== sources[i - 1]) sourceSegment += 1;
+    const parsed = sources[i] === event.source ? event
+      : parseLogLine(event.rawLine, event.lineNumber, event.endLineNumber, sources[i]);
+    return { ...parsed, sourceSegment };
+  });
 }

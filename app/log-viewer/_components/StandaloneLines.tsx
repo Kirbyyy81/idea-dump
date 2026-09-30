@@ -3,6 +3,7 @@
 import { Textarea } from '@/components/atoms/Textarea';
 import { LogEvent, UnparsedLogLine } from '@/lib/log-viewer/types';
 import { EventHeader } from './EventHeader';
+import { JsonOrText } from './JsonTree';
 
 export function StandaloneLines({
   unparsedLines,
@@ -22,11 +23,7 @@ export function StandaloneLines({
         {unmatchedContentData.map((event) => (
           <div key={event.id} className="min-w-0 space-y-1">
             <EventHeader event={event} />
-            <Textarea
-              className="min-h-[70px] w-full min-w-0 text-xs font-mono"
-              value={event.rawLine}
-              readOnly
-            />
+            <JsonOrText title="Content data payload" event={event} />
           </div>
         ))}
         {unparsedLines.map((line) => (

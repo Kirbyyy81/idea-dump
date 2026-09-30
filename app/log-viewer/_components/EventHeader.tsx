@@ -6,7 +6,7 @@ export function EventHeader({ event }: { event: LogEvent }) {
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-text-muted">
       <span className="font-mono">{event.timestamp || '-'}</span>
-      <span className="px-2 py-0.5 rounded border border-border-subtle bg-bg-subtle text-text-secondary">
+      <span className="min-w-0 max-w-full break-words px-2 py-0.5 rounded border border-border-subtle bg-bg-subtle text-text-secondary">
         {event.eventType || 'UNKNOWN'}
       </span>
       <span className="px-2 py-0.5 rounded border border-border-subtle bg-bg-base text-text-secondary">
