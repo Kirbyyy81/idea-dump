@@ -3,6 +3,7 @@ name: validate
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -12,8 +13,67 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect project changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      web: ${{ steps.filter.outputs.web }}
+      finance_ocr: ${{ steps.filter.outputs.finance_ocr }}
+      android: ${{ steps.filter.outputs.android }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          # Pushes compare with the previous push; PRs compare with their base.
+          base: ${{ github.ref }}
+          filters: |
+            web:
+              - 'app/**'
+              - 'components/**'
+              - 'lib/**'
+              - 'public/**'
+              - 'scripts/**'
+              - 'service-worker/**'
+              - 'shared/**'
+              - 'tests/**'
+              - 'supabase/**'
+              - '*.{ts,tsx,js,mjs,cjs,mts,cts}'
+              - 'tsconfig*.json'
+              - 'package.json'
+              - 'package-lock.json'
+              - '.eslintrc*'
+              - '.eslintignore'
+              - '.npmrc'
+              - '.nvmrc'
+              - '.env.example'
+              - '.github/workflows/validate.yml'
+            finance_ocr:
+              - 'services/finance-ocr/**'
+              # The worker and its tests import these shared application modules.
+              - 'lib/finance/**'
+              - 'lib/types.ts'
+              - 'shared/**'
+              - 'supabase/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'tsconfig.json'
+              - '.npmrc'
+              - '.nvmrc'
+              - 'render.yaml'
+              - '.github/workflows/validate.yml'
+            android:
+              - 'android/**'
+              - '.github/workflows/validate.yml'
+
   web:
     name: Web application
+    needs: changes
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.web == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -55,6 +115,8 @@ jobs:
 
   finance_ocr:
     name: Finance OCR service
+    needs: changes
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.finance_ocr == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
@@ -89,6 +151,8 @@ jobs:
 
   android:
     name: Android companion
+    needs: changes
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.android == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:

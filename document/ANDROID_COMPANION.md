@@ -12,7 +12,7 @@ Prepare compatible application code and apply the canonical forward migrations b
 
 Keep `APP_ORIGIN` set to the public IdeaDump HTTPS origin. The Android build's `companionOrigin` must match it. Existing server-only Supabase credentials are used; no new secret belongs in the APK.
 
-Do not replay the baseline on an existing Supabase project. Preview pending migrations against the intended project before deployment. The changes have been tested on isolated PostgreSQL; they have not been applied to a hosted project by this implementation task.
+Do not replay the baseline on an existing Supabase project. Preview pending migrations against the intended project before deployment. The changes were tested on isolated PostgreSQL and applied to the live IdeaDump project on 2026-09-29. Remote migration history matches the three canonical versions listed above.
 
 ## Pairing protocol
 
@@ -89,13 +89,20 @@ Both isolated SQL suites passed against the adopted schema plus forward migratio
 
 Root lint, TypeScript checks, production build, and both dependency audits passed (zero vulnerabilities). Finance OCR typecheck, build, both audits, and 322 tests passed; 131 optional tests were skipped. All 467 root application tests across 80 files passed, including companion HTTP/auth/parser coverage. The suite ran in four groups with one worker; worker-startup timeouts and an execution pause required reruns. No test assertions failed in the completed runs.
 
+## Hosted rollout verification, 2026-09-29
+
+All three companion migrations were applied to the live IdeaDump Supabase project. The deployed pairing endpoint had returned HTTP 503 because the companion schema was missing. After deployment, pairing creation and proof-based polling both returned HTTP 200. The unapproved diagnostic request correctly remained pending and was removed after verification. The verification URL points to `https://idea-dump-alpha.vercel.app`.
+
+The four new tables have RLS enabled and deny direct access to `anon` and `authenticated`; the companion functions are security invoker and executable only by the server role. The security advisor reports informational [RLS without policies](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy) findings for these intentionally server-only tables. Existing warnings for [pg_net in public](https://supabase.com/docs/guides/database/database-linter?lint=0014_extension_in_public) and [leaked-password protection](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection) are unchanged.
+
+This verifies pairing bootstrap and polling, not the user's browser approval or real notification capture. No user account was approved by the diagnostic.
+
 ## Remaining acceptance and rollout
 
-- Deploy the three migrations and compatible web application before Finance pairing can work against the configured origin.
 - Test browser pairing through password and email sign-in, capture real Ryt/TNG notifications, interrupt connectivity, then confirm/reject/mark duplicates through the deployed PWA.
 - Verify actual Spotify playback and LRCLIB matching, screen-off behavior, permission revocation, and process recreation on Android 13 and Android 16. Synthetic transport tests do not establish Spotify or head-unit behavior.
 - Record the Android Auto version, head unit, and wired/wireless connection; both lyric fields and uninterrupted Spotify audio must pass on that hardware.
 - Keep UOB disabled until a sanitized sample has passed parser and device validation.
-- Production signing and deployment remain separate from this sideload implementation.
+- Production APK signing and distribution remain separate from this sideload implementation.
 
 For rollback, pause capture on the phone and revoke affected credentials in Finance settings. Keep additive database tables and lineage intact. Local events stay encrypted until accepted or explicitly discarded.
