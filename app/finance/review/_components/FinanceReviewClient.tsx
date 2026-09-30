@@ -367,7 +367,7 @@ export function FinanceReviewClient({
                                         formattedAmount={candidate.payload.amount != null ? formatCurrency(candidate.payload.amount, candidate.payload.currency || 'MYR') : null}
                                         status={<>
                                             {candidate.id === selectedId && <span className="mb-1 block font-semibold text-accent-blue">Selected</span>}
-                                            <span className="block text-text-muted">Confidence {Math.round((candidate.confidence || 0) * 100)}%</span>
+                                            <span className="block text-text-muted">{candidate.intake?.source === 'notification' ? 'Bank notification' : `Confidence ${Math.round((candidate.confidence || 0) * 100)}%`}</span>
                                             {outcome !== 'none' && <span className="mt-1 flex items-center gap-1 font-semibold text-warning"><WarningDoodleIcon size={13} />{outcome === 'strong' ? 'Strong duplicate match' : 'Possible duplicate'}</span>}
                                         </>}
                                     />
@@ -391,7 +391,7 @@ export function FinanceReviewClient({
                                     </div>
                                 )}
                                 {selected.payload.matched_rule_names.length > 0 && <p className="mt-3 text-sm text-text-muted">Matched: {selected.payload.matched_rule_names.join(', ')}</p>}
-                                <p className="mt-2 text-xs text-text-muted">OCR confidence: {selected.intake?.ocr_confidence === null || selected.intake?.ocr_confidence === undefined ? 'Unavailable' : `${Math.round(selected.intake.ocr_confidence)}%`} · Normalizer version: {selected.intake?.normalizer_version ?? 'Legacy'}</p>
+                                {selected.intake?.source === 'notification' ? <p className="mt-2 text-xs text-text-muted">Bank notification. {selected.intake.notification?.date_provenance === 'posted_at' ? 'Date suggested from notification time in Malaysia. Verify before confirming.' : selected.intake.notification?.date_provenance === 'notification_text' ? 'Date read from notification.' : 'Transaction date unavailable.'}</p> : <p className="mt-2 text-xs text-text-muted">OCR confidence: {selected.intake?.ocr_confidence === null || selected.intake?.ocr_confidence === undefined ? 'Unavailable' : `${Math.round(selected.intake.ocr_confidence)}%`} · Normalizer version: {selected.intake?.normalizer_version ?? 'Legacy'}</p>}
                                 <FinanceFormErrorSummary errors={fieldErrors} />
 
                                 {duplicateOutcome(selected) !== 'none' && (
@@ -452,7 +452,7 @@ export function FinanceReviewClient({
                                     <Textarea id="review-notes" label="Notes" containerClassName="md:col-span-2" errorMessage={fieldErrors.notes} data-finance-field="notes" maxLength={MAX_FINANCE_NOTES_LENGTH} value={form.notes} onChange={(event) => setReviewField('notes', event.target.value)} />
                                 </div>
 
-                                <details className="mt-5 border border-border-default bg-bg-subtle"><summary className="cursor-pointer px-4 py-3 text-sm font-semibold">Normalized OCR text</summary><pre className="max-h-64 overflow-auto whitespace-pre-wrap border-t border-border-default p-4 text-xs text-text-secondary">{selected.intake?.ocr_normalized_text || selected.intake?.ocr_text || 'No OCR text available.'}</pre></details>
+                                {selected.intake?.source === 'notification' ? <details className="mt-5 border border-border-default bg-bg-subtle"><summary className="cursor-pointer px-4 py-3 text-sm font-semibold">Original notification</summary><div className="border-t border-border-default p-4"><pre className="max-h-64 overflow-auto whitespace-pre-wrap text-xs text-text-secondary">{[selected.intake.notification?.title, selected.intake.notification?.body, selected.intake.notification?.subtext].filter(Boolean).join('\n')}</pre><p className="mt-3 text-xs text-text-muted">Original text is deleted when you confirm, cancel, or mark this item as duplicate.</p></div></details> : <details className="mt-5 border border-border-default bg-bg-subtle"><summary className="cursor-pointer px-4 py-3 text-sm font-semibold">Normalized OCR text</summary><pre className="max-h-64 overflow-auto whitespace-pre-wrap border-t border-border-default p-4 text-xs text-text-secondary">{selected.intake?.ocr_normalized_text || selected.intake?.ocr_text || 'No OCR text available.'}</pre></details>}
                                 {selected.intake?.ocr_raw_text && selected.intake.ocr_raw_text !== selected.intake.ocr_normalized_text && <details className="mt-3 border border-border-default bg-bg-subtle"><summary className="cursor-pointer px-4 py-3 text-sm font-semibold">Raw OCR text · {selected.intake.ocr_confidence === null ? 'confidence unavailable' : `${Math.round(selected.intake.ocr_confidence)}% confidence`}</summary><pre className="max-h-64 overflow-auto whitespace-pre-wrap border-t border-border-default p-4 text-xs text-text-secondary">{selected.intake.ocr_raw_text}</pre></details>}
 
                                 <div className="mt-5 grid grid-cols-2 gap-3 sm:flex sm:justify-end">
