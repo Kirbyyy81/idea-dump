@@ -97,6 +97,14 @@ The four new tables have RLS enabled and deny direct access to `anon` and `authe
 
 This verifies pairing bootstrap and polling, not the user's browser approval or real notification capture. No user account was approved by the diagnostic.
 
+## Android Auto loading regression, 2026-09-30
+
+A platform media-browser connection to the original APK timed out on the connected Samsung SM-N986B. `LyricsMediaService.onGetSession` rejected Media3's unidentified legacy-controller placeholder before the framework could finish binding. Media3 documents this [legacy binding special case](https://developer.android.com/reference/androidx/media3/session/MediaSessionService#onGetSession(androidx.media3.session.MediaSession.ControllerInfo)). Authorization now runs in `MediaLibrarySession.Callback.onConnect`, where the actual client identity is available, retaining the trusted-client, own-package, and Android Auto checks.
+
+A second failing regression showed that a Media3 subscription succeeded without announcing available content. The service now resolves the browsable root through `onGetItem`, uses the default subscription callback, and notifies subscribers when displayed metadata changes.
+
+Both new browser tests failed against the original installed APK and passed after updating it. The two existing media-proxy tests also passed, for four device tests total. Eight unit tests, Android lint, and debug/test APK assembly passed. The fixed APK was installed on the connected SM-N986B; the temporary test helper was removed. The phone used for the reported car test was a different device, so these results do not replace a retest with that phone and head unit.
+
 ## Remaining acceptance and rollout
 
 - Test browser pairing through password and email sign-in, capture real Ryt/TNG notifications, interrupt connectivity, then confirm/reject/mark duplicates through the deployed PWA.
