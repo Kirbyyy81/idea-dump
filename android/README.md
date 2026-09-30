@@ -62,7 +62,7 @@ adb -s YOUR_DEVICE_SERIAL shell am instrument -w -r app.ideadump.companion.test/
 
 Unit tests cover filtering, stable identities, Unicode LRC parsing, offsets, cue selection, and playback anchors. Device tests cover real Keystore encryption, queue reopening/deduplication/capacity, distinct media fields, transport forwarding, and screen controls. Storage tests use disposable test databases and synthetic events. The screen test leaves capture disabled and the timing offset at zero; use an unpaired test installation.
 
-The validation workflow runs on every push and pull request. Its Android job runs native unit tests, lint, and debug assembly only when `android/**` or `.github/workflows/validate.yml` changes, then uploads the debug APK. Pushes check the changes since the previous push; pull requests check the full PR diff. Web and Finance OCR validation still run each time. Use **Actions > validate > Run workflow** to force an APK build without changing files. Instrumentation runs separately on the selected phone.
+The validation workflow runs on every push and pull request. Its Android job runs native unit tests, lint, and debug assembly only when `android/**` or `.github/workflows/validate.yml` changes, then uploads the debug APK. Pushes check the changes since the previous push; pull requests check the full PR diff. Web and Finance OCR validation also run only for their relevant files, including shared code and configuration. A manual run validates all three projects. Use **Actions > validate > Run workflow** to force an APK build without changing files. Instrumentation runs separately on the selected phone.
 
 ## Physical acceptance still required
 
