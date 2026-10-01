@@ -4,7 +4,11 @@ The `/log-viewer` tool parses pasted or uploaded logs in the browser. Log conten
 
 ## Payload display
 
-Open a request, response, or content-data panel to read indented, syntax-coloured JSON at every nesting level. Long lines scroll within the panel. The header's raw-line button reveals the original record below the formatted payload, and hides it when pressed again. It also opens a closed panel. Raw controls are independent between records.
+Open a request, response, or content-data panel to read indented, syntax-coloured JSON. Objects and arrays start expanded and can be folded individually using their arrow buttons, or together using **Expand all** and **Collapse all**. Folded values retain their braces or brackets and show an ellipsis. All controls support the keyboard. Long lines scroll within the panel.
+
+The header's **Copy JSON** button copies the complete payload with two-space indentation, including values hidden by folding, even when the panel is closed. It reports clipboard success or failure without changing the panel, raw visibility, or folding. Copy is available only for valid JSON, including primitive values.
+
+The header's raw-line button reveals the original record below the formatted payload, and hides it when pressed again. It also opens a closed panel. Raw, copy, and folding controls are independent between records. Closing a payload unmounts its formatted content; reopening it starts expanded again.
 
 Text and empty bodies remain readable. Malformed JSON displays the extracted text with a warning, without repairing or replacing values. The original record, including multiline content and its line references, remains available through the raw control.
 
@@ -46,6 +50,6 @@ npm run test:log-viewer
 npx playwright test tests/browser/log-viewer.spec.ts
 ```
 
-The first command runs parser, dictionary, correlation, and component tests. The browser suite checks desktop and mobile uploads, deep JSON rendering, keyboard-operated raw controls, missing requests, and the explicit parse action for large pastes. Browser harnesses live under `tests/browser/` and do not ship in application routes.
+The first command runs parser, dictionary, correlation, and component tests. The browser suite checks desktop and mobile uploads, deep JSON rendering, keyboard-operated folding, copying complete JSON from folded or closed panels, independent raw controls, missing requests, and the explicit parse action for large pastes. Browser harnesses live under `tests/browser/` and do not ship in application routes.
 
 Also run the audits, lint, TypeScript, full tests, and production build required by the repository guide.

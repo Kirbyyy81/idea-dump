@@ -26,6 +26,63 @@ test('expands all JSON levels and independently reveals raw lines using the keyb
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width + 2);
 });
 
+test('copies complete request and response JSON while folding with the keyboard', async ({ page, context }, testInfo) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  // Windows clipboard text uses CRLF even when writeText receives LF.
+  const readClipboard = () => page.evaluate(async () => (await navigator.clipboard.readText()).replace(/\r\n/g, '\n'));
+  const requestBody = { plans: [{ details: { name: 'Example plan', addons: [true, null, 2] } }] };
+  const responseBody = { result: { ok: true, value: '<script>escaped</script>' } };
+  await page.goto('/log-viewer');
+  await page.getByRole('textbox', { name: 'Paste raw log text' }).fill([
+    '2026-09-24 10:00:00.000 REQUEST https://example.test/yesshop/mobile/ws/v1/json/getPlanPriceInfo ' + JSON.stringify(requestBody),
+    '2026-09-24 10:00:00.100 RESPONSE https://example.test/yesshop/mobile/ws/v1/json/getPlanPriceInfo ' + JSON.stringify(responseBody),
+  ].join('\n'));
+  const request = page.getByRole('region', { name: 'Request body' });
+  const response = page.getByRole('region', { name: 'Response body' });
+  await request.getByRole('button', { name: 'Copy request JSON' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(request.getByRole('status')).toHaveText('JSON copied.');
+  expect(await readClipboard()).toBe(JSON.stringify(requestBody, null, 2));
+  await expect(request.locator('code')).toHaveCount(0);
+
+  await request.getByRole('button', { name: 'Request body', exact: true }).click();
+  const path = '$["plans"]';
+  await request.getByRole('button', { name: 'Collapse ' + path, exact: true }).focus();
+  await page.keyboard.press('Space');
+  await expect(request.getByRole('button', { name: 'Expand ' + path, exact: true })).toHaveAttribute('aria-expanded', 'false');
+  await expect(request.locator('code')).not.toContainText('Example plan');
+  await request.getByRole('button', { name: 'Copy request JSON' }).click();
+  expect(await readClipboard()).toBe(JSON.stringify(requestBody, null, 2));
+  await request.getByRole('button', { name: 'Expand ' + path, exact: true }).focus();
+  await page.keyboard.press('Enter');
+  await expect(request.locator('code')).toHaveText(JSON.stringify(requestBody, null, 2));
+  await request.getByRole('button', { name: 'Collapse all' }).click();
+  await expect(request.locator('code')).toHaveText('{…}');
+
+  await response.getByRole('button', { name: 'Response body', exact: true }).click();
+  await expect(response.locator('code')).toHaveText(JSON.stringify(responseBody, null, 2));
+  await response.getByRole('button', { name: 'Copy response JSON' }).focus();
+  await page.keyboard.press('Space');
+  await expect(response.getByRole('status')).toHaveText('JSON copied.');
+  expect(await readClipboard()).toBe(JSON.stringify(responseBody, null, 2));
+  await expect(request.locator('code')).toHaveText('{…}');
+  await request.getByRole('button', { name: 'Expand all' }).click();
+  await expect(request.locator('code')).toHaveText(JSON.stringify(requestBody, null, 2));
+  await expect(request.getByRole('button', { name: 'Copy request JSON' })).toHaveText('Copy JSON');
+  await expect(response.getByRole('button', { name: 'Copy response JSON' })).toHaveText('Copy JSON');
+  const headerButtons = await response.locator('section > div').first().getByRole('button').all();
+  const boxes = await Promise.all(headerButtons.map(button => button.boundingBox()));
+  for (let i = 0; i < boxes.length; i++) {
+    for (let j = i + 1; j < boxes.length; j++) {
+      const a = boxes[i]!;
+      const b = boxes[j]!;
+      expect(a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y).toBe(true);
+    }
+  }
+  await page.screenshot({ path: testInfo.outputPath('copy-and-fold-json.png'), fullPage: true });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width + 2);
+});
+
 for (const source of ['yes-shop', 'ussp']) {
   test(`imports ${source} and preserves grouped missing-request content`, async ({ page }) => {
     await page.goto('/log-viewer');
