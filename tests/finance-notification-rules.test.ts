@@ -13,6 +13,11 @@ const rule = (overrides: Partial<FinanceOcrRule> = {}): FinanceOcrRule => ({
     created_at: '2026-09-25', auto_created_at: null, ...overrides,
 });
 describe('notification rules', () => {
+    it('matches manual phrases against consistently normalized notification text', () => {
+        const result = applyNotificationRules(payload, 'You’ve\n sent ＲＭ\u00a0１２.３０ to Alex', [rule({ pattern: "you've sent rm 12.30 to alex", match_type: 'exact_phrase' })]);
+        expect(result.payload.category_id).toBe('income');
+        expect(result.matched_rule_id).toBe('rule-1');
+    });
     it('applies manual rules while preserving the explicit source and parser fields', () => {
         const result = applyNotificationRules(payload,'Alex has transferred RM 12.30 to you',[rule()]);
         expect(result.payload).toMatchObject({ source_id: 'tng', category_id: 'income', amount: 12.3, payee_name: 'Alex', notes: null });

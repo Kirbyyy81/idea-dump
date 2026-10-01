@@ -46,7 +46,14 @@ Public pairing bootstrap has a database-enforced limit of 100 new requests per m
 }
 ```
 
-Ryt's package is `my.rytbank.app`. UOB (`com.uob.mightymy`) is intentionally disabled pending a real sample. Incoming TNG and outgoing Ryt wording supplied by the owner have parser fixtures.
+Ryt's package is `my.rytbank.app`. UOB (`com.uob.mightymy`) is intentionally disabled pending a real sample. Supported templates have anonymized parser fixtures:
+
+- TNG: `PERSON has transferred RM X.XX to you. Tap here to check the transaction details` suggests income and the sender.
+- TNG: `RM X.XX has been successfully transferred to PERSON.` suggests an expense and the recipient.
+- TNG: `RM X.XX received from PERSON for Fund Transfer.` suggests income and the sender, excluding the fixed suffix.
+- Ryt: `You've sent RM X.XX to PERSON on DATE, 1:25pm (GMT+8) using your main account` suggests an expense, the recipient, and the explicit date.
+
+Parsing and manual-rule matching use a working copy normalized with Unicode NFKC, collapsed whitespace, and straight apostrophes. Names retain Unicode and internal punctuation such as `A/P` and `@`. Raw text and replay digests remain unchanged. Multiple monetary values leave the amount unset; unsupported wording does not guess a direction.
 
 A successful response returns the durable event status and intake identifier. Identical owner/event replays are safe; a changed payload with the same identifier returns 409. Notification ingestion creates review candidates only. No companion endpoint can confirm a transaction.
 

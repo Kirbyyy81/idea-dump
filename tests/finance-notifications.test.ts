@@ -80,3 +80,76 @@ describe('notification date validation', () => {
         }
     });
 });
+
+
+describe('notification text normalization', () => {
+    it.each([
+        ['RM 25.90 has been successfully transferred to Alex Tan.', 'expense', 'Alex Tan', 25.9],
+        ['RM 1,025.90 received from Mei Ling for Fund Transfer.', 'income', 'Mei Ling', 1025.9],
+        ['RM 25.90 has been successfully transferred to Alex Tan', 'expense', 'Alex Tan', 25.9],
+        ['RM 25.90 received from Mei Ling for Fund Transfer', 'income', 'Mei Ling', 25.9],
+    ])('parses observed TNG wording: %s', (text, direction, payeeName, amount) => {
+        expect(parseFinanceNotification(fixture(text))).toMatchObject({
+            status: 'review', date_provenance: 'posted_at',
+            payload: { amount, direction, payee_name: payeeName, transaction_date: '2026-09-26' },
+        });
+    });
+    it.each([
+        '  RM\u00a025.90\n has been  successfully\ttransferred to\nAlex\u00a0Tan.  ',
+        'ＲＭ ２５.９０ has been successfully transferred to Ａｌｅｘ Ｔａｎ．',
+    ])('normalizes whitespace and full-width characters: %s', text => {
+        expect(parseFinanceNotification(fixture(text)).payload).toMatchObject({ amount: 25.9, direction: 'expense', payee_name: 'Alex Tan' });
+    });
+    it('normalizes Ryt apostrophes, whitespace and explicit dates', () => {
+        const event = fixture('You’ve\n sent RM\u00a010.00 to Jean D’Ávila on ２５ Sep ２０２６,\n 1:25pm (GMT+8) using your main account');
+        event.source_package = 'my.rytbank.app';
+        expect(parseFinanceNotification(event)).toMatchObject({
+            date_provenance: 'notification_text', payload: { amount: 10, direction: 'expense', payee_name: "Jean D'Ávila", transaction_date: '2026-09-25' },
+        });
+    });
+    it.each([
+        ['RM 10.00 has been successfully transferred to 小明.', '小明'],
+        ['RM 10.00 received from Nur A/P Rani @ Devi for Fund Transfer.', 'Nur A/P Rani @ Devi'],
+        ['RM 10.00 has been successfully transferred to Jean D’Ávila-Smith, Jr. (A).', "Jean D'Ávila-Smith, Jr. (A)"],
+        ['RM 10.00 received from A. Tan & Co. for Fund Transfer.', 'A. Tan & Co.'],
+        ['O’Neil A/P Tan @ Alex has transferred RM 10.00 to you.', "O'Neil A/P Tan @ Alex"],
+    ])('preserves legitimate name characters within template boundaries: %s', (text, name) => {
+        expect(parseFinanceNotification(fixture(text)).payload?.payee_name).toBe(name);
+    });
+    it.each([
+        'Paid RM 10.00 and sent RM 20.00',
+        'RM 10.00 has been successfully transferred to Alex. RM 20.00 received from Mei for Fund Transfer.',
+        'Alex has transferred RM 10.00 to you. Mei has transferred RM 20.00 to you.',
+        'Paid RM 10.00. Available balance RM 500.00',
+    ])('leaves ambiguous monetary values and direction unset: %s', text => {
+        expect(parseFinanceNotification(fixture(text)).payload).toMatchObject({ amount: null, direction: null, payee_name: null });
+    });
+    it('does not apply a TNG-specific direction to another source', () => {
+        const event = fixture('RM 10.00 received from Alex for Fund Transfer.');
+        event.source_package = 'my.rytbank.app';
+        expect(parseFinanceNotification(event).payload).toMatchObject({ amount: null, direction: null, payee_name: null });
+    });
+    it.each([
+        ['Your ＯＴＰ is 123456 for payment ＲＭ １０.００', 'sensitive_notification'],
+        ['Special\u00a0offer: payment cashback RM 10.00', 'not_transaction'],
+        ['Your available balance is ＲＭ ５００.００', 'not_transaction'],
+    ])('checks normalized sensitive and irrelevant text: %s', (text, failureCode) => {
+        expect(parseFinanceNotification(fixture(text))).toMatchObject({ status: 'ignored', payload: null, failure_code: failureCode });
+    });
+    it('keeps invalid explicit full-width dates unset', () => {
+        expect(parseFinanceNotification(fixture('Payment of ＲＭ １２.３０ on ３１/０２/２０２６'))).toMatchObject({
+            date_provenance: 'unavailable', payload: { amount: 12.3, direction: null, transaction_date: null },
+        });
+    });
+    it('leaves raw text and replay identity unchanged', () => {
+        const event = fixture('ＲＭ\u00a0１０.００ has been successfully transferred to Jean D’Ávila.');
+        event.notification.title = 'ＴＮＧ\n eWallet';
+        event.notification.subtext = '  Transfer\u00a0completed  ';
+        const raw = structuredClone(event);
+        const digest = notificationPayloadDigest(event);
+        expect(parseFinanceNotification(event).payload).toMatchObject({ amount: 10, direction: 'expense', payee_name: "Jean D'Ávila" });
+        expect(event).toEqual(raw);
+        expect(notificationPayloadDigest(event)).toBe(digest);
+        expect(notificationPayloadDigest({ ...event, notification: { ...event.notification, text: "RM 10.00 has been successfully transferred to Jean D'Ávila." } })).not.toBe(digest);
+    });
+});
