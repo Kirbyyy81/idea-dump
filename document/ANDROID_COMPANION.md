@@ -123,7 +123,7 @@ Supported TNG transfers, Ryt transfers and merchant payments, Unicode/whitespace
 
 All 547 root tests across 83 files passed with Node 22.22.0 using `npm test -- --maxWorkers=1 --pool=threads`. The default process-worker run stalled on Windows and was stopped before this completed thread-worker run. Root lint, TypeScript, service-worker checks, and the production build passed.
 
-Dependency audits still report existing findings: `brace-expansion` (high severity, development dependencies) and `dompurify` (low severity, production dependency). The production-only audit reports the latter. Dependency manifests and the lockfile were not changed by this work.
+The normalization work initially left existing `brace-expansion` and `dompurify` audit findings unresolved. Subsequent dependency updates on 2026-10-01 patched both packages, along with Fastify and fast-uri in the Finance OCR service. Full and production-only audits now report zero vulnerabilities in both projects.
 
 These are server changes for new intake and explicit Retry. Existing pending records were not reparsed, and no hosted data, schema, or Android build was changed.
 
