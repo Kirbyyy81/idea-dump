@@ -49,6 +49,7 @@
   ```
 
 - Run the smallest relevant checks while iterating, then complete every applicable check before handing off finished work.
+- `.github/workflows/validate.yml` routes validation by changed paths. Keep its OCR filters aligned with imports from shared Finance code, `lib/types.ts`, and `shared/date.ts`. Workflow changes run all three application jobs. Validate workflow edits with actionlint and check web-only, OCR-only, Android-only, shared-code, and documentation-only routing.
 
 ## Editing Rules
 

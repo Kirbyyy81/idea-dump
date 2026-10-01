@@ -12,8 +12,81 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect changed components
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      web: ${{ steps.paths.outputs.web }}
+      finance_ocr: ${{ steps.paths.outputs.finance_ocr }}
+      android: ${{ steps.paths.outputs.android }}
+    steps:
+      - name: Check out repository for push comparisons
+        if: github.event_name == 'push'
+        uses: actions/checkout@v4
+
+      - name: Detect affected applications
+        id: paths
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4
+        with:
+          # Pushes compare with the previous push; PRs use the complete PR diff.
+          # A new branch is compared with the default branch's merge base.
+          base: ${{ github.event_name == 'push' && github.ref || '' }}
+          filters: |
+            web:
+              - '.github/workflows/validate.yml'
+              - '.gitattributes'
+              - '.nvmrc'
+              - '.npmrc'
+              - '.env.example'
+              - '.eslintrc*'
+              - 'eslint.config.*'
+              - 'app/**'
+              - 'components/**'
+              - 'lib/**'
+              - 'shared/**'
+              - 'public/**'
+              - 'service-worker/**'
+              - 'scripts/**'
+              - 'supabase/**'
+              - 'tests/**'
+              - 'middleware.ts'
+              - 'next-env.d.ts'
+              - 'next.config.*'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'playwright.config.*'
+              - 'postcss.config.*'
+              - 'tailwind.config.*'
+              - 'tsconfig*.json'
+              - 'vitest.config.*'
+            finance_ocr:
+              - '.github/workflows/validate.yml'
+              - '.gitattributes'
+              - '.nvmrc'
+              - '.npmrc'
+              - 'services/finance-ocr/**'
+              - 'render.yaml'
+              - 'lib/finance/ocr/**'
+              - 'lib/finance/core/constants.ts'
+              - 'lib/finance/core/ruleMatching.ts'
+              - 'lib/finance/core/values.ts'
+              - 'lib/finance/dashboard.ts'
+              - 'lib/types.ts'
+              - 'shared/date.ts'
+            android:
+              - '.github/workflows/validate.yml'
+              - '.gitattributes'
+              - 'android/**'
+
   web:
     name: Web application
+    needs: changes
+    # Validate conservatively if change detection fails instead of silently skipping checks.
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.web == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -55,6 +128,8 @@ jobs:
 
   finance_ocr:
     name: Finance OCR service
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.finance_ocr == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
@@ -89,6 +164,8 @@ jobs:
 
   android:
     name: Android companion
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.android == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
