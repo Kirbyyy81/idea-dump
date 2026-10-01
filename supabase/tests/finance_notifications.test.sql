@@ -67,6 +67,11 @@ begin
     r:=pg_temp.accept_notification(103); c:=(r->>'candidate_id')::uuid; i:=(r->>'intake_item_id')::uuid;
     perform public.finance_mark_candidate_duplicate('21000000-0000-4000-8000-000000000001',c,t);
     perform pg_temp.check_companion((select body is null and status='duplicate' from public.finance_notification_events where intake_item_id=i),'duplicate deletes raw');
+    r:=pg_temp.accept_notification(106); c:=(r->>'candidate_id')::uuid; i:=(r->>'intake_item_id')::uuid;
+    perform public.finance_link_candidate_v1('21000000-0000-4000-8000-000000000001',c,t,
+        (select updated_at from public.finance_transactions where id=t),'{"reference_number":"BACKUP123"}');
+    perform pg_temp.check_companion((select body is null and status='duplicate' from public.finance_notification_events where intake_item_id=i),'link deletes raw notification');
+    perform pg_temp.check_companion((select reference_number='BACKUP123' and source='notification' from public.finance_transactions where id=t),'link preserves notification origin');
     r:=public.finance_accept_notification_v1('21000000-0000-4000-8000-000000000001','21000000-0000-4000-8000-000000000021',pg_temp.notification_event(104),repeat('e',64),'{"status":"ignored","date_provenance":"unavailable","payload":null}');
     perform pg_temp.check_companion((select body is null and intake_item_id is null from public.finance_notification_events where id=(r->>'event_id')::uuid),'ignored content never stored');
     update public.companion_devices set revoked_at=now() where id='21000000-0000-4000-8000-000000000021';
