@@ -46,7 +46,19 @@ Public pairing bootstrap has a database-enforced limit of 100 new requests per m
 }
 ```
 
-Ryt's package is `my.rytbank.app`. UOB (`com.uob.mightymy`) is intentionally disabled pending a real sample. Incoming TNG and outgoing Ryt wording supplied by the owner have parser fixtures.
+Ryt's package is `my.rytbank.app`. UOB (`com.uob.mightymy`) is intentionally disabled pending a real sample. Supported templates have anonymized parser fixtures:
+
+- TNG: `PERSON has transferred RM X.XX to you. Tap here to check the transaction details` suggests income and the sender.
+- TNG: `RM X.XX has been successfully transferred to PERSON.` suggests an expense and the recipient.
+- TNG: `RM X.XX received from PERSON for Fund Transfer.` suggests income and the sender, excluding the fixed suffix.
+- Ryt: `You've sent RM X.XX to PERSON on DATE, 1:25pm (GMT+8) using your main account` suggests an expense, the recipient, and the explicit date.
+- Ryt: `You've paid RMX.XX to MERCHANT on DATE, 3:51 PM (GMT+8) using your Main Account.` suggests an expense, the merchant, and the explicit date. The `paid` template leaves payee fields empty, even if the merchant name matches a saved payee. The `sent` template continues to represent a transfer to a payee.
+
+Parsing and manual-rule matching use a working copy normalized with Unicode NFKC, collapsed whitespace, and straight apostrophes. Names retain Unicode and internal punctuation such as `A/P` and `@`. Raw text and replay digests remain unchanged. Multiple monetary values leave the amount unset; unsupported wording does not guess a direction.
+
+The server compares extracted counterparties with the paired user's active saved payees using the existing normalized-name convention. Exactly one match sets `payee_id` and the canonical saved name. Missing, archived, or ambiguous matches keep the extracted name for review. Existing manual Finance rules run afterward with their current priority and precedence. Categories still depend on manual rules and user review; notification corrections do not train a parser.
+
+New uploads and the existing Finance Review Retry action use the same preparation path. Deploy these normalization changes through the normal web release process; no migration or Android reinstall is required. Existing pending candidates are not automatically reparsed. Retry explicitly applies the current parser and saved payees while raw notification text remains available.
 
 A successful response returns the durable event status and intake identifier. Identical owner/event replays are safe; a changed payload with the same identifier returns 409. Notification ingestion creates review candidates only. No companion endpoint can confirm a transaction.
 
@@ -96,6 +108,24 @@ All three companion migrations were applied to the live IdeaDump Supabase projec
 The four new tables have RLS enabled and deny direct access to `anon` and `authenticated`; the companion functions are security invoker and executable only by the server role. The security advisor reports informational [RLS without policies](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy) findings for these intentionally server-only tables. Existing warnings for [pg_net in public](https://supabase.com/docs/guides/database/database-linter?lint=0014_extension_in_public) and [leaked-password protection](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection) are unchanged.
 
 This verifies pairing bootstrap and polling, not the user's browser approval or real notification capture. No user account was approved by the diagnostic.
+
+## Android Auto loading regression, 2026-09-30
+
+A platform media-browser connection to the original APK timed out on the connected Samsung SM-N986B. `LyricsMediaService.onGetSession` rejected Media3's unidentified legacy-controller placeholder before the framework could finish binding. Media3 documents this [legacy binding special case](https://developer.android.com/reference/androidx/media3/session/MediaSessionService#onGetSession(androidx.media3.session.MediaSession.ControllerInfo)). Authorization now runs in `MediaLibrarySession.Callback.onConnect`, where the actual client identity is available, retaining the trusted-client, own-package, and Android Auto checks.
+
+A second failing regression showed that a Media3 subscription succeeded without announcing available content. The service now resolves the browsable root through `onGetItem`, uses the default subscription callback, and notifies subscribers when displayed metadata changes.
+
+Both new browser tests failed against the original installed APK and passed after updating it. The two existing media-proxy tests also passed, for four device tests total. Eight unit tests, Android lint, and debug/test APK assembly passed. The fixed APK was installed on the connected SM-N986B; the temporary test helper was removed. The phone used for the reported car test was a different device, so these results do not replace a retest with that phone and head unit.
+
+## Notification normalization validation, 2026-10-01
+
+Supported TNG transfers, Ryt transfers and merchant payments, Unicode/whitespace/apostrophe normalization, conservative amounts and dates, unique saved-payee matching, ownership/archive filtering, manual-rule precedence, and identical intake/Retry preparation passed 87 focused tests. Merchant payments retain empty payee fields even when a saved payee has the same name. Amount checks accept sentence punctuation while rejecting malformed decimals and ambiguous monetary values. Synthetic fixtures verify that raw text and replay identity remain unchanged.
+
+All 547 root tests across 83 files passed with Node 22.22.0 using `npm test -- --maxWorkers=1 --pool=threads`. The default process-worker run stalled on Windows and was stopped before this completed thread-worker run. Root lint, TypeScript, service-worker checks, and the production build passed.
+
+The normalization work initially left existing `brace-expansion` and `dompurify` audit findings unresolved. Subsequent dependency updates on 2026-10-01 patched both packages, along with Fastify and fast-uri in the Finance OCR service. Full and production-only audits now report zero vulnerabilities in both projects.
+
+These are server changes for new intake and explicit Retry. Existing pending records were not reparsed, and no hosted data, schema, or Android build was changed.
 
 ## Remaining acceptance and rollout
 

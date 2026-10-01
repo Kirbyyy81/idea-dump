@@ -45,6 +45,8 @@ Review and source management open the existing PWA or system browser. The compan
 
 `core/` owns encrypted preferences, settings, and the notification listener. `finance/` owns the encrypted Room queue, scoped API client, pairing, and WorkManager retries. `lyrics/` owns Spotify session observation, LRCLIB/local storage, timed cues, and the Media3 media-library proxy.
 
+Media clients are authorized in the session connection callback. The service first accepts Media3's legacy binding placeholder so Android Auto can complete its browser handshake. Root subscriptions announce content, and metadata changes refresh subscribed lists.
+
 Spotify remains the audio source. The proxy publishes current/next cues in separate metadata fields and forwards supported controls. It does not create an audio player or request audio focus. Car catalog voice search is unsupported.
 
 Finance notification payloads use Android Keystore AES-GCM with event/owner binding. Uploads retain stable event IDs across retries. The queue holds at most 1,000 events and never evicts older unsent events. Cloud backup and device transfer exclude companion data.
@@ -60,7 +62,7 @@ adb -s YOUR_DEVICE_SERIAL install -r app/build/outputs/apk/androidTest/debug/app
 adb -s YOUR_DEVICE_SERIAL shell am instrument -w -r app.ideadump.companion.test/androidx.test.runner.AndroidJUnitRunner
 ```
 
-Unit tests cover filtering, stable identities, Unicode LRC parsing, offsets, cue selection, and playback anchors. Device tests cover real Keystore encryption, queue reopening/deduplication/capacity, distinct media fields, transport forwarding, and screen controls. Storage tests use disposable test databases and synthetic events. The screen test leaves capture disabled and the timing offset at zero; use an unpaired test installation.
+Unit tests cover filtering, stable identities, Unicode LRC parsing, offsets, cue selection, and playback anchors. Device tests cover real Keystore encryption, queue reopening/deduplication/capacity, distinct media fields, transport forwarding, screen controls, platform media-browser connection and child loading, and Media3 subscription notifications. Storage tests use disposable test databases and synthetic events. The screen test leaves capture disabled and the timing offset at zero; use an unpaired test installation.
 
 The validation workflow runs on every push and pull request. Its Android job runs native unit tests, lint, and debug assembly only when `android/**` or `.github/workflows/validate.yml` changes, then uploads the debug APK. Pushes check the changes since the previous push; pull requests check the full PR diff. Web and Finance OCR validation also run only for their relevant files, including shared code and configuration. A manual run validates all three projects. Use **Actions > validate > Run workflow** to force an APK build without changing files. Instrumentation runs separately on the selected phone.
 

@@ -8,6 +8,7 @@
 - Keep Finance and Lyrics data, network clients, storage, and failures isolated.
 - Never commit local.properties, credentials, signing keys, build output, or captured bank notifications.
 - Use Android Keystore for secrets and notification-payload encryption. Never log notification text or tokens.
+- Authorize media clients in `MediaLibrarySession.Callback.onConnect`, where the real client identity is available. Legacy browser binding passes a placeholder to `onGetSession`; rejecting it prevents Android Auto from connecting. Keep root lookup and subscription notifications covered by `MediaLibraryConnectionTest`.
 - Preserve Spotify audio focus. Do not synthesize audio to keep the car service alive.
 - Treat hardware two-field validation and UOB examples as explicit outstanding acceptance work.
 - Commit completed, checked feature slices throughout implementation.
