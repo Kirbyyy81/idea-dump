@@ -55,6 +55,10 @@ Ryt's package is `my.rytbank.app`. UOB (`com.uob.mightymy`) is intentionally dis
 
 Parsing and manual-rule matching use a working copy normalized with Unicode NFKC, collapsed whitespace, and straight apostrophes. Names retain Unicode and internal punctuation such as `A/P` and `@`. Raw text and replay digests remain unchanged. Multiple monetary values leave the amount unset; unsupported wording does not guess a direction.
 
+The server compares extracted counterparties with the paired user's active saved payees using the existing normalized-name convention. Exactly one match sets `payee_id` and the canonical saved name. Missing, archived, or ambiguous matches keep the extracted name for review. Existing manual Finance rules run afterward with their current priority and precedence. Categories still depend on manual rules and user review; notification corrections do not train a parser.
+
+New uploads and the existing Finance Review Retry action use the same preparation path. Deploy these normalization changes through the normal web release process; no migration or Android reinstall is required. Existing pending candidates are not automatically reparsed. Retry explicitly applies the current parser and saved payees while raw notification text remains available.
+
 A successful response returns the durable event status and intake identifier. Identical owner/event replays are safe; a changed payload with the same identifier returns 409. Notification ingestion creates review candidates only. No companion endpoint can confirm a transaction.
 
 Sensitive and unrelated content is discarded before client persistence and checked again on the server. Ignored server events retain a replay digest, without raw text or a candidate. Reviewable text is stored separately from OCR. Confirmation, rejection, and duplicate resolution delete raw title/body/subtext inside the same database transaction. Structured transaction fields and replay digests remain. No notification text enters OCR correction excerpts or lyric requests.
@@ -111,6 +115,16 @@ A platform media-browser connection to the original APK timed out on the connect
 A second failing regression showed that a Media3 subscription succeeded without announcing available content. The service now resolves the browsable root through `onGetItem`, uses the default subscription callback, and notifies subscribers when displayed metadata changes.
 
 Both new browser tests failed against the original installed APK and passed after updating it. The two existing media-proxy tests also passed, for four device tests total. Eight unit tests, Android lint, and debug/test APK assembly passed. The fixed APK was installed on the connected SM-N986B; the temporary test helper was removed. The phone used for the reported car test was a different device, so these results do not replace a retest with that phone and head unit.
+
+## Notification normalization validation, 2026-10-01
+
+Both observed TNG transfer formats, existing TNG/Ryt formats, Unicode/whitespace/apostrophe normalization, conservative amounts and dates, unique saved-payee matching, ownership/archive filtering, manual-rule precedence, and identical intake/Retry preparation passed 73 focused tests. Synthetic fixtures verify that raw text and replay identity remain unchanged.
+
+All 533 root tests across 83 files passed with Node 22.22.0 using `npm test -- --maxWorkers=1 --pool=threads --reporter=verbose`. The default process-worker run stalled on Windows and was stopped before this completed thread-worker run. Root lint, TypeScript, service-worker checks, and the production build passed.
+
+Dependency audits still report existing findings: `brace-expansion` (high severity, development dependencies) and `dompurify` (low severity, production dependency). The production-only audit reports the latter. Dependency manifests and the lockfile were not changed by this work.
+
+These are server changes for new intake and explicit Retry. Existing pending records were not reparsed, and no hosted data, schema, or Android build was changed.
 
 ## Remaining acceptance and rollout
 
