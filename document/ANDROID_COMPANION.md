@@ -52,6 +52,7 @@ Ryt's package is `my.rytbank.app`. UOB (`com.uob.mightymy`) is intentionally dis
 - TNG: `RM X.XX has been successfully transferred to PERSON.` suggests an expense and the recipient.
 - TNG: `RM X.XX received from PERSON for Fund Transfer.` suggests income and the sender, excluding the fixed suffix.
 - Ryt: `You've sent RM X.XX to PERSON on DATE, 1:25pm (GMT+8) using your main account` suggests an expense, the recipient, and the explicit date.
+- Ryt: `You've paid RMX.XX to MERCHANT on DATE, 3:51 PM (GMT+8) using your Main Account.` suggests an expense, the merchant, and the explicit date. The `paid` template leaves payee fields empty, even if the merchant name matches a saved payee. The `sent` template continues to represent a transfer to a payee.
 
 Parsing and manual-rule matching use a working copy normalized with Unicode NFKC, collapsed whitespace, and straight apostrophes. Names retain Unicode and internal punctuation such as `A/P` and `@`. Raw text and replay digests remain unchanged. Multiple monetary values leave the amount unset; unsupported wording does not guess a direction.
 
@@ -118,9 +119,9 @@ Both new browser tests failed against the original installed APK and passed afte
 
 ## Notification normalization validation, 2026-10-01
 
-Both observed TNG transfer formats, existing TNG/Ryt formats, Unicode/whitespace/apostrophe normalization, conservative amounts and dates, unique saved-payee matching, ownership/archive filtering, manual-rule precedence, and identical intake/Retry preparation passed 73 focused tests. Synthetic fixtures verify that raw text and replay identity remain unchanged.
+Supported TNG transfers, Ryt transfers and merchant payments, Unicode/whitespace/apostrophe normalization, conservative amounts and dates, unique saved-payee matching, ownership/archive filtering, manual-rule precedence, and identical intake/Retry preparation passed 87 focused tests. Merchant payments retain empty payee fields even when a saved payee has the same name. Amount checks accept sentence punctuation while rejecting malformed decimals and ambiguous monetary values. Synthetic fixtures verify that raw text and replay identity remain unchanged.
 
-All 533 root tests across 83 files passed with Node 22.22.0 using `npm test -- --maxWorkers=1 --pool=threads --reporter=verbose`. The default process-worker run stalled on Windows and was stopped before this completed thread-worker run. Root lint, TypeScript, service-worker checks, and the production build passed.
+All 547 root tests across 83 files passed with Node 22.22.0 using `npm test -- --maxWorkers=1 --pool=threads`. The default process-worker run stalled on Windows and was stopped before this completed thread-worker run. Root lint, TypeScript, service-worker checks, and the production build passed.
 
 Dependency audits still report existing findings: `brace-expansion` (high severity, development dependencies) and `dompurify` (low severity, production dependency). The production-only audit reports the latter. Dependency manifests and the lockfile were not changed by this work.
 

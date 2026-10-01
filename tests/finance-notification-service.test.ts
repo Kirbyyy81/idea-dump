@@ -72,6 +72,24 @@ beforeEach(() => {
 });
 
 describe('notification preparation for intake and Retry', () => {
+    it('keeps merchant payments out of saved payees on intake and Retry, then applies merchant rules', async () => {
+        const input = event();
+        input.source_package = 'my.rytbank.app';
+        input.notification.title = 'Nice! Payment successful!';
+        input.notification.text = 'You’ve paid ＲＭ12.30 to SYNTHETIC CAFE on 1/10/2026,\n 3:51 PM (GMT+8) using your Main Account.';
+        mocks.tables.finance_notification_events = [storedNotification(input)];
+        mocks.tables.dim_finance_payees.push({ id: 'cafe-payee', user_id: owner, name: 'SYNTHETIC CAFE', normalized_name: 'syntheticcafe', is_archived: false });
+        mocks.rules.mockResolvedValue({ error: null, data: [rule({ name: 'Cafe purchases', pattern: 'SYNTHETIC CAFE', category_id: 'dining', direction: null })] });
+        await acceptFinanceNotification(owner, 'device-1', input);
+        const prepared = mocks.rpc.mock.calls[0][1].p_parsed;
+        expect(prepared).toMatchObject({ date_provenance: 'notification_text', matched_rule_id: 'rule-1',
+            payload: { amount: 12.3, direction: 'expense', merchant: 'Cafe purchases', payee_id: null, payee_name: null, category_id: 'dining', transaction_date: '2026-10-01', matched_rule_names: ['Cafe purchases'] },
+        });
+        await retryFinanceNotification(owner, 'candidate-1', 'intake-1');
+        expect(mocks.update).toHaveBeenCalledWith(owner, 'candidate-1', expect.objectContaining({ payload: prepared.payload, matched_rule_id: 'rule-1' }));
+        expect(mocks.assess).toHaveBeenCalledWith(expect.objectContaining({ userId: owner, amount: 12.3, merchant: 'Cafe purchases', transactionDate: '2026-10-01' }));
+    });
+
     it('uses the same extraction, saved-payee matching and manual rules on both paths', async () => {
         const input = event();
         const raw = structuredClone(input);

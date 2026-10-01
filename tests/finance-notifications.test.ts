@@ -153,3 +153,57 @@ describe('notification text normalization', () => {
         expect(notificationPayloadDigest({ ...event, notification: { ...event.notification, text: "RM 10.00 has been successfully transferred to Jean D'Ávila." } })).not.toBe(digest);
     });
 });
+
+
+describe('Ryt merchant payments', () => {
+    const payment = (text = "You've paid RM12.30 to SYNTHETIC CAFE on 1/10/2026, 3:51 PM (GMT+8) using your Main Account.") => ({
+        ...fixture(text), source_package: 'my.rytbank.app' as const,
+        notification: { ...fixture(text).notification, title: 'Nice! Payment successful!' },
+    });
+    it('extracts the observed paid template as a merchant expense', () => {
+        expect(parseFinanceNotification(payment())).toMatchObject({
+            status: 'review', date_provenance: 'notification_text',
+            payload: { amount: 12.3, merchant: 'SYNTHETIC CAFE', direction: 'expense', payee_id: null, payee_name: null, transaction_date: '2026-10-01' },
+        });
+    });
+    it('normalizes payment text while retaining Unicode and internal merchant punctuation', () => {
+        const text = 'You’ve paid ＲＭ\u00a0１２.３０ to Café D’Ávila & Co. (MY)\n on １/１０/２０２６, 3:51 PM (GMT+8) using your Main Account.';
+        const input = payment(text);
+        const raw = structuredClone(input);
+        const digest = notificationPayloadDigest(input);
+        expect(parseFinanceNotification(input).payload).toMatchObject({ amount: 12.3, merchant: "Café D'Ávila & Co. (MY)", direction: 'expense', payee_name: null, transaction_date: '2026-10-01' });
+        expect(input).toEqual(raw);
+        expect(notificationPayloadDigest(input)).toBe(digest);
+    });
+    it('keeps sent transfers as payees even when a recipient name resembles a business', () => {
+        expect(parseFinanceNotification(payment("You've sent RM12.30 to SYNTHETIC CAFE on 1/10/2026, 3:51 PM (GMT+8) using your Main Account.")).payload).toMatchObject({
+            amount: 12.3, merchant: null, direction: 'expense', payee_id: null, payee_name: 'SYNTHETIC CAFE',
+        });
+    });
+    it('keeps malformed payment dates unset', () => {
+        expect(parseFinanceNotification(payment("You've paid RM12.30 to SYNTHETIC CAFE on 31/02/2026, 3:51 PM (GMT+8) using your Main Account."))).toMatchObject({
+            date_provenance: 'unavailable', payload: { amount: 12.3, merchant: 'SYNTHETIC CAFE', direction: 'expense', transaction_date: null },
+        });
+    });
+    it('does not guess a merchant or direction from unsupported payment wording', () => {
+        expect(parseFinanceNotification(payment('You paid RM12.30 to SYNTHETIC CAFE')).payload).toMatchObject({ amount: 12.3, merchant: null, direction: null, payee_name: null });
+    });
+    it('does not apply the Ryt merchant template to TNG', () => {
+        const input = { ...payment(), source_package: 'my.com.tngdigital.ewallet' as const };
+        expect(parseFinanceNotification(input).payload).toMatchObject({ amount: 12.3, merchant: null, direction: null, payee_name: null });
+    });
+    it('accepts a sentence period after a fallback amount', () => {
+        expect(parseFinanceNotification(payment('Paid RM12.30.')).payload).toMatchObject({ amount: 12.3, merchant: null, direction: null });
+    });
+    it.each(['Paid RM12.300', 'Paid RM12.30.99'])('does not reinterpret malformed monetary values: %s', text => {
+        expect(parseFinanceNotification(payment(text))).toMatchObject({ status: 'ignored', payload: null });
+    });
+    it('keeps multiple monetary values conservative', () => {
+        expect(parseFinanceNotification(payment(payment().notification.text + ' Available balance RM500.00.')).payload).toMatchObject({ amount: null, merchant: null, direction: null, payee_name: null });
+    });
+    it.each(['OTP for payment', 'Payment declined', 'Special offer'])('rejects unsafe or irrelevant payment notifications: %s', title => {
+        const input = payment();
+        input.notification.title = title;
+        expect(parseFinanceNotification(input).status).toBe('ignored');
+    });
+});

@@ -6,7 +6,7 @@ import { normalizeFinanceNotificationText } from './normalization';
 const sensitive = /\b(?:otp|tac|one[- ]time (?:password|passcode)|verification code|security code|authentication code)\b|sensitive (?:content|notification) (?:hidden|redacted)/i;
 const irrelevant = /\b(?:cashback offer|promotion|promo code|special offer|payment reminder|payment due|unsuccessful|failed|declined|cancelled)\b/i;
 const transaction = /\b(?:transferred|sent|paid|payment|received|credited|debited|purchase|withdrawal|refund)\b/i;
-const amountPattern = '(?:RM|MYR)\\s*((?:\\d{1,3}(?:,\\d{3})+|\\d+)\\.\\d{2})(?![\\d.])';
+const amountPattern = '(?:RM|MYR)\\s*((?:\\d{1,3}(?:,\\d{3})+|\\d+)\\.\\d{2})(?!\\d|\\.\\d)';
 
 function transactionDate(value: string): string | null {
     const iso = normalizeFinanceDate(value);
@@ -42,7 +42,7 @@ export function parseFinanceNotification(event: FinanceNotificationEventInput): 
     let provenance: FinanceNotificationParseResult['date_provenance'] = explicitDate.found ? (explicitDate.date ? 'notification_text' : 'unavailable') : 'posted_at';
     const hasSingleAmount = [...body.matchAll(new RegExp(amountPattern, 'ig'))].length === 1;
     const incoming = new RegExp('^(.+?) has transferred ' + amountPattern + ' to you(?:[.! ]|$)', 'i').exec(body);
-    const outgoing = new RegExp("^(?:You've|You have) sent " + amountPattern + ' to (.+?) on (.+?),\\s*\\d{1,2}:\\d{2}\\s*(?:am|pm)\\s*\\(GMT\\+8\\) using your main account[.!]?$', 'i').exec(body);
+    const outgoing = new RegExp("^(?:You've|You have) (sent|paid) " + amountPattern + ' to (.+?) on (.+?),\\s*\\d{1,2}:\\d{2}\\s*(?:am|pm)\\s*\\(GMT\\+8\\) using your main account[.!]?$', 'i').exec(body);
     const tngSent = new RegExp('^' + amountPattern + ' has been successfully transferred to (.+?)[.!?]?$', 'i').exec(body);
     const tngReceived = new RegExp('^' + amountPattern + ' received from (.+?) for Fund Transfer[.!?]?$', 'i').exec(body);
     if (hasSingleAmount && event.source_package === 'my.com.tngdigital.ewallet' && incoming) {
@@ -55,10 +55,14 @@ export function parseFinanceNotification(event: FinanceNotificationEventInput): 
         payload.payee_name = match[2].trim().slice(0, 500);
         payload.direction = tngSent ? 'expense' : 'income';
     } else if (hasSingleAmount && event.source_package === 'my.rytbank.app' && outgoing) {
-        payload.amount = toPositiveFinanceAmount(outgoing[1].replace(/,/g, ''));
-        payload.payee_name = outgoing[2].slice(0, 500);
+        payload.amount = toPositiveFinanceAmount(outgoing[2].replace(/,/g, ''));
+        if (outgoing[1].toLowerCase() === 'paid') {
+            payload.merchant = outgoing[3].slice(0, 500);
+        } else {
+            payload.payee_name = outgoing[3].slice(0, 500);
+        }
         payload.direction = 'expense';
-        payload.transaction_date = transactionDate(outgoing[3].trim());
+        payload.transaction_date = transactionDate(outgoing[4].trim());
         provenance = payload.transaction_date ? 'notification_text' : 'unavailable';
     } else {
         // Require transaction context next to the amount; balances are never fallback amounts.
