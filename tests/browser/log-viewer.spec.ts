@@ -68,8 +68,10 @@ test('copies complete request and response JSON while folding with the keyboard'
   await expect(request.locator('code')).toHaveText('{…}');
   await request.getByRole('button', { name: 'Expand all' }).click();
   await expect(request.locator('code')).toHaveText(JSON.stringify(requestBody, null, 2));
-  await expect(request.getByRole('button', { name: 'Copy request JSON' })).toHaveText('Copy JSON');
-  await expect(response.getByRole('button', { name: 'Copy response JSON' })).toHaveText('Copy JSON');
+  await expect(request.getByRole('button', { name: 'Copy request JSON' })).toHaveAttribute('title', 'Copy request JSON');
+  await expect(response.getByRole('button', { name: 'Copy response JSON' })).toHaveAttribute('title', 'Copy response JSON');
+  await expect(response.getByRole('button', { name: 'Copy response JSON' })).toHaveText('');
+  await expect(response.getByRole('button', { name: 'Copy response JSON' }).locator('svg')).toBeVisible();
   const headerButtons = await response.locator('section > div').first().getByRole('button').all();
   const boxes = await Promise.all(headerButtons.map(button => button.boundingBox()));
   for (let i = 0; i < boxes.length; i++) {

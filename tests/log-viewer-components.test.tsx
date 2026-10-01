@@ -97,8 +97,10 @@ describe('Log Viewer payload panels', () => {
     vi.stubGlobal('navigator', { clipboard: { writeText } });
     const { container } = render(<JsonOrText title="Request body" event={event} />);
     const copy = screen.getByRole('button', { name: 'Copy request JSON' });
+    expect(copy.textContent).toBe('');
+    expect(copy.querySelector('svg')).not.toBeNull();
     fireEvent.click(copy);
-    await waitFor(() => expect(copy.textContent).toBe('Copied'));
+    await waitFor(() => expect(screen.getByRole('status').textContent).toBe('JSON copied.'));
     expect(writeText).toHaveBeenLastCalledWith(JSON.stringify(payload, null, 2));
     expect(container.querySelector('pre')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Raw request line' }));
@@ -123,7 +125,7 @@ describe('Log Viewer payload panels', () => {
     fireEvent.click(response.getByRole('button', { name: 'Copy response JSON' }));
     await waitFor(() => expect(response.getByRole('status').textContent).toBe('JSON copied.'));
     expect(writeText).toHaveBeenCalledWith('{\n  "ok": true\n}');
-    expect(request.getByRole('button', { name: 'Copy request JSON' }).textContent).toBe('Copy JSON');
+    expect(request.getByRole('status').textContent).toBe('');
     expect(request.getByRole('button', { name: 'Expand $' })).toBeDefined();
   });
 
@@ -134,7 +136,7 @@ describe('Log Viewer payload panels', () => {
     const copy = screen.getByRole('button', { name: 'Copy response JSON' });
     fireEvent.click(copy);
     await waitFor(() => expect(screen.getByRole('status').textContent).toContain('Could not copy JSON'));
-    expect(copy.textContent).toBe('Copy JSON');
+    expect(copy.getAttribute('title')).toBe('Copy response JSON');
     fireEvent.click(copy);
     await waitFor(() => expect(screen.getByRole('status').textContent).toBe('JSON copied.'));
     expect(writeText).toHaveBeenLastCalledWith('null');
