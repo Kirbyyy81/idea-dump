@@ -287,6 +287,13 @@ export function toFinanceReviewCandidate(candidate: FinanceCandidateTransaction)
         } : null,
         duplicate_transaction: duplicate ? {
             id: duplicate.id,
+            source_id: duplicate.source_id,
+            category_id: duplicate.category_id || null,
+            direction: duplicate.direction,
+            reference_number: duplicate.reference_number || null,
+            notes: duplicate.notes || null,
+            updated_at: duplicate.updated_at,
+            category: namedReference(duplicate.category),
             amount: Number(duplicate.amount),
             currency: duplicate.currency || FINANCE_V1_CURRENCY,
             merchant: duplicate.merchant || null,
