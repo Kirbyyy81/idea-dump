@@ -17,3 +17,5 @@ for (const file of ['companion_pairing.test.sql', 'finance_notifications.test.sq
         { env, stdio: 'inherit', windowsHide: true });
     if (result.error || result.status !== 0) throw new Error('Companion database test failed: ' + file);
 }
+
+await import('./test-notification-concurrency.mjs');
