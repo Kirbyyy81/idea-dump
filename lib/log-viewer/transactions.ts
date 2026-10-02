@@ -9,7 +9,7 @@ function sortTransactionsByTimeline(transactions: Transaction[]): Transaction[] 
   return [...transactions].sort((a, b) => Math.min(...a.lineRefs) - Math.min(...b.lineRefs));
 }
 
-function hasFailurePayload(value: unknown): boolean {
+function hasFailurePayload(value: unknown, isResponseStatus = false): boolean {
   if (value == null || typeof value !== 'object') return false;
 
   if (Array.isArray(value)) {
@@ -22,18 +22,17 @@ function hasFailurePayload(value: unknown): boolean {
   const displayErrorMessage = record.displayErrorMessage;
   const result = record.result;
   const responseCode = record.responseCode;
-  const responseStatus = record.responseStatus;
   const status = record.status;
+  const successfulStatus = isResponseStatus && typeof status === 'string' &&
+    status.toUpperCase() === 'SUCCESSFUL' && errorCode === '00';
 
   if (errorCode != null && errorCode !== '' && errorCode !== 0 && errorCode !== '0' && errorCode !== '00') return true;
-  if (typeof errorMessage === 'string' && errorMessage.trim()) return true;
+  if (!successfulStatus && typeof errorMessage === 'string' && errorMessage.trim()) return true;
   if (typeof displayErrorMessage === 'string' && displayErrorMessage.trim()) return true;
   if (typeof result === 'string' && result.toLowerCase() === 'fail') return true;
-  if (typeof status === 'string' && status.toLowerCase() === 'error') return true;
+  if (typeof status === 'string' && ['error', 'fail', 'failed', 'failure', 'unsuccessful'].includes(status.toLowerCase())) return true;
   if (responseCode != null && responseCode !== 0 && responseCode !== '0') return true;
-  if (responseStatus && hasFailurePayload(responseStatus)) return true;
-
-  return Object.values(record).some((item) => hasFailurePayload(item));
+  return Object.entries(record).some(([key, item]) => hasFailurePayload(item, key === 'responseStatus'));
 }
 
 function eventHasError(event: LogEvent): boolean {

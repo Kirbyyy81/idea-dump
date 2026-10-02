@@ -10,12 +10,77 @@ const log = (...lines: string[]) => lines.map((line, i) => `2026-09-24 10:00:00.
 const yes = (name: string) => `https://example.test/yesshop/mobile/ws/v1/json/${name}`;
 const ussp = (name: string) => `https://example.test/ussp/tablet/ws/v1/json/${name}`;
 
+describe('updated Yes Shop normalization', () => {
+  it.each([
+    ['getTodaySaleAmount', 'yesshop-admin/ws/v1/account/salesDailyTotalAmount'],
+    ['getMonthlySaleAmount', 'yesshop-admin/ws/v1/account/salesMonthlyTotalAmount'],
+    ['getWalletTopUpPaymentType', 'yesshop-admin/ws/v1/wallet/getTopUpPaymentType'],
+    ['initiateCashWalletPayment', 'yesshop-wallet/ws/v1/wallet/initiateTopUpPayment'],
+    ['getCvpTopUpAndCvpTransferHistoryTransactionData', 'yesshop-admin/ws/v1/cvptopup/getCVPHistory'],
+    ['getCvpTransferLoadData', 'yesshop-admin/ws/v1/cvptransfer/cvpTransferLoadDetails'],
+    ['getDealerOwnerStoreList', 'yesshop-admin/ws/v1/GetStoreList'],
+  ])('matches %s to the observed endpoint, including orphan responses', (name, path) => {
+    const url = 'https://example.test/' + path;
+    for (const withRequest of [true, false]) {
+      const result = build(log(`CONTENT DATA >>  ${name.toUpperCase()}  >> {"accountId":"sample-account"}`,
+        ...(withRequest ? [`REQUEST >>>>>>> ${url} >>>>>> {"contentData":"encoded","sessionId":"sample"}`] : []),
+        `RESPONSE SUCCESS1 >>>>>>> ${url} >>>>>> {"responseCode":0}`));
+      expect(result.unmatchedContentData).toEqual([]);
+      expect(result.transactions[0].contentData?.functionName).toBe(name.toUpperCase());
+      expect(result.transactions[0].contentMatch).toEqual({ method: 'dictionary', confidence: 'medium' });
+      expect(result.transactions[0].orphanKind).toBe(withRequest ? null : 'response');
+      expect(result.transactions[0].responses[0].source).toBe('yes-shop');
+    }
+  });
+
+  it('does not classify a success message in responseStatus.errorMessage as failure', () => {
+    const result = build(log(`RESPONSE_SUCCESS >>>>>>> (200) >>>>>> ${yes('ReserveMSISDN')} >>>>>> ` +
+      JSON.stringify({ responseStatus: { status: 'SUCCESSFUL', errorCode: '00', errorMessage: 'Operation Successfuly executed' } })));
+    expect(transactionHasError(result.transactions[0])).toBe(false);
+  });
+
+  it.each([
+    { responseStatus: { status: 'SUCCESSFUL', errorCode: 'E01', errorMessage: 'Failure' } },
+    { responseStatus: { status: 'FAILED', errorCode: '00' } },
+    { responseStatus: { status: 'SUCCESSFUL', errorCode: '00' }, responseCode: 1 },
+    { responseStatus: { status: 'SUCCESSFUL', errorCode: '00' }, nested: { errorCode: 'E02' } },
+    { responseStatus: { status: 'SUCCESSFUL', errorCode: '00', displayErrorMessage: 'Failure' } },
+    { errorMessage: 'Unqualified failure' },
+  ])('retains contradictory or unqualified failure evidence: %j', (body) => {
+    const result = build(log(`RESPONSE_SUCCESS >>>>>>> (200) >>>>>> ${yes('Test')} >>>>>> ${JSON.stringify(body)}`));
+    expect(transactionHasError(result.transactions[0])).toBe(true);
+  });
+
+  it.each(['RESPONSE_SUCCESS >>>>>>> (500)', 'RESPONSE_ERROR >>>>>>> (200)'])(
+    'keeps transport and marker errors despite success payloads: %s', (marker) => {
+      const result = build(log(`${marker} >>>>>> ${yes('Test')} >>>>>> {"responseStatus":{"status":"SUCCESSFUL","errorCode":"00"}}`));
+      expect(transactionHasError(result.transactions[0])).toBe(true);
+    });
+
+  it('leaves duplicate requests, repeated content, pairing and concurrency unchanged', () => {
+    const url = yes('ReserveMSISDN');
+    const result = build(log(
+      'CONTENT DATA >> getReserveNoContentData >> {"msisdn":"sample"}',
+      'CONTENT DATA >> getReserveNoContentData >> {"msisdn":"sample"}',
+      `REQUEST >>>>>>> ${url} >>>>>> {"contentData":"encoded","sessionId":"sample"}`,
+      `REQUEST >>>>>>> POST >>>>>> URL: ${url} >>>>>> {"contentData":"encoded","sessionId":"sample"}`,
+      `RESPONSE_SUCCESS >>>>>>> ${url} >>>>>> {"ok":true}`,
+      `REQUEST >>>>>>> ${url} >>>>>> {"contentData":"encoded","sessionId":"sample"}`,
+      `RESPONSE_SUCCESS >>>>>>> ${url} >>>>>> {"ok":true}`,
+    ));
+    expect(result.transactions.map((tx) => [tx.request?.lineNumber, tx.responses.map((event) => event.lineNumber), tx.orphanKind]))
+      .toEqual([[3, [5], null], [4, [7], null], [6, [], 'request']]);
+    expect(result.transactions.every((tx) => tx.hadConcurrency)).toBe(true);
+    expect(result.unmatchedContentData.map((event) => event.lineNumber)).toEqual([1, 2]);
+  });
+});
+
 describe('source-specific log parsing', () => {
   it('detects the source by URL paths, including records before the first URL', () => {
     for (const [file, source] of [['yes-shop', 'yes-shop'], ['ussp', 'ussp']]) {
       expect(new Set(parseLogText(fixture(file)).map((event) => event.source))).toEqual(new Set([source]));
     }
-    for (const path of ['yesshop-admin/api/test', 'yesshop-report/api/test', 'cots/api/yes-shop/v2/banners/list']) {
+    for (const path of ['yesshop-admin/api/test', 'yesshop-report/api/test', 'yesshop-wallet/ws/v1/wallet/getCashWalletBalance', 'cots/api/yes-shop/v2/banners/list']) {
       expect(parseLogText(log(`REQUEST https://example.test/${path} {}`))[0].source).toBe('yes-shop');
     }
     expect(parseLogText(log('REQUEST https://ussp.example.test/other {}'))[0].source).toBe('unknown');
