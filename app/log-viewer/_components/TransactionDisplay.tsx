@@ -6,6 +6,7 @@ import { LogEvent, Transaction } from '@/lib/log-viewer/types';
 import { transactionHasError } from '@/lib/log-viewer/transactions';
 import { EventHeader } from './EventHeader';
 import { JsonOrText } from './JsonTree';
+import { TableDumpRow } from './TableDumpRow';
 import { AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react';
 
 function formatMsDuration(ms: number): string {
@@ -33,6 +34,7 @@ export function TransactionRow({
   expanded: boolean;
   onToggle: () => void;
 }) {
+  if (tx.tableBatch) return <TableDumpRow tx={tx} expanded={expanded} onToggle={onToggle} />;
   const lastResponse = tx.responses[tx.responses.length - 1];
   const standaloneEvent = getStandaloneTimelineEvent(tx);
   const status = lastResponse?.httpStatus;

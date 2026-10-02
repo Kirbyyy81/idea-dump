@@ -1355,6 +1355,10 @@ export type LogBodyKind = 'json' | 'text' | 'none';
 export type LogLineType = 'request' | 'response' | 'content_data' | 'crash' | 'error' | 'info' | 'other';
 export type OrphanKind = 'request' | 'response' | 'content_data' | null;
 
+export type LogTableField = { name: string; value: string };
+export type LogTableRow = { rawText: string; fields?: LogTableField[] };
+export type LogTableDump = { name: string; empty: boolean; rows: LogTableRow[] };
+
 export type LogEvent = {
   id: string;
   rawLine: string;
@@ -1382,6 +1386,7 @@ export type LogEvent = {
   bodyRaw?: string;
   bodyJson?: unknown;
   bodyParseError?: boolean;
+  tableDump?: LogTableDump;
 };
 
 export type PairingConfidence = 'high' | 'medium' | 'low' | 'unknown';
@@ -1398,6 +1403,7 @@ export type Transaction = {
   responses: LogEvent[];
   contentData?: LogEvent;
   contentMatch?: LogContentMatch;
+  tableBatch?: LogTableDump[];
   lineRefs: number[];
   orphanKind: OrphanKind;
   orphanResponse?: boolean;

@@ -1,5 +1,6 @@
 import type { BuildTransactionsOptions, LogEvent, PairingConfidence, Transaction, UnparsedLogLine } from '@/lib/types';
 import { appendLineRef, attachContent, endpointKeys, eventIds, isImageResult, isImageUpload, responseContentRequest, sourceScope } from './matching';
+import { groupTableTransactions } from './tables';
 
 function preferredCorrelationId(event: LogEvent): string | undefined {
   return event.responseId ?? event.requestId ?? event.clientRequestId;
@@ -164,7 +165,7 @@ export function buildTransactions(events: LogEvent[], options: BuildTransactions
   for (const tx of open) tx.closedReason = 'eof';
   const unmatchedContentData = attachContent(events, transactions);
   return {
-    transactions: sortTransactionsByTimeline(transactions),
+    transactions: sortTransactionsByTimeline(groupTableTransactions(events, transactions)),
     orphanResponses: sortTransactionsByTimeline(orphanResponses),
     unparsedLines, unmatchedContentData,
   };
