@@ -46,25 +46,55 @@ Public pairing bootstrap has a database-enforced limit of 100 new requests per m
 }
 ```
 
-Ryt's package is `my.rytbank.app`. UOB (`com.uob.mightymy`) is intentionally disabled pending a real sample. Supported templates have anonymized parser fixtures:
+Ryt's package is `my.rytbank.app`. UOB (`com.uob.mightymy`) is intentionally disabled pending a real sample. Starter patterns are stored centrally in the database and have anonymized regression fixtures:
 
 - TNG: `PERSON has transferred RM X.XX to you. Tap here to check the transaction details` suggests income and the sender.
 - TNG: `RM X.XX has been successfully transferred to PERSON.` suggests an expense and the recipient.
 - TNG: `RM X.XX received from PERSON for Fund Transfer.` suggests income and the sender, excluding the fixed suffix.
 - Ryt: `You've sent RM X.XX to PERSON on DATE, 1:25pm (GMT+8) using your main account` suggests an expense, the recipient, and the explicit date.
+- Ryt: `RMX.XX paid at MERCHANT using your Main Account.` suggests an expense and merchant, including the verified card-payment format.
 - Ryt: `You've paid RMX.XX to MERCHANT on DATE, 3:51 PM (GMT+8) using your Main Account.` suggests an expense, the merchant, and the explicit date. The `paid` template leaves payee fields empty, even if the merchant name matches a saved payee. The `sent` template continues to represent a transfer to a payee.
 
 Parsing and manual-rule matching use a working copy normalized with Unicode NFKC, collapsed whitespace, and straight apostrophes. Names retain Unicode and internal punctuation such as `A/P` and `@`. Raw text and replay digests remain unchanged. Multiple monetary values leave the amount unset; unsupported wording does not guess a direction.
 
-The server compares extracted counterparties with the paired user's active saved payees using the existing normalized-name convention. Exactly one match sets `payee_id` and the canonical saved name. Missing, archived, or ambiguous matches keep the extracted name for review. Existing manual Finance rules run afterward with their current priority and precedence. Categories still depend on manual rules and user review; notification corrections do not train a parser.
+The server compares extracted counterparties with the paired user's active saved payees using the existing normalized-name convention. Exactly one match sets `payee_id` and the canonical saved name. Missing, archived, or ambiguous matches keep the extracted name for review. Existing manual Finance rules run afterward with their current priority and precedence. Categories still depend on manual rules and user review. Notification extraction learning is separate from screenshot/OCR learning and does not learn categories or notes.
 
-New uploads and the existing Finance Review Retry action use the same preparation path. Deploy these normalization changes through the normal web release process; no migration or Android reinstall is required. Existing pending candidates are not automatically reparsed. Retry explicitly applies the current parser and saved payees while raw notification text remains available.
+New uploads and Finance Review Retry use the same preparation path: stored extraction patterns, saved-payee matching, manual Finance rules, then duplicate assessment. Manual rules keep precedence. Unknown eligible formats remain reviewable with missing fields. Existing pending candidates are not automatically reparsed. Retry explicitly applies current patterns and saved payees while raw text remains available. Apply the notification-learning migrations below before the compatible web release; no Android reinstall is required.
 
 A successful response returns the durable event status and intake identifier. Identical owner/event replays are safe; a changed payload with the same identifier returns 409. Notification ingestion creates review candidates only. No companion endpoint can confirm a transaction.
 
 Sensitive and unrelated content is discarded before client persistence and checked again on the server. Ignored server events retain a replay digest, without raw text or a candidate. Reviewable text is stored separately from OCR. Confirmation, rejection, and duplicate resolution delete raw title/body/subtext inside the same database transaction. Structured transaction fields and replay digests remain. No notification text enters OCR correction excerpts or lyric requests.
 
 An explicit transaction date wins. Otherwise the candidate suggests the notification's posted date in Asia/Kuala_Lumpur; review displays this provenance. Malformed explicit dates remain unset.
+
+## Notification extraction learning
+
+The engine interprets version 1 pattern definitions with escaped literal anchors and bounded typed slots for amount, date, time, counterparty, and reference. Rules contain no executable code or user-supplied regular expressions. Starter definitions also contain conservative amount/date fallbacks. Runtime parsing contains no bank-specific extraction branches.
+
+One successful manual confirmation can activate a personalized pattern immediately. The server compares the original notification with the reviewed values, replacing uniquely identifiable values with selectors so a later message can contain a different amount, name, date, and reference. Direction can be a fixed classification for that format. Ambiguous or unsupported corrections remain manual; a confirmed value is never reused as a constant selector. Unknown formats require a uniquely identifiable counterparty and refuse unclassified numeric anchors. This does not infer every possible format from one example.
+
+Patterns are scoped to user, Finance source, bank package, and format. A personalized format overrides its starter; disagreeing matching patterns leave the affected field unset. Disabling a pattern creates or updates the user's override, suppresses that starter, and survives subsequent reviews. Disabling one format does not disable separately listed generic amount/date patterns. Finance settings, Rules, Notification patterns lets the owner inspect structural slots and enable or disable patterns for a selected source. Review shows learned fields and unresolved pattern conflicts. Manual rule results are not labeled as learned extraction.
+
+The server-only `finance_confirm_notification_v1` wraps existing confirmation. It captures raw-text context before deletion and commits the transaction, pattern, and review provenance atomically. Replays, unsuccessful confirmations, rejection, and duplicate linking do not train. A changed review source is recorded without learning into the original source. Confirmation remains successful when a correction cannot be inferred safely.
+
+`finance_notification_patterns` stores shared starters and owner-specific definitions, revisions, activation state, and the latest supporting transaction. `finance_notification_learning_reviews` records successful confirmation identifiers and the learning outcome. Neither stores complete notification text or copies it into OCR evidence. Changes to the supporting transaction's extraction fields invalidate its pattern; category/notes-only edits do not. Deletion also invalidates the pattern. A fresh confirmed notification can provide new support, but does not re-enable a disabled pattern. Deleted raw text is never reconstructed for learning or historical backfill.
+
+Deploy these canonical migrations before the compatible web release:
+
+- `20261002100322_finance_notification_patterns.sql`
+- `20261002101103_finance_notification_learning.sql`
+
+Use a reviewed deployment set that excludes unrelated pending migrations. Both migrations are additive. Android upload contracts, screenshot learning, and category assignment stay compatible. After releasing the web code, Retry will populate the pending Ryt card payment from the stored starter format. No Android reinstall is needed.
+
+### Notification learning validation and rollout, 2026-10-02
+
+The full root suite passed 584 tests across 87 files. The final package-isolation safeguard and API passed 13 focused tests. Review/settings and duplicate-link browser tests passed on desktop and mobile (12 tests); the six notification UI tests passed again after the loading safeguard. The four isolated companion SQL suites and separate-connection lock/concurrent-confirmation tests passed. Root lint, TypeScript, production build, and full/production dependency audits passed with zero vulnerabilities. OCR typecheck, build, both audits, and 387 tests passed (171 optional tests skipped).
+
+The canonical CLI push applied only `20261002100322` and `20261002101103` to the live IdeaDump project. The temporary deployment set included already-applied history and excluded unrelated parser migrations `20260918033827` and `20260929055515`; no migration history was repaired. Staged migration checksums matched the committed files. The post-deployment dry run reported no pending migrations in that set. The CLI could not update its optional local catalog cache because Docker was unavailable; remote versions and objects were verified directly.
+
+Catalog checks verified 15 valid starter definitions, RLS on both tables, no direct browser-role table access, and security-invoker functions with empty search paths and server-only execution. A rollback-only service-role smoke test verified owner/source rejection without retaining writes. Security advisors added only expected [RLS-without-policies information](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy) for the two server-only tables; existing warnings were unchanged. Performance advisors added [unused-index information](https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index) for the newly created indexes and no new missing-FK-index findings.
+
+The compatible web release is still required. The branch is committed locally and has not been pushed as part of this change. Existing pending notifications were not reparsed or modified; use Retry after the web release. Historical resolved notifications whose raw text was deleted cannot be backfilled.
 
 ## Linking screenshot details to a notification transaction
 
@@ -96,7 +126,7 @@ $env:PSQL_PATH = 'C:\path\to\psql.exe'
 node scripts/test-companion-db.mjs
 ```
 
-The SQL suites cover pairing replay, wrong proofs, ownership, revocation, intake replay conflicts, manual-review enforcement, all three text-deletion paths, and raw-free ignored events. The linking suite also verifies selected fields, explicit conflicts, ownership, stale previews, replay safety, provenance, and rollback. Fixtures roll back. Hosted databases are rejected by the runner.
+The SQL suites cover pairing replay, wrong proofs, ownership, revocation, intake replay conflicts, manual-review enforcement, all three text-deletion paths, and raw-free ignored events. The linking suite also verifies selected fields, explicit conflicts, ownership, stale previews, replay safety, provenance, and rollback. The learning suite verifies ownership/source isolation, one-review activation, correction, disabling, replay, invalidation, permissions, and atomic raw-text deletion. SQL fixtures roll back. The runner also opens separate connections to test held candidate locks and simultaneous confirmations; these committed synthetic fixtures use a fresh test owner and are deleted afterward. Hosted databases are rejected by the runner.
 
 ## Validation record, 2026-09-25
 

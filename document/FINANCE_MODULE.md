@@ -672,6 +672,12 @@ Review confirmation records differences between the original candidate and the c
 
 Transaction edits also record payee-name changes. Corrections store the text payee name, not the opaque payee ID.
 
+### Notification extraction patterns
+
+Notification intake and Retry load stored starter and owner-specific extraction patterns before payee matching, manual rules, and duplicate checks. A single successful manual confirmation can learn bounded selectors for amount, direction, merchant/payee, explicit date, and reference. Categories and notes are excluded. This workflow is separate from screenshot parser learning and its scheduled promotion requirements.
+
+Rules settings includes source-scoped notification pattern inspection and enable/disable controls. Review identifies learned fields and conflicts. The server-only confirmation wrapper commits learning atomically, preserves raw-text deletion, and excludes replay, failure, rejection, and duplicate linking. Editing or deleting the supporting transaction invalidates the affected pattern. See [notification learning and rollout](ANDROID_COMPANION.md#notification-extraction-learning).
+
 ### Parser learning and retired legacy rules
 
 The daily learning job continues to refresh algorithm 2 and 3 parser templates. Templates retain the existing source/receipt-format scopes, upload cutoff, shadow evidence, contradiction handling, and explicit promotion requirements. Algorithm 3 transforms consume recorded parser baselines; new baselines are captured after standard parsing and manual rules.
@@ -855,6 +861,7 @@ All Finance API handlers are dynamic and return JSON.
 | `/api/finance/review` | POST | Confirm, retry, duplicate, and reject mutations. Queue reads are server-rendered. |
 | `/api/finance/sources` | GET, POST, PATCH or PUT, DELETE | Source library management. |
 | `/api/finance/categories` | GET, POST, PUT or PATCH, DELETE | Category library management. |
+| `/api/finance/notification-patterns` | GET, PATCH | Owner-scoped notification patterns for an active source; inspect structural definitions and toggle with revision checks. |
 | `/api/finance/rules` | GET, POST, PUT, DELETE | Rule library management. GET also returns an empty suggestions array and the safe learning summary so Settings needs one read. |
 | `/api/finance/rule-suggestions` | PATCH, POST | Retired endpoint; authorized mutations return HTTP 410. |
 | `/api/finance/share-batches/prepare` | POST | Reserve a batch and return signed upload details. |
