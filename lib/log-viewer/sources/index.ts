@@ -14,7 +14,7 @@ export function sourceFromUrl(url?: string): LogViewerSource {
   try {
     const path = new URL(url).pathname.toLowerCase();
     if (path.startsWith('/ussp/')) return 'ussp';
-    if (/^\/(?:yesshop(?:-admin|-report)?\/|cots\/api\/yes-shop\/)/.test(path)) return 'yes-shop';
+    if (/^\/(?:yesshop(?:-admin|-report|-wallet)?\/|cots\/api\/yes-shop\/)/.test(path)) return 'yes-shop';
   } catch { /* Preserve unrecognised URL text in the generic parser. */ }
   return 'unknown';
 }

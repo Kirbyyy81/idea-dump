@@ -1,5 +1,6 @@
 import { LogBodyKind, LogEvent, LogLineType, LogViewerSource } from '@/lib/log-viewer/types';
 import { resolveSources, sourceFromUrl, sourceParsers } from './sources';
+import { parseTableDump } from './tables';
 
 const HTTP_METHODS = new Set([
   'GET',
@@ -236,7 +237,8 @@ export function parseLogLine(
   const timestamp = tsMatch?.[1] ?? '';
   const rest = tsMatch?.[2] ?? line;
   const timestampMs = timestamp ? tryParseTimestampMs(timestamp) : undefined;
-  const lineType = classifyLine(rest, Boolean(timestamp));
+  const tableDump = parseTableDump(rest);
+  const lineType = tableDump ? 'info' : classifyLine(rest, Boolean(timestamp));
 
   const parts = rest
     .split(/\s+>{5,}\s+|\s+>>>\s+/)
@@ -244,7 +246,7 @@ export function parseLogLine(
     .filter(Boolean);
 
   const defaultEventType = markerText(parts[0] ?? rest).replace(/\s+(?:URL:\s*)?https?:\/\/[\s\S]*$/i, '').trim();
-  const eventType = lineType === 'crash'
+  const eventType = tableDump ? 'Table dump' : lineType === 'crash'
     ? 'CRASH'
     : lineType === 'info'
       ? extractInfoEventType(rest)
@@ -257,7 +259,8 @@ export function parseLogLine(
   const record = sourceParsers[source](rest, lineType, url);
   const endpointName = urlParts.path?.split('/').filter(Boolean).at(-1) ?? record.endpointName;
   const method = extractMethod(rest, parts, eventType);
-  const body = parseBody(record.bodyText);
+  const body = tableDump ? { kind: 'text' as const, raw: rest, json: undefined, parseError: undefined }
+    : parseBody(record.bodyText);
   const header = record.bodyText ? rest.slice(0, rest.lastIndexOf(record.bodyText)) : rest;
   const requestId = findStringField(body.json, 'requestId');
   const responseId = findStringField(body.json, 'responseId');
@@ -300,6 +303,7 @@ export function parseLogLine(
     bodyRaw: body.raw,
     bodyJson: body.json,
     bodyParseError: body.parseError,
+    tableDump,
   };
 }
 

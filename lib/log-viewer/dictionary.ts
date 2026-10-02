@@ -27,6 +27,13 @@ const yesShopAliases: Readonly<Record<string, readonly string[]>> = {
   getReserveNoContentData: ['ReserveMSISDN'],
   getVerifyDeviceContentData: ['VerifyDevicesAndReserveMsisdn'],
   planOrderPriceDetailRequest: ['getPlanPriceInfo'],
+  getTodaySaleAmount: ['salesDailyTotalAmount'],
+  getMonthlySaleAmount: ['salesMonthlyTotalAmount'],
+  getWalletTopUpPaymentType: ['getTopUpPaymentType'],
+  initiateCashWalletPayment: ['initiateTopUpPayment'],
+  getCvpTopUpAndCvpTransferHistoryTransactionData: ['getCVPHistory'],
+  getCvpTransferLoadData: ['cvpTransferLoadDetails'],
+  getDealerOwnerStoreList: ['GetStoreList'],
 };
 
 const normalizedAliases = new Map(Object.entries(yesShopAliases)
