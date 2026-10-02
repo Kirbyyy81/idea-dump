@@ -1,5 +1,7 @@
 'use client';
 
+import { FinanceDuplicateLink } from './FinanceDuplicateLink';
+import type { FinanceLinkChanges } from '@/lib/types';
 import { FormEvent, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -211,8 +213,9 @@ export function FinanceReviewClient({
     };
 
     const resolveItem = async (
-        action: 'confirm' | 'reject' | 'retry' | 'mark_duplicate',
-        event?: FormEvent
+        action: 'confirm' | 'reject' | 'retry' | 'mark_duplicate' | 'link_duplicate',
+        event?: FormEvent,
+        changes?: FinanceLinkChanges
     ) => {
         event?.preventDefault();
         if (!selected || !form) return;
@@ -285,7 +288,10 @@ export function FinanceReviewClient({
                 source_id: sourceId,
                 category_id: categoryId,
             };
-            const requestBody = action === 'confirm'
+            const requestBody = action === 'link_duplicate'
+                ? { candidate_id: selected.id, action, matched_transaction_id: selected.duplicate_transaction?.id,
+                    expected_updated_at: selected.duplicate_transaction?.updated_at, changes: changes || {} }
+                : action === 'confirm'
                 ? {
                     candidate_id: selected.id,
                     action,
@@ -315,6 +321,8 @@ export function FinanceReviewClient({
                 setCandidates((current) => current.filter((item) => item.id !== selected.id));
                 showSuccess(action === 'confirm'
                     ? 'Transaction confirmed'
+                    : action === 'link_duplicate'
+                        ? 'Details linked to the existing transaction'
                     : action === 'mark_duplicate'
                         ? 'Review item marked as duplicate'
                         : 'Review item rejected');
@@ -367,7 +375,7 @@ export function FinanceReviewClient({
                                         formattedAmount={candidate.payload.amount != null ? formatCurrency(candidate.payload.amount, candidate.payload.currency || 'MYR') : null}
                                         status={<>
                                             {candidate.id === selectedId && <span className="mb-1 block font-semibold text-accent-blue">Selected</span>}
-                                            <span className="block text-text-muted">Confidence {Math.round((candidate.confidence || 0) * 100)}%</span>
+                                            <span className="block text-text-muted">{candidate.intake?.source === 'notification' ? 'Bank notification' : `Confidence ${Math.round((candidate.confidence || 0) * 100)}%`}</span>
                                             {outcome !== 'none' && <span className="mt-1 flex items-center gap-1 font-semibold text-warning"><WarningDoodleIcon size={13} />{outcome === 'strong' ? 'Strong duplicate match' : 'Possible duplicate'}</span>}
                                         </>}
                                     />
@@ -391,7 +399,7 @@ export function FinanceReviewClient({
                                     </div>
                                 )}
                                 {selected.payload.matched_rule_names.length > 0 && <p className="mt-3 text-sm text-text-muted">Matched: {selected.payload.matched_rule_names.join(', ')}</p>}
-                                <p className="mt-2 text-xs text-text-muted">OCR confidence: {selected.intake?.ocr_confidence === null || selected.intake?.ocr_confidence === undefined ? 'Unavailable' : `${Math.round(selected.intake.ocr_confidence)}%`} · Normalizer version: {selected.intake?.normalizer_version ?? 'Legacy'}</p>
+                                {selected.intake?.source === 'notification' ? <p className="mt-2 text-xs text-text-muted">Bank notification. {selected.intake.notification?.date_provenance === 'posted_at' ? 'Date suggested from notification time in Malaysia. Verify before confirming.' : selected.intake.notification?.date_provenance === 'notification_text' ? 'Date read from notification.' : 'Transaction date unavailable.'}</p> : <p className="mt-2 text-xs text-text-muted">OCR confidence: {selected.intake?.ocr_confidence === null || selected.intake?.ocr_confidence === undefined ? 'Unavailable' : `${Math.round(selected.intake.ocr_confidence)}%`} Â· Normalizer version: {selected.intake?.normalizer_version ?? 'Legacy'}</p>}
                                 <FinanceFormErrorSummary errors={fieldErrors} />
 
                                 {duplicateOutcome(selected) !== 'none' && (
@@ -410,6 +418,16 @@ export function FinanceReviewClient({
                                                 formattedAmount={formatCurrency(selected.duplicate_transaction.amount, selected.duplicate_transaction.currency || 'MYR')}
                                             />
                                         </div>}
+                                        {selected.duplicate_transaction?.updated_at && <FinanceDuplicateLink
+                                            key={`${selected.id}:${selected.duplicate_transaction.updated_at}`}
+                                            saved={selected.duplicate_transaction}
+                                            incoming={{ ...form, payee_name: form.has_payee ? form.payee_name : null,
+                                                direction: isDirectionProposalPending ? undefined : form.direction,
+                                                transaction_date: isDateProposalPending ? undefined : form.transaction_date }}
+                                            sourceLabel={selected.intake?.source === 'notification' ? 'Notification' : 'Screenshot'}
+                                            sources={sources} categories={categories} disabled={isSaving}
+                                            onLink={(changes) => void resolveItem('link_duplicate', undefined, changes)}
+                                        />}
                                         <Toggle id="review-allow-duplicate" toggleLabel="Confirm anyway" containerClassName="mt-3" errorMessage={fieldErrors.allow_duplicate} data-finance-field="allow_duplicate" checked={form.allow_duplicate} onChange={(allow_duplicate) => setReviewField('allow_duplicate', allow_duplicate)} />
                                         {form.allow_duplicate && <Textarea id="review-duplicate-reason" label="Override reason" containerClassName="mt-3" required={duplicateOutcome(selected) === 'strong'} errorMessage={fieldErrors.duplicate_override_reason} data-finance-field="duplicate_override_reason" maxLength={500} value={form.duplicate_override_reason} onChange={(event) => setReviewField('duplicate_override_reason', event.target.value)} placeholder="Why is this a separate transaction?" />}
                                     </div>
@@ -452,11 +470,11 @@ export function FinanceReviewClient({
                                     <Textarea id="review-notes" label="Notes" containerClassName="md:col-span-2" errorMessage={fieldErrors.notes} data-finance-field="notes" maxLength={MAX_FINANCE_NOTES_LENGTH} value={form.notes} onChange={(event) => setReviewField('notes', event.target.value)} />
                                 </div>
 
-                                <details className="mt-5 border border-border-default bg-bg-subtle"><summary className="cursor-pointer px-4 py-3 text-sm font-semibold">Normalized OCR text</summary><pre className="max-h-64 overflow-auto whitespace-pre-wrap border-t border-border-default p-4 text-xs text-text-secondary">{selected.intake?.ocr_normalized_text || selected.intake?.ocr_text || 'No OCR text available.'}</pre></details>
-                                {selected.intake?.ocr_raw_text && selected.intake.ocr_raw_text !== selected.intake.ocr_normalized_text && <details className="mt-3 border border-border-default bg-bg-subtle"><summary className="cursor-pointer px-4 py-3 text-sm font-semibold">Raw OCR text · {selected.intake.ocr_confidence === null ? 'confidence unavailable' : `${Math.round(selected.intake.ocr_confidence)}% confidence`}</summary><pre className="max-h-64 overflow-auto whitespace-pre-wrap border-t border-border-default p-4 text-xs text-text-secondary">{selected.intake.ocr_raw_text}</pre></details>}
+                                {selected.intake?.source === 'notification' ? <details className="mt-5 border border-border-default bg-bg-subtle"><summary className="cursor-pointer px-4 py-3 text-sm font-semibold">Original notification</summary><div className="border-t border-border-default p-4"><pre className="max-h-64 overflow-auto whitespace-pre-wrap text-xs text-text-secondary">{[selected.intake.notification?.title, selected.intake.notification?.body, selected.intake.notification?.subtext].filter(Boolean).join('\n')}</pre><p className="mt-3 text-xs text-text-muted">Original text is deleted when you confirm, cancel, or mark this item as duplicate.</p></div></details> : <details className="mt-5 border border-border-default bg-bg-subtle"><summary className="cursor-pointer px-4 py-3 text-sm font-semibold">Normalized OCR text</summary><pre className="max-h-64 overflow-auto whitespace-pre-wrap border-t border-border-default p-4 text-xs text-text-secondary">{selected.intake?.ocr_normalized_text || selected.intake?.ocr_text || 'No OCR text available.'}</pre></details>}
+                                {selected.intake?.ocr_raw_text && selected.intake.ocr_raw_text !== selected.intake.ocr_normalized_text && <details className="mt-3 border border-border-default bg-bg-subtle"><summary className="cursor-pointer px-4 py-3 text-sm font-semibold">Raw OCR text Â· {selected.intake.ocr_confidence === null ? 'confidence unavailable' : `${Math.round(selected.intake.ocr_confidence)}% confidence`}</summary><pre className="max-h-64 overflow-auto whitespace-pre-wrap border-t border-border-default p-4 text-xs text-text-secondary">{selected.intake.ocr_raw_text}</pre></details>}
 
                                 <div className="mt-5 grid grid-cols-2 gap-3 sm:flex sm:justify-end">
-                                    {selected.payload.duplicate_transaction_id && <Button type="button" variant="secondary" className="col-span-2 sm:w-auto" onClick={() => void resolveItem('mark_duplicate')} disabled={isSaving}>Mark duplicate</Button>}
+                                    {selected.payload.duplicate_transaction_id && !selected.duplicate_transaction?.updated_at && <Button type="button" variant="secondary" className="col-span-2 sm:w-auto" onClick={() => void resolveItem('mark_duplicate')} disabled={isSaving}>Mark duplicate</Button>}
                                     <Button type="button" variant="ghost" className="w-full min-w-0 px-3 sm:w-auto" icon={<CloseDoodleIcon size={15} />} onClick={() => void resolveItem('reject')} disabled={isSaving}>Cancel transaction</Button>
                                     <Button type="submit" className="w-full min-w-0 px-3 sm:w-auto" icon={<CheckDoodleIcon size={15} />} isLoading={isSaving} disabled={isSaving}>Confirm transaction</Button>
                                 </div>

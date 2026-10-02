@@ -215,11 +215,12 @@ The dashboard accepts a `YYYY-MM` month and computes:
 - Number of intake items awaiting review.
 - Expense totals grouped by category, including Uncategorised.
 - Daily income and expense totals.
-- Six most recent confirmed transactions.
+- Six most recent confirmed transactions, using compact summary rows with category icons and amounts aligned on the right. Source and category badges are hidden on the dashboard; category names remain available to screen readers. The ledger, review, and budget rows retain their existing details.
 
-The cash-flow and category panels have equal layout height. Their charts are navigation controls:
+The daily calendar and category chart control which transactions are shown:
 
-- Selecting an income bar, expense bar, or date tick opens the ledger filtered to that exact date.
+- Selecting a calendar day updates `/finance?month=YYYY-MM&date=YYYY-MM-DD` without resetting the scroll position. The recent-transactions section queries that day's six most recent confirmed transactions on the server, rather than filtering only the previously loaded six. Monthly totals, calendar amounts, and category totals remain unchanged.
+- The selected-day card has no separate transaction link. The transactions section shows the selected date, an empty-day message when appropriate, and a Clear day filter action. Its View all link opens the ledger for the selected date. Clearing the filter or switching months restores the monthly recent list. Future dates are disabled; invalid dates or dates outside the selected month redirect to the unfiltered month.
 - Selecting a category segment or category row opens the ledger filtered to that category.
 - Selecting Uncategorised filters for transactions whose `category_id` is null.
 - Chart interactions include keyboard activation and accessible labels.
@@ -469,9 +470,9 @@ Deletion calls the tenant-scoped `finance_delete_transaction` RPC. Concurrent le
 
 ## Screenshot OCR
 
-### Direct upload flow
+### In-app screenshot upload
 
-The browser sends one multipart `screenshot` file directly to Render with the current Supabase access token.
+The Finance Screenshot picker accepts one or multiple images. A single image keeps the immediate direct upload flow: the browser sends one multipart `screenshot` file to Render with the current Supabase access token. Selecting two or more images opens the batch review and uses the durable signed-upload queue described below, with one independent OCR item and transaction outcome per image. This in-app selection avoids the Android share target when Chrome cannot pass Gallery images to the installed PWA.
 
 ```mermaid
 sequenceDiagram
@@ -647,7 +648,7 @@ The application assessment is advisory. The confirmation RPC recomputes the dupl
 - Any possible or strong match requires the user to explicitly allow the duplicate before manual confirmation.
 - A strong match also requires an override reason.
 - Automatic confirmation never overrides a duplicate.
-- The user may instead mark the candidate as a duplicate of the matched confirmed transaction, which does not create a ledger row.
+- The user may instead link the candidate to the matched confirmed transaction, which does not create a ledger row. The review comparison preselects missing fields and requires explicit selection for conflicting values. Only selected fields are applied, atomically with duplicate resolution; stale transaction versions require a fresh review. See [companion evidence linking](ANDROID_COMPANION.md#linking-screenshot-details-to-a-notification-transaction) for provenance and rollout.
 
 ## Review workflow
 
@@ -739,13 +740,15 @@ sequenceDiagram
     OCR->>Storage: Delete and verify temporary objects
 ```
 
-### Browser-side share limits
+### Browser-side batch limits
 
 - Maximum 10 files.
 - Maximum 4 MB per file.
 - Maximum 40 MB per batch.
 - PNG, JPEG, and WebP only.
 - MIME signature and image dimensions are validated before upload.
+
+These limits and the per-image review and removal controls apply to both Android shares and multi-image selections in the Screenshot picker. Removing images until one remains keeps that selection in the background batch flow. Removing all images returns to the Screenshot picker. An incoming Android share takes priority over an unsubmitted picker selection.
 
 The service worker and Finance UI communicate through the shared protocol in [`lib/finance/share/protocol.ts`](../lib/finance/share/protocol.ts). Message types cover ready, claim, payload, acknowledgement, missing payload, and error. Runtime parsers reject malformed messages.
 
@@ -897,6 +900,8 @@ All Finance API handlers are dynamic and return JSON.
 - Image bytes remain in browser, request, and OCR process memory only.
 - The service does not persist direct image bytes to Storage.
 - The image hash, OCR output, parser result, and processing lineage are persisted in Finance tables.
+- The add form shows a large, uncropped image preview. Submitting opens one dialog for upload, reading, preparation, errors and the saved result; retry retains the selected file.
+- The dialog tells the user they may leave only after the server returns a saved candidate or transaction. A candidate can remain pending review. Continue closes the dialog and opens that candidate in Review, or the transactions page for an already confirmed result. No automatic redirect occurs before Continue.
 
 ### Android share batch
 

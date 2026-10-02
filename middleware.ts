@@ -2,6 +2,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import {
     AUTH_PATHS,
+    getSafeNextPath,
     PUBLIC_AUTH_PATH_PREFIXES,
 } from '@/lib/auth/routes';
 
@@ -60,6 +61,10 @@ export async function middleware(request: NextRequest) {
     if (!isPublicPath && !user) {
         const url = request.nextUrl.clone();
         url.pathname = '/login';
+        if (request.nextUrl.pathname === '/companion/pair') {
+            url.search = '';
+            url.searchParams.set('next', request.nextUrl.pathname + request.nextUrl.search);
+        }
         return applySupabaseState(NextResponse.redirect(url));
     }
 
@@ -71,6 +76,8 @@ export async function middleware(request: NextRequest) {
 
     if (user && isLoginRoute && !isPasswordRecovery) {
         const url = request.nextUrl.clone();
+        const next = request.nextUrl.searchParams.get('next');
+        if (next) return applySupabaseState(NextResponse.redirect(new URL(getSafeNextPath(next), url.origin)));
         url.pathname = '/';
         return applySupabaseState(NextResponse.redirect(url));
     }

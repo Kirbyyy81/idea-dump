@@ -1,5 +1,57 @@
 # PRD 010: Phases 4 and 5
 
+## Configurable guarded receipt rules, 18 September 2026 (not deployed)
+
+The hardcoded baseline receipt changes in `313f20a` were reverted in `82bd7a6`. With no stored active rule, baseline parsing stays unchanged. Receipt names, labels and prefix strings are configuration data, not branches in the parser.
+
+Migration `20260918033827_finance_guarded_receipt_rules.sql` adds two algorithm 2 configuration types without changing existing definitions or algorithm 3 semantics:
+
+- `source_signature`: all one-to-five literal line conditions must match. An active signature can refine only its configured `replaces_source_id`/`target_source_id` pair, including shared filename evidence. A tenant-safe generated-column foreign key owns the replacement source. Unrelated source evidence is not overridden. Shadow matches only record observations.
+- `guarded_merchant`: conditions gate same-line label extraction or extraction from the immediately preceding physical line with one configured, case-sensitive prefix removal. Values use the existing merchant validator. Repeated equal values collapse; distinct values conflict. Optional `clear_matching_payee` reclassifies only the same baseline party, not a different payee or competing payee-template result. Manual merchant assignments remain authoritative.
+
+Conditions support exact lines, literal prefixes with a token boundary, or labels requiring a non-empty value. Existing 20,000-character/200-physical-line bounds, 120-character anchors, 4,096-byte configurations, combined template capacity, tenant isolation and lifecycle gates remain in effect. Raw regular expressions and unknown configuration keys are rejected. Prefix cleanup remains a heuristic and must earn reviewed shadow evidence, particularly for legitimate names starting with the configured initials.
+
+The opt-in operator installer supplies three reviewed definitions: TnG Card (`Posting Time` + `Card Balance` + `Entry Loc`), Ryt DuitNow QR merchant (`To` with the exact transaction type), and Ryt merchant icon cleanup (`D ` or `DO ` immediately before `Paid from Main Account`, guarded by other labels). These are operator-supplied proposals, not a claim that the automatic candidate generator discovered them. Definitions contain no transaction values or personal names. They are installed only for explicitly selected owned sources.
+
+Rollout order:
+
+1. Deploy compatible application and OCR runtimes together, preserving any newer receipt-format support on the deployment branch.
+2. Apply the forward migration. It adds capabilities and the catalog but installs no per-user templates or active rules.
+3. As the trusted database operator, bind verified source IDs and call:
+
+   ```sql
+   set statement_timeout = '90s';
+   select public.finance_install_guarded_receipt_rules(
+     :user_id, :ryt_source_id, :tng_wallet_source_id, :tng_card_source_id
+   );
+   ```
+
+4. Inspect the returned invocation's durable learning result and template evidence. The installer is retry-safe for the same cutoff and definitions. It replays through the existing learner, preserving cron, idempotent refresh invocations, 90-day retention and contradictions. Two supporting card transactions remain `proposed`; three may qualify for `shadow`. It never activates a rule or rewrites reviewed transactions.
+5. Collect fresh reviewed observations and separately approve promotion through the existing operator function. After a cutoff reset, rerun the installer to seed new immutable versions; old observations cannot satisfy the new shadow period. Disable/requeue remains guarded by existing operator helpers.
+
+Validation includes `services/finance-ocr/test/guardedRules.test.ts` and `supabase/tests/finance_guarded_receipt_rules.test.sql`, alongside all previous SQL lifecycle and runtime/SQL parity suites. Use `FINANCE_PARSER_TEST_DATABASE_URL` and `FINANCE_PARSER_TEST_PSQL` for an isolated migrated database, never production. Production migration application, rule installation, promotion and measured accuracy gains are not part of this implementation.
+
+Validation results on Node 22.22.0: root lint, TypeScript, 257 tests and production build passed; OCR typecheck, all 483 tests (including all SQL parity cases) and build passed. Both projects' full and production-only audits reported zero vulnerabilities. All six rollback-only SQL lifecycle suites passed on isolated PostgreSQL 17; the new suite also passed with the later receipt-format migrations applied. The local Supabase security advisor reported no issues, and catalog checks confirmed operator-only helper execution and retained RLS. pgTAP was unavailable, so its separate RLS suite remains a validation gap. The local database uses synthetic Supabase prerequisites and is not a hosted staging or production performance test.
+
+## Pending rollout: filename-date context, algorithm 4
+
+`20260929055515_finance_filename_date_context.sql` adds only algorithm 4 filename-date rules. Deploy the compatible application and OCR service before applying this migration. This change has not been deployed to production, and no templates are activated by the migration.
+
+- A receipt with `Today` but no recognised screenshot timestamp returns `unresolved_missing_context`. The runtime preserves the baseline date. It never infers the screenshot date from upload time or the current date.
+- Recognised timestamps with impossible dates or times remain `invalid_output`. Receipts without a standalone `Today` marker remain `not_applicable`.
+- Algorithms 2 and 3 keep their evaluator semantics, identities and evidence. Normal refresh can generate new algorithm 4 proposals from three distinct accepted, confirmed and date-corrected transactions within the upload cutoff. Old rejected rules are not silently reactivated.
+- Missing-context evidence is retained without a value hash and excluded from precision, contradictions, applicable evaluation counts and fresh supporting reviews. Coverage still reflects skipped cases. For algorithm 4, the five-case promotion gate counts applicable cases, not abstentions.
+- The existing refresh transaction includes algorithm 4, with invocation idempotency, safe failure recording and unchanged cron/retention. Cutoff resets, operator controls, format isolation and combined capacity limits include all three runtime field versions. Promotion still requires three fresh successful reviewed shadow transactions, no contradictions and no overlap with an active rule.
+- Payee missing-context policy and Wallet Ref extraction are unchanged.
+
+Validate on an isolated migrated database with `supabase/tests/finance_filename_date_context.test.sql`, all existing parser/receipt lifecycle suites and the OCR parity suite using `FINANCE_PARSER_TEST_DATABASE_URL` and `FINANCE_PARSER_TEST_PSQL`. Do not use a production database for these fixture tests.
+
+Local validation on 29 September: the adopted schema and all subsequent migrations, including this exact migration, applied in a disposable PostgreSQL database. Hosted Auth, Storage, Cron and queue prerequisites used metadata scaffolding, not hosted services. All nine parser/receipt lifecycle suites passed, including algorithm 4 replay, retries, capacity, promotion, disable and cutoff checks. Date-context runtime/SQL parity passed. Direct catalog checks verified RLS, server-only reads and denied execution of the three new helpers by browser and service roles.
+
+Application lint, TypeScript, 449 tests and production build passed. OCR unit tests, typecheck and build passed, as did the final 73 date-context/contract checks including SQL parity. Both production and development dependency audits reported zero vulnerabilities for the application and OCR service.
+
+The full optional parity run on PostgreSQL's built-in `C.UTF-8` locale retains one unrelated algorithm 2 failure: 150 `ß` characters remain 150 characters under SQL `upper`, while JavaScript expands them to 300 `S` characters and rejects the reference length. This migration does not change algorithm 2 normalization. That locale-dependent reference issue remains a separate validation gap; no production accuracy or full hosted-platform validation is claimed.
+
 For the current deployment state, see [Production rollout, 14 September 2026](#production-rollout-14-september-2026). The [Algorithm 3](#algorithm-3-non-amount-completion-7-september-2026) section describes the six-type contract. Earlier rollout sections record historical states, including migrations that were pending at that time.
 
 ## Production rollout, 14 September 2026

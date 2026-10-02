@@ -1,0 +1,28 @@
+2026-09-24 10:43:00.000 CONTENT DATA >> getMaster Country list >> {"organizationId":1,"masterDataType":"COUNTRY"}
+2026-09-24 10:43:00.010 REQUEST https://example.test/yesshop/mobile/ws/v1/json/GetMasterData {"organizationId":1,"masterDataType":"COUNTRY","contentData":"encoded-a","sessionId":"session-a"}
+2026-09-24 10:43:00.020 CONTENT DATA >> getMaster Country list >> {"organizationId":1,"masterDataType":"NATIONALITY"}
+2026-09-24 10:43:00.030 REQUEST https://example.test/yesshop/mobile/ws/v1/json/GetGoogleApiKey {"sessionId":"session-a"}
+2026-09-24 10:43:00.040 CONTENT DATA >> getMasterConfigContentData >> {"configName":"MAX_EKYC_RETRY_COUNT","requestId":"config-1"}
+2026-09-24 10:43:00.050 REQUEST https://example.test/yesshop/mobile/ws/v1/json/GetMasterData {"organizationId":1,"masterDataType":"NATIONALITY","contentData":"encoded-b","sessionId":"session-a"}
+2026-09-24 10:43:00.060 REQUEST https://example.test/yesshop/mobile/ws/v1/json/GetMaterConfig {"contentData":"encoded-c","sessionId":"session-a"}
+2026-09-24 10:43:00.070 RESPONSE SUCCESS1 >>>>>>> https://example.test/yesshop/mobile/ws/v1/json/GetGoogleApiKey >>>>>> {"responseCode":0}
+2026-09-24 10:43:00.080 RESPONSE SUCCESS1 >>>>>>> https://example.test/yesshop/mobile/ws/v1/json/GetMaterConfig >>>>>> {"responseCode":0}
+2026-09-24 10:43:01.000 CONTENT DATA >> getProductDeviceList >> {"planType":"POSTPAID","securityId":"person-a","securityType":"ID"}
+2026-09-24 10:43:01.010 REQUEST >>>>>>> getPlanDeviceList >>>>>> {"contentData":"encoded-device","sessionId":"session-a"}
+2026-09-24 10:43:01.020 RESPONSE SUCCESS1 >>>>>>> getPlanDeviceList >>>>>> {"deviceList":[],"responseCode":0}
+2026-09-24 10:43:02.000 CONTENT DATA >> getPlanListRequest >> {"partNo":"part-a","planType":"POSTPAID"}
+2026-09-24 10:43:02.010 REQUEST >>>>>>> getPlanListByDevice >>>>>> {"contentData":"encoded-plan","sessionId":"session-a"}
+2026-09-24 10:43:02.020 RESPONSE SUCCESS1 >>>>>>> getPlanListByDevice >>>>>> {"planList":[],"responseCode":0}
+2026-09-24 10:43:03.000 CONTENT DATA >> planOrderPriceDetailRequest >> {"connections":[{"planChargeComponentDetails":[{"chargeName":"Plan Advanced Payment","chargeAmount":null}],"addonBasicInfos":[{"offerName":"Sample plan","isMandatoryAddon":true}]}]}
+2026-09-24 10:43:03.010 REQUEST >>>>>>> getPlanPriceInfo >>>>>> {"contentData":"encoded-price","sessionId":"session-a"}
+2026-09-24 10:43:03.020 RESPONSE SUCCESS1 >>>>>>> getPlanPriceInfo >>>>>> {"connectionPriceInfoList":[{"charges":[{"amount":32}]}],"responseCode":0}
+2026-09-24 10:43:04.000 REQUEST >>>>>>> https://example.test/yesshop/mobile/ws/v1/json/GetAppVersion >>>>>> (No Body)
+2026-09-24 10:43:04.010 RESPONSE >>>>>>> https://example.test/yesshop/mobile/ws/v1/json/GetAppVersion >>>>>> {"versionCode":1}
+2026-09-24 10:43:05.000 CONTENT DATA >> getIcScanConfigData >> {"configName":"SCAN_CONFIG","requestId":"scan-1"}
+2026-09-24 10:43:05.010 REQUEST >>>>>>> GetMaterConfig >>>>>> {"contentData":"encoded-scan","sessionId":"session-a"}
+2026-09-24 10:43:05.020 RESPONSE SUCCESS1 >>>>>>> GetMaterConfig >>>>>> {"configValue":true,"responseCode":0}
+2026-09-24 10:43:06.000 CONTENT DATA >> getEkyc UploadImageContentData >> {"identityType":"ID","requestImageCropped":true}
+2026-09-24 10:43:06.010 REQUEST https://example.test/ekyc/ws/v1/json/uploadMyKadImage {"requestId":"image-request","clientRequestId":"image-client","sessionId":"session-a"}
+2026-09-24 10:43:06.020 RESPONSE duration >> 15 >> RESULT {"responseId":"image-result","imageId":"image-a","id_expected_confidence":90,"responseCode":0}
+2026-09-24 10:43:07.000 CONTENT DATA >> getEkycUploadVideoContentData >> {"additionalIdentifiers":[]}
+2026-09-24 10:43:07.010 RESPONSE duration >> 10 >> RESULT https://example.test/ekyc/ws/v1/json/verifyImageWithVideo {"responseId":"video-result","responseCode":0}

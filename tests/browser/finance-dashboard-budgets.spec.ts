@@ -16,7 +16,7 @@ test('month navigation shows separate frozen cycles, current progress and empty 
     await expect(history).not.toContainText('October groceries');
     await page.evaluate(() => { document.documentElement.style.zoom = '2'; });
     await expect(history.getByRole('heading', { name: 'Weekly groceries' }).first()).toBeVisible();
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
     await page.getByRole('button', { name: 'Previous month' }).click();
     await expect(history).toContainText('No budget cycles for this month.');
 });

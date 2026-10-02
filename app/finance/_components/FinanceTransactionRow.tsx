@@ -24,7 +24,7 @@ type FinanceTransactionRowProps = RowInteraction & {
     date?: string | null;
     direction?: FinanceTransactionDirection | null;
     formattedAmount: string | null;
-    density?: 'default' | 'compact';
+    density?: 'default' | 'compact' | 'summary';
     status?: ReactNode;
 };
 
@@ -50,7 +50,8 @@ export function FinanceTransactionRow({
     const tone = direction === 'income' ? 'text-success' : direction === 'expense' ? 'text-error' : 'text-text-secondary';
     const className = cn(
         'grid min-w-0 w-full grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 gap-y-2 text-left',
-        density === 'compact' ? 'px-3 py-3 text-sm' : 'px-5 py-4 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center',
+        density === 'summary' ? 'grid-cols-[auto_minmax(0,1fr)_auto] px-3 py-3 text-sm'
+            : density === 'compact' ? 'px-3 py-3 text-sm' : 'px-5 py-4 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center',
         (href || onSelect) && 'rounded-md transition-colors hover:bg-bg-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-dark',
         onSelect && 'border-l-4 border-l-transparent',
         selected && 'border-l-accent-blue bg-bg-hover'
@@ -66,17 +67,18 @@ export function FinanceTransactionRow({
             <span className="block break-words font-semibold [overflow-wrap:anywhere]">{recipient}</span>
             {payeeName && merchant && <span className="block break-words text-sm text-text-secondary [overflow-wrap:anywhere]">Merchant: {merchant}</span>}
             {date !== undefined && <span className="mt-1 block text-xs text-text-muted">{date ? <time dateTime={date}>{date}</time> : 'No date'}</span>}
-            <span className="mt-2 flex min-w-0 flex-wrap gap-2">
+            {density === 'summary' && <span className="sr-only">Category: {categoryName || 'Uncategorised'}</span>}
+            {density !== 'summary' && <span className="mt-2 flex min-w-0 flex-wrap gap-2">
                 <span className="inline-flex min-h-7 max-w-full items-center gap-1.5 rounded-full border border-border-subtle bg-bg-subtle px-2.5 py-1 text-xs font-semibold text-text-secondary">
                     <SourceDoodleIcon size={13} className="shrink-0" /><span className="break-words [overflow-wrap:anywhere]">{sourceName || 'Unknown source'}</span>
                 </span>
                 {categoryName !== undefined && <span className="inline-flex min-h-7 max-w-full items-center gap-1.5 rounded-full border border-border-subtle bg-bg-subtle px-2.5 py-1 text-xs font-semibold text-text-secondary">
                     <CategoryDoodleIcon size={13} className="shrink-0" /><span className="break-words [overflow-wrap:anywhere]">{categoryName || 'Uncategorised'}</span>
                 </span>}
-            </span>
+            </span>}
             {status && <span className="mt-2 block text-xs">{status}</span>}
         </span>
-        <span className={cn('col-start-2 flex min-w-0 flex-wrap items-center justify-between gap-2', density === 'default' && 'sm:col-start-3 sm:row-start-1 sm:justify-end')}>
+        <span className={cn('col-start-2 flex min-w-0 flex-wrap items-center justify-between gap-2', density === 'default' && 'sm:col-start-3 sm:row-start-1 sm:justify-end', density === 'summary' && 'col-start-3 row-start-1 max-w-32 justify-end text-right')}>
             <span className={cn('break-all font-bold', formattedAmount === null ? 'text-text-muted' : tone)}>
                 {formattedAmount === null ? 'No amount' : <>{direction && <><span className="sr-only">{direction === 'income' ? 'Income ' : 'Expense '}</span><span aria-hidden="true">{direction === 'income' ? '+' : '-'}</span></>}{formattedAmount}</>}
             </span>

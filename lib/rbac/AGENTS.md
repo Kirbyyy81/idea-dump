@@ -7,7 +7,7 @@
 
 ## Responsibilities
 
-- Keep module and built-in role slugs in `constants.ts`.
+- Keep built-in role slugs and shared slug types in `constants.ts`. Load the module catalog from `dim_modules`; do not filter database modules through a compiled slug allowlist.
 - Keep RBAC data structures in `types.ts`.
 - Keep session lookup, role resolution, module metadata, overrides, and access calculation in `access.ts`.
 - Keep route-facing authorization helpers and standard unauthorized or forbidden responses in `guards.ts`.
@@ -19,6 +19,7 @@
 - Resolve access from the authenticated user or verified API-key identity. Never trust request-provided roles, user IDs, module lists, or override effects.
 - Preserve always-allowed module behavior and explicit user deny or allow overrides.
 - Validate database-provided navigation paths as safe internal paths before exposing them to the client.
+- Resolve grants and overrides only against the enabled, validated database catalog. Validate visibility mutations against the full catalog, including disabled modules, and role/override mutations against managed modules. Syntactically valid slugs alone never authorize access or writes.
 - Use the shared server and admin Supabase clients. Do not create an inline client or expose service-role credentials.
 - Scope user-specific RBAC queries to the verified user. Broader role and module metadata reads must remain limited to trusted server code.
 - API routes must authorize independently because middleware does not cover `/api`.

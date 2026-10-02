@@ -1,6 +1,6 @@
 {
   "name": "idea-dump",
-  "version": "0.15.3",
+  "version": "0.16.2",
   "private": true,
   "engines": {
     "node": ">=22.22.0 <23.0.0"
@@ -13,7 +13,7 @@
     "start": "next start",
     "lint": "next lint",
     "test": "npm run check:service-worker && vitest run",
-    "test:log-viewer": "vitest run tests/log-viewer.test.ts",
+    "test:log-viewer": "vitest run tests/log-viewer",
     "test:finance-security": "vitest run tests/finance-security.test.ts",
     "test:finance-validation": "vitest run tests/finance-validation.test.ts",
     "test:finance-budgets": "vitest run tests/finance-budget",
@@ -37,6 +37,7 @@
     "@supabase/supabase-js": "2.112.3",
     "clsx": "^2.1.0",
     "lucide-react": "0.475.0",
+    "mermaid": "11.17.2",
     "next": "15.5.25",
     "react": "19.2.8",
     "react-dom": "19.2.8",

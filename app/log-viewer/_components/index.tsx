@@ -1,7 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { Button } from '@/components/atoms/Button';
+import { NextDoodleIcon } from '@/components/atoms/DoodleIcons';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
@@ -23,6 +25,7 @@ function transactionIncludesLineType(tx: Transaction, lineType: LogLineType): bo
 }
 
 export function LogViewer() {
+  const rawInputRef = useRef<HTMLTextAreaElement>(null);
   const [fileName, setFileName] = useState<string>('');
   const [rawText, setRawText] = useState<string>('');
   const [lastParsedRawText, setLastParsedRawText] = useState<string>('');
@@ -146,6 +149,12 @@ export function LogViewer() {
     processText(text, file.name);
   };
 
+  const returnToImport = () => {
+    flushSync(() => setIsImportOpen(true));
+    rawInputRef.current?.focus({ preventScroll: true });
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  };
+
   useEffect(() => {
     const trimmed = rawText.trim();
 
@@ -171,7 +180,7 @@ export function LogViewer() {
   }, [rawText, autoParseSource, clearParsedState, isLargePastedLog, lastParsedRawText, processText]);
 
   return (
-    <div className="w-full min-w-0 max-w-full space-y-6 overflow-x-hidden">
+    <div className="w-full min-w-0 max-w-full space-y-6 overflow-x-hidden pb-20">
       <Card className="min-w-0 max-w-full p-0">
         <button
           type="button"
@@ -232,6 +241,7 @@ export function LogViewer() {
               </div>
             </div>
             <Textarea
+              ref={rawInputRef}
               id="log-viewer-raw-input"
               className="min-h-[180px] w-full min-w-0 text-xs font-mono"
               value={rawText}
@@ -435,6 +445,15 @@ export function LogViewer() {
           </div>
         </Card>
       )}
+      <Button
+        type="button"
+        className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-[calc(1rem+env(safe-area-inset-right))] z-20 h-12 w-12 rounded-full p-0"
+        aria-label="Back to log input"
+        title="Back to log input"
+        onClick={returnToImport}
+      >
+        <NextDoodleIcon className="-rotate-90" />
+      </Button>
     </div>
   );
 }

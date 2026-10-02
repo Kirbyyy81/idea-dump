@@ -42,7 +42,7 @@ select public.finance_refresh_rule_suggestions();
 select pg_temp.check_v3(not exists(select 1 from public.finance_parser_templates where algorithm_version=3),'two independent reviews plus pending cannot generate');
 update public.finance_candidate_transactions set status='accepted';
 select public.finance_refresh_rule_suggestions('d3000000-0000-4000-8000-000000000002');
-select pg_temp.check_v3((select status='succeeded' and algorithm_version=3 and templates_proposed>0 from public.finance_learning_runs where invocation_id='d3000000-0000-4000-8000-000000000002'),'successful integrated run');
+select pg_temp.check_v3((select status='succeeded' and algorithm_version=4 and templates_proposed>0 from public.finance_learning_runs where invocation_id='d3000000-0000-4000-8000-000000000002'),'successful integrated run');
 select pg_temp.check_v3((select count(distinct template_type)=6 from public.finance_parser_templates where algorithm_version=3),'all six types generated');
 select pg_temp.check_v3(not exists(select 1 from public.finance_parser_templates where algorithm_version=3 and (field_name='amount' or evidence_count<3)),'only supported non-amount definitions');
 select pg_temp.check_v3(not exists(select 1 from public.finance_template_evidence e join public.finance_parser_templates t on t.id=e.template_id

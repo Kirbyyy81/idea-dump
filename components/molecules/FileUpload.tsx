@@ -5,20 +5,24 @@ import { ImagePlus, X } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
 import { cn } from '@/lib/utils';
 
-interface FileUploadProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'value' | 'onChange'> {
+type FileUploadProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'value' | 'onChange' | 'multiple'> & {
     label: string;
     value: File | null;
     onChange: (file: File | null) => void;
     error?: boolean;
     previewUrl?: string | null;
-}
+    previewSize?: 'compact' | 'large';
+} & ({ multiple?: false; onFilesChange?: never } | { multiple: true; onFilesChange: (files: File[]) => void });
 
 export function FileUpload({
     label,
     value,
     onChange,
+    multiple,
+    onFilesChange,
     error,
     previewUrl,
+    previewSize = 'compact',
     accept,
     disabled,
     className,
@@ -45,6 +49,12 @@ export function FileUpload({
     const displayPreviewUrl = localPreviewUrl || previewUrl;
 
     const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
+        if (multiple && onFilesChange) {
+            const selectedFiles = Array.from(event.target.files ?? []);
+            if (selectedFiles.length > 0) onFilesChange(selectedFiles);
+            event.target.value = '';
+            return;
+        }
         onChange(event.target.files?.[0] ?? null);
     };
 
@@ -59,6 +69,7 @@ export function FileUpload({
                 ref={inputRef}
                 id={inputId}
                 type="file"
+                multiple={multiple}
                 accept={accept}
                 disabled={disabled}
                 tabIndex={-1}
@@ -75,7 +86,7 @@ export function FileUpload({
                     disabled && 'opacity-60'
                 )}
             >
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className={cn('flex flex-col gap-3', previewSize === 'compact' && 'sm:flex-row sm:items-center')}>
                     <label
                         htmlFor={inputId}
                         className={cn(
@@ -97,9 +108,11 @@ export function FileUpload({
                     </label>
 
                     {displayPreviewUrl && (
-                        <div className="h-24 w-full overflow-hidden rounded-lg border border-border-default bg-bg-hover sm:w-32">
+                        <div className={cn('w-full overflow-hidden rounded-lg border border-border-default bg-bg-hover',
+                            previewSize === 'large' ? 'h-[min(65svh,36rem)] min-h-64' : 'h-24 sm:w-32')}>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={displayPreviewUrl} alt="" className="h-full w-full object-cover" />
+                            <img src={displayPreviewUrl} alt={previewSize === 'large' ? `${label} preview` : ''}
+                                className={cn('h-full w-full', previewSize === 'large' ? 'object-contain' : 'object-cover')} />
                         </div>
                     )}
                 </div>
@@ -107,7 +120,7 @@ export function FileUpload({
                 <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
                     <div className="flex gap-2">
                         <Button type="button" variant="ghost" aria-describedby={describedBy} onClick={() => inputRef.current?.click()} disabled={disabled}>
-                            {value ? 'Change file' : 'Choose file'}
+                            {value ? 'Change file' : multiple ? 'Choose images' : 'Choose file'}
                         </Button>
                         {value && (
                             <Button type="button" variant="secondary" icon={<X size={14} />} onClick={clearFile} disabled={disabled}>

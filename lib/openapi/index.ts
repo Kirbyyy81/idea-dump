@@ -1,5 +1,6 @@
 import { openApiComponents } from './components';
 import { filmOpenApiPaths } from './film';
+import { documentationOpenApiPaths } from './documentation';
 import { logOpenApiPaths } from './logs';
 import { projectOpenApiPaths } from './projects';
 import { ticketOpenApiPaths } from './tickets';
@@ -30,6 +31,7 @@ export function getOpenApiSpec() {
             ...projectOpenApiPaths,
             ...ticketOpenApiPaths,
             ...filmOpenApiPaths,
+            ...documentationOpenApiPaths,
         },
     };
 }

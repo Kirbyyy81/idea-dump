@@ -3,6 +3,16 @@ import { describe, expect, it, vi } from 'vitest';
 import { FinanceTransactionRow } from '@/app/finance/_components/FinanceTransactionRow';
 
 describe('shared Finance transaction row', () => {
+    it('shows the category icon and amount in summary rows without source or category badges', () => {
+        const { container } = render(<FinanceTransactionRow density="summary" merchant="Cafe" sourceName="Bank" categoryName="Food" date="2026-09-21" direction="expense" formattedAmount="RM 12.30" />);
+        expect(container.querySelector('[data-ledger-category-icon="food"]')).toBeTruthy();
+        expect(screen.queryByText('Bank')).toBeNull();
+        expect(screen.queryByText('Food')).toBeNull();
+        expect(screen.getByText('Category: Food')).toBeTruthy();
+        expect(screen.getByText('RM 12.30')).toBeTruthy();
+        expect(screen.getByText('2026-09-21')).toBeTruthy();
+    });
+
     it.each(['default', 'compact'] as const)('keeps the same information and visual vocabulary in %s density', (density) => {
         const { container } = render(<FinanceTransactionRow density={density} payeeName="Alex" merchant="Cafe" sourceName="Bank" categoryName="Food" date="2026-09-21" direction="expense" formattedAmount="RM 12.30" />);
         expect(container.querySelector(`[data-finance-transaction-row="${density}"]`)).toBeTruthy();

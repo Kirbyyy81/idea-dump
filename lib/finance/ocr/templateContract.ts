@@ -7,7 +7,7 @@ import type {
     FinanceParserTemplateType,
 } from '@/lib/types';
 
-export const FINANCE_PARSER_TEMPLATE_ALGORITHM_VERSION = 3;
+export const FINANCE_PARSER_TEMPLATE_ALGORITHM_VERSION = 4;
 
 export const FINANCE_PARSER_TEMPLATE_GUARDRAILS = Object.freeze({
     minimumEvidenceCount: 3,
@@ -31,6 +31,8 @@ export const FINANCE_PARSER_TEMPLATE_PATTERN_IDS = [
 ] as const satisfies readonly FinanceParserTemplatePatternId[];
 
 const templateTypes = [
+    'source_signature',
+    'guarded_merchant',
     'source_phrase',
     'same_line_label',
     'next_non_empty_line',
@@ -71,6 +73,8 @@ const templateStatuses = [
 const extractionFields = templateFields.filter((field) => field !== 'source_id');
 
 const allowedFieldsByType: Record<FinanceParserTemplateType, readonly FinanceParserTemplateField[]> = {
+    source_signature: ['source_id'],
+    guarded_merchant: ['merchant'],
     source_phrase: ['source_id'],
     same_line_label: extractionFields,
     next_non_empty_line: extractionFields,
@@ -196,6 +200,20 @@ function hasValidPhraseList(value: unknown) {
 
 function getConfigurationShapeError(configuration: Record<string, unknown>) {
     switch (configuration.type) {
+        case 'source_signature':
+            return hasExactKeys(configuration, ['type', 'conditions', 'replaces_source_id'])
+                && isUuid(configuration.replaces_source_id) && validConditions(configuration.conditions)
+                ? null : 'Source signature configuration is invalid.';
+        case 'guarded_merchant': {
+            const extraction = configuration.extraction;
+            return hasExactKeys(configuration, ['type', 'conditions', 'extraction', 'clear_matching_payee'])
+                && validConditions(configuration.conditions) && typeof configuration.clear_matching_payee === 'boolean'
+                && isPlainObject(extraction) && isBoundedText(extraction.label)
+                && ((extraction.type === 'same_line_label' && hasExactKeys(extraction, ['type', 'label']))
+                    || (extraction.type === 'before_label' && hasExactKeys(extraction, ['type', 'label', 'strip_prefixes'])
+                        && hasValidPhraseList(extraction.strip_prefixes)))
+                ? null : 'Guarded merchant configuration is invalid.';
+        }
         case 'source_phrase':
             return hasExactKeys(configuration, ['type', 'phrase', 'location'])
                 && isBoundedText(configuration.phrase)
@@ -271,6 +289,13 @@ function getConfigurationShapeError(configuration: Record<string, unknown>) {
     }
 }
 
+function validConditions(value: unknown) {
+    return Array.isArray(value) && value.length >= 1 && value.length <= 5
+        && value.every((condition) => isPlainObject(condition)
+            && hasExactKeys(condition, ['mode', 'text']) && ['exact', 'prefix', 'label'].includes(String(condition.mode))
+            && isBoundedText(condition.text));
+}
+
 export function getFinanceParserTemplateConfigurationErrors(
     fieldName: FinanceParserTemplateField,
     configuration: unknown,
@@ -338,7 +363,7 @@ export function getFinanceParserTemplateContractErrors(value: unknown) {
     if (!isPlainObject(value)) return ['Parser template must be an object.'];
     const errors: string[] = [];
     if (!hasExactKeys(value, 'scope_receipt_format' in value ? [...contractKeys, 'scope_receipt_format'] : contractKeys)) errors.push('Parser template fields are incomplete or unknown.');
-    if (value.scope_receipt_format != null && (!['ryt_shared_v1', 'ryt_screenshot_v1'].includes(String(value.scope_receipt_format)) || value.field_name === 'source_id' || ![2, 3].includes(Number(value.algorithm_version)))) errors.push('Receipt format scope is invalid.');
+    if (value.scope_receipt_format != null && (!['ryt_shared_v1', 'ryt_screenshot_v1'].includes(String(value.scope_receipt_format)) || value.field_name === 'source_id' || ![2, 3, 4].includes(Number(value.algorithm_version)))) errors.push('Receipt format scope is invalid.');
     if (!isUuid(value.id)) errors.push('Template ID must be a UUID.');
     if (!isUuid(value.user_id)) errors.push('Template user ID must be a UUID.');
     if (!isNullableUuid(value.target_source_id)) errors.push('Target source ID must be null or a UUID.');
@@ -349,13 +374,23 @@ export function getFinanceParserTemplateContractErrors(value: unknown) {
     if (!templateTypes.includes(value.template_type as FinanceParserTemplateType)) {
         errors.push('Template type is not supported.');
     }
-    if (value.algorithm_version !== 1 && value.algorithm_version !== 2 && value.algorithm_version !== FINANCE_PARSER_TEMPLATE_ALGORITHM_VERSION) {
+    if (typeof value.algorithm_version !== 'number' || ![1, 2, 3, FINANCE_PARSER_TEMPLATE_ALGORITHM_VERSION].includes(value.algorithm_version)) {
         errors.push('Template algorithm version is not supported.');
+    }
+    if (['source_signature', 'guarded_merchant'].includes(String(value.template_type)) && value.algorithm_version !== 2) {
+        errors.push('Guarded rule types require algorithm 2.');
+    }
+    if (isPlainObject(value.configuration) && value.configuration.type === 'source_signature'
+        && value.configuration.replaces_source_id === value.target_source_id) {
+        errors.push('A source signature must refine a different source.');
     }
     if (value.algorithm_version === 3 && (
         value.field_name === 'source_id' || value.field_name === 'amount'
         || !['bounded_line_window', 'allowlisted_regex_capture', 'strip_prefix', 'strip_suffix', 'character_filter', 'date_format'].includes(String(value.template_type))
     )) errors.push('Algorithm 3 supports only extended non-amount field templates.');
+    if (value.algorithm_version === 4 && (value.field_name !== 'transaction_date' || value.template_type !== 'filename_date')) {
+        errors.push('Algorithm 4 supports only filename-date templates.');
+    }
     if (!Number.isInteger(value.template_version) || Number(value.template_version) < 1) {
         errors.push('Template version must be a positive integer.');
     }
@@ -441,6 +476,9 @@ interface TemplateSpecificity {
 
 function getTemplateSpecificity(configuration: FinanceParserTemplateConfiguration): TemplateSpecificity {
     switch (configuration.type) {
+        case 'source_signature':
+        case 'guarded_merchant':
+            return { scopeRank: 6, anchorLength: configuration.conditions.reduce((sum, item) => sum + item.text.length, 0), lineWindow: 1 };
         case 'source_phrase':
             return {
                 scopeRank: configuration.location === 'filename'

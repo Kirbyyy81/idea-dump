@@ -1,5 +1,68 @@
 // Database types matching Supabase schema
 
+export interface DocumentationPage {
+    id: string;
+    title: string;
+    type: string | null;
+    version: string | null;
+    lastEditedTime: string;
+    projectId: string | null;
+    projectName: string | null;
+    notionUrl: string;
+}
+
+export interface DocumentationRichText {
+    text: string;
+    href: string | null;
+    bold: boolean;
+    italic: boolean;
+    underline: boolean;
+    strikethrough: boolean;
+    code: boolean;
+}
+
+export interface DocumentationBlock {
+    id: string;
+    type: string;
+    hasChildren: boolean;
+    richText: DocumentationRichText[];
+    language?: string;
+    checked?: boolean;
+    icon?: string;
+    url?: string;
+    isAsset?: boolean;
+    title?: string;
+    tableWidth?: number;
+    tableHeader?: boolean;
+    cells?: DocumentationRichText[][];
+}
+
+export interface DocumentationTreeBlock extends DocumentationBlock {
+    children: DocumentationTreeBlock[];
+}
+
+export interface DocumentationBranchState {
+    status: 'idle' | 'loading' | 'error';
+    complete: boolean;
+    hasLoaded: boolean;
+    error: string | null;
+}
+
+export interface DocumentationContentSnapshot {
+    outlineComplete: boolean;
+    outlineFailures: number;
+    blocks: DocumentationTreeBlock[];
+    branches: Record<string, DocumentationBranchState>;
+    count: number;
+    complete: boolean;
+    failures: number;
+}
+
+export interface DocumentationBlockPage {
+    blocks: DocumentationBlock[];
+    nextCursor: string | null;
+}
+
 export type Status = 'ideation' | 'development' | 'deployed' | 'archived';
 
 export type Priority = 'low' | 'medium' | 'high';
@@ -397,7 +460,7 @@ export const filmProcessTypes: FilmProcessType[] = ['C41', 'E6', 'BW', 'ECN2'];
 
 export type FinanceTransactionDirection = 'expense' | 'income';
 export type FinanceEntryMode = 'manual' | 'screenshot';
-export type FinanceTransactionSource = 'manual' | 'screenshot';
+export type FinanceTransactionSource = 'manual' | 'screenshot' | 'notification';
 export type FinanceTransactionStatus = 'confirmed' | 'review' | 'duplicate' | 'rejected';
 export type FinanceCurrency = 'MYR';
 export type FinanceDuplicateOutcome = 'none' | 'possible' | 'strong';
@@ -503,6 +566,7 @@ export interface FinanceTransactionView {
 }
 
 export interface FinanceDashboardRecentTransaction {
+    category?: Pick<FinanceReferenceOption, 'name'> | null;
     id: string;
     direction: FinanceTransactionDirection;
     amount: number;
@@ -658,6 +722,7 @@ export interface FinanceReceiptProcessing {
 }
 
 export interface FinanceIntakeItem {
+    notification?: FinanceNotificationReview | null;
     id: string;
     user_id: string;
     source: 'screenshot' | 'notification';
@@ -734,6 +799,8 @@ export interface FinanceCandidateTransaction {
 }
 
 export interface FinanceReviewIntake {
+    source?: 'screenshot' | 'notification';
+    notification?: FinanceNotificationReview | null;
     ocr_text: string | null;
     ocr_raw_text: string | null;
     ocr_normalized_text: string | null;
@@ -741,7 +808,25 @@ export interface FinanceReviewIntake {
     normalizer_version: number | null;
 }
 
+export type FinanceLinkField = 'amount' | 'direction' | 'source_id' | 'category_id' | 'transaction_date'
+    | 'merchant' | 'payee_name' | 'reference_number' | 'notes';
+export type FinanceLinkChanges = Partial<Record<FinanceLinkField, string | number>>;
+export interface FinanceLinkOption {
+    field: FinanceLinkField;
+    label: string;
+    saved: string | number | null;
+    incoming: string | number;
+    isGap: boolean;
+}
+
 export interface FinanceReviewDuplicateTransaction {
+    source_id: string;
+    category_id: string | null;
+    direction: FinanceTransactionDirection;
+    reference_number: string | null;
+    notes: string | null;
+    updated_at: string;
+    category?: Pick<FinanceReferenceOption, 'name'> | null;
     id: string;
     amount: number;
     currency: FinanceCurrency;
@@ -939,7 +1024,9 @@ export type FinanceParserTemplateType =
     | 'saved_payee_match'
     | 'filename_date'
     | 'reference_label'
-    | 'receipt_pattern';
+    | 'receipt_pattern'
+    | 'source_signature'
+    | 'guarded_merchant';
 
 export type FinanceParserTemplateSourceLocation =
     | 'filename'
@@ -965,6 +1052,26 @@ export interface FinanceSourcePhraseTemplateConfiguration {
     type: 'source_phrase';
     phrase: string;
     location: FinanceParserTemplateSourceLocation;
+}
+
+export interface FinanceTemplateLineCondition {
+    mode: 'exact' | 'prefix' | 'label';
+    text: string;
+}
+
+export interface FinanceSourceSignatureTemplateConfiguration {
+    type: 'source_signature';
+    conditions: FinanceTemplateLineCondition[];
+    replaces_source_id: string;
+}
+
+export interface FinanceGuardedMerchantTemplateConfiguration {
+    type: 'guarded_merchant';
+    conditions: FinanceTemplateLineCondition[];
+    extraction:
+        | { type: 'same_line_label'; label: string }
+        | { type: 'before_label'; label: string; strip_prefixes: string[] };
+    clear_matching_payee: boolean;
 }
 
 export interface FinanceSameLineLabelTemplateConfiguration {
@@ -1050,6 +1157,8 @@ export interface FinanceReceiptPatternTemplateConfiguration {
 
 export type FinanceParserTemplateConfiguration =
     | FinanceSourcePhraseTemplateConfiguration
+    | FinanceSourceSignatureTemplateConfiguration
+    | FinanceGuardedMerchantTemplateConfiguration
     | FinanceSameLineLabelTemplateConfiguration
     | FinanceNextNonEmptyLineTemplateConfiguration
     | FinanceBoundedLineWindowTemplateConfiguration
@@ -1231,4 +1340,129 @@ export interface FinanceShareBatch {
     duplicate_files: number;
     failed_files: number;
     items: FinanceShareBatchItem[];
+}
+
+// Client-only Log Viewer records.
+export type LogViewerSource = 'yes-shop' | 'ussp' | 'unknown';
+
+export type LogViewerRecord = {
+  bodyText?: string;
+  endpointName?: string;
+  functionName?: string;
+  httpStatus?: number;
+};
+
+export type LogContentMatch = {
+  confidence: PairingConfidence;
+  method: 'id' | 'dictionary' | 'proximity';
+};
+
+export type LogBodyKind = 'json' | 'text' | 'none';
+export type LogLineType = 'request' | 'response' | 'content_data' | 'crash' | 'error' | 'info' | 'other';
+export type OrphanKind = 'request' | 'response' | 'content_data' | null;
+
+export type LogTableField = { name: string; value: string };
+export type LogTableRow = { rawText: string; fields?: LogTableField[] };
+export type LogTableDump = { name: string; empty: boolean; rows: LogTableRow[] };
+
+export type LogEvent = {
+  id: string;
+  rawLine: string;
+  lineNumber: number;
+  endLineNumber?: number;
+  timestamp: string;
+  timestampMs?: number;
+  lineType: LogLineType;
+  eventType: string;
+  source?: LogViewerSource;
+  sourceSegment?: number;
+  endpointName?: string;
+  method?: string;
+  url?: string;
+  endpointKey?: string;
+  host?: string;
+  path?: string;
+  httpStatus?: number;
+  functionName?: string;
+  requestId?: string;
+  responseId?: string;
+  clientRequestId?: string;
+  durationMs?: number;
+  bodyKind?: LogBodyKind;
+  bodyRaw?: string;
+  bodyJson?: unknown;
+  bodyParseError?: boolean;
+  tableDump?: LogTableDump;
+};
+
+export type PairingConfidence = 'high' | 'medium' | 'low' | 'unknown';
+
+export type Transaction = {
+  id: string;
+  url?: string;
+  endpointKey?: string;
+  host?: string;
+  path?: string;
+  correlationId?: string;
+  method?: string;
+  request?: LogEvent;
+  responses: LogEvent[];
+  contentData?: LogEvent;
+  contentMatch?: LogContentMatch;
+  tableBatch?: LogTableDump[];
+  lineRefs: number[];
+  orphanKind: OrphanKind;
+  orphanResponse?: boolean;
+  startedAtMs?: number;
+  endedAtMs?: number;
+  confidence: PairingConfidence;
+  hadConcurrency: boolean;
+  closedReason?: 'paired' | 'timeout' | 'eof' | 'orphan';
+};
+
+export type UnparsedLogLine = {
+  rawLine: string;
+  lineNumber: number;
+  reason?: string;
+};
+
+export type BuildTransactionsOptions = {
+  inactivityTimeoutMs: number;
+  nowMs?: number;
+};
+
+export interface FinanceNotificationEventInput {
+    client_event_id: string;
+    source_id: string;
+    source_package: 'my.rytbank.app' | 'my.com.tngdigital.ewallet' | 'com.uob.mightymy';
+    captured_at: string;
+    notification_key_hash: string;
+    notification: { title: string | null; text: string; subtext: string | null; posted_at: string };
+}
+export type FinanceNotificationDateProvenance = 'notification_text' | 'posted_at' | 'unavailable';
+export interface FinanceNotificationParseResult {
+    status: 'review' | 'ignored';
+    failure_code: 'sensitive_notification' | 'not_transaction' | null;
+    payload: FinanceCandidatePayload | null;
+    date_provenance: FinanceNotificationDateProvenance;
+}
+
+export interface CompanionDevice {
+    id: string; label: string; created_at: string; last_seen_at: string | null; revoked_at: string | null;
+}
+export type CompanionPairingResult = { status: "pending" } | { status: "paired"; device_id: string; user_id: string };
+
+export interface FinanceNotificationReview {
+    title: string | null; body: string | null; subtext: string | null;
+    source_package: FinanceNotificationEventInput["source_package"];
+    posted_at: string; date_provenance: FinanceNotificationDateProvenance;
+}
+export interface FinanceNotificationRecord extends FinanceNotificationReview {
+    source_id: string; captured_at: string; client_event_id: string; notification_key_hash: string;
+}
+
+export interface FinanceNotificationPrepared extends FinanceNotificationParseResult {
+    matched_rule_id?: string | null;
+    duplicate_outcome?: FinanceDuplicateOutcome; duplicate_score?: number; duplicate_signals?: FinanceDuplicateSignal[];
+    duplicate_explanation?: string; duplicate_checked_at?: string;
 }

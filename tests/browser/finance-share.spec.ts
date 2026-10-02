@@ -49,3 +49,30 @@ test('polling failure preserves the batch; successful empty status restores entr
     await expect(page.getByRole('heading', { name: 'Processing images' })).toHaveCount(0);
     await expect(page.getByText('Batch complete')).toHaveCount(0);
 });
+
+test('Screenshot picker reviews multiple images and returns after removal', async ({ page }, testInfo) => {
+    await page.route('**/api/finance/share-batches/active', (route) => route.fulfill({ json: { data: null } }));
+    await page.goto('/finance/add');
+    const picker = page.locator('input[type=file]');
+    await expect(picker).toHaveAttribute('multiple', '');
+    const base64 = await page.evaluate(() => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 100; canvas.height = 200;
+        canvas.getContext('2d')!.fillRect(0, 0, 100, 200);
+        return canvas.toDataURL('image/png').split(',')[1];
+    });
+    const buffer = Buffer.from(base64, 'base64');
+    await picker.setInputFiles([
+        { name: 'first.png', mimeType: 'image/png', buffer },
+        { name: 'second.png', mimeType: 'image/png', buffer },
+    ]);
+    await expect(page.getByRole('heading', { name: 'Review selected images' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Process 2 images' })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Process screenshot' })).toHaveCount(0);
+    await page.screenshot({ path: testInfo.outputPath('screenshot-batch-mobile.png'), fullPage: true });
+    await page.getByRole('button', { name: 'Remove second.png' }).click();
+    await expect(page.getByRole('button', { name: 'Process 1 image' })).toBeEnabled();
+    await page.getByRole('button', { name: 'Remove first.png' }).click();
+    await expect(page.getByRole('button', { name: 'Process screenshot' })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
+});

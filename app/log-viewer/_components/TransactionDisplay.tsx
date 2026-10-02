@@ -1,12 +1,12 @@
 'use client';
 
 import { Badge } from '@/components/atoms/Badge';
-import { Textarea } from '@/components/atoms/Textarea';
 import { cn } from '@/lib/utils';
 import { LogEvent, Transaction } from '@/lib/log-viewer/types';
 import { transactionHasError } from '@/lib/log-viewer/transactions';
 import { EventHeader } from './EventHeader';
 import { JsonOrText } from './JsonTree';
+import { TableDumpRow } from './TableDumpRow';
 import { AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react';
 
 function formatMsDuration(ms: number): string {
@@ -34,6 +34,7 @@ export function TransactionRow({
   expanded: boolean;
   onToggle: () => void;
 }) {
+  if (tx.tableBatch) return <TableDumpRow tx={tx} expanded={expanded} onToggle={onToggle} />;
   const lastResponse = tx.responses[tx.responses.length - 1];
   const standaloneEvent = getStandaloneTimelineEvent(tx);
   const status = lastResponse?.httpStatus;
@@ -42,7 +43,7 @@ export function TransactionRow({
     tx.orphanKind === 'request'
       ? 'no response'
       : tx.orphanKind === 'response'
-        ? 'orphan'
+        ? 'Request not logged'
         : standaloneEvent?.lineType === 'info'
           ? 'info'
         : isError
@@ -96,7 +97,7 @@ export function TransactionRow({
           {lastResponse?.durationMs != null && <span>- {formatMsDuration(lastResponse.durationMs)}</span>}
           {durationMs != null && <span>- {formatMsDuration(durationMs)}</span>}
           {tx.lineRefs.length > 0 && <span>- lines {tx.lineRefs.join(', ')}</span>}
-          {tx.contentData && <span>- content data</span>}
+          {tx.contentData && <span>- content data{tx.contentMatch ? ` (${tx.contentMatch.confidence} confidence)` : ''}</span>}
           {tx.correlationId && <span>- id {tx.correlationId}</span>}
           {tx.hadConcurrency && <span title="Multiple outstanding requests on same endpoint">- low conf</span>}
           {!tx.hadConcurrency && tx.confidence !== 'unknown' && <span>- {tx.confidence} conf</span>}
@@ -130,39 +131,15 @@ function TransactionDetails({ tx }: { tx: Transaction }) {
                 : 'Info details'}
             event={standaloneEvent}
           />
-          <details className="min-w-0 rounded-md border border-border-subtle bg-bg-base">
-            <summary className="cursor-pointer select-none px-3 py-2 text-sm text-text-secondary">
-              Raw {standaloneEvent.lineType} line
-            </summary>
-            <div className="px-3 pb-3">
-              <Textarea
-                className="min-h-[120px] w-full min-w-0 text-xs font-mono"
-                value={standaloneEvent.rawLine}
-                readOnly
-              />
-            </div>
-          </details>
         </div>
       ) : tx.request ? (
         <div className="space-y-2">
           <EventHeader event={tx.request} />
           <JsonOrText title="Request body" event={tx.request} />
-          <details className="min-w-0 rounded-md border border-border-subtle bg-bg-base">
-            <summary className="cursor-pointer select-none px-3 py-2 text-sm text-text-secondary">
-              Raw request line
-            </summary>
-            <div className="px-3 pb-3">
-              <Textarea
-                className="min-h-[120px] w-full min-w-0 text-xs font-mono"
-                value={tx.request.rawLine}
-                readOnly
-              />
-            </div>
-          </details>
         </div>
       ) : (
         <div className="text-sm text-text-muted">
-          No matching request (orphan response).
+          Request not logged.
         </div>
       )}
 
@@ -171,18 +148,6 @@ function TransactionDetails({ tx }: { tx: Transaction }) {
           <h3 className="font-heading text-sm text-text-secondary">Content Data</h3>
           <EventHeader event={tx.contentData} />
           <JsonOrText title="Content data payload" event={tx.contentData} />
-          <details className="min-w-0 rounded-md border border-border-subtle bg-bg-base">
-            <summary className="cursor-pointer select-none px-3 py-2 text-sm text-text-secondary">
-              Raw content data line
-            </summary>
-            <div className="px-3 pb-3">
-              <Textarea
-                className="min-h-[120px] w-full min-w-0 text-xs font-mono"
-                value={tx.contentData.rawLine}
-                readOnly
-              />
-            </div>
-          </details>
         </div>
       )}
 
@@ -208,18 +173,6 @@ function TransactionDetails({ tx }: { tx: Transaction }) {
               <div key={`${response.lineNumber}-${response.timestamp}`} className="space-y-2">
                 <EventHeader event={response} />
                 <JsonOrText title="Response body" event={response} />
-                <details className="min-w-0 rounded-md border border-border-subtle bg-bg-base">
-                  <summary className="cursor-pointer select-none px-3 py-2 text-sm text-text-secondary">
-                    Raw response line
-                  </summary>
-                  <div className="px-3 pb-3">
-                    <Textarea
-                      className="min-h-[120px] w-full min-w-0 text-xs font-mono"
-                      value={response.rawLine}
-                      readOnly
-                    />
-                  </div>
-                </details>
               </div>
             ))}
           </div>

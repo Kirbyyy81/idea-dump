@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin';
-import { FinanceCategory, FinanceSource, FinanceTransaction } from '@/lib/types';
+import { FinanceCategory, FinanceLinkChanges, FinanceSource, FinanceTransaction } from '@/lib/types';
 
 export const FINANCE_TRANSACTION_VIEW_SELECT = [
     'id, source_id, category_id, direction, amount, currency, merchant, payee_id',
@@ -19,11 +19,13 @@ const FINANCE_TRANSACTION_INTERNAL_SELECT =
     'id, source_id, category_id, direction, amount, currency, merchant, payee_id, reference_number, transaction_date, notes, source, status';
 const FINANCE_DASHBOARD_RECENT_SELECT = [
     'id, direction, amount, merchant, transaction_date',
+    'category:dim_finance_categories(name)',
     'finance_source:dim_finance_sources(name)',
     'finance_payee:dim_finance_payees(name)',
 ].join(', ');
-const FINANCE_REVIEW_DUPLICATE_SELECT = [
-    'id, amount, currency, merchant, transaction_date',
+export const FINANCE_REVIEW_DUPLICATE_SELECT = [
+    'id, source_id, category_id, direction, amount, currency, merchant, transaction_date, reference_number, notes, updated_at',
+    'category:dim_finance_categories(name)',
     'finance_source:dim_finance_sources(name)',
     'finance_payee:dim_finance_payees(name)',
 ].join(', ');
@@ -37,11 +39,11 @@ const FINANCE_RULE_INTERNAL_SELECT =
     'id, source_id, category_id, direction, is_active, source';
 const FINANCE_REVIEW_QUEUE_SELECT = [
     'id, payload, confidence, duplicate_outcome, duplicate_signals, duplicate_explanation',
-    'intake:finance_intake_items(ocr_text,ocr_raw_text,ocr_normalized_text,ocr_confidence,normalizer_version)',
+    'intake:finance_intake_items(source,ocr_text,ocr_raw_text,ocr_normalized_text,ocr_confidence,normalizer_version,notification:finance_notification_events(title,body,subtext,source_package,posted_at,date_provenance))',
 ].join(', ');
 const FINANCE_REVIEW_INTERNAL_SELECT = [
     'id, intake_item_id, payload, status',
-    'intake:finance_intake_items(ocr_text,ocr_normalized_text,original_filename,ocr_text_hash,receipt_processing)',
+    'intake:finance_intake_items(source,ocr_text,ocr_normalized_text,original_filename,ocr_text_hash,receipt_processing)',
 ].join(', ');
 
 export async function listFinanceCategories(userId: string) {
@@ -185,7 +187,7 @@ export async function listRuntimeFinanceFieldTemplates(userId: string) {
         .eq('user_id', userId)
         .in('field_name', ['reference_number', 'merchant', 'transaction_date', 'direction', 'payee_name', 'notes', 'recipient_reference'])
         .in('status', ['active', 'shadow'])
-        .in('algorithm_version', [2, 3])
+        .in('algorithm_version', [2, 3, 4])
         .order('status')
         .order('activated_at')
         .order('id')
@@ -468,9 +470,10 @@ export async function listFinanceDashboardMonthTransactions(
 export async function listFinanceDashboardRecentTransactions(
     userId: string,
     monthStart: string,
-    nextMonthStart: string
+    nextMonthStart: string,
+    selectedDate: string | null = null
 ) {
-    return createAdminClient()
+    const query = createAdminClient()
         .from('finance_transactions')
         .select(FINANCE_DASHBOARD_RECENT_SELECT)
         .eq('user_id', userId)
@@ -480,6 +483,8 @@ export async function listFinanceDashboardRecentTransactions(
         .order('transaction_date', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(6);
+    if (selectedDate) query.eq('transaction_date', selectedDate);
+    return query;
 }
 
 export async function listFinanceReviewQueue(userId: string) {
@@ -540,6 +545,16 @@ export async function markFinanceReviewCandidateDuplicate(
         p_user_id: userId,
         p_candidate_id: candidateId,
         p_matched_transaction_id: matchedTransactionId,
+    });
+}
+
+export async function linkFinanceReviewCandidate(
+    userId: string, candidateId: string, transactionId: string,
+    expectedUpdatedAt: string, changes: FinanceLinkChanges
+) {
+    return createAdminClient().rpc('finance_link_candidate_v1', {
+        p_user_id: userId, p_candidate_id: candidateId, p_matched_transaction_id: transactionId,
+        p_expected_updated_at: expectedUpdatedAt, p_changes: changes,
     });
 }
 

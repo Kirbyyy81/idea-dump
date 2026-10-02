@@ -1,4 +1,5 @@
 const router = {
+    refresh: () => window.dispatchEvent(new Event('test-router-refresh')),
     push: (href: string) => {
         if (window.location.pathname === '/finance' && href.startsWith('/finance?')) window.location.assign(href);
         else window.history.pushState(null, '', href);

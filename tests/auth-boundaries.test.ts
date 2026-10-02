@@ -195,3 +195,19 @@ describe('authentication response boundaries', () => {
         expect(response.headers.get('cache-control')).toBe('private, no-store');
     });
 });
+
+describe('companion pairing authentication continuation', () => {
+    it('keeps the pairing code out of Supabase auth code parameters', async () => {
+        configureServerClient({ user: null });
+        const response = await middleware(new NextRequest('https://preview.example/companion/pair?code=ABCD1234'));
+        const destination = new URL(response.headers.get('location')!);
+        expect(destination.pathname).toBe('/login');
+        expect(destination.searchParams.has('code')).toBe(false);
+        expect(destination.searchParams.get('next')).toBe('/companion/pair?code=ABCD1234');
+    });
+    it('returns a signed-in user to the pairing screen', async () => {
+        configureServerClient({ user: { id: 'user-1' } });
+        const response = await middleware(new NextRequest('https://preview.example/login?next=%2Fcompanion%2Fpair%3Fcode%3DABCD1234'));
+        expect(response.headers.get('location')).toBe('https://preview.example/companion/pair?code=ABCD1234');
+    });
+});

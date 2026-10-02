@@ -20,5 +20,9 @@ export const PUBLIC_AUTH_PATH_PREFIXES = [
 ] as const;
 
 export function getSafeNextPath(value: string | null, fallback = '/') {
-    return value?.startsWith('/') && !value.startsWith('//') ? value : fallback;
+    if (!value?.startsWith('/') || value.startsWith('//') || /[\\\x00-\x20]/.test(value)) return fallback;
+    try {
+        const parsed = new URL(value, 'https://app.invalid');
+        return parsed.origin === 'https://app.invalid' ? parsed.pathname + parsed.search + parsed.hash : fallback;
+    } catch { return fallback; }
 }

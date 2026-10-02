@@ -219,6 +219,7 @@ export function toFinanceDashboardRecentTransaction(
         amount: Number(transaction.amount),
         merchant: transaction.merchant || null,
         transaction_date: transaction.transaction_date,
+        category: namedReference(transaction.category),
         finance_source: namedReference(transaction.finance_source),
         finance_payee: namedReference(transaction.finance_payee),
     };
@@ -272,6 +273,8 @@ export function toFinanceReviewCandidate(candidate: FinanceCandidateTransaction)
         duplicate_signals: candidate.duplicate_signals || [],
         duplicate_explanation: candidate.duplicate_explanation || null,
         intake: candidate.intake ? {
+            source: candidate.intake.source,
+            notification: candidate.intake.notification || null,
             ocr_text: candidate.intake.ocr_text || null,
             ocr_raw_text: candidate.intake.ocr_raw_text || null,
             ocr_normalized_text: candidate.intake.ocr_normalized_text || null,
@@ -284,6 +287,13 @@ export function toFinanceReviewCandidate(candidate: FinanceCandidateTransaction)
         } : null,
         duplicate_transaction: duplicate ? {
             id: duplicate.id,
+            source_id: duplicate.source_id,
+            category_id: duplicate.category_id || null,
+            direction: duplicate.direction,
+            reference_number: duplicate.reference_number || null,
+            notes: duplicate.notes || null,
+            updated_at: duplicate.updated_at,
+            category: namedReference(duplicate.category),
             amount: Number(duplicate.amount),
             currency: duplicate.currency || FINANCE_V1_CURRENCY,
             merchant: duplicate.merchant || null,

@@ -13,6 +13,8 @@ export const financeTemplateFieldLabels: Record<FinanceParserTemplateField, stri
 
 export const financeTemplateTypeLabels: Record<FinanceParserTemplateType, string> = {
     source_phrase: 'Recognize a source phrase',
+    source_signature: 'Recognize a source layout',
+    guarded_merchant: 'Read a conditional merchant',
     same_line_label: 'Read the value beside a label',
     next_non_empty_line: 'Read the next non-empty line',
     bounded_line_window: 'Read nearby lines around a label',
@@ -73,7 +75,7 @@ export function toFinanceShadowRules(
         if (!record(row) || typeof row.id !== 'string' || !row.id || row.id.length > 128
             || typeof row.field_name !== 'string' || !Object.hasOwn(financeTemplateFieldLabels, row.field_name)
             || typeof row.template_type !== 'string' || !Object.hasOwn(financeTemplateTypeLabels, row.template_type)
-            || !count(row.algorithm_version) || ![1, 2, 3].includes(row.algorithm_version)
+            || !count(row.algorithm_version) || ![1, 2, 3, 4].includes(row.algorithm_version)
             || !count(row.template_version) || row.template_version < 1
             || !count(row.evidence_count) || !count(row.evaluation_count) || !count(row.contradiction_count)
             || ratio(row.precision) === undefined || ratio(row.coverage) === undefined

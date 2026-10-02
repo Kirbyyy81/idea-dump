@@ -1,3 +1,4 @@
+import { retryFinanceNotification } from '@/lib/finance/notifications/service';
 import { PostgrestError } from '@supabase/supabase-js';
 import { canonicalFinanceCategoryName } from '@/lib/finance/catalog';
 import { aggregateFinanceDashboard, FinanceDashboardRow } from '@/lib/finance/dashboard';
@@ -43,6 +44,8 @@ import {
     listRuntimeFinanceFieldTemplates,
     listActiveFinanceSourceReferences,
     markFinanceReviewCandidateDuplicate,
+    linkFinanceReviewCandidate,
+    FINANCE_REVIEW_DUPLICATE_SELECT,
     rejectFinanceReviewCandidate,
     updateFinanceIntakeSourceEvidence,
     updateFinanceReviewCandidate,
@@ -76,13 +79,14 @@ import {
     FinanceShareFileInput,
     FinanceTransactionInput,
     parseFinanceReviewConfirm,
+    parseFinanceLinkChanges,
     toRequiredFinanceText,
     isFinanceUuid,
     parseFinanceTransaction,
 } from '@/lib/finance/core/schemas';
 import { normalizeFinanceTransaction } from '@/lib/finance/core/auth';
 import { financeShadowSourceIds, toFinanceShadowRules } from '@/lib/finance/shadowRules';
-import { FinanceFieldErrors, getFinanceMonthRange, getLocalFinanceMonth } from '@/lib/finance/core/values';
+import { FinanceFieldErrors, getFinanceMonthRange, getLocalFinanceMonth, normalizeFinanceDate } from '@/lib/finance/core/values';
 import { parseFinanceText } from '@/lib/finance/ocr/parser';
 import { FINANCE_V1_CURRENCY } from '@/lib/finance/core/constants';
 import { getFinanceCandidateReference } from '@/lib/finance/core/auth';
@@ -105,6 +109,7 @@ import {
     FinanceOcrSource,
     FinanceOcrSourceTemplate,
     FinanceReferenceData,
+    FinanceReviewDuplicateTransaction,
     FinanceReferenceOption,
     FinanceRule,
     FinanceSourceDetail,
@@ -570,12 +575,15 @@ export async function deleteFinanceTransactionForUser(userId: string, transactio
     if (!data) fail('Transaction not found', 404);
 }
 
-export async function getFinanceDashboard(userId: string, requestedMonth: string | null) {
+export async function getFinanceDashboard(userId: string, requestedMonth: string | null, selectedDate: string | null = null) {
     const monthRange = getFinanceMonthRange(requestedMonth || getLocalFinanceMonth());
     if (!monthRange) fail('Month must use YYYY-MM format');
+    if (selectedDate !== null && (normalizeFinanceDate(selectedDate) !== selectedDate || !selectedDate.startsWith(`${monthRange.month}-`))) {
+        fail('Date must be a valid day in the selected month');
+    }
     const [monthRows, recentResult, budgetCycles] = await Promise.all([
         listFinanceDashboardMonthTransactions(userId, monthRange.monthStart, monthRange.nextMonthStart, DASHBOARD_PAGE_SIZE),
-        listFinanceDashboardRecentTransactions(userId, monthRange.monthStart, monthRange.nextMonthStart),
+        listFinanceDashboardRecentTransactions(userId, monthRange.monthStart, monthRange.nextMonthStart, selectedDate),
         getFinanceDashboardBudgets(userId, monthRange.month),
     ]);
     if (recentResult.error) throw recentResult.error;
@@ -703,6 +711,25 @@ export async function resolveFinanceReviewCandidateForUser(
         return { kind: 'success' as const };
     }
 
+    if (action === 'link_duplicate') {
+        const transactionId = toRequiredFinanceText(body.matched_transaction_id);
+        const expectedUpdatedAt = toRequiredFinanceText(body.expected_updated_at);
+        if (!isFinanceUuid(transactionId) || !expectedUpdatedAt || !Number.isFinite(Date.parse(expectedUpdatedAt))) {
+            fail('Reload the existing transaction before linking', 422);
+        }
+        const { data: saved, error } = await findFinanceTransaction(userId, transactionId, FINANCE_REVIEW_DUPLICATE_SELECT);
+        if (error) throw error;
+        if (!saved) fail('Existing transaction not found', 404);
+        const parsed = parseFinanceLinkChanges(body.changes, saved as unknown as FinanceReviewDuplicateTransaction, today);
+        if ('error' in parsed) fail(parsed.error, 422, { field_errors: parsed.field_errors || {} });
+        const { data, error: linkError } = await linkFinanceReviewCandidate(userId, candidateId, transactionId, expectedUpdatedAt, parsed.data);
+        if (linkError) {
+            reviewRpcError(linkError);
+            throw linkError;
+        }
+        return { kind: 'linked' as const, data };
+    }
+
     if (action === 'mark_duplicate') {
         const matchedTransactionId = toRequiredFinanceText(
             body.matched_transaction_id || candidate.payload?.duplicate_transaction_id
@@ -716,6 +743,12 @@ export async function resolveFinanceReviewCandidateForUser(
 
     if (action === 'retry') {
         if (candidate.status !== 'pending') fail('Only pending review items can be retried', 409);
+        if (candidate.intake?.source === 'notification') {
+            const { data, error } = await retryFinanceNotification(userId, candidateId, candidate.intake_item_id);
+            if (error) throw error;
+            const [withDuplicate] = await attachDuplicateTransactions(userId, [data as unknown as FinanceCandidateTransaction]);
+            return { kind: 'candidate' as const, data: toFinanceReviewCandidate(withDuplicate) };
+        }
         const [sourcesResult, sourceTemplatesResult, fieldTemplatesResult, rulesResult, payeesResult] = await Promise.all([
             listActiveFinanceSources(userId),
             listRuntimeFinanceSourceTemplates(userId),

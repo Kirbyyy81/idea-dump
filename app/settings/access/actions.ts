@@ -8,7 +8,6 @@ import {
     getRoleModuleAssignments,
     getSessionUserAppAccess,
     getUserAppAccess,
-    isAppModuleSlug,
 } from '@/lib/rbac/access';
 import { AppModuleSlug } from '@/lib/rbac/constants';
 import { AccessAdminRoleRecord, AccessAdminUserRecord, AppModuleMetadata, ModuleOverrideEffect } from '@/lib/rbac/types';
@@ -121,7 +120,8 @@ export async function saveModuleVisibility(
 ): Promise<{ success: true }> {
     await requireAccessAdmin();
 
-    if (!isAppModuleSlug(moduleSlug)) {
+    const modules = await getAllAppModules();
+    if (!modules.some((moduleRow) => moduleRow.slug === moduleSlug)) {
         throw new Error('Invalid module');
     }
 
@@ -130,14 +130,17 @@ export async function saveModuleVisibility(
     }
 
     const admin = createAdminClient();
-    const { error } = await admin
+    const { data, error } = await admin
         .from('dim_modules')
         .update({ enabled })
-        .eq('modules', moduleSlug);
+        .eq('modules', moduleSlug)
+        .select('modules')
+        .single();
 
     if (error) {
         throw new Error(error.message || 'Failed to update module visibility');
     }
+    if (!data) throw new Error('Module no longer exists');
 
     return { success: true };
 }
@@ -180,7 +183,7 @@ export async function createRole(role: string, modules: string[]): Promise<{ suc
 export async function saveUserAccess(
     userId: string,
     role: string,
-    overrides: Record<string, ModuleOverrideEffect | null>
+    overrides: Partial<Record<string, ModuleOverrideEffect | null>>
 ): Promise<{ success: true }> {
     await requireAccessAdmin();
 

@@ -3,11 +3,12 @@ import { FinanceDashboardClient } from '@/app/finance/_components/FinanceDashboa
 import { resolveFinanceDashboardMonth } from '@/lib/finance/dashboard';
 import { requireFinancePageAccess } from '@/lib/finance/core/pageAccess';
 import { getFinanceDashboard } from '@/lib/finance/core/service';
-import { FINANCE_TIME_ZONE, getFinanceDateInTimeZone } from '@/lib/finance/core/values';
+import { FINANCE_TIME_ZONE, getFinanceDateInTimeZone, normalizeFinanceDate } from '@/lib/finance/core/values';
 
 interface FinancePageProps {
     searchParams: Promise<{
         month?: string | string[];
+        date?: string | string[];
     }>;
 }
 
@@ -22,7 +23,13 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
         redirect(`/finance?month=${defaultMonth}`);
     }
 
-    const summary = await getFinanceDashboard(session.user.id, month);
+    const today = getFinanceDateInTimeZone(FINANCE_TIME_ZONE);
+    const rawDate = Array.isArray(params.date) ? params.date[0] : params.date;
+    const selectedDate = rawDate === undefined ? null : normalizeFinanceDate(rawDate);
+    if (rawDate !== undefined && (!selectedDate || !selectedDate.startsWith(`${month}-`) || selectedDate > today)) {
+        redirect(`/finance?month=${month}`);
+    }
+    const summary = await getFinanceDashboard(session.user.id, month, selectedDate);
 
-    return <FinanceDashboardClient month={month} today={getFinanceDateInTimeZone(FINANCE_TIME_ZONE)} summary={summary} />;
+    return <FinanceDashboardClient month={month} today={today} selectedDate={selectedDate} summary={summary} />;
 }

@@ -108,6 +108,15 @@ export function DocumentDoodleIcon(props: DoodleIconProps) {
     );
 }
 
+export function CopyDoodleIcon(props: DoodleIconProps) {
+    return (
+        <DoodleIcon {...props}>
+            <path d="M9.7 8.2c2.9-.2 5.7-.2 8.6.1.9.1 1.5.7 1.5 1.6l-.1 8.5c0 .9-.7 1.6-1.6 1.6l-8.6-.1c-.9 0-1.6-.7-1.6-1.6l.1-8.5c0-.9.7-1.6 1.7-1.6Z" />
+            <path d="M5.1 15.8c-.7-.1-1.1-.7-1.1-1.4l.1-8.7c0-.9.7-1.6 1.6-1.6l8.5.1c.8 0 1.4.5 1.5 1.2" />
+        </DoodleIcon>
+    );
+}
+
 export function ScanDoodleIcon(props: DoodleIconProps) {
     return (
         <DoodleIcon {...props}>

@@ -51,6 +51,8 @@ The current app is organized around these modules:
 - `Log Viewer`  
   Interactive viewer for logs and productivity entries.
 
+- `Documentation`: Read and search the current private Notion Document Hub. Notion projects are optional read-only labels and are independent of app projects. See [Notion viewer setup](document/NOTION_VIEWER_SETUP.md).
+
 - `Settings`  
   Profile details, sign-out flow, version/build metadata, access administration, and the OpenAPI/Swagger reference.
 
@@ -82,6 +84,7 @@ Notes:
 - `APP_ORIGIN` is the trusted absolute origin used for production Auth redirects. Production defaults to `https://idea-dump-alpha.vercel.app`, but the environment value should be set explicitly and updated with any domain change.
 - `NEXT_PUBLIC_FINANCE_OCR_URL` is the public Render Finance OCR origin without a trailing slash.
 - `FINANCE_QUEUE_WAKE_SECRET` is a server-only secret shared by Vercel and Render. Use the same random value of at least 32 bytes in both environments.
+- `NOTION_API_TOKEN` and `NOTION_DOCUMENTS_DATA_SOURCE_ID` configure the separate server-only, read-only Documentation integration. See [Notion viewer setup](document/NOTION_VIEWER_SETUP.md).
 - Optional build metadata can also be set if you want the Settings page to show custom version info:
 
 ```env
@@ -120,6 +123,22 @@ If `npm` is easier to run through Git Bash on your machine, the repo includes a 
 .\scripts\npm-gitbash.ps1 run lint
 .\scripts\npm-gitbash.ps1 run build
 ```
+
+## Continuous integration
+
+[Validation](.github/workflows/validate.yml) detects changed files before scheduling the web, Finance OCR, and Android jobs. Existing pushes compare against the previous pushed commit; pull requests use their complete diff. The first push of a new branch compares against its merge base with the default branch.
+
+| Changed files | Validation jobs |
+| --- | --- |
+| Web application, root dependencies/configuration, assets, service worker, tests, scripts, or database files | Web |
+| `services/finance-ocr/` or `render.yaml` | OCR |
+| Shared Finance OCR helpers, the imported Finance constants/rule matching/value/dashboard modules, `lib/types.ts`, or `shared/date.ts` | Web and OCR |
+| `android/` | Android |
+| `.nvmrc` or `.npmrc` | Web and OCR |
+| The validation workflow or `.gitattributes` | All three |
+| Root documentation or `document/` only | No application jobs |
+
+Changes spanning multiple components run each affected job. Unaffected jobs remain visible as skipped and do not produce build artifacts. Manual `workflow_dispatch` runs skip change detection and validate all three projects. If change detection fails, all three validation jobs run conservatively. The job names and their existing audit, test, build, and APK upload steps stay the same. The workflow uses a commit-pinned [paths-filter action](https://github.com/dorny/paths-filter) to handle pull requests, new branches, deletions, and renames.
 
 ## Finance Share Target
 
@@ -239,3 +258,7 @@ The application build regenerates the worker before Next.js compilation. The roo
 ## License
 
 MIT
+
+## Android companion
+
+The native Android subproject lives in [android/](android/README.md). It targets Android 13 and newer; use JDK 17 and Android SDK 36. See its README for builds and device acceptance checks.

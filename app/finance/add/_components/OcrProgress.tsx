@@ -21,7 +21,7 @@ export function OcrProgress({ phase, uploadProgress }: OcrProgressProps) {
 
     return (
         <section
-            className="mt-4 rounded-xl border border-border-default bg-bg-subtle p-4"
+            className="space-y-4"
             aria-live="polite"
             aria-label="Screenshot processing progress"
         >
@@ -49,11 +49,11 @@ export function OcrProgress({ phase, uploadProgress }: OcrProgressProps) {
 
             {phase === 'reading' && (
                 <p className="mt-2 text-xs text-text-muted">
-                    The free reader may take about a minute to wake after being idle.
+                    Reading may take about a minute. Keep this page open until your result is saved.
                 </p>
             )}
 
-            <ol className="mt-4 grid grid-cols-3 gap-2 text-xs">
+            <ol className="grid gap-3 text-xs sm:grid-cols-3">
                 {STEPS.map((step, index) => {
                     const isComplete = index < activeIndex;
                     const isActive = index === activeIndex;
@@ -76,7 +76,7 @@ export function OcrProgress({ phase, uploadProgress }: OcrProgressProps) {
                             >
                                 {isComplete ? <CheckDoodleIcon size={12} /> : index + 1}
                             </span>
-                            <span className="truncate">{step.label.replace(' screenshot', '')}<span className="sr-only">{isComplete ? ', complete' : isActive ? ', current step' : ', not started'}</span></span>
+                            <span>{step.label.replace(' screenshot', '')}<span className="sr-only">{isComplete ? ', complete' : isActive ? ', current step' : ', not started'}</span></span>
                         </li>
                     );
                 })}
