@@ -12,7 +12,7 @@ if (!['postgres:', 'postgresql:'].includes(url.protocol) || !['localhost', '127.
 }
 const env = { ...process.env, PGHOST: url.hostname.replace(/^\[|\]$/g, ''), PGPORT: url.port || '5432',
     PGUSER: decodeURIComponent(url.username), PGPASSWORD: decodeURIComponent(url.password), PGDATABASE: decodeURIComponent(url.pathname.slice(1)) };
-for (const file of ['companion_pairing.test.sql', 'finance_notifications.test.sql', 'finance_duplicate_link.test.sql', 'finance_notification_learning.test.sql']) {
+for (const file of ['companion_pairing.test.sql', 'finance_notifications.test.sql', 'finance_duplicate_link.test.sql', 'finance_notification_learning.test.sql', 'finance_notification_auto_confirmation.test.sql']) {
     const result = spawnSync(process.env.PSQL_PATH || 'psql', ['-v', 'ON_ERROR_STOP=1', '-f', path.resolve('supabase/tests', file)],
         { env, stdio: 'inherit', windowsHide: true });
     if (result.error || result.status !== 0) throw new Error('Companion database test failed: ' + file);
