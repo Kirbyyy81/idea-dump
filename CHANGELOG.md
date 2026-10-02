@@ -1,5 +1,37 @@
 # Changelog
 
+## [0.17.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.16.2...idea-dump-v0.17.0) (2026-10-02)
+
+
+### Features
+
+* add barcode generator ([ebf9829](https://github.com/Kirbyyy81/idea-dump/commit/ebf9829d07c152f92baeaa683ab25323f66bda15))
+* add complete notifications directly ([70f0aa9](https://github.com/Kirbyyy81/idea-dump/commit/70f0aa94dda8f22875fc424fae6a6fa9bebc053c))
+* auto-confirm complete notifications ([16290d4](https://github.com/Kirbyyy81/idea-dump/commit/16290d44ab455ff9bd2ebe384d6c134001982e56))
+* copy and fold json ([ee25abe](https://github.com/Kirbyyy81/idea-dump/commit/ee25abe94bd332b76a50ac700a287f5f1136187a))
+* group logged table batches ([60f0efa](https://github.com/Kirbyyy81/idea-dump/commit/60f0efa8cbdc79ce01376d87f050e3c144e33653))
+* learn notification formats ([1131c56](https://github.com/Kirbyyy81/idea-dump/commit/1131c56e9f1df93d1dca6374db833567ff48dc91))
+* link transaction evidence ([0218c49](https://github.com/Kirbyyy81/idea-dump/commit/0218c4931bbf53cf2766a8cd4c436ab13b79790a))
+* manage notification patterns ([8179f44](https://github.com/Kirbyyy81/idea-dump/commit/8179f44e76adb671dc0b685c356d27fb168b9fe6))
+* match notification payees ([d77ef43](https://github.com/Kirbyyy81/idea-dump/commit/d77ef435ab135767c67a6d1a3c0dc4d281411115))
+* parse merchant payments ([2516760](https://github.com/Kirbyyy81/idea-dump/commit/25167607d43636b2e216c52a6583918aa51af1c8))
+* return to log input ([ff8593e](https://github.com/Kirbyyy81/idea-dump/commit/ff8593e92e92678ffe89d45d9f39e62427e1f5df))
+* review linked details ([9e363af](https://github.com/Kirbyyy81/idea-dump/commit/9e363af3640b27b1eea1be45dcc21eea919fab3b))
+* store notification extraction rules ([691a788](https://github.com/Kirbyyy81/idea-dump/commit/691a788747fcd5cde79c9e8b539e174f3b8f0546))
+
+
+### Bug Fixes
+
+* connect android auto browsers ([32dbcd6](https://github.com/Kirbyyy81/idea-dump/commit/32dbcd6d822af4deca9100f662c5abbee49dbad4))
+* expand log payload display ([43869cf](https://github.com/Kirbyyy81/idea-dump/commit/43869cf54298d8cbe48f1c948c6b7471ff3cbb4d))
+* isolate notification pattern overrides ([d8769eb](https://github.com/Kirbyyy81/idea-dump/commit/d8769ebbe2d57c1de6e31ff4a73121db342b2cec))
+* match dashboard budget month ([856ba7a](https://github.com/Kirbyyy81/idea-dump/commit/856ba7ad4444cde770eb0ed5ff6f4c6f8990fa0e))
+* normalize finance notifications ([f923fc8](https://github.com/Kirbyyy81/idea-dump/commit/f923fc8d3ca723934cd86bb3e02124082ee237a7))
+* normalize yes shop logs ([615c0bd](https://github.com/Kirbyyy81/idea-dump/commit/615c0bd4603ffb89425505308cec232a851e7020))
+* query historical budget cycles ([801cf57](https://github.com/Kirbyyy81/idea-dump/commit/801cf57453abad2bde689b0cd2f36cad04ad578b))
+* separate log source parsing ([9ed84fe](https://github.com/Kirbyyy81/idea-dump/commit/9ed84fe9d7c126cc33960ae68be610ea3fb5ba7f))
+* use json copy icon ([042ab0f](https://github.com/Kirbyyy81/idea-dump/commit/042ab0f87f22e329c39df0662decd6df745e36c3))
+
 ## [0.16.2](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.16.1...idea-dump-v0.16.2) (2026-09-29)
 
 
