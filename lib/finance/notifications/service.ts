@@ -1,18 +1,21 @@
 import 'server-only';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { CompanionError } from '@/lib/companion/core/http';
-import type { FinanceNotificationEventInput, FinanceNotificationRecord, FinanceNotificationPrepared, FinanceOcrPayee, FinanceOcrRule } from '@/lib/types';
+import type { FinanceNotificationEventInput, FinanceNotificationRecord, FinanceNotificationPrepared, FinanceOcrPayee, FinanceOcrRule, FinanceNotificationPattern } from '@/lib/types';
 import { parseFinanceNotification } from './parser';
 import { notificationPayloadDigest } from './replay';
 import { applyNotificationRules } from './rules';
 import { matchFinanceNotificationPayee } from './payees';
-import { listActiveFinancePayees, listActiveFinanceRules, updateFinanceReviewCandidate } from '@/lib/finance/core/repository';
+import { listFinanceNotificationPatterns, listActiveFinancePayees, listActiveFinanceRules, updateFinanceReviewCandidate } from '@/lib/finance/core/repository';
 import { assessFinanceDuplicate, financeDuplicateColumns } from '@/lib/finance/transactions/duplicates';
 
 async function prepareNotification(userId: string, event: FinanceNotificationEventInput, intakeId?: string): Promise<FinanceNotificationPrepared> {
-    const parsed = parseFinanceNotification(event);
+    let parsed = parseFinanceNotification(event);
     if (!parsed.payload) return parsed;
-    const [ruleResult, payeeResult] = await Promise.all([listActiveFinanceRules(userId), listActiveFinancePayees(userId)]);
+    const [ruleResult, payeeResult, patternResult] = await Promise.all([listActiveFinanceRules(userId), listActiveFinancePayees(userId), listFinanceNotificationPatterns(userId, event.source_id)]);
+    if (patternResult.error) throw new CompanionError('Could not load notification patterns', 503);
+    parsed = parseFinanceNotification(event, (patternResult.data || []) as FinanceNotificationPattern[], userId);
+    if (!parsed.payload) return parsed;
     if (ruleResult.error) throw new CompanionError('Could not load Finance rules', 503);
     if (payeeResult.error) throw new CompanionError('Could not load Finance payees', 503);
     const matched = matchFinanceNotificationPayee(parsed.payload, (payeeResult.data || []) as FinanceOcrPayee[]);

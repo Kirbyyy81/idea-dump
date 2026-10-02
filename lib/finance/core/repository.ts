@@ -728,3 +728,7 @@ export async function listFinanceDuplicateCandidates(input: {
     }
     return { transactions, textHashTransactionIds };
 }
+
+export async function listFinanceNotificationPatterns(userId: string, sourceId: string) {
+    return createAdminClient().rpc('finance_notification_patterns_for_user_v1', { p_user_id: userId, p_source_id: sourceId });
+}

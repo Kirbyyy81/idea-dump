@@ -1,7 +1,8 @@
+import { notificationPatterns } from './fixtures/notification-patterns';
 import { describe, expect, it } from 'vitest';
 import type { FinanceNotificationEventInput } from '@/lib/types';
 import { parseFinanceNotificationRequest } from '@/lib/finance/notifications/schemas';
-import { parseFinanceNotification } from '@/lib/finance/notifications/parser';
+import { parseFinanceNotification as parseRawNotification } from '@/lib/finance/notifications/parser';
 import { notificationPayloadDigest } from '@/lib/finance/notifications/replay';
 
 const fixture = (text = 'Alex Tan has transferred RM 25.90 to you. Tap here to check the transaction details'): FinanceNotificationEventInput => ({
@@ -207,3 +208,5 @@ describe('Ryt merchant payments', () => {
         expect(parseFinanceNotification(input).status).toBe('ignored');
     });
 });
+
+function parseFinanceNotification(event: Parameters<typeof parseRawNotification>[0]) { return parseRawNotification(event, notificationPatterns); }

@@ -1,3 +1,4 @@
+import { notificationPatterns } from './fixtures/notification-patterns';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FinanceNotificationEventInput, FinanceOcrRule } from '@/lib/types';
 
@@ -11,6 +12,7 @@ vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: () => ({ from: mocks
 vi.mock('@/lib/finance/core/repository', async importOriginal => ({
     ...await importOriginal<typeof import('@/lib/finance/core/repository')>(),
     listActiveFinanceRules: mocks.rules,
+    listFinanceNotificationPatterns: vi.fn(async () => ({ data: notificationPatterns, error: null })),
     updateFinanceReviewCandidate: mocks.update,
 }));
 vi.mock('@/lib/finance/transactions/duplicates', async importOriginal => ({
