@@ -67,3 +67,28 @@ npx playwright test tests/browser/log-viewer.spec.ts
 The first command runs parser, dictionary, correlation, table-batch, and component tests. The browser suite checks desktop and mobile uploads, deep JSON rendering, keyboard-operated folding, copying complete JSON from folded or closed panels, independent raw controls, table-batch rendering/search/filtering, missing requests, and the explicit parse action for large pastes. Browser harnesses live under `tests/browser/` and do not ship in application routes.
 
 Also run the audits, lint, TypeScript, full tests, and production build required by the repository guide.
+
+## Barcode Generator
+
+The Log Viewer navigation includes **Barcode Generator** at `/log-viewer/barcode-generator`, using the same `log_viewer` access rules.
+
+- Enter or paste one numeric identifier. Code 128 generates automatically after a 400 ms pause.
+- Scan the black-on-white barcode directly from the screen. Input changes immediately remove the previous preview.
+- Leading zeros and long identifiers remain exact strings. Surrounding whitespace is trimmed; internal whitespace, multiline identifiers, and non-ASCII digits are rejected.
+- The 256-digit input cap bounds rendering work; it is not a claim that every length fits or scans on every device.
+- Recent numbers keeps the last seven distinct successful values. Selecting one immediately restores its barcode and moves it to the top.
+- History stays in user-scoped `sessionStorage`, survives same-tab navigation and refresh, and normally ends when the tab closes. Browser session restoration or tab duplication can restore or copy it.
+- The persistent barcode session provider clears feature history on sign-out or account changes, including sign-out from Settings. When storage is unavailable, bounded in-memory history remains usable during client-side navigation.
+- Barcodes render locally using pinned JsBarcode. Identifiers never go into URLs, API calls, application logs, or database records.
+- Wide barcodes scroll without compression; the page prompts for a wider display before scanning. No print, download, manual Generate, or cleanup controls are provided.
+
+Feature components live under `app/log-viewer/barcode-generator/_components/`. Pure validation and history helpers live under `lib/log-viewer/barcode/`. The persistent shell mounts the lightweight session provider; the renderer is owned by the barcode page.
+
+Validation:
+
+```powershell
+npm run test:log-viewer
+npx playwright test tests/browser/barcode-generator.spec.ts tests/browser/log-viewer.spec.ts
+```
+
+The barcode unit suite independently decodes SVG bars with ZXing, and browser fixtures exercise desktop/mobile layout, navigation, history, auth changes, and network-free generation. Physical acceptance with Ashley's usual scanner and target display remains required. See [PRD 014](prd/PRD_014.md).
