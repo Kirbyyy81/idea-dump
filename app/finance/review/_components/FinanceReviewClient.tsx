@@ -1,5 +1,6 @@
 'use client';
 
+import { NotificationExtractionStatus } from './NotificationExtractionStatus';
 import { FinanceDuplicateLink } from './FinanceDuplicateLink';
 import type { FinanceLinkChanges } from '@/lib/types';
 import { FormEvent, useEffect, useMemo, useRef, useState, useTransition } from 'react';
@@ -400,6 +401,7 @@ export function FinanceReviewClient({
                                 )}
                                 {selected.payload.matched_rule_names.length > 0 && <p className="mt-3 text-sm text-text-muted">Matched: {selected.payload.matched_rule_names.join(', ')}</p>}
                                 {selected.intake?.source === 'notification' ? <p className="mt-2 text-xs text-text-muted">Bank notification. {selected.intake.notification?.date_provenance === 'posted_at' ? 'Date suggested from notification time in Malaysia. Verify before confirming.' : selected.intake.notification?.date_provenance === 'notification_text' ? 'Date read from notification.' : 'Transaction date unavailable.'}</p> : <p className="mt-2 text-xs text-text-muted">OCR confidence: {selected.intake?.ocr_confidence === null || selected.intake?.ocr_confidence === undefined ? 'Unavailable' : `${Math.round(selected.intake.ocr_confidence)}%`} Â· Normalizer version: {selected.intake?.normalizer_version ?? 'Legacy'}</p>}
+                                {selected.intake?.source === 'notification' ? <NotificationExtractionStatus trace={selected.payload.notification_extraction} /> : null}
                                 <FinanceFormErrorSummary errors={fieldErrors} />
 
                                 {duplicateOutcome(selected) !== 'none' && (

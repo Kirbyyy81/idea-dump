@@ -1,3 +1,4 @@
+import { NotificationPatternsPanel } from '@/app/finance/settings/_components/NotificationPatternsPanel';
 import { AlertDialog } from '@/components/molecules/AlertDialog';
 import { createRoot } from 'react-dom/client';
 import { FinanceBudgetsClient } from '@/app/finance/budgets/_components/FinanceBudgetsClient';
@@ -21,6 +22,8 @@ const dashboardSummary = dashboardDate ? { ...dashboardFixture, recent_transacti
 createRoot(document.getElementById('root')!).render(<FinanceReferenceDataProvider>
     {window.location.pathname === '/finance'
         ? <FinanceDashboardClient month={dashboardMonth} today="2026-09-22" selectedDate={dashboardDate} summary={dashboardSummary} />
+        : window.location.pathname === '/finance/settings/notifications'
+        ? <NotificationPatternsPanel />
         : window.location.pathname === '/finance/review'
         ? <AlertProvider><AlertDialog /><FinanceReviewClient initialCandidates={(window as unknown as { reviewInitial?: FinanceReviewCandidate[] }).reviewInitial || reviewCandidates} initialFailedIntakes={[]} initialSelectedId="candidate-1" today="2026-09-22" /></AlertProvider>
         : window.location.pathname === '/finance/add'
