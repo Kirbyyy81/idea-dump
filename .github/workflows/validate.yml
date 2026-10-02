@@ -3,6 +3,7 @@ name: validate
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -14,6 +15,7 @@ concurrency:
 jobs:
   changes:
     name: Detect changed components
+    if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -43,6 +45,8 @@ jobs:
               - '.npmrc'
               - '.env.example'
               - '.eslintrc*'
+              - '.eslintignore'
+              - '*.{ts,tsx,js,mjs,cjs,mts,cts}'
               - 'eslint.config.*'
               - 'app/**'
               - 'components/**'
@@ -86,7 +90,7 @@ jobs:
     name: Web application
     needs: changes
     # Validate conservatively if change detection fails instead of silently skipping checks.
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.web == 'true') }}
+    if: ${{ !cancelled() && (github.event_name == 'workflow_dispatch' || needs.changes.result != 'success' || needs.changes.outputs.web == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -129,7 +133,7 @@ jobs:
   finance_ocr:
     name: Finance OCR service
     needs: changes
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.finance_ocr == 'true') }}
+    if: ${{ !cancelled() && (github.event_name == 'workflow_dispatch' || needs.changes.result != 'success' || needs.changes.outputs.finance_ocr == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
@@ -165,7 +169,7 @@ jobs:
   android:
     name: Android companion
     needs: changes
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.android == 'true') }}
+    if: ${{ !cancelled() && (github.event_name == 'workflow_dispatch' || needs.changes.result != 'success' || needs.changes.outputs.android == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:

@@ -44,6 +44,8 @@ import {
     listRuntimeFinanceFieldTemplates,
     listActiveFinanceSourceReferences,
     markFinanceReviewCandidateDuplicate,
+    linkFinanceReviewCandidate,
+    FINANCE_REVIEW_DUPLICATE_SELECT,
     rejectFinanceReviewCandidate,
     updateFinanceIntakeSourceEvidence,
     updateFinanceReviewCandidate,
@@ -77,6 +79,7 @@ import {
     FinanceShareFileInput,
     FinanceTransactionInput,
     parseFinanceReviewConfirm,
+    parseFinanceLinkChanges,
     toRequiredFinanceText,
     isFinanceUuid,
     parseFinanceTransaction,
@@ -106,6 +109,7 @@ import {
     FinanceOcrSource,
     FinanceOcrSourceTemplate,
     FinanceReferenceData,
+    FinanceReviewDuplicateTransaction,
     FinanceReferenceOption,
     FinanceRule,
     FinanceSourceDetail,
@@ -705,6 +709,25 @@ export async function resolveFinanceReviewCandidateForUser(
         const { error } = await rejectFinanceReviewCandidate(userId, candidateId);
         if (error) reviewRpcError(error);
         return { kind: 'success' as const };
+    }
+
+    if (action === 'link_duplicate') {
+        const transactionId = toRequiredFinanceText(body.matched_transaction_id);
+        const expectedUpdatedAt = toRequiredFinanceText(body.expected_updated_at);
+        if (!isFinanceUuid(transactionId) || !expectedUpdatedAt || !Number.isFinite(Date.parse(expectedUpdatedAt))) {
+            fail('Reload the existing transaction before linking', 422);
+        }
+        const { data: saved, error } = await findFinanceTransaction(userId, transactionId, FINANCE_REVIEW_DUPLICATE_SELECT);
+        if (error) throw error;
+        if (!saved) fail('Existing transaction not found', 404);
+        const parsed = parseFinanceLinkChanges(body.changes, saved as unknown as FinanceReviewDuplicateTransaction, today);
+        if ('error' in parsed) fail(parsed.error, 422, { field_errors: parsed.field_errors || {} });
+        const { data, error: linkError } = await linkFinanceReviewCandidate(userId, candidateId, transactionId, expectedUpdatedAt, parsed.data);
+        if (linkError) {
+            reviewRpcError(linkError);
+            throw linkError;
+        }
+        return { kind: 'linked' as const, data };
     }
 
     if (action === 'mark_duplicate') {

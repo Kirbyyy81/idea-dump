@@ -636,7 +636,7 @@ The application assessment is advisory. The confirmation RPC recomputes the dupl
 - Any possible or strong match requires the user to explicitly allow the duplicate before manual confirmation.
 - A strong match also requires an override reason.
 - Automatic confirmation never overrides a duplicate.
-- The user may instead mark the candidate as a duplicate of the matched confirmed transaction, which does not create a ledger row.
+- The user may instead link the candidate to the matched confirmed transaction, which does not create a ledger row. The review comparison preselects missing fields and requires explicit selection for conflicting values. Only selected fields are applied, atomically with duplicate resolution; stale transaction versions require a fresh review. See [companion evidence linking](ANDROID_COMPANION.md#linking-screenshot-details-to-a-notification-transaction) for provenance and rollout.
 
 ## Review workflow
 

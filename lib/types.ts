@@ -802,7 +802,25 @@ export interface FinanceReviewIntake {
     normalizer_version: number | null;
 }
 
+export type FinanceLinkField = 'amount' | 'direction' | 'source_id' | 'category_id' | 'transaction_date'
+    | 'merchant' | 'payee_name' | 'reference_number' | 'notes';
+export type FinanceLinkChanges = Partial<Record<FinanceLinkField, string | number>>;
+export interface FinanceLinkOption {
+    field: FinanceLinkField;
+    label: string;
+    saved: string | number | null;
+    incoming: string | number;
+    isGap: boolean;
+}
+
 export interface FinanceReviewDuplicateTransaction {
+    source_id: string;
+    category_id: string | null;
+    direction: FinanceTransactionDirection;
+    reference_number: string | null;
+    notes: string | null;
+    updated_at: string;
+    category?: Pick<FinanceReferenceOption, 'name'> | null;
     id: string;
     amount: number;
     currency: FinanceCurrency;

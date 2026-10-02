@@ -138,7 +138,7 @@ If `npm` is easier to run through Git Bash on your machine, the repo includes a 
 | The validation workflow or `.gitattributes` | All three |
 | Root documentation or `document/` only | No application jobs |
 
-Changes spanning multiple components run each affected job. Unaffected jobs remain visible as skipped. If change detection fails, all three validation jobs run conservatively. The job names and their existing audit, test, build, and APK upload steps stay the same. The workflow uses a commit-pinned [paths-filter action](https://github.com/dorny/paths-filter) to handle pull requests, new branches, deletions, and renames.
+Changes spanning multiple components run each affected job. Unaffected jobs remain visible as skipped and do not produce build artifacts. Manual `workflow_dispatch` runs skip change detection and validate all three projects. If change detection fails, all three validation jobs run conservatively. The job names and their existing audit, test, build, and APK upload steps stay the same. The workflow uses a commit-pinned [paths-filter action](https://github.com/dorny/paths-filter) to handle pull requests, new branches, deletions, and renames.
 
 ## Finance Share Target
 

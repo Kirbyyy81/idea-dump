@@ -25,29 +25,43 @@ class LyricsMediaService : MediaLibraryService() {
         session=MediaLibrarySession.Builder(this,player,LibraryCallback())
             .setSessionActivity(PendingIntent.getActivity(this,0,Intent(this,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
             .build()
-        scope.launch { lyrics.state.collect { player.update(it) } }
+        scope.launch {
+            lyrics.state.collect {
+                val previous=player.item()
+                player.update(it)
+                if(previous!=player.item()) session?.notifyChildrenChanged("root",1,null)
+            }
+        }
         lyrics.accessChanged()
     }
-    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? =
-        if(controllerInfo.isTrusted || controllerInfo.packageName==packageName || controllerInfo.packageName=="com.google.android.projection.gearhead") session else null
+    // Legacy browsers bind with an unidentified placeholder. Authorize the real client in onConnect.
+    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? = session
     override fun onDestroy() { scope.cancel();session?.release();player.release();super.onDestroy() }
+    private fun rootItem(): MediaItem = MediaItem.Builder().setMediaId("root")
+        .setMediaMetadata(MediaMetadata.Builder().setTitle("Spotify lyrics").setIsBrowsable(true).setIsPlayable(false).build()).build()
     private inner class LibraryCallback : MediaLibrarySession.Callback {
+        override fun onConnect(session: MediaSession,controller: MediaSession.ControllerInfo): MediaSession.ConnectionResult =
+            if(controller.isTrusted || controller.packageName==packageName || controller.packageName=="com.google.android.projection.gearhead")
+                super.onConnect(session,controller)
+            else MediaSession.ConnectionResult.reject()
         override fun onGetLibraryRoot(session: MediaLibrarySession,browser: MediaSession.ControllerInfo,params: LibraryParams?): ListenableFuture<LibraryResult<MediaItem>> {
-            val root=MediaItem.Builder().setMediaId("root").setMediaMetadata(MediaMetadata.Builder().setTitle("Spotify lyrics").setIsBrowsable(true).setIsPlayable(false).build()).build()
-            return Futures.immediateFuture(LibraryResult.ofItem(root,params))
+            return Futures.immediateFuture(LibraryResult.ofItem(rootItem(),params))
         }
         override fun onGetChildren(session: MediaLibrarySession,browser: MediaSession.ControllerInfo,parentId: String,page: Int,pageSize: Int,params: LibraryParams?): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
             if(parentId!="root" || page<0 || pageSize<=0) return Futures.immediateFuture(LibraryResult.ofError(SessionError.ERROR_BAD_VALUE))
             return Futures.immediateFuture(LibraryResult.ofItemList(if(page==0) listOf(player.item()) else emptyList(),params))
         }
         override fun onGetItem(session: MediaLibrarySession,browser: MediaSession.ControllerInfo,mediaId: String): ListenableFuture<LibraryResult<MediaItem>> =
-            Futures.immediateFuture(if(mediaId=="spotify") LibraryResult.ofItem(player.item(),null) else LibraryResult.ofError(SessionError.ERROR_BAD_VALUE))
+            Futures.immediateFuture(when(mediaId) {
+                "root" -> LibraryResult.ofItem(rootItem(),null)
+                "spotify" -> LibraryResult.ofItem(player.item(),null)
+                else -> LibraryResult.ofError(SessionError.ERROR_BAD_VALUE)
+            })
         override fun onAddMediaItems(mediaSession: MediaSession,controller: MediaSession.ControllerInfo,mediaItems: List<MediaItem>): ListenableFuture<List<MediaItem>> =
             Futures.immediateFuture(mediaItems.filter { it.mediaId=="spotify" }.map { player.item() })
         // This proxy exposes the current Spotify session only; catalog voice search is unsupported.
         override fun onSearch(session: MediaLibrarySession,browser: MediaSession.ControllerInfo,query: String,params: LibraryParams?): ListenableFuture<LibraryResult<Void>> =
             Futures.immediateFuture(LibraryResult.ofError(SessionError.ERROR_NOT_SUPPORTED))
-        override fun onSubscribe(session: MediaLibrarySession,browser: MediaSession.ControllerInfo,parentId: String,params: LibraryParams?): ListenableFuture<LibraryResult<Void>> =
-            Futures.immediateFuture(LibraryResult.ofVoid())
+        // Default onSubscribe validates rootItem and announces children to Media3 browsers.
     }
 }

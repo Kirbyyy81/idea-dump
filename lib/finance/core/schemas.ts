@@ -1,3 +1,5 @@
+import { FINANCE_LINK_LABELS } from '@/lib/finance/review';
+import type { FinanceLinkChanges, FinanceLinkField, FinanceReviewDuplicateTransaction } from '@/lib/types';
 import {
     FinanceTransactionDirection,
     FinanceTransactionStatus,
@@ -422,4 +424,21 @@ function parseFinanceShareFiles(value: unknown): FinanceShareFileInput[] | null 
         });
     }
     return totalBytes <= MAX_FINANCE_SHARE_BATCH_BYTES ? files : null;
+}
+
+export function parseFinanceLinkChanges(
+    raw: unknown, saved: FinanceReviewDuplicateTransaction, today: string
+): FinanceValidationResult<FinanceLinkChanges> {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { error: 'Choose the details to link' };
+    const changes = raw as Record<string, unknown>;
+    for (const [field, value] of Object.entries(changes)) {
+        if (!Object.hasOwn(FINANCE_LINK_LABELS, field)
+            || (field === 'amount' ? typeof value !== 'number' : typeof value !== 'string' || !value.trim())) {
+            return { error: 'Choose valid transaction details to link' };
+        }
+    }
+    const merged = { ...saved, payee_name: saved.finance_payee?.name || null, ...changes };
+    const parsed = parseFinanceTransaction({ ...merged, has_payee: Boolean(merged.payee_name) }, today);
+    if ('error' in parsed) return parsed;
+    return { data: Object.fromEntries(Object.keys(changes).map((key) => [key, parsed.data[key as FinanceLinkField]])) as FinanceLinkChanges };
 }
