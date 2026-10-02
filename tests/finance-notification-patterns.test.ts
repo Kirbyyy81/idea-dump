@@ -34,6 +34,12 @@ describe('stored notification patterns', () => {
   expect(parseFinanceNotification(input,[seed,override],'other').payload?.amount).toBe(16);
   expect(parseFinanceNotification(input,[seed,{...override,is_active:true,evidence_valid:false}],'owner').payload?.direction).toBeNull();
  });
+ it('keeps overrides isolated from a different package with the same key', () => {
+  const seed = notificationPatterns.find(p=>p.format_key==='ryt-card-payment')!;
+  const input = sampleNotification('RM16.00 paid at EXAMPLE CAFE using your Main Account.');
+  const override = {...seed,id:'override',source_package:'*',user_id:'owner',source_id:input.source_id,is_active:false};
+  expect(parseFinanceNotification(input,[seed,override],'owner').payload?.amount).toBe(16);
+ });
  it('leaves disagreeing rule values unset', () => {
   const seed = notificationPatterns.find(p=>p.format_key==='ryt-card-payment')!;
   const other = {...seed,id:'other',format_key:'other',definition:{...seed.definition,direction:'income' as const}};

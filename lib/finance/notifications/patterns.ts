@@ -77,8 +77,8 @@ export function extractNotificationPattern(definition: FinanceNotificationPatter
 export function applyNotificationPatterns(raw: string, patterns: FinanceNotificationPattern[], scope: {userId?: string; sourceId: string; sourcePackage: string}) {
     const eligible = patterns.filter(p => (p.source_package === '*' || p.source_package === scope.sourcePackage)
         && (p.user_id === null || (p.user_id === scope.userId && p.source_id === scope.sourceId)));
-    const overrides = new Set(eligible.filter(p => p.user_id !== null).map(p => p.format_key));
-    const active = eligible.filter(p => (p.user_id !== null || !overrides.has(p.format_key)) && p.is_active && p.evidence_valid);
+    const overrides = new Set(eligible.filter(p => p.user_id !== null).map(p => p.source_package+':'+p.format_key));
+    const active = eligible.filter(p => (p.user_id !== null || !overrides.has(p.source_package+':'+p.format_key)) && p.is_active && p.evidence_valid);
     const values: Partial<Record<FinanceNotificationField, string | number | null>> = {};
     const trace: FinanceNotificationExtractionTrace = { version: 1, fields: {}, conflicts: [] };
     for (const pattern of active) {
