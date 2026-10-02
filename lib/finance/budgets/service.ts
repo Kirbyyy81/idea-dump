@@ -1,7 +1,7 @@
 import 'server-only';
-import type { FinanceBudgetDetail, FinanceBudgetDetailQuery, FinanceBudgetFieldErrors, FinanceBudgetListQuery, FinanceBudgetMutation, FinanceBudgetPage, FinanceBudgetSettings, FinanceBudgetSummary } from '@/lib/types';
+import type { FinanceBudgetDetail, FinanceBudgetDetailQuery, FinanceBudgetFieldErrors, FinanceBudgetListQuery, FinanceBudgetMutation, FinanceBudgetPage, FinanceBudgetSettings, FinanceBudgetSummary, FinanceDashboardBudget } from '@/lib/types';
 import { FinanceServiceError } from '@/lib/finance/core/errors';
-import { getBudgetRecord, listBudgetRecords, mutateBudgetRecord } from './repository';
+import { getBudgetRecord, listBudgetRecords, listDashboardBudgetRecords, mutateBudgetRecord } from './repository';
 
 const DETAIL_DEFAULTS: FinanceBudgetDetailQuery = { history_page: 1, history_page_size: 20, transactions_page: 1, transactions_page_size: 50 };
 const FIELD_MESSAGES: FinanceBudgetFieldErrors = {
@@ -55,8 +55,8 @@ export async function mutateFinanceBudget(userId: string, mutation: FinanceBudge
     return detail.budget;
 }
 
-export async function getFinanceDashboardBudgets(userId: string): Promise<FinanceBudgetSummary[]> {
-    const { data, error } = await listBudgetRecords(userId, { state: 'active', page: 1, page_size: 3 }, true);
+export async function getFinanceDashboardBudgets(userId: string, month: string): Promise<FinanceDashboardBudget[]> {
+    const { data, error } = await listDashboardBudgetRecords(userId, month);
     if (error) throwBudgetDatabaseError(error);
-    return (data as unknown as FinanceBudgetPage<FinanceBudgetSummary>).data.map(currentBudgetSettings);
+    return data as unknown as FinanceDashboardBudget[];
 }

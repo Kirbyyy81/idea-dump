@@ -18,8 +18,6 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
-import { AppModuleSlug } from '@/lib/rbac/constants';
-import { PageLoader } from '@/components/atoms/Loader';
 import { AppModuleMetadata } from '@/lib/rbac/types';
 import { useAccess } from '@/lib/contexts/AccessContext';
 import { Project } from '@/lib/types';
@@ -132,14 +130,6 @@ export default function DashboardPage() {
                         );
                     })}
                 </div>
-
-                {!allowedModules.includes('projects') && (
-                    <Card className="p-6">
-                        <h2 className="text-lg font-bold text-text-primary">
-                            Projects Access
-                        </h2>
-                    </Card>
-                )}
             </div>
         </AppShell>
     );

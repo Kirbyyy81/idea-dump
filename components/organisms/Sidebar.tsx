@@ -11,6 +11,7 @@ import { AppModuleSlug } from '@/lib/rbac/constants';
 import { matchesModuleRoute } from '@/lib/rbac/routes';
 import { useAccess } from '@/lib/contexts/AccessContext';
 import {
+    Barcode,
     BarChart3,
     BookOpen,
     Camera,
@@ -81,7 +82,7 @@ function isExactPath(pathname: string, href: string) {
 
 export function Sidebar({ projects, collapsed = false, className, onToggleCollapsed }: SidebarProps) {
     const pathname = usePathname();
-    const [openGroups, setOpenGroups] = useState<Partial<Record<'projects' | 'tickets' | 'film' | 'finance', boolean>>>({});
+    const [openGroups, setOpenGroups] = useState<Partial<Record<'projects' | 'tickets' | 'film' | 'finance' | 'log_viewer', boolean>>>({});
     const access = useAccess();
     const allowedModules = access?.allowedModules ?? [];
     const modules = access?.modules ?? [];
@@ -107,6 +108,7 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
         <Link
             key={href}
             href={href}
+            aria-current={isActive ? 'page' : undefined}
             title={collapsed ? label : undefined}
             className={cn(
                 NAV_SUBITEM_CLASS,
@@ -132,6 +134,7 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
     }) => (
         <Link
             href={href}
+            aria-current={active ? 'page' : undefined}
             title={collapsed ? label : undefined}
             className={cn(
                 NAV_ITEM_CLASS,
@@ -154,7 +157,7 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
     }: {
         active: boolean;
         children: JSX.Element;
-        group: 'projects' | 'tickets' | 'film' | 'finance';
+        group: 'projects' | 'tickets' | 'film' | 'finance' | 'log_viewer';
         href: string;
         icon: JSX.Element;
         label: string;
@@ -398,6 +401,29 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
 
                 {navModules.map((item) => {
                     const itemPath = getModulePath(item.slug, item.path);
+                    if (item.slug === 'log_viewer') {
+                        return <div key={item.slug}>{renderModuleGroup({
+                            active: isModuleActive('log_viewer'),
+                            group: 'log_viewer',
+                            href: itemPath,
+                            icon: <FileSearch size={18} />,
+                            label: getModuleLabel(item.slug, item.label),
+                            children: <div>
+                                {renderSubItem({
+                                    href: itemPath,
+                                    icon: <FileSearch size={14} />,
+                                    isActive: isExactPath(pathname, itemPath),
+                                    label: 'View logs',
+                                })}
+                                {renderSubItem({
+                                    href: '/log-viewer/barcode-generator',
+                                    icon: <Barcode size={14} />,
+                                    isActive: isExactPath(pathname, '/log-viewer/barcode-generator'),
+                                    label: 'Barcode Generator',
+                                })}
+                            </div>,
+                        })}</div>;
+                    }
                     return (
                     <div key={item.slug}>
                         {renderModuleLink({

@@ -577,7 +577,7 @@ export interface FinanceDashboardRecentTransaction {
 }
 
 export interface FinanceDashboardSummary {
-    active_budgets?: FinanceBudgetSummary[];
+    budget_cycles?: FinanceDashboardBudget[];
     total_expense: number;
     total_income: number;
     net_cash_flow: number;
@@ -647,6 +647,12 @@ export interface FinanceBudgetCycle {
     configuration?: FinanceBudgetSettings;
     metrics: FinanceBudgetMetrics;
 }
+export interface FinanceDashboardBudget {
+    budget_id: string;
+    name: string;
+    cycle: FinanceBudgetCycle;
+}
+
 export interface FinanceBudgetSummary {
     id: string;
     name: string;
@@ -1336,6 +1342,95 @@ export interface FinanceShareBatch {
     failed_files: number;
     items: FinanceShareBatchItem[];
 }
+
+// Client-only Log Viewer records.
+export type LogViewerSource = 'yes-shop' | 'ussp' | 'unknown';
+
+export type LogViewerRecord = {
+  bodyText?: string;
+  endpointName?: string;
+  functionName?: string;
+  httpStatus?: number;
+};
+
+export type LogContentMatch = {
+  confidence: PairingConfidence;
+  method: 'id' | 'dictionary' | 'proximity';
+};
+
+export type LogBodyKind = 'json' | 'text' | 'none';
+export type LogLineType = 'request' | 'response' | 'content_data' | 'crash' | 'error' | 'info' | 'other';
+export type OrphanKind = 'request' | 'response' | 'content_data' | null;
+
+export type LogTableField = { name: string; value: string };
+export type LogTableRow = { rawText: string; fields?: LogTableField[] };
+export type LogTableDump = { name: string; empty: boolean; rows: LogTableRow[] };
+
+export type LogEvent = {
+  id: string;
+  rawLine: string;
+  lineNumber: number;
+  endLineNumber?: number;
+  timestamp: string;
+  timestampMs?: number;
+  lineType: LogLineType;
+  eventType: string;
+  source?: LogViewerSource;
+  sourceSegment?: number;
+  endpointName?: string;
+  method?: string;
+  url?: string;
+  endpointKey?: string;
+  host?: string;
+  path?: string;
+  httpStatus?: number;
+  functionName?: string;
+  requestId?: string;
+  responseId?: string;
+  clientRequestId?: string;
+  durationMs?: number;
+  bodyKind?: LogBodyKind;
+  bodyRaw?: string;
+  bodyJson?: unknown;
+  bodyParseError?: boolean;
+  tableDump?: LogTableDump;
+};
+
+export type PairingConfidence = 'high' | 'medium' | 'low' | 'unknown';
+
+export type Transaction = {
+  id: string;
+  url?: string;
+  endpointKey?: string;
+  host?: string;
+  path?: string;
+  correlationId?: string;
+  method?: string;
+  request?: LogEvent;
+  responses: LogEvent[];
+  contentData?: LogEvent;
+  contentMatch?: LogContentMatch;
+  tableBatch?: LogTableDump[];
+  lineRefs: number[];
+  orphanKind: OrphanKind;
+  orphanResponse?: boolean;
+  startedAtMs?: number;
+  endedAtMs?: number;
+  confidence: PairingConfidence;
+  hadConcurrency: boolean;
+  closedReason?: 'paired' | 'timeout' | 'eof' | 'orphan';
+};
+
+export type UnparsedLogLine = {
+  rawLine: string;
+  lineNumber: number;
+  reason?: string;
+};
+
+export type BuildTransactionsOptions = {
+  inactivityTimeoutMs: number;
+  nowMs?: number;
+};
 
 export interface FinanceNotificationEventInput {
     client_event_id: string;

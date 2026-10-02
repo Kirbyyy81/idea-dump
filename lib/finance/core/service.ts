@@ -582,16 +582,16 @@ export async function getFinanceDashboard(userId: string, requestedMonth: string
     if (selectedDate !== null && (normalizeFinanceDate(selectedDate) !== selectedDate || !selectedDate.startsWith(`${monthRange.month}-`))) {
         fail('Date must be a valid day in the selected month');
     }
-    const [monthRows, recentResult, activeBudgets] = await Promise.all([
+    const [monthRows, recentResult, budgetCycles] = await Promise.all([
         listFinanceDashboardMonthTransactions(userId, monthRange.monthStart, monthRange.nextMonthStart, DASHBOARD_PAGE_SIZE),
         listFinanceDashboardRecentTransactions(userId, monthRange.monthStart, monthRange.nextMonthStart, selectedDate),
-        getFinanceDashboardBudgets(userId),
+        getFinanceDashboardBudgets(userId, monthRange.month),
     ]);
     if (recentResult.error) throw recentResult.error;
     const aggregate = aggregateFinanceDashboard(monthRows as FinanceDashboardRow[]);
     return {
         total_expense: aggregate.total_expense,
-        active_budgets: activeBudgets,
+        budget_cycles: budgetCycles,
         total_income: aggregate.total_income,
         net_cash_flow: aggregate.net_cash_flow,
         recent_transactions: (recentResult.data || []).map((transaction) => (
