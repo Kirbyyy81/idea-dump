@@ -37,7 +37,7 @@ const rule = (overrides: Partial<FinanceOcrRule> = {}): FinanceOcrRule => ({
 });
 function storedNotification(input = event()) {
     return { user_id: owner, intake_item_id: 'intake-1', status: 'review',
-        client_event_id: input.client_event_id, source_id: input.source_id, source_package: input.source_package,
+        payload_digest: 'a'.repeat(64), client_event_id: input.client_event_id, source_id: input.source_id, source_package: input.source_package,
         notification_key_hash: input.notification_key_hash, captured_at: input.captured_at,
         title: input.notification.title, body: input.notification.text, subtext: input.notification.subtext, posted_at: input.notification.posted_at,
     };
@@ -68,7 +68,9 @@ beforeEach(() => {
         return query;
     });
     mocks.rules.mockResolvedValue({ data: [rule()], error: null });
-    mocks.rpc.mockResolvedValue({ data: { status: 'review', intake_item_id: 'intake-1' }, error: null });
+    mocks.rpc.mockImplementation(async (name, args) => ({ data: name === 'finance_retry_notification_v1'
+        ? { confirmed: false, candidate: { id:'candidate-1', payload:args.p_parsed.payload } }
+        : { status: 'review', intake_item_id: 'intake-1' }, error: null }));
     mocks.update.mockImplementation(async (_owner, _candidate, update) => ({ data: { id: 'candidate-1', ...update }, error: null }));
     mocks.assess.mockResolvedValue({ outcome: 'none', matchedTransactionId: null, score: 0, signals: [], explanation: 'No duplicate.' });
 });
@@ -88,7 +90,7 @@ describe('notification preparation for intake and Retry', () => {
             payload: { amount: 12.3, direction: 'expense', merchant: 'Cafe purchases', payee_id: null, payee_name: null, category_id: 'dining', transaction_date: '2026-10-01', matched_rule_names: ['Cafe purchases'] },
         });
         await retryFinanceNotification(owner, 'candidate-1', 'intake-1');
-        expect(mocks.update).toHaveBeenCalledWith(owner, 'candidate-1', expect.objectContaining({ payload: prepared.payload, matched_rule_id: 'rule-1' }));
+        expect(mocks.rpc).toHaveBeenCalledWith('finance_retry_notification_v1', expect.objectContaining({p_user_id:owner,p_candidate_id:'candidate-1',p_expected_digest:'a'.repeat(64),p_parsed:expect.objectContaining({payload:prepared.payload,matched_rule_id:'rule-1'})}));
         expect(mocks.assess).toHaveBeenCalledWith(expect.objectContaining({ userId: owner, amount: 12.3, merchant: 'Cafe purchases', transactionDate: '2026-10-01' }));
     });
 
@@ -109,9 +111,9 @@ describe('notification preparation for intake and Retry', () => {
         expect(mocks.update).not.toHaveBeenCalled();
         const stored = structuredClone(mocks.tables.finance_notification_events);
         await retryFinanceNotification(owner, 'candidate-1', 'intake-1');
-        expect(mocks.update).toHaveBeenCalledWith(owner, 'candidate-1', expect.objectContaining({ payload: args.p_parsed.payload, matched_rule_id: 'rule-1', confidence: null }));
+        expect(mocks.rpc).toHaveBeenCalledWith('finance_retry_notification_v1', expect.objectContaining({p_parsed:expect.objectContaining({payload:args.p_parsed.payload,matched_rule_id:'rule-1'})}));
         expect(mocks.tables.finance_notification_events).toEqual(stored);
-        expect(mocks.rpc).toHaveBeenCalledTimes(1);
+        expect(mocks.rpc).toHaveBeenCalledTimes(2);
         expect(mocks.rules.mock.calls).toEqual([[owner], [owner]]);
         expect(mocks.queries.filter(query => query.table === 'dim_finance_payees')).toEqual([
             { table: 'dim_finance_payees', filters: [['user_id', owner], ['is_archived', false]] },
@@ -185,5 +187,21 @@ describe('notification confirmation preparation', () => {
         }));
         expect(mocks.queries).toContainEqual({table:'finance_notification_events',filters:[['user_id',owner],['intake_item_id','intake-1']]});
         expect(JSON.stringify(mocks.rpc.mock.calls.at(-1)?.[1].p_learning)).not.toContain('EXAMPLE CAFE');
+    });
+});
+
+describe('notification automatic confirmation transport', () => {
+    it('uses one atomic intake call and returns completed without training or changing upload data', async () => {
+        mocks.rpc.mockResolvedValue({data:{status:'completed',replayed:false},error:null});
+        const input=event();
+        expect(await acceptFinanceNotification(owner,'device-1',input)).toEqual({status:'completed',replayed:false});
+        expect(mocks.rpc).toHaveBeenCalledTimes(1);
+        expect(mocks.rpc).toHaveBeenCalledWith('finance_accept_notification_v2',expect.objectContaining({p_event:input}));
+    });
+    it('returns automatic Retry completion without a separate non-atomic update', async () => {
+        mocks.rpc.mockResolvedValue({data:{confirmed:true},error:null});
+        expect(await retryFinanceNotification(owner,'candidate-1','intake-1')).toMatchObject({data:{confirmed:true}});
+        expect(mocks.update).not.toHaveBeenCalled();
+        expect(mocks.rpc).toHaveBeenCalledTimes(1);
     });
 });

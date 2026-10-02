@@ -1367,6 +1367,11 @@ export interface FinanceNotificationRecord extends FinanceNotificationReview {
     source_id: string; captured_at: string; client_event_id: string; notification_key_hash: string;
 }
 
+export interface FinanceNotificationRetryResult {
+    confirmed: boolean;
+    candidate?: FinanceCandidateTransaction;
+}
+
 export interface FinanceNotificationPrepared extends FinanceNotificationParseResult {
     matched_rule_id?: string | null;
     duplicate_outcome?: FinanceDuplicateOutcome; duplicate_score?: number; duplicate_signals?: FinanceDuplicateSignal[];

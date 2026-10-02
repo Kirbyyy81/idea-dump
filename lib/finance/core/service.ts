@@ -1,3 +1,4 @@
+import type { FinanceNotificationRetryResult } from '@/lib/types';
 import { confirmFinanceNotification, retryFinanceNotification } from '@/lib/finance/notifications/service';
 import { PostgrestError } from '@supabase/supabase-js';
 import { canonicalFinanceCategoryName } from '@/lib/finance/catalog';
@@ -745,8 +746,11 @@ export async function resolveFinanceReviewCandidateForUser(
         if (candidate.status !== 'pending') fail('Only pending review items can be retried', 409);
         if (candidate.intake?.source === 'notification') {
             const { data, error } = await retryFinanceNotification(userId, candidateId, candidate.intake_item_id);
-            if (error) throw error;
-            const [withDuplicate] = await attachDuplicateTransactions(userId, [data as unknown as FinanceCandidateTransaction]);
+            if (error) reviewRpcError(error);
+            const result = data as FinanceNotificationRetryResult;
+            if (result?.confirmed) return { kind: 'success' as const };
+            if (!result?.candidate) fail('Could not refresh notification review', 503);
+            const [withDuplicate] = await attachDuplicateTransactions(userId, [result.candidate]);
             return { kind: 'candidate' as const, data: toFinanceReviewCandidate(withDuplicate) };
         }
         const [sourcesResult, sourceTemplatesResult, fieldTemplatesResult, rulesResult, payeesResult] = await Promise.all([

@@ -7,7 +7,7 @@ import { parseFinanceNotification } from './parser';
 import { notificationPayloadDigest } from './replay';
 import { applyNotificationRules } from './rules';
 import { matchFinanceNotificationPayee } from './payees';
-import { listFinanceNotificationPatterns, listActiveFinancePayees, listActiveFinanceRules, updateFinanceReviewCandidate } from '@/lib/finance/core/repository';
+import { listFinanceNotificationPatterns, listActiveFinancePayees, listActiveFinanceRules } from '@/lib/finance/core/repository';
 import { assessFinanceDuplicate, financeDuplicateColumns } from '@/lib/finance/transactions/duplicates';
 
 async function prepareNotification(userId: string, event: FinanceNotificationEventInput, intakeId?: string): Promise<FinanceNotificationPrepared> {
@@ -32,7 +32,7 @@ async function prepareNotification(userId: string, event: FinanceNotificationEve
 }
 export async function acceptFinanceNotification(userId: string, deviceId: string, event: FinanceNotificationEventInput) {
     const parsed = await prepareNotification(userId, event);
-    const { data, error } = await createAdminClient().rpc('finance_accept_notification_v1', {
+    const { data, error } = await createAdminClient().rpc('finance_accept_notification_v2', {
         p_user_id: userId, p_device_id: deviceId, p_event: event, p_digest: notificationPayloadDigest(event), p_parsed: parsed,
     });
     if (error) {
@@ -59,14 +59,8 @@ export async function retryFinanceNotification(userId: string, candidateId: stri
     };
     const parsed = await prepareNotification(userId,event,intakeId);
     if (!parsed.payload) throw new CompanionError('This notification cannot be parsed. Reject it or fill the fields manually.', 422);
-    return updateFinanceReviewCandidate(userId,candidateId,{
-        payload:parsed.payload,confidence:null,
-        ...('matched_rule_id' in parsed ? {
-            matched_rule_id:parsed.matched_rule_id,
-            duplicate_outcome:parsed.duplicate_outcome,duplicate_score:parsed.duplicate_score,
-            duplicate_signals:parsed.duplicate_signals,duplicate_explanation:parsed.duplicate_explanation,duplicate_checked_at:parsed.duplicate_checked_at,
-        } : {}),
-        updated_at:new Date().toISOString(),
+    return createAdminClient().rpc('finance_retry_notification_v1', {
+        p_user_id: userId, p_candidate_id: candidateId, p_expected_digest: data.payload_digest, p_parsed: parsed,
     });
 }
 
