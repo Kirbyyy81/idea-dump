@@ -1,6 +1,42 @@
 import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 
+test('returns to the paste field from a long log without clearing input or filters', async ({ page }, testInfo) => {
+  const raw = readFileSync('lib/log-viewer/fixtures/yes-shop.txt', 'utf8').replace(/\r\n/g, '\n');
+  await page.goto('/log-viewer');
+  await page.locator('#log-viewer-file-input').setInputFiles('lib/log-viewer/fixtures/yes-shop.txt');
+  const input = page.getByRole('textbox', { name: 'Paste raw log text' });
+  const back = page.getByRole('button', { name: 'Back to log input', exact: true });
+  await expect(input).toHaveCount(0);
+  await page.getByPlaceholder('Search endpoint / payload...').fill('get');
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(500);
+  await expect(back).toBeInViewport();
+  const box = (await back.boundingBox())!;
+  const viewport = page.viewportSize()!;
+  expect(box.width).toBeGreaterThanOrEqual(44);
+  expect(box.height).toBeGreaterThanOrEqual(44);
+  expect(viewport.width - box.x - box.width).toBeLessThanOrEqual(32);
+  expect(viewport.height - box.y - box.height).toBeLessThanOrEqual(32);
+  await page.screenshot({ path: testInfo.outputPath('back-to-log-input.png') });
+
+  await back.focus();
+  await page.keyboard.press('Enter');
+  await expect(input).toBeFocused();
+  await expect(input).toHaveValue(raw);
+  await expect(page.getByRole('button', { name: /Import Logs/ })).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.getByPlaceholder('Search endpoint / payload...')).toHaveValue('get');
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+
+  // Reusing the shortcut with an already open panel must still scroll and focus.
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await back.click();
+  await expect(input).toBeFocused();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  await expect(input).toHaveValue(raw);
+  await expect(page.getByRole('heading', { name: 'Logs', exact: true })).toBeVisible();
+});
+
 test('expands all JSON levels and independently reveals raw lines using the keyboard', async ({ page }, testInfo) => {
   const deep = { result: [{ nested: { children: [{ name: 'Plan Advanced Payment', chargeAmount: null, isMandatoryAddon: true, url: 'https://example.test/' + 'long-path/'.repeat(35) }] } }] };
   const request = '2026-09-24 10:00:00.000 REQUEST https://example.test/yesshop/mobile/ws/v1/json/getPlanPriceInfo ' + JSON.stringify(deep);

@@ -2,6 +2,8 @@
 
 The `/log-viewer` tool parses pasted or uploaded logs in the browser. Log contents and dictionaries are not uploaded or stored on a server.
 
+The floating **Back to log input** button in the bottom-right corner immediately returns to the top, opens **Import Logs**, and focuses the paste field. Existing input, filters, and parsed results are preserved.
+
 ## Payload display
 
 Open a request, response, or content-data panel to read indented, syntax-coloured JSON. Objects and arrays start expanded and can be folded individually using their arrow buttons, or together using **Expand all** and **Collapse all**. Folded values retain their braces or brackets and show an ellipsis. All controls support the keyboard. Long lines scroll within the panel.
