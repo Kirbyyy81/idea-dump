@@ -1400,6 +1400,7 @@ export interface FinanceNotificationPattern {
     revision: number;
 }
 export interface FinanceNotificationExtractionTrace {
+    date_provenance?: FinanceNotificationDateProvenance;
     version: 1;
     fields: Partial<Record<FinanceNotificationField, { pattern_id: string; revision: number; learned: boolean }>>;
     conflicts: FinanceNotificationField[];

@@ -274,7 +274,9 @@ export function toFinanceReviewCandidate(candidate: FinanceCandidateTransaction)
         duplicate_explanation: candidate.duplicate_explanation || null,
         intake: candidate.intake ? {
             source: candidate.intake.source,
-            notification: candidate.intake.notification || null,
+            notification: candidate.intake.notification ? { ...candidate.intake.notification,
+                date_provenance: candidate.payload.notification_extraction?.date_provenance ?? candidate.intake.notification.date_provenance,
+            } : null,
             ocr_text: candidate.intake.ocr_text || null,
             ocr_raw_text: candidate.intake.ocr_raw_text || null,
             ocr_normalized_text: candidate.intake.ocr_normalized_text || null,

@@ -9,7 +9,7 @@ export const dateToken = '(?:20\\d{2}-\\d{2}-\\d{2}|\\d{1,2}[/-]\\d{1,2}[/-]20\\
 const kinds: Record<string, string> = {
     amount: '(?:RM|MYR)\\s*(?:\\d{1,3}(?:,\\d{3})+|\\d+)\\.\\d{2}(?!\\d|\\.\\d)',
     date: dateToken, time: '\\d{1,2}:\\d{2}\\s*(?:am|pm)',
-    text: '.{1,500}?', reference: '[\\p{L}\\p{N}/@._-]{1,200}',
+    text: '.{1,500}?', reference: '[\\p{L}\\p{N}/@._-]{1,200}?',
 };
 export function notificationDate(value: string): string | null {
     const iso = normalizeFinanceDate(value);

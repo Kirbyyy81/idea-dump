@@ -1,3 +1,4 @@
+import { learnNotificationPattern } from './learning';
 import 'server-only';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { CompanionError } from '@/lib/companion/core/http';
@@ -66,5 +67,27 @@ export async function retryFinanceNotification(userId: string, candidateId: stri
             duplicate_signals:parsed.duplicate_signals,duplicate_explanation:parsed.duplicate_explanation,duplicate_checked_at:parsed.duplicate_checked_at,
         } : {}),
         updated_at:new Date().toISOString(),
+    });
+}
+
+export async function confirmFinanceNotification(userId: string, candidateId: string, intakeId: string, params: Record<string, unknown>) {
+    const { data: row, error } = await createAdminClient().from('finance_notification_events')
+        .select('*').eq('user_id', userId).eq('intake_item_id', intakeId).single();
+    if (error || !row?.body) throw new CompanionError('Notification is no longer available for review', 409);
+    const { data: patterns, error: patternError } = await listFinanceNotificationPatterns(userId, row.source_id);
+    if (patternError) throw new CompanionError('Could not load notification patterns', 503);
+    const event: FinanceNotificationEventInput = {
+        client_event_id: row.client_event_id, source_id: row.source_id, source_package: row.source_package,
+        captured_at: row.captured_at, notification_key_hash: row.notification_key_hash,
+        notification: { title: row.title, text: row.body, subtext: row.subtext, posted_at: row.posted_at },
+    };
+    const learning = learnNotificationPattern(event, {
+        amount: params.p_amount as number, direction: params.p_direction as 'expense' | 'income',
+        merchant: params.p_merchant as string | null, payee_name: params.p_payee_name as string | null,
+        transaction_date: params.p_transaction_date as string, reference_number: params.p_reference_number as string | null,
+    }, patterns || [], userId);
+    return createAdminClient().rpc('finance_confirm_notification_v1', {
+        p_user_id: userId, p_candidate_id: candidateId, p_expected_digest: row.payload_digest,
+        p_confirmation: params, p_learning: learning,
     });
 }

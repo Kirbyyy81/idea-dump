@@ -27,6 +27,6 @@ export function parseFinanceNotification(event: FinanceNotificationEventInput, p
     else { extracted.trace.fields = {}; extracted.trace.conflicts = []; }
     if (explicitDates.some(d => !d) || new Set(explicitDates).size > 1) payload.transaction_date = null;
     const provenance = hasExplicitDate ? (payload.transaction_date ? 'notification_text' : 'unavailable') : 'posted_at';
-    payload.notification_extraction = extracted.trace;
+    payload.notification_extraction = { ...extracted.trace, date_provenance: provenance };
     return {status:'review',payload,date_provenance:provenance,failure_code:null};
 }

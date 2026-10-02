@@ -1,4 +1,4 @@
-import { retryFinanceNotification } from '@/lib/finance/notifications/service';
+import { confirmFinanceNotification, retryFinanceNotification } from '@/lib/finance/notifications/service';
 import { PostgrestError } from '@supabase/supabase-js';
 import { canonicalFinanceCategoryName } from '@/lib/finance/catalog';
 import { aggregateFinanceDashboard, FinanceDashboardRow } from '@/lib/finance/dashboard';
@@ -846,7 +846,9 @@ export async function resolveFinanceReviewCandidateForUser(
     if (latestAssessment.outcome === 'strong' && !input.duplicate_override_reason) {
         fail('Explain why this strong duplicate should still be confirmed');
     }
-    const { data, error } = await confirmFinanceReviewCandidate(params);
+    const { data, error } = candidate.intake?.source === 'notification'
+        ? await confirmFinanceNotification(userId, candidateId, candidate.intake_item_id, params)
+        : await confirmFinanceReviewCandidate(params);
     if (error) reviewRpcError(error);
     const confirmation = data as ConfirmFinanceCandidateResult;
     if (!confirmation?.confirmed || !confirmation.transaction) {

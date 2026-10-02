@@ -19,7 +19,7 @@ vi.mock('@/lib/finance/transactions/duplicates', async importOriginal => ({
     ...await importOriginal<typeof import('@/lib/finance/transactions/duplicates')>(),
     assessFinanceDuplicate: mocks.assess,
 }));
-import { acceptFinanceNotification, retryFinanceNotification } from '@/lib/finance/notifications/service';
+import { acceptFinanceNotification, retryFinanceNotification, confirmFinanceNotification } from '@/lib/finance/notifications/service';
 import { notificationPayloadDigest } from '@/lib/finance/notifications/replay';
 
 const owner = '00000000-0000-4000-8000-000000000010';
@@ -166,5 +166,24 @@ describe('notification preparation for intake and Retry', () => {
         await expect(retryFinanceNotification(owner, 'candidate-1', 'intake-1')).rejects.toMatchObject({ status: 409 });
         expect(mocks.update).not.toHaveBeenCalled();
         expect(mocks.rules).not.toHaveBeenCalled();
+    });
+});
+
+describe('notification confirmation preparation', () => {
+    it('derives learning from owned original text and sends the replay digest to the atomic RPC', async () => {
+        const input = event();
+        input.source_package = 'my.rytbank.app';
+        input.notification.text = 'Settled RM10.00 with EXAMPLE CAFE.';
+        mocks.tables.finance_notification_events = [{ ...storedNotification(input), payload_digest: 'digest' }];
+        await confirmFinanceNotification(owner, 'candidate-1', 'intake-1', {
+            p_amount:10,p_direction:'expense',p_merchant:'EXAMPLE CAFE',p_payee_name:null,
+            p_transaction_date:'2026-09-26',p_reference_number:null,
+        });
+        expect(mocks.rpc).toHaveBeenCalledWith('finance_confirm_notification_v1', expect.objectContaining({
+            p_user_id:owner,p_candidate_id:'candidate-1',p_expected_digest:'digest',
+            p_learning:expect.objectContaining({definition:expect.objectContaining({direction:'expense'})}),
+        }));
+        expect(mocks.queries).toContainEqual({table:'finance_notification_events',filters:[['user_id',owner],['intake_item_id','intake-1']]});
+        expect(JSON.stringify(mocks.rpc.mock.calls.at(-1)?.[1].p_learning)).not.toContain('EXAMPLE CAFE');
     });
 });
