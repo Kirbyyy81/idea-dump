@@ -7,14 +7,18 @@ import { FinanceShareTargetProvider } from '@/app/finance/_components/FinanceSha
 import { AlertProvider } from '@/lib/contexts/AlertContext';
 import { FinanceDashboardClient } from '@/app/finance/_components/FinanceDashboardClient';
 import { dashboardFixture } from '../fixtures/finance-dashboard';
+import { dashboardBudgetMonths } from '../fixtures/finance-dashboard-budgets';
 import { FinanceReviewClient } from '@/app/finance/review/_components/FinanceReviewClient';
 import { reviewCandidates } from '../fixtures/finance-review';
 
 const initial = (window as unknown as { budgetInitial?: { list: FinanceBudgetPage<FinanceBudgetSummary>; detail: FinanceBudgetDetail | null } }).budgetInitial
     ?? { list: { data: [], page: 1, page_size: 20, total: 0 }, detail: null };
+const dashboardMonth = new URLSearchParams(window.location.search).get('month') || '2026-09';
+const budgetMonthsEnabled = (window as unknown as { dashboardBudgetMonths?: boolean }).dashboardBudgetMonths;
 createRoot(document.getElementById('root')!).render(<FinanceReferenceDataProvider>
     {window.location.pathname === '/finance'
-        ? <FinanceDashboardClient month="2026-09" today="2026-09-22" summary={dashboardFixture} />
+        ? <FinanceDashboardClient month={dashboardMonth} today={budgetMonthsEnabled ? '2026-10-02' : '2026-09-22'}
+            summary={budgetMonthsEnabled ? { ...dashboardFixture, budget_cycles: dashboardBudgetMonths[dashboardMonth] ?? [] } : dashboardFixture} />
         : window.location.pathname === '/finance/review'
         ? <AlertProvider><FinanceReviewClient initialCandidates={reviewCandidates} initialFailedIntakes={[]} initialSelectedId="candidate-1" today="2026-09-22" /></AlertProvider>
         : window.location.pathname === '/finance/add'

@@ -8,6 +8,7 @@ import FinanceError from '@/app/finance/error';
 import FinancePage from '@/app/finance/page';
 import { resolveFinanceDashboardMonth } from '@/lib/finance/dashboard';
 import { FinanceDashboardSummary } from '@/lib/types';
+import { dashboardBudgetMonths } from './fixtures/finance-dashboard-budgets';
 
 const {
     dashboardService,
@@ -78,6 +79,27 @@ const summary: FinanceDashboardSummary = {
 };
 
 describe('server-rendered Finance dashboard', () => {
+    it('renders separate frozen cards with their own totals and no link to current-cycle details', () => {
+        render(<FinanceDashboardClient month="2026-09" today="2026-10-02" summary={{ ...summary, budget_cycles: dashboardBudgetMonths['2026-09'] }} />);
+        const budgets = screen.getByRole('region', { name: 'Budget cycles' });
+        expect(within(budgets).getAllByRole('article')).toHaveLength(2);
+        expect(within(budgets).getAllByRole('heading', { name: 'Weekly groceries' })).toHaveLength(2);
+        expect(within(budgets).getByText('14 to 20 Sept 2026')).toBeDefined();
+        expect(within(budgets).getByText('21 to 27 Sept 2026')).toBeDefined();
+        expect(budgets.textContent).toContain('RM 60.00 remaining');
+        expect(budgets.textContent).toContain('RM 25.00 over');
+        expect(within(budgets).getAllByRole('link')).toHaveLength(1);
+    });
+    it('shows an empty reporting month without falling back to current budgets', () => {
+        render(<FinanceDashboardClient month="2026-08" today="2026-10-02" summary={{ ...summary, budget_cycles: [] }} />);
+        expect(screen.getByText('No budget cycles for this month.')).toBeDefined();
+    });
+    it('keeps current-month cards linked to their active budget', () => {
+        render(<FinanceDashboardClient month="2026-10" today="2026-10-02" summary={{ ...summary, budget_cycles: dashboardBudgetMonths['2026-10'] }} />);
+        const budgets = screen.getByRole('region', { name: 'Active budgets' });
+        expect(within(budgets).getByRole('link', { name: /October groceries/ }).getAttribute('href')).toContain(dashboardBudgetMonths['2026-10'][0].budget_id);
+        expect(budgets.textContent).toContain('RM 176.70 remaining');
+    });
     beforeEach(() => {
         dashboardService.mockReset();
         pageAccess.mockReset();
