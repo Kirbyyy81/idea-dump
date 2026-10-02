@@ -8,6 +8,10 @@ export function listBudgetRecords(userId: string, query: FinanceBudgetListQuery,
     });
 }
 
+export function listDashboardBudgetRecords(userId: string, month: string) {
+    return createAdminClient().rpc('finance_budget_dashboard', { p_user_id: userId, p_month: month });
+}
+
 export function getBudgetRecord(userId: string, id: string, query: FinanceBudgetDetailQuery) {
     return createAdminClient().rpc('finance_budget_detail', {
         p_user_id: userId, p_budget_id: id, p_history_page: query.history_page, p_history_page_size: query.history_page_size,

@@ -577,7 +577,7 @@ export interface FinanceDashboardRecentTransaction {
 }
 
 export interface FinanceDashboardSummary {
-    active_budgets?: FinanceBudgetSummary[];
+    budget_cycles?: FinanceDashboardBudget[];
     total_expense: number;
     total_income: number;
     net_cash_flow: number;
@@ -647,6 +647,12 @@ export interface FinanceBudgetCycle {
     configuration?: FinanceBudgetSettings;
     metrics: FinanceBudgetMetrics;
 }
+export interface FinanceDashboardBudget {
+    budget_id: string;
+    name: string;
+    cycle: FinanceBudgetCycle;
+}
+
 export interface FinanceBudgetSummary {
     id: string;
     name: string;

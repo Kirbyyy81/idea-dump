@@ -21,7 +21,7 @@ const database = vi.hoisted(() => {
         order: vi.fn(),
         range: vi.fn(),
         select: vi.fn(),
-        rpc: vi.fn().mockResolvedValue({ data: { data: [] }, error: null }),
+        rpc: vi.fn().mockResolvedValue({ data: [], error: null }),
         then: (resolve: (value: typeof result) => unknown) => Promise.resolve(resolve(result)),
     };
     for (const method of ['eq', 'from', 'gte', 'is', 'lte', 'lt', 'limit', 'or', 'order', 'range', 'select'] as const) {
@@ -42,6 +42,7 @@ beforeEach(() => {
 describe('Finance transaction repository filters', () => {
     it('filters only recent transactions by day while keeping monthly aggregation and tenant scope', async () => {
         await getFinanceDashboard('user-1', '2026-09', '2026-09-17');
+        expect(database.rpc).toHaveBeenCalledWith('finance_budget_dashboard', { p_user_id: 'user-1', p_month: '2026-09' });
         expect(database.eq.mock.calls).toEqual([
             ['user_id', 'user-1'], ['status', 'confirmed'],
             ['user_id', 'user-1'], ['status', 'confirmed'], ['transaction_date', '2026-09-17'],
@@ -76,9 +77,9 @@ describe('Finance transaction repository filters', () => {
         expect(database.limit).toHaveBeenCalledWith(6);
         expect(database.select.mock.calls.some(([select]) => select.includes('id, direction, amount, merchant, transaction_date') && select.includes('category:dim_finance_categories(name)'))).toBe(true);
         expect(summary.recent_transactions).toEqual([]);
-        expect(summary.active_budgets).toEqual([]);
-        expect(database.rpc).toHaveBeenCalledWith('finance_budget_list', {
-            p_user_id: 'user-1', p_state: 'active', p_page: 1, p_page_size: 3, p_dashboard: true,
+        expect(summary.budget_cycles).toEqual([]);
+        expect(database.rpc).toHaveBeenCalledWith('finance_budget_dashboard', {
+            p_user_id: 'user-1', p_month: month,
         });
     });
 

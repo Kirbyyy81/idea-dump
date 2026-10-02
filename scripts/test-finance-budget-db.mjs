@@ -26,6 +26,8 @@ function run(sql, extra = [], onReady) {
 function check(ok, label) { if (!ok) throw new Error(`Budget database check failed: ${label}`); }
 const suite = await run('', ['-f', path.join(root, 'supabase/tests/finance_budgets.test.sql')]);
 check(suite.code === 0, suite.error || 'SQL lifecycle suite');
+const dashboard = await run('', ['-f', path.join(root, 'supabase/tests/finance_budget_dashboard.test.sql')]);
+check(dashboard.code === 0, dashboard.error || 'SQL dashboard month suite');
 const owner = randomUUID(); const source = randomUUID(); const requestId = randomUUID();
 const config = JSON.stringify({ name: 'Concurrent fixture', amount: '100.00', cycle_type: 'custom', start_date: '2026-09-14', custom_days: 1,
     anchor_day: null, time_zone: 'Asia/Kuala_Lumpur', filter_logic: 'and', source_ids: [source], category_ids: [], include_uncategorised: false });

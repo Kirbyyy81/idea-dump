@@ -18,7 +18,7 @@ import { FinanceDashboardSummary } from '@/lib/types';
 import { shiftFinanceMonth } from '@/lib/finance/core/values';
 import { formatCurrencyMYR } from '@/lib/utils';
 import { financeTransactionsHref } from '@/lib/finance/transactions/filters';
-import { BudgetProgress } from '@/app/finance/budgets/_components/BudgetProgress';
+import { BudgetCycleProgress } from '@/app/finance/budgets/_components/BudgetProgress';
 
 const CHART_COLORS = ['#e76f51', '#2a9d8f', '#457b9d', '#e9c46a', '#8d6e63', '#6d597a'];
 
@@ -89,13 +89,16 @@ export function FinanceDashboardClient({ month, today, selectedDate = null, summ
                 </section>
 
                 <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(280px,1fr)]">
-                    <section aria-labelledby="active-budgets-heading" className="lg:col-span-2">
-                        <div className="mb-3 flex items-center justify-between gap-3"><h2 id="active-budgets-heading" className="text-base font-bold">Active budgets</h2>
+                    <section aria-labelledby="budget-cycles-heading" className="lg:col-span-2">
+                        <div className="mb-3 flex items-center justify-between gap-3"><h2 id="budget-cycles-heading" className="text-base font-bold">{month === today.slice(0, 7) ? 'Active budgets' : 'Budget cycles'}</h2>
                             <Link href="/finance/budgets" className="text-sm font-medium underline underline-offset-4">View budgets</Link></div>
-                        {(summary.active_budgets?.length ?? 0) > 0 ? <ul className="grid gap-3 md:grid-cols-3">{summary.active_budgets!.map((budget) => <li key={budget.id} className="min-w-0">
-                            <Link href={`/finance/budgets?budget=${budget.id}`} className="block h-full rounded-lg border border-border-default bg-bg-surface p-4 hover:bg-bg-hover">
-                                <h3 className="mb-3 break-words font-semibold">{budget.name}</h3><BudgetProgress budget={budget} compact />
-                            </Link></li>)}</ul> : <p className="text-sm text-text-muted">No active budgets.</p>}
+                        {(summary.budget_cycles?.length ?? 0) > 0 ? <ul className="grid gap-3 md:grid-cols-3">{summary.budget_cycles!.map((budget) => {
+                            const content = <><h3 className="mb-3 break-words font-semibold">{budget.name}</h3><BudgetCycleProgress name={budget.name} cycle={budget.cycle} compact /></>;
+                            return <li key={budget.cycle.id} className="min-w-0">{budget.cycle.frozen_at
+                                ? <article className="h-full rounded-lg border border-border-default bg-bg-surface p-4">{content}</article>
+                                : <Link href={`/finance/budgets?budget=${budget.budget_id}`} className="block h-full rounded-lg border border-border-default bg-bg-surface p-4 hover:bg-bg-hover">{content}</Link>}
+                            </li>;
+                        })}</ul> : <p className="text-sm text-text-muted">{month === today.slice(0, 7) ? 'No active budgets.' : 'No budget cycles for this month.'}</p>}
                     </section>
                     <FinanceActivityCalendar key={month} month={month} today={today} items={summary.daily_cash_flow} selectedDate={selectedDate} onSelectDate={selectDay} pending={isPending} />
                     <section aria-labelledby="category-net-heading" className="flex min-w-0 flex-col">
