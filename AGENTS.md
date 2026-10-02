@@ -49,8 +49,8 @@
   ```
 
 - Run the smallest relevant checks while iterating, then complete every applicable check before handing off finished work.
-- `.github/workflows/validate.yml` filters each job by changed files. Web checks cover application code, assets, tests, service-worker code, database files, and root build/dependency configuration. OCR checks cover `services/finance-ocr/`, shared `lib/finance/`, `lib/types.ts`, `shared/`, database files, root dependency/runtime configuration, and `render.yaml`. Update filters when adding dependencies outside these paths.
-- Workflow changes or manual `workflow_dispatch` runs validate all projects. Pushes compare against the previous push; pull requests use their full diff. Skipped jobs do not produce build artifacts.
+- `.github/workflows/validate.yml` routes validation by changed paths. Keep its OCR filters aligned with imports from shared Finance code, `lib/types.ts`, and `shared/date.ts`. Validate workflow edits with actionlint and check web-only, OCR-only, Android-only, shared-code, documentation-only, and manual-run routing.
+- Workflow changes, `.gitattributes` changes, or manual `workflow_dispatch` runs validate all projects. Pushes compare against the previous push; pull requests use their full diff. If change detection fails, all projects are validated. Skipped jobs do not produce build artifacts.
 
 ## Editing Rules
 
@@ -76,4 +76,4 @@
 - Native Android code lives in `android/`. Read its scoped `AGENTS.md` before editing.
 - Use JDK 17 and Android SDK 36. From `android/`, run `./gradlew testDebugUnitTest lintDebug assembleDebug` (Windows: `gradlew.bat`).
 - Android 13 and 16 phones and the target Android Auto head unit require physical acceptance testing.
-- CI builds Android only for changes under `android/`, changes to `.github/workflows/validate.yml`, or a manual `workflow_dispatch` run. Runs that skip Android do not publish an APK; web and Finance OCR checks use their own change filters.
+- CI builds Android for changes under `android/`, changes to `.github/workflows/validate.yml` or `.gitattributes`, manual `workflow_dispatch` runs, or a change-detection failure. Runs that skip Android do not publish an APK; web and Finance OCR checks use their own change filters.

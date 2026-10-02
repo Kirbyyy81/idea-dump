@@ -6,7 +6,7 @@ The `/log-viewer` tool parses pasted or uploaded logs in the browser. Log conten
 
 Open a request, response, or content-data panel to read indented, syntax-coloured JSON. Objects and arrays start expanded and can be folded individually using their arrow buttons, or together using **Expand all** and **Collapse all**. Folded values retain their braces or brackets and show an ellipsis. All controls support the keyboard. Long lines scroll within the panel.
 
-The header's **Copy JSON** button copies the complete payload with two-space indentation, including values hidden by folding, even when the panel is closed. It reports clipboard success or failure without changing the panel, raw visibility, or folding. Copy is available only for valid JSON, including primitive values.
+The header's copy icon copies the complete payload with two-space indentation, including values hidden by folding, even when the panel is closed. It has an accessible Copy JSON label and shows a checkmark after copying. Clipboard success or failure is announced without changing the panel, raw visibility, or folding. Copy is available only for valid JSON, including primitive values.
 
 The header's raw-line button reveals the original record below the formatted payload, and hides it when pressed again. It also opens a closed panel. Raw, copy, and folding controls are independent between records. Closing a payload unmounts its formatted content; reopening it starts expanded again.
 

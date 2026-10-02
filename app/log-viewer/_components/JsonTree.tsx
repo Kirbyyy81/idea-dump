@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useState } from 'react';
 import { Button } from '@/components/atoms/Button';
-import { NextDoodleIcon } from '@/components/atoms/DoodleIcons';
+import { CheckDoodleIcon, CopyDoodleIcon, NextDoodleIcon } from '@/components/atoms/DoodleIcons';
 import { Textarea } from '@/components/atoms/Textarea';
 import type { LogEvent } from '@/lib/log-viewer/types';
 import { FormattedJson } from './FormattedJson';
@@ -26,8 +26,11 @@ function CopyJsonButton({ value, label }: { value: unknown; label: string }) {
   };
 
   return <>
-    <Button variant="ghost" type="button" className="min-h-11 shrink-0 text-xs" aria-label={label} onClick={copy}>
-      {status === 'copied' ? 'Copied' : 'Copy JSON'}
+    <Button
+      variant="ghost" type="button" className="h-11 w-11 shrink-0 p-0"
+      aria-label={label} title={status === 'copied' ? 'JSON copied' : label} onClick={copy}
+    >
+      {status === 'copied' ? <CheckDoodleIcon className="text-success" /> : <CopyDoodleIcon />}
     </Button>
     <span role="status" className={status === 'error' ? 'w-full px-3 text-xs text-error' : 'sr-only'}>
       {status === 'copied' ? 'JSON copied.' : status === 'error' ? 'Could not copy JSON. Check clipboard permissions and try again.' : ''}

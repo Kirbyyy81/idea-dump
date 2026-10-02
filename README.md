@@ -124,6 +124,22 @@ If `npm` is easier to run through Git Bash on your machine, the repo includes a 
 .\scripts\npm-gitbash.ps1 run build
 ```
 
+## Continuous integration
+
+[Validation](.github/workflows/validate.yml) detects changed files before scheduling the web, Finance OCR, and Android jobs. Existing pushes compare against the previous pushed commit; pull requests use their complete diff. The first push of a new branch compares against its merge base with the default branch.
+
+| Changed files | Validation jobs |
+| --- | --- |
+| Web application, root dependencies/configuration, assets, service worker, tests, scripts, or database files | Web |
+| `services/finance-ocr/` or `render.yaml` | OCR |
+| Shared Finance OCR helpers, the imported Finance constants/rule matching/value/dashboard modules, `lib/types.ts`, or `shared/date.ts` | Web and OCR |
+| `android/` | Android |
+| `.nvmrc` or `.npmrc` | Web and OCR |
+| The validation workflow or `.gitattributes` | All three |
+| Root documentation or `document/` only | No application jobs |
+
+Changes spanning multiple components run each affected job. Unaffected jobs remain visible as skipped and do not produce build artifacts. Manual `workflow_dispatch` runs skip change detection and validate all three projects. If change detection fails, all three validation jobs run conservatively. The job names and their existing audit, test, build, and APK upload steps stay the same. The workflow uses a commit-pinned [paths-filter action](https://github.com/dorny/paths-filter) to handle pull requests, new branches, deletions, and renames.
+
 ## Finance Share Target
 
 The share target is supported by the installed Android PWA. On iPhone and iPad, use the Finance screenshot upload because the current project does not include a native iOS Share Extension.
