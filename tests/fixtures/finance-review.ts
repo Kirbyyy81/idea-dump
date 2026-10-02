@@ -7,7 +7,7 @@ export const reviewCandidates: FinanceReviewCandidate[] = [{
         transaction_date: '2026-09-21', source_id: null, category_id: null, reference_number: null, notes: null,
         matched_rule_names: [], duplicate_transaction_id: 'existing-1',
     },
-    duplicate_transaction: { id: 'existing-1', amount: 12.3, currency: 'MYR', merchant: 'Another cafe', transaction_date: '2026-09-20', finance_source: { name: 'Bank' } },
+    duplicate_transaction: { id: 'existing-1', source_id: '31000000-0000-4000-8000-000000000011', category_id: null, direction: 'expense', reference_number: null, notes: null, updated_at: '2026-09-21T00:00:00Z', amount: 12.3, currency: 'MYR', merchant: 'Another cafe', transaction_date: '2026-09-20', finance_source: { name: 'Bank' } },
 }, {
     id: 'candidate-2', confidence: null, duplicate_outcome: 'none', duplicate_signals: [], duplicate_explanation: null,
     payload: {

@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin';
-import { FinanceCategory, FinanceSource, FinanceTransaction } from '@/lib/types';
+import { FinanceCategory, FinanceLinkChanges, FinanceSource, FinanceTransaction } from '@/lib/types';
 
 export const FINANCE_TRANSACTION_VIEW_SELECT = [
     'id, source_id, category_id, direction, amount, currency, merchant, payee_id',
@@ -23,8 +23,9 @@ const FINANCE_DASHBOARD_RECENT_SELECT = [
     'finance_source:dim_finance_sources(name)',
     'finance_payee:dim_finance_payees(name)',
 ].join(', ');
-const FINANCE_REVIEW_DUPLICATE_SELECT = [
-    'id, amount, currency, merchant, transaction_date',
+export const FINANCE_REVIEW_DUPLICATE_SELECT = [
+    'id, source_id, category_id, direction, amount, currency, merchant, transaction_date, reference_number, notes, updated_at',
+    'category:dim_finance_categories(name)',
     'finance_source:dim_finance_sources(name)',
     'finance_payee:dim_finance_payees(name)',
 ].join(', ');
@@ -544,6 +545,16 @@ export async function markFinanceReviewCandidateDuplicate(
         p_user_id: userId,
         p_candidate_id: candidateId,
         p_matched_transaction_id: matchedTransactionId,
+    });
+}
+
+export async function linkFinanceReviewCandidate(
+    userId: string, candidateId: string, transactionId: string,
+    expectedUpdatedAt: string, changes: FinanceLinkChanges
+) {
+    return createAdminClient().rpc('finance_link_candidate_v1', {
+        p_user_id: userId, p_candidate_id: candidateId, p_matched_transaction_id: transactionId,
+        p_expected_updated_at: expectedUpdatedAt, p_changes: changes,
     });
 }
 

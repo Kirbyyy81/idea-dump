@@ -66,6 +66,24 @@ Sensitive and unrelated content is discarded before client persistence and check
 
 An explicit transaction date wins. Otherwise the candidate suggests the notification's posted date in Asia/Kuala_Lumpur; review displays this provenance. Malformed explicit dates remain unset.
 
+## Linking screenshot details to a notification transaction
+
+A notification and a screenshot still enter Finance independently. Duplicate checks compare each review item with confirmed transactions. If both items are pending, confirm one, then Retry the other to refresh its match.
+
+In the duplicate comparison, choose the incoming details to keep. Empty saved fields are selected by default. Conflicting values remain unselected until the user chooses them. `Link selected details` updates the existing transaction and resolves the incoming candidate as its duplicate in one database transaction. `Link without changes` retains the evidence relationship without editing the ledger. No second ledger row is created.
+
+The comparison supports reference number, merchant, payee, notes, amount, date, direction, source, and category. Blank incoming values never clear saved values. Changing an incoming conflict after selecting it requires selecting the revised value again. Saved fields changed by another operation cause a conflict and a fresh review instead of an overwrite.
+
+The original transaction origin and intake remain intact. The duplicate candidate identifies the existing transaction; a `duplicate_linked` processing event records the supplying intake and the before/after values of each applied field. Original OCR evidence remains on the screenshot intake. This is a link to extracted information, not permanent image storage: existing transient image cleanup still applies. Linking does not create OCR correction-learning evidence. Notification raw text is still deleted when the incoming notification is resolved.
+
+Deploy `20261001103729_finance_link_duplicate_details.sql` before the corresponding web release. The migration adds a server-only, security-invoker function and does not alter historical transactions. No Android APK or OCR service change is required. Existing resolved duplicates are not retroactively enriched.
+
+Validation on 2026-10-01 passed 565 Web tests across 84 files, 387 OCR tests (171 optional tests skipped), 12 desktop/mobile browser tests, and the three isolated companion SQL suites. A two-connection test verified that a held candidate lock produces a safe retry and the subsequent link leaves one ledger row. Web lint, TypeScript, production build, OCR typecheck/build, and full/production dependency audits passed with zero vulnerabilities. Desktop and 330px phone layouts were inspected. Hosted rollout completed on 2026-10-01.
+
+The live IdeaDump project records the canonical version `20261001103729`. Catalog verification confirmed that `finance_link_candidate_v1` matches the committed function, uses security-invoker execution with an empty search path, permits `service_role`, and denies `PUBLIC`, `anon`, and `authenticated`. A rollback-only service-role smoke test confirmed invalid-input rejection without changing user data. The security advisor reported no new findings.
+
+The branch-wide CLI dry run encountered an existing ledger discrepancy: deployed dashboard migration `20260920122733` is absent locally, while parser migrations `20260918033827` and `20260929055515` remain undeployed. A temporary deployment directory contained the applied migrations (reconstructing the missing dashboard file from stored migration statements) and the exact committed linking migration. Its dry run listed only `20261001103729_finance_link_duplicate_details.sql`; the canonical CLI push applied it, and a second dry run reported no pending migrations in that deployment set. The unrelated parser migrations and existing production history were left unchanged. The corresponding web release is still required; this rollout did not deploy application code.
+
 ## Local database regression tests
 
 Use only a disposable, fully migrated loopback PostgreSQL database:
@@ -78,7 +96,7 @@ $env:PSQL_PATH = 'C:\path\to\psql.exe'
 node scripts/test-companion-db.mjs
 ```
 
-The SQL suites cover pairing replay, wrong proofs, ownership, revocation, intake replay conflicts, manual-review enforcement, all three text-deletion paths, and raw-free ignored events. Fixtures roll back. Hosted databases are rejected by the runner.
+The SQL suites cover pairing replay, wrong proofs, ownership, revocation, intake replay conflicts, manual-review enforcement, all three text-deletion paths, and raw-free ignored events. The linking suite also verifies selected fields, explicit conflicts, ownership, stale previews, replay safety, provenance, and rollback. Fixtures roll back. Hosted databases are rejected by the runner.
 
 ## Validation record, 2026-09-25
 

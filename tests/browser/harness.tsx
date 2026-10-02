@@ -1,7 +1,8 @@
+import { AlertDialog } from '@/components/molecules/AlertDialog';
 import { createRoot } from 'react-dom/client';
 import { FinanceBudgetsClient } from '@/app/finance/budgets/_components/FinanceBudgetsClient';
 import { FinanceReferenceDataProvider } from '@/app/finance/_components/FinanceReferenceData';
-import type { FinanceBudgetDetail, FinanceBudgetPage, FinanceBudgetSummary } from '@/lib/types';
+import type { FinanceBudgetDetail, FinanceBudgetPage, FinanceBudgetSummary, FinanceReviewCandidate } from '@/lib/types';
 import { FinanceTransactionEntry } from '@/app/finance/add/_components/FinanceTransactionEntry';
 import { FinanceShareTargetProvider } from '@/app/finance/_components/FinanceShareTargetProvider';
 import { AlertProvider } from '@/lib/contexts/AlertContext';
@@ -21,7 +22,7 @@ createRoot(document.getElementById('root')!).render(<FinanceReferenceDataProvide
     {window.location.pathname === '/finance'
         ? <FinanceDashboardClient month={dashboardMonth} today="2026-09-22" selectedDate={dashboardDate} summary={dashboardSummary} />
         : window.location.pathname === '/finance/review'
-        ? <AlertProvider><FinanceReviewClient initialCandidates={reviewCandidates} initialFailedIntakes={[]} initialSelectedId="candidate-1" today="2026-09-22" /></AlertProvider>
+        ? <AlertProvider><AlertDialog /><FinanceReviewClient initialCandidates={(window as unknown as { reviewInitial?: FinanceReviewCandidate[] }).reviewInitial || reviewCandidates} initialFailedIntakes={[]} initialSelectedId="candidate-1" today="2026-09-22" /></AlertProvider>
         : window.location.pathname === '/finance/add'
         ? <AlertProvider><FinanceShareTargetProvider><FinanceTransactionEntry initialMode="screenshot" /></FinanceShareTargetProvider></AlertProvider>
         : <FinanceBudgetsClient initialBudgets={initial.list.data} initialState={initial.detail?.budget.state ?? 'active'} initialDetail={initial.detail} />}
