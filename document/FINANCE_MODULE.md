@@ -690,6 +690,8 @@ See [the retirement rollout instructions](FINANCE_PARSER_LEARNING_ROLLOUT.md#leg
 
 ## Automatic confirmation
 
+New notifications and explicit notification Retry add a transaction automatically when amount, direction, merchant or payee, and date are valid and no database duplicate is found. Category and reference are optional. Missing/conflicting values, stale patterns and possible duplicates stay in Review. Automatic entries are excluded from notification learning; manual confirmation provides learning evidence. See [notification automatic transactions](ANDROID_COMPANION.md#automatic-notification-transactions).
+
 Direct screenshot uploads never auto-confirm newly processed candidates.
 
 A queued Android share item may auto-confirm only when all of the following are true:
