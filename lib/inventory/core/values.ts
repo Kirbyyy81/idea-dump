@@ -66,6 +66,13 @@ export function productStock(data: InventoryData, productId: string) {
     };
 }
 
+export function latestPurchasePrices(data: InventoryData, productId: string) {
+    const batches = data.batches.filter((batch) => batch.product_id === productId);
+    const purchase = data.purchases.filter((item) => batches.some((batch) => batch.purchase_id === item.id))
+        .sort((a, b) => (b.purchased_on ?? '').localeCompare(a.purchased_on ?? '') || b.created_at.localeCompare(a.created_at) || b.id.localeCompare(a.id))[0];
+    return { purchase, batches: batches.filter((batch) => batch.purchase_id === purchase?.id) };
+}
+
 export function comparePrice(data: InventoryData, productId: string, snapshot: Pick<InventorySnapshot, 'unit' | 'sheets_per_item'>, prospective: number | null = null) {
     const purchases = new Map(data.purchases.map((purchase) => [purchase.id, purchase]));
     const factor = snapshot.unit === 'count' ? 1 : 100;

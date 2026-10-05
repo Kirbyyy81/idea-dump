@@ -119,3 +119,13 @@ Save purchase commits the receipt corrections and selected Finance link atomical
 
 Applied [20261005103956_inventory_finance_price_review.sql](../supabase/migrations/20261005103956_inventory_finance_price_review.sql) to the connected Supabase project. Deploy this migration before the updated application. Verified the combined-save function and unchanged RLS/browser permissions.
 Finance price review verification: 58 Inventory tests, 693 application tests, 28 desktop/mobile browser cases, isolated database rollback/ownership/access/retry checks, lint, TypeScript and production build passed. Finance OCR typecheck, build and tests passed (387 passed, 171 skipped). Existing audit and advisor findings remain unchanged.
+
+### Shelf table
+
+The Inventory landing page uses one table row per product with Product, Stock, Unit price, Stock lasts and a three-dot action menu. Stock shows amount followed by unit (for example 2,700 ml or 10 boxes), counting unopened items only. In-use counts appear only above zero. Duration remains based on unopened stock.
+
+Unit price comes from the most recent dated purchase, using receipt creation time and ID to break ties; unknown-date receipts sort after dated receipts. All matching lines from that receipt are shown when it contains multiple sizes. Unknown latest prices stay unknown. Prices divide line cost by original usable-item count, including boxes inside multipacks. Size labels remain visible. Hover reveals purchase date and comparable prices; activating the price opens a keyboard/touch-accessible breakdown including pack cost and usual normalized price.
+
+Product names and stock quantities open product details. The row menu provides Add stock, Start using, Edit product and Adjust stock. The table scrolls horizontally on mobile, with Product and Stock first. Row menus render outside the scroll container so their actions remain reachable.
+
+Shelf table verification: 695 application tests, 30 desktop/mobile browser cases, isolated Inventory database checks, lint, TypeScript, service-worker checks and production build passed. The rebuilt local preview was verified against saved stock and unit prices without changing records. Production audit is clear; seven existing development dependency findings remain unchanged.

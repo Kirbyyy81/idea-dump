@@ -49,11 +49,11 @@ async function choose(page: Page, label: string, option: string, inDialog = fals
 }
 test('shelf totals, breakdown, estimate, and read-only price comparison', async ({ page }, info) => {
     const { commands } = await setup(page);
-    const shampoo = page.getByRole('article', { name: 'Dove Shampoo' });
-    await expect(shampoo.getByText('1,250 ml unopened', { exact: true })).toBeVisible();
+    const shampoo = page.getByRole('row', { name: 'Dove Shampoo' });
+    await expect(shampoo.getByText('1,250 ml', { exact: true })).toBeVisible();
     await expect(shampoo.getByText('1 in use', { exact: true })).toBeVisible();
-    await expect(shampoo.getByText('Approximately 100 days of unopened stock')).toBeVisible();
-    await expect(page.getByRole('article', { name: 'Tissues' }).getByText('10 boxes unopened')).toBeVisible();
+    await expect(shampoo.getByText('Approximately 100 days')).toBeVisible();
+    await expect(page.getByRole('row', { name: 'Tissues' }).getByText('10 boxes')).toBeVisible();
     await shampoo.getByRole('button', { name: /View breakdown/ }).click();
     const dialog = page.getByRole('dialog', { name: 'Dove Shampoo', exact: true });
     await expect(dialog.getByText('2 unopened · 1 in use')).toBeVisible();
@@ -116,9 +116,10 @@ test('creates a product from the receiving cart and adds existing opened stock',
 });
 test('starts a box rather than a multipack and finishes it through usage history', async ({ page }) => {
     const { commands } = await setup(page);
-    await page.getByRole('article', { name: 'Tissues' }).getByRole('button', { name: 'Start using' }).click();
+    await page.getByRole('button', { name: 'Tissues actions', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Start using', exact: true }).click();
     await page.getByRole('dialog').getByRole('button', { name: 'Start using', exact: true }).click();
-    await expect(page.getByRole('article', { name: 'Tissues' }).getByText('9 boxes unopened')).toBeVisible();
+    await expect(page.getByRole('row', { name: 'Tissues' }).getByText('9 boxes')).toBeVisible();
     await page.getByRole('link', { name: 'Usage history', exact: true }).click();
     const usage = page.getByText('Tissues · Five boxes', { exact: true }).locator('..').locator('..');
     await usage.getByRole('button', { name: 'Finished', exact: true }).click();
@@ -126,7 +127,7 @@ test('starts a box rather than a multipack and finishes it through usage history
     await expect(page.getByRole('dialog')).not.toBeVisible();
     expect(commands.map((command) => command.action)).toEqual(['start', 'finish']);
     await page.getByRole('link', { name: 'Inventory', exact: true }).click();
-    await expect(page.getByRole('article', { name: 'Tissues' }).getByText('0 in use')).toBeVisible();
+    await expect(page.getByRole('row', { name: 'Tissues' }).getByText('0 in use')).not.toBeVisible();
 });
 test('links and unlinks an existing Finance expense from purchase history', async ({ page }) => {
     const { commands } = await setup(page);
@@ -160,7 +161,7 @@ test('edits size variants while retaining historical quantities', async ({ page 
     await page.getByRole('region', { name: 'Variant 1', exact: true }).getByLabel('Size per item (ml)').fill('450');
     await page.getByRole('button', { name: 'Save product', exact: true }).click();
     await expect(page.getByRole('dialog')).not.toBeVisible();
-    await expect(page.getByRole('article', { name: 'Dove Shampoo' }).getByText('1,250 ml unopened', { exact: true })).toBeVisible();
+    await expect(page.getByRole('row', { name: 'Dove Shampoo' }).getByText('1,250 ml', { exact: true })).toBeVisible();
     expect(commands[0]).toMatchObject({ action: 'save_product', payload: { revision: 1, variants: [{ size: 450 }, { size: 250 }] } });
 });
 
@@ -215,11 +216,11 @@ test('subcategories can be added, reused, filtered, and cleared', async ({ page 
     expect(commands[0]).toMatchObject({ action: 'save_product', payload: { category: 'Hair Care', subcategory: 'Conditioner' } });
     await choose(page, 'Category', 'Hair Care');
     await choose(page, 'Subcategory', 'Conditioner');
-    await expect(page.getByRole('article', { name: 'Dove Shampoo' })).toBeVisible();
-    await expect(page.getByRole('article', { name: 'Tissues' })).not.toBeVisible();
+    await expect(page.getByRole('row', { name: 'Dove Shampoo' })).toBeVisible();
+    await expect(page.getByRole('row', { name: 'Tissues' })).not.toBeVisible();
     await choose(page, 'Category', 'Household');
     await expect(page.getByRole('combobox', { name: 'Subcategory', exact: true })).toHaveText('All subcategories');
-    await expect(page.getByRole('article', { name: 'Tissues' })).toBeVisible();
+    await expect(page.getByRole('row', { name: 'Tissues' })).toBeVisible();
     await page.getByRole('button', { name: 'Add product', exact: true }).click();
     await choose(page, 'Subcategory', 'Conditioner', true);
     await page.getByRole('dialog').getByRole('textbox', { name: /^Category/ }).fill('Skin Care');
@@ -259,8 +260,8 @@ test('edits a complete purchase from product history and preserves usage and Fin
     await expect(dialog).not.toBeVisible();
     expect(commands[0]).toEqual(commands[1]);
     expect(commands[1]).toMatchObject({ action: 'edit_purchase', payload: { purchase_id: id.purchase, revision: 1, lines: [{ batch_id: id.largeBatch, quantity: 4, total_paid: 68 }, { batch_id: id.smallBatch }, { batch_id: id.tissueBatch }] } });
-    await expect(page.getByRole('article', { name: 'Dove Shampoo' }).getByText('1,750 ml unopened', { exact: true })).toBeVisible();
-    await expect(page.getByRole('article', { name: 'Dove Shampoo' }).getByText('1 in use', { exact: true })).toBeVisible();
+    await expect(page.getByRole('row', { name: 'Dove Shampoo' }).getByText('1,750 ml', { exact: true })).toBeVisible();
+    await expect(page.getByRole('row', { name: 'Dove Shampoo' }).getByText('1 in use', { exact: true })).toBeVisible();
     await page.getByRole('link', { name: 'Purchases', exact: true }).click();
     await expect(page.getByText('Linked to a Finance expense', { exact: true })).not.toBeVisible();
     await page.getByRole('button', { name: 'Purchase actions', exact: true }).first().click();
@@ -343,4 +344,24 @@ test('Finance suggestion can be cancelled or adjusted before a single atomic sav
     expect(commands[1]).toMatchObject({ action: 'edit_purchase', payload: { finance_transaction_id: id.purchase, lines: [{ total_paid: 42 }] } });
     await page.getByRole('button', { name: 'Purchase actions', exact: true }).click();
     await expect(page.getByRole('menuitem', { name: 'Change Finance link', exact: true })).toBeVisible();
+});
+
+test('table exposes unit prices, pack breakdown and keyboard actions without page overflow', async ({ page }) => {
+    await setup(page);
+    await expect(page.getByRole('columnheader', { name: 'Unit price', exact: true })).toBeVisible();
+    const row = page.getByRole('row', { name: 'Tissues', exact: true });
+    await expect(row.getByText(/RM\s*3\.00 \/ box/)).toBeVisible();
+    await expect(row.getByText('0 in use')).toHaveCount(0);
+    await row.getByRole('button', { name: 'Tissues: unit price details', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Tissues: unit price', exact: true });
+    await expect(dialog.getByText(/RM\s*15\.00 \/ pack of 5 boxes/)).toBeVisible();
+    await expect(dialog.getByText(/Usual price:/)).toBeVisible();
+    await page.keyboard.press('Escape');
+    const trigger = page.getByRole('button', { name: 'Tissues actions', exact: true });
+    await trigger.focus();
+    await page.keyboard.press('ArrowDown');
+    await expect(page.getByRole('menuitem', { name: 'Add stock', exact: true })).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(trigger).toBeFocused();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });

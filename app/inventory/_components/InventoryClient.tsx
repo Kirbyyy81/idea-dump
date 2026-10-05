@@ -16,6 +16,8 @@ import { StockAction, type StockActionChoice } from './StockAction';
 import { EditPurchase } from './EditPurchase';
 import { FinanceLink } from './FinanceLink';
 import { PriceCheck } from './PriceCheck';
+import { UnitPrice } from './UnitPrice';
+import { ActionMenu } from '@/components/molecules/ActionMenu';
 import { StockSummary } from './StockSummary';
 import { PurchaseHistory, UsageHistory } from './InventoryHistory';
 import { panelClass } from './fields';
@@ -55,14 +57,27 @@ export function InventoryClient({ initialData, canLinkFinance, view = 'shelf' }:
                     <Button variant="secondary" onClick={() => setDialog({ type: 'product' })}>Add product</Button></div>
                 {!products.length && <div className={`${panelClass} flex flex-col items-center gap-3 py-12`}><Package size={30} aria-hidden="true" /><h2 className="text-lg font-bold">{data.products.length ? 'No matching products' : 'Your shelf is ready'}</h2>
                     {!data.products.length && <Button onClick={() => setDialog({ type: 'product' })}>Create your first product</Button>}</div>}
-                <div className="space-y-3">{products.map((product) => {
-                    const stock = productStock(data, product.id);
-                    return <article key={product.id} aria-label={product.name} className={`${panelClass} grid items-center gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]`}>
-                        <div className="min-w-0"><button type="button" onClick={() => setDialog({ type: 'detail', id: product.id })} className="break-words text-left text-base font-bold underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-border-strong">{product.name}</button><p className="mt-1 text-xs text-text-secondary">{[product.brand, product.category, product.subcategory].filter(Boolean).join(' · ')}</p></div>
-                        <StockSummary data={data} product={product} onOpen={() => setDialog({ type: 'detail', id: product.id })} />
-                        <div className="flex flex-wrap gap-2"><Button variant="secondary" onClick={() => setDialog({ type: 'cart', productId: product.id })}>Add stock</Button><Button disabled={!stock.units} onClick={() => action({ action: 'start', productId: product.id })}>Start using</Button></div>
-                    </article>;
-                })}</div>
+                {products.length > 0 && <div role="region" aria-label="Inventory table" tabIndex={0} className="relative overflow-x-auto rounded-lg border border-border-default bg-bg-surface">
+                    <table className="w-full min-w-[44rem] table-fixed text-left text-sm">
+                        <colgroup><col className="w-40 sm:w-64" /><col className="w-32" /><col className="w-48" /><col className="w-36" /><col className="w-16" /></colgroup>
+                        <thead className="border-b border-border-default bg-bg-subtle"><tr>{['Product', 'Stock', 'Unit price', 'Stock lasts', 'Actions'].map((label) => <th key={label} scope="col" className="px-3 py-3 font-semibold">{label === 'Actions' ? <span className="sr-only">Actions</span> : label}</th>)}</tr></thead>
+                        <tbody className="divide-y divide-border-default">{products.map((product) => {
+                            const stock = productStock(data, product.id);
+                            return <tr key={product.id} aria-label={product.name} className="align-top">
+                                <th scope="row" className="px-3 py-4 font-normal"><button type="button" onClick={() => setDialog({ type: 'detail', id: product.id })} className="break-words text-left font-bold underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-border-strong">{product.name}</button><p className="mt-1 text-xs text-text-secondary">{[product.brand, product.category, product.subcategory].filter(Boolean).join(' · ')}</p></th>
+                                <td className="px-3 py-4"><StockSummary data={data} product={product} onOpen={() => setDialog({ type: 'detail', id: product.id })} /></td>
+                                <td className="px-3 py-4"><UnitPrice data={data} product={product} /></td>
+                                <td className="px-3 py-4 text-text-secondary">{stock.estimate.days === null ? 'No estimate yet' : `Approximately ${stock.estimate.days} days`}</td>
+                                <td className="px-2 py-3"><ActionMenu portal label={`${product.name} actions`} items={[
+                                    { label: 'Add stock', onSelect: () => setDialog({ type: 'cart', productId: product.id }) },
+                                    { label: 'Start using', disabled: !stock.units, onSelect: () => action({ action: 'start', productId: product.id }) },
+                                    { label: 'Edit product', onSelect: () => setDialog({ type: 'product', id: product.id }) },
+                                    { label: 'Adjust stock', disabled: !stock.batches.length, onSelect: () => action({ action: 'adjust', productId: product.id }) },
+                                ]} /></td>
+                            </tr>;
+                        })}</tbody>
+                    </table>
+                </div>}
             </>}
             {view === 'purchases' && <PurchaseHistory data={data} canLinkFinance={canLinkFinance} onLink={link} onEdit={(purchase) => setDialog({ type: 'edit_purchase', purchase })} />}
             {view === 'usage' && <UsageHistory data={data} onAction={action} />}

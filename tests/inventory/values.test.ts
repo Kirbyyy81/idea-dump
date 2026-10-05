@@ -1,8 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { comparePrice, estimateStock, lineTotal, productStock } from '@/lib/inventory/core/values';
+import { comparePrice, estimateStock, latestPurchasePrices, lineTotal, productStock } from '@/lib/inventory/core/values';
 import { inventoryFixture, inventoryIds as id } from '../fixtures/inventory';
 
 describe('Inventory stock and consumption', () => {
+    it('shows all sizes from the latest purchase, including unknown prices', () => {
+        const data = structuredClone(inventoryFixture);
+        data.batches[0].total_paid = null;
+        const result = latestPurchasePrices(data, id.shampoo);
+        expect(result.purchase?.id).toBe(id.purchase);
+        expect(result.batches.map((batch) => batch.id)).toEqual([id.largeBatch, id.smallBatch]);
+        expect(result.batches[0].total_paid).toBeNull();
+    });
+    it('orders unit prices by purchase date instead of receipt entry order', () => {
+        const data = structuredClone(inventoryFixture);
+        data.purchases[1].created_at = '2026-10-05T00:00:00Z';
+        expect(latestPurchasePrices(data, id.shampoo).purchase?.id).toBe(id.purchase);
+        data.purchases[0].purchased_on = null;
+        expect(latestPurchasePrices(data, id.shampoo).purchase?.id).toBe(id.oldPurchase);
+        expect(latestPurchasePrices(data, 'missing').batches).toEqual([]);
+    });
     it('excludes opened bottles and combines unopened sizes', () => {
         const stock = productStock(inventoryFixture, id.shampoo);
         expect(stock).toMatchObject({ unopened: 1250, units: 3, inUse: 1, estimate: { days: 100, samples: 1 } });
