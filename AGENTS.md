@@ -37,6 +37,7 @@
 
 - Run `npm run test:log-viewer` when changing Log Viewer UI, parsing, pairing, or fixtures. Run `npx playwright test tests/browser/log-viewer.spec.ts` for Log Viewer interaction changes. See `document/LOG_VIEWER.md` for source and dictionary rules.
 - Run the budgeting unit, browser and isolated database suites documented in `lib/finance/AGENTS.md` when changing budgets. Browser fixtures live under `tests/browser/` and do not ship in application routes.
+- Run `npm run test:inventory`, `npm run test:inventory:db`, and `npm run test:inventory:browser` when changing Inventory. Read `lib/inventory/AGENTS.md`; the database suite uses disposable local PostgreSQL through PGlite and needs no Supabase credentials.
 - Run `npm run check:service-worker` when changing the PWA worker or Finance share-message protocol. Regenerate the checked-in artifact with `npm run build:service-worker`.
 - Validate Finance OCR changes from `services/finance-ocr/` with:
 
@@ -61,13 +62,14 @@
 - Keep domain types in `lib/types.ts` unless a nearer scoped guide documents an exception.
 - Reuse the repository Supabase clients and RBAC guards; do not create inline clients or bypass authorization helpers.
 - Add database changes as new forward migrations. Do not rewrite applied migrations or replay the reviewed production baseline over an existing project.
+- When adding a module, include its `dim_modules` registration and intended `bridge_role_modules` grants in a forward migration, apply it to the application's connected Supabase project, and keep local migration history aligned. Creating a migration file alone does not complete module setup. Verify the enabled registration, intended user access, and dashboard/navigation visibility before handing it over for review. If application is blocked, report the blocker explicitly instead of treating the module as ready.
 - Do not edit generated output such as `.next/`, `public/sw.js`, OCR `dist/`, or dependency directories. Change `service-worker/sw.ts`, then regenerate `public/sw.js` through its build script.
 
 ## Contribution Rules
 
 - Keep changes focused and preserve unrelated working-tree edits.
 - Update a lockfile only when its corresponding dependencies change.
-- Use short, atomic commits that describe one coherent result.
+- Use short, atomic commits grouped by specific feature or user-visible behavior. Keep related implementation, tests, and documentation together; do not split work into generic backend, interface, tests, and documentation batches. Name what was added or changed, such as receiving stock or comparing purchase prices.
 - After completing and validating task changes, commit them automatically in focused atomic commits. Do not ask again whether to commit. Include only task changes and preserve unrelated user edits. Push only when requested.
 - Document required environment or deployment changes without committing secrets.
 
