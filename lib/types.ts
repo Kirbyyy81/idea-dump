@@ -1466,3 +1466,108 @@ export interface FinanceNotificationPrepared extends FinanceNotificationParseRes
     duplicate_outcome?: FinanceDuplicateOutcome; duplicate_score?: number; duplicate_signals?: FinanceDuplicateSignal[];
     duplicate_explanation?: string; duplicate_checked_at?: string;
 }
+// Personal inventory. Quantities use ml, g, or individual usable items.
+export type InventoryUnit = 'ml' | 'g' | 'count';
+export interface InventoryVariantInput {
+    id: string;
+    label: string;
+    size: number;
+    pack_quantity: number;
+    sheets_per_item: number | null;
+}
+export interface InventoryProductInput {
+    id: string;
+    revision: number;
+    name: string;
+    brand: string | null;
+    category: string;
+    unit: InventoryUnit;
+    item_label: string;
+    variants: InventoryVariantInput[];
+}
+export interface InventoryProduct extends Omit<InventoryProductInput, 'variants'> { created_at: string; }
+export interface InventoryVariant extends InventoryVariantInput { product_id: string; }
+export interface InventorySnapshot {
+    product_name: string;
+    variant_label: string;
+    unit: InventoryUnit;
+    item_label: string;
+    size: number;
+    pack_quantity: number;
+    sheets_per_item: number | null;
+}
+export interface InventoryPurchase {
+    id: string;
+    kind: 'purchase' | 'existing';
+    purchased_on: string | null;
+    currency: 'MYR';
+    finance_transaction_id: string | null;
+    created_at: string;
+}
+export interface InventoryBatch {
+    id: string;
+    purchase_id: string;
+    product_id: string;
+    variant_id: string;
+    purchased_quantity: number;
+    original_units: number;
+    unopened_units: number;
+    total_paid: number | null;
+    snapshot: InventorySnapshot;
+    created_at: string;
+}
+export interface InventoryUsage {
+    id: string;
+    batch_id: string;
+    status: 'in_use' | 'finished' | 'removed';
+    started_on: string | null;
+    finished_on: string | null;
+    revision: number;
+    created_at: string;
+}
+export interface InventoryAdjustment {
+    id: string;
+    batch_id: string;
+    usage_id: string | null;
+    quantity: number;
+    reason: 'correction' | 'discarded' | 'lost' | 'given_away';
+    adjusted_on: string;
+    created_at: string;
+}
+export interface InventoryData {
+    products: InventoryProduct[];
+    variants: InventoryVariant[];
+    purchases: InventoryPurchase[];
+    batches: InventoryBatch[];
+    usages: InventoryUsage[];
+    adjustments: InventoryAdjustment[];
+}
+export interface InventoryReceiptLine {
+    variant_id: string;
+    product_revision: number;
+    quantity: number;
+    price_mode: 'unit' | 'total';
+    price: number | null;
+    in_use_quantity: number;
+    started_on: string | null;
+}
+export interface InventoryReceiptInput {
+    kind: 'purchase' | 'existing';
+    purchased_on: string | null;
+    lines: InventoryReceiptLine[];
+}
+export type InventoryMutation = { request_id: string } & (
+    | { action: 'save_product'; payload: InventoryProductInput }
+    | { action: 'receive'; payload: InventoryReceiptInput }
+    | { action: 'start'; payload: { batch_id: string; started_on: string } }
+    | { action: 'finish' | 'edit_usage'; payload: { usage_id: string; revision: number; started_on: string | null; finished_on: string | null } }
+    | { action: 'adjust'; payload: { batch_id: string; usage_id: string | null; quantity: number; reason: InventoryAdjustment['reason']; adjusted_on: string } }
+    | { action: 'link_finance'; payload: { purchase_id: string; finance_transaction_id: string | null } }
+);
+export interface InventoryExpense {
+    id: string;
+    merchant: string | null;
+    amount: number;
+    transaction_date: string;
+    currency: string;
+}
