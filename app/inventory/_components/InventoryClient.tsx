@@ -6,20 +6,21 @@ import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { FormDialog } from '@/components/molecules/FormDialog';
-import type { InventoryData, InventoryMutation } from '@/lib/types';
+import type { InventoryData, InventoryMutation, InventoryPurchase } from '@/lib/types';
 import { inventoryRequest } from '@/lib/inventory/core/client';
 import { productStock, quantityText } from '@/lib/inventory/core/values';
 import { ProductForm } from './ProductForm';
 import { ReceiveCart } from './ReceiveCart';
 import { StockAction, type StockActionChoice } from './StockAction';
+import { FinanceLink } from './FinanceLink';
 import { PriceCheck } from './PriceCheck';
 import { StockSummary } from './StockSummary';
 import { PurchaseHistory, UsageHistory } from './InventoryHistory';
 import { InventoryErrorNotice, panelClass } from './fields';
 
 type Dialog = { type: 'product'; id?: string } | { type: 'cart'; productId?: string } | { type: 'detail'; id: string }
-    | { type: 'stock'; choice: StockActionChoice };
-export function InventoryClient({ initialData }: { initialData: InventoryData; canLinkFinance: boolean }) {
+    | { type: 'stock'; choice: StockActionChoice } | { type: 'finance'; purchase: InventoryPurchase };
+export function InventoryClient({ initialData, canLinkFinance }: { initialData: InventoryData; canLinkFinance: boolean }) {
     const [data, setData] = useState(initialData);
     const [tab, setTab] = useState<'shelf' | 'purchases' | 'usage'>('shelf');
     const [search, setSearch] = useState(''); const [category, setCategory] = useState('');
@@ -43,6 +44,7 @@ export function InventoryClient({ initialData }: { initialData: InventoryData; c
     }
     const close = () => setDialog(null);
     const action = (choice: StockActionChoice) => setDialog({ type: 'stock', choice });
+    const link = (purchase: InventoryPurchase) => setDialog({ type: 'finance', purchase });
     return <AppShell pageTitle="Inventory" contentClassName="p-4 md:p-6" headerAction={<Button icon={<Plus size={16} />} onClick={() => setDialog({ type: 'cart' })}>Add stock</Button>}>
         <div className="space-y-5">
             <InventoryErrorNotice error={error} />
@@ -63,12 +65,13 @@ export function InventoryClient({ initialData }: { initialData: InventoryData; c
                     </article>;
                 })}</div>
             </>}
-            {tab === 'purchases' && <PurchaseHistory data={data} canLinkFinance={false} onLink={() => {}} />}
+            {tab === 'purchases' && <PurchaseHistory data={data} canLinkFinance={canLinkFinance} onLink={link} />}
             {tab === 'usage' && <UsageHistory data={data} onAction={action} />}
         </div>
         {dialog?.type === 'product' && <FormDialog title={dialog.id ? 'Edit product' : 'Add product'} onClose={close}><ProductForm key={dialog.id ?? 'new'} productId={dialog.id} data={data} save={save} onSaved={close} /></FormDialog>}
         {dialog?.type === 'cart' && <ReceiveCart initialProductId={dialog.productId} data={data} save={save} onClose={close} />}
         {dialog?.type === 'stock' && <StockAction choice={dialog.choice} data={data} save={save} onClose={close} />}
+        {dialog?.type === 'finance' && <FinanceLink purchase={dialog.purchase} save={save} onClose={close} />}
         {detail && <FormDialog title={detail.name} onClose={close}><div className="space-y-6">
             <div className="flex flex-wrap gap-2"><Button variant="secondary" onClick={() => setDialog({ type: 'product', id: detail.id })}>Edit product</Button><Button onClick={() => setDialog({ type: 'cart', productId: detail.id })}>Add stock</Button><Button variant="secondary" disabled={!data.batches.some((batch) => batch.product_id === detail.id)} onClick={() => action({ action: 'adjust', productId: detail.id })}>Adjust stock</Button></div>
             <section className="space-y-2"><h3 className="font-bold">Stock breakdown</h3>{data.batches.filter((batch) => batch.product_id === detail.id).map((batch) => <div key={batch.id} className="rounded-md border border-border-default p-3 text-sm"><p className="font-semibold">{batch.snapshot.variant_label} · {quantityText(batch.snapshot.size, detail.unit === 'count' ? 'item' : batch.snapshot.unit)} each</p><p>{batch.unopened_units} unopened · {data.usages.filter((usage) => usage.batch_id === batch.id && usage.status === 'in_use').length} in use</p><p className="text-text-secondary">Purchased {data.purchases.find((purchase) => purchase.id === batch.purchase_id)?.purchased_on ?? 'on an unknown date'}</p></div>)}
@@ -76,7 +79,7 @@ export function InventoryClient({ initialData }: { initialData: InventoryData; c
             <section className="space-y-2"><h3 className="font-bold">Usage estimate</h3><p className="text-sm">{productStock(data, detail.id).estimate.days === null ? 'No usage estimate yet' : `Approximately ${productStock(data, detail.id).estimate.days} days of unopened stock`}</p>
                 {productStock(data, detail.id).estimate.basis.map((basis) => <p key={basis} className="text-xs text-text-secondary">{basis}</p>)}<p className="text-xs text-text-secondary">Uses all comparable completed usage. Overlapping days count once; gaps between recorded usage periods are excluded. In-use quantities are excluded.</p></section>
             <PriceCheck data={data} product={detail} />
-            <section className="space-y-3"><h3 className="font-bold">Purchase history</h3><PurchaseHistory data={data} productId={detail.id} canLinkFinance={false} onLink={() => {}} /></section>
+            <section className="space-y-3"><h3 className="font-bold">Purchase history</h3><PurchaseHistory data={data} productId={detail.id} canLinkFinance={canLinkFinance} onLink={link} /></section>
             <section className="space-y-3"><h3 className="font-bold">Usage history</h3><UsageHistory data={data} productId={detail.id} onAction={action} /></section>
             <section className="space-y-2"><h3 className="font-bold">Stock adjustments</h3>{data.adjustments.filter((adjustment) => data.batches.some((batch) => batch.id === adjustment.batch_id && batch.product_id === detail.id)).map((adjustment) => <p key={adjustment.id} className="text-sm">{adjustment.adjusted_on} · {data.batches.find((batch) => batch.id === adjustment.batch_id)?.snapshot.variant_label} · {adjustment.quantity > 0 ? '+' : ''}{adjustment.quantity} {detail.item_label} · {adjustment.reason.replace('_', ' ')}{adjustment.usage_id ? ' (in use)' : ''}</p>)}
                 {!data.adjustments.some((adjustment) => data.batches.some((batch) => batch.id === adjustment.batch_id && batch.product_id === detail.id)) && <p className="text-sm text-text-secondary">No adjustments recorded.</p>}</section>
