@@ -402,7 +402,7 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
                     children: (
                         <div>
                             {renderSubItem({ href: '/inventory/purchases', icon: <ReceiptText size={14} />, isActive: isExactPath(pathname, '/inventory/purchases'), label: 'Purchases' })}
-                            {renderSubItem({ href: '/inventory/usage', icon: <ClipboardCheck size={14} />, isActive: isExactPath(pathname, '/inventory/usage'), label: 'Usage history' })}
+                            {renderSubItem({ href: '/inventory/usage', icon: <BarChart3 size={14} />, isActive: isExactPath(pathname, '/inventory/usage'), label: 'Usage history' })}
                         </div>
                     ),
                 })}
