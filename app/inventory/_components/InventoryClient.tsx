@@ -40,7 +40,7 @@ export function InventoryClient({ initialData, canLinkFinance, view = 'shelf' }:
     const close = () => setDialog(null);
     const action = (choice: StockActionChoice) => setDialog({ type: 'stock', choice });
     const link = (purchase: InventoryPurchase) => setDialog({ type: 'finance', purchase });
-    return <AppShell pageTitle={view === 'shelf' ? 'Inventory' : view === 'purchases' ? 'Purchases' : 'Usage history'} contentClassName="p-4 md:p-6" headerAction={<Button icon={<Plus size={16} />} onClick={() => setDialog({ type: 'cart' })}>Add stock</Button>}>
+    return <AppShell pageTitle={view === 'shelf' ? 'Inventory' : view === 'purchases' ? 'Purchases' : 'Usage history'} contentClassName="p-4 md:p-6" headerClassName="flex-row items-center justify-between gap-3" headerAction={<Button className="whitespace-nowrap" icon={<Plus size={16} />} onClick={() => setDialog({ type: 'cart' })}>Add stock</Button>}>
         <div className="space-y-5">
             <InventoryErrorNotice error={error} />
             {notice && <p role="status" className="text-sm text-success">{notice}</p>}
