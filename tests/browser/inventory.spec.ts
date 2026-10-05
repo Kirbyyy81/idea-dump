@@ -116,9 +116,13 @@ test('links and unlinks an existing Finance expense from purchase history', asyn
     await expect(page.getByText('Essentials shop', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Link', exact: true }).click();
     await expect(page.getByText('Linked to a Finance expense', { exact: true })).toBeVisible();
+    await expect(page.getByRole('status')).toHaveText('Changes saved.');
+    await page.getByRole('button', { name: 'Dismiss notification' }).click();
+    await expect(page.getByRole('status')).toHaveCount(0);
     await page.getByRole('button', { name: 'Change Finance link', exact: true }).click();
     await page.getByRole('button', { name: 'Remove Finance link', exact: true }).click();
     await expect(page.getByText('Linked to a Finance expense', { exact: true })).not.toBeVisible();
+    await expect(page.getByRole('status')).toHaveText('Changes saved.');
     expect(commands.map((command) => command.action)).toEqual(['link_finance', 'link_finance']);
 });
 

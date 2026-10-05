@@ -6,6 +6,7 @@ import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { FormDialog } from '@/components/molecules/FormDialog';
+import { Toast } from '@/components/molecules/Toast';
 import type { InventoryData, InventoryMutation, InventoryPurchase } from '@/lib/types';
 import { inventoryRequest } from '@/lib/inventory/core/client';
 import { productStock, quantityText } from '@/lib/inventory/core/values';
@@ -24,7 +25,7 @@ export function InventoryClient({ initialData, canLinkFinance, view = 'shelf' }:
     const [data, setData] = useState(initialData);
     const [search, setSearch] = useState(''); const [category, setCategory] = useState(''); const [subcategory, setSubcategory] = useState('');
     const [dialog, setDialog] = useState<Dialog | null>(null);
-    const [error, setError] = useState(''); const [notice, setNotice] = useState('');
+    const [error, setError] = useState(''); const [notice, setNotice] = useState<{ id: string; message: string } | null>(null);
     const categories = useMemo(() => [...new Set(data.products.map((product) => product.category))].sort(), [data.products]);
     const subcategories = useMemo(() => [...new Set(data.products.filter((product) => product.category === category)
         .map((product) => product.subcategory).filter((value): value is string => Boolean(value)))].sort(), [data.products, category]);
@@ -34,7 +35,7 @@ export function InventoryClient({ initialData, canLinkFinance, view = 'shelf' }:
         const result = await inventoryRequest<{ id: string }>('/api/inventory', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(mutation) });
         try { setData(await inventoryRequest<InventoryData>('/api/inventory')); setError(''); }
         catch { setError('Saved successfully, but the latest stock could not load. Reload the page before making another change.'); }
-        setNotice(mutation.action === 'receive' ? 'Stock added to your shelf.' : 'Changes saved.');
+        setNotice({ id: crypto.randomUUID(), message: mutation.action === 'receive' ? 'Stock added to your shelf.' : 'Changes saved.' });
         return result;
     }
     const close = () => setDialog(null);
@@ -43,7 +44,6 @@ export function InventoryClient({ initialData, canLinkFinance, view = 'shelf' }:
     return <AppShell pageTitle={view === 'shelf' ? 'Inventory' : view === 'purchases' ? 'Purchases' : 'Usage history'} contentClassName="p-4 md:p-6" headerClassName="flex-row items-center justify-between gap-3" headerAction={<Button className="whitespace-nowrap" icon={<Plus size={16} />} onClick={() => setDialog({ type: 'cart' })}>Add stock</Button>}>
         <div className="space-y-5">
             <InventoryErrorNotice error={error} />
-            {notice && <p role="status" className="text-sm text-success">{notice}</p>}
             {view === 'shelf' && <>
                 <div className="flex flex-wrap items-end gap-3"><Input label="Search products" value={search} onValueChange={setSearch} containerClassName="min-w-0 flex-1 basis-52" />
                     <Select label="Category" value={category} onChange={(value) => { setCategory(value); setSubcategory(''); }} options={[{ value: '', label: 'All categories' }, ...categories.map((item) => ({ value: item, label: item }))]} className="w-full sm:w-48" />
@@ -79,5 +79,6 @@ export function InventoryClient({ initialData, canLinkFinance, view = 'shelf' }:
             <section className="space-y-2"><h3 className="font-bold">Stock adjustments</h3>{data.adjustments.filter((adjustment) => data.batches.some((batch) => batch.id === adjustment.batch_id && batch.product_id === detail.id)).map((adjustment) => <p key={adjustment.id} className="text-sm">{adjustment.adjusted_on} · {data.batches.find((batch) => batch.id === adjustment.batch_id)?.snapshot.variant_label} · {adjustment.quantity > 0 ? '+' : ''}{adjustment.quantity} {detail.item_label} · {adjustment.reason.replace('_', ' ')}{adjustment.usage_id ? ' (in use)' : ''}</p>)}
                 {!data.adjustments.some((adjustment) => data.batches.some((batch) => batch.id === adjustment.batch_id && batch.product_id === detail.id)) && <p className="text-sm text-text-secondary">No adjustments recorded.</p>}</section>
         </div></FormDialog>}
+        {notice && <Toast key={notice.id} message={notice.message} onDismiss={() => setNotice(null)} />}
     </AppShell>;
 }
