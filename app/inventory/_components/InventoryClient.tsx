@@ -24,22 +24,16 @@ export function InventoryClient({ initialData, canLinkFinance, view = 'shelf' }:
     const [data, setData] = useState(initialData);
     const [search, setSearch] = useState(''); const [category, setCategory] = useState(''); const [subcategory, setSubcategory] = useState('');
     const [dialog, setDialog] = useState<Dialog | null>(null);
-    const [error, setError] = useState(''); const [notice, setNotice] = useState(''); const [refreshing, setRefreshing] = useState(false);
+    const [error, setError] = useState(''); const [notice, setNotice] = useState('');
     const categories = useMemo(() => [...new Set(data.products.map((product) => product.category))].sort(), [data.products]);
     const subcategories = useMemo(() => [...new Set(data.products.filter((product) => product.category === category)
         .map((product) => product.subcategory).filter((value): value is string => Boolean(value)))].sort(), [data.products, category]);
     const products = data.products.filter((product) => (!category || product.category === category) && (!subcategory || product.subcategory === subcategory) && `${product.name} ${product.brand ?? ''}`.toLowerCase().includes(search.toLowerCase()));
     const detail = dialog?.type === 'detail' ? data.products.find((product) => product.id === dialog.id) : null;
-    async function refresh() {
-        setRefreshing(true); setError('');
-        try { setData(await inventoryRequest<InventoryData>('/api/inventory')); }
-        catch (failure) { setError(failure instanceof Error ? failure.message : 'Could not refresh inventory.'); }
-        finally { setRefreshing(false); }
-    }
     async function save(mutation: InventoryMutation) {
         const result = await inventoryRequest<{ id: string }>('/api/inventory', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(mutation) });
         try { setData(await inventoryRequest<InventoryData>('/api/inventory')); setError(''); }
-        catch { setError('Saved successfully, but the shelf could not refresh. Refresh before making another change.'); }
+        catch { setError('Saved successfully, but the latest stock could not load. Reload the page before making another change.'); }
         setNotice(mutation.action === 'receive' ? 'Stock added to your shelf.' : 'Changes saved.');
         return result;
     }
@@ -50,7 +44,6 @@ export function InventoryClient({ initialData, canLinkFinance, view = 'shelf' }:
         <div className="space-y-5">
             <InventoryErrorNotice error={error} />
             {notice && <p role="status" className="text-sm text-success">{notice}</p>}
-            <div className="flex justify-end"><Button variant="ghost" disabled={refreshing} onClick={() => void refresh()}>{refreshing ? 'Refreshing...' : 'Refresh'}</Button></div>
             {view === 'shelf' && <>
                 <div className="flex flex-wrap items-end gap-3"><Input label="Search products" value={search} onValueChange={setSearch} containerClassName="min-w-0 flex-1 basis-52" />
                     <Select label="Category" value={category} onChange={(value) => { setCategory(value); setSubcategory(''); }} options={[{ value: '', label: 'All categories' }, ...categories.map((item) => ({ value: item, label: item }))]} className="w-full sm:w-48" />
