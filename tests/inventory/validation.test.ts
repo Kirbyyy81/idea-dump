@@ -11,6 +11,10 @@ describe('Inventory validation', () => {
         expect(parseInventoryMutation({ request_id, action: 'edit_purchase', payload: purchaseEdit }).payload).toEqual(purchaseEdit);
         expect(parseInventoryMutation({ request_id, action: 'edit_purchase', payload: { ...purchaseEdit, kind: 'existing', purchased_on: null, lines: [{ ...purchaseEdit.lines[0], total_paid: null }] } }).action).toBe('edit_purchase');
     });
+    it('accepts an explicit Finance link only as a valid ID', () => {
+        expect(parseInventoryMutation({ request_id, action: 'edit_purchase', payload: { ...purchaseEdit, finance_transaction_id: id.purchase } }).payload).toMatchObject({ finance_transaction_id: id.purchase });
+        for (const value of [null, '', 'invalid']) expect(() => parseInventoryMutation({ request_id, action: 'edit_purchase', payload: { ...purchaseEdit, finance_transaction_id: value } })).toThrow();
+    });
     it.each([{ revision: 0 }, { purchased_on: null }, { lines: [] }, { lines: [purchaseEdit.lines[0], purchaseEdit.lines[0]] },
         ...[{ quantity: 0 }, { quantity: 1.5 }, { total_paid: null }, { total_paid: -1 }, { total_paid: 1.001 }].map((change) => ({ lines: [{ ...purchaseEdit.lines[0], ...change }] }))
     ])('rejects invalid purchase corrections %o', (change) => {

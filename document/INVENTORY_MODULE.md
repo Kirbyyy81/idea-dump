@@ -28,7 +28,7 @@ Subcategory choices come from products in the selected category. Choose **Add su
 
 Open a saved purchase from **Purchases** or product details and choose **Link Finance expense**. Search the owner's existing confirmed MYR expenses by merchant, with paged results. Linking needs both Inventory and Finance module access.
 
-The link does not create an expense or overwrite Inventory prices. Different totals are valid when the Finance expense includes other shopping. Removing the link, or deleting the expense, leaves Inventory purchases and stock intact. Finance access is optional for every other inventory workflow.
+Selecting an expense opens a price review; prices and the link change only when Save purchase is confirmed. This never creates or edits a Finance expense. Different totals are valid when the Finance expense includes other shopping. Removing the link, or deleting the expense, leaves Inventory purchases and stock intact. Finance access is optional for every other inventory workflow.
 
 ## Data and access
 
@@ -110,3 +110,12 @@ Purchase menu verification: all 692 application tests, 26 desktop/mobile browser
 
 Receiving-cart prices use one Price (RM) row with the amount beside a pricing-basis selector. The selector offers Per pack for multipacks, Per item for individual items, and Total for the complete line. Changing the basis keeps the entered amount and recalculates the line total. Both controls stay on the same row on mobile.
 Price-row verification: 692 application tests, 26 desktop/mobile browser cases, database checks, lint, TypeScript and production build passed. Browser coverage verifies same-row alignment and both price calculations. The local preview was rebuilt and checked without saving stock. Existing audit findings are unchanged.
+
+### Finance price review
+
+Selecting a Finance expense opens Edit purchase without saving a link immediately. A receipt with one line gets the expense amount suggested as its line total; multiple lines retain their current prices and show the expense amount as a reference for allocation. Users can adjust prices freely, including totals different from the expense amount. Closing the editor discards the suggested price and pending link.
+
+Save purchase commits the receipt corrections and selected Finance link atomically. The API and database both recheck Finance access; the database verifies the expense is still owned, confirmed and MYR. A failed save changes neither prices nor link, and retries retain request identity. Finance transactions are never edited. Standalone link removal also advances the purchase revision to reject stale editors.
+
+Applied [20261005103956_inventory_finance_price_review.sql](../supabase/migrations/20261005103956_inventory_finance_price_review.sql) to the connected Supabase project. Deploy this migration before the updated application. Verified the combined-save function and unchanged RLS/browser permissions.
+Finance price review verification: 58 Inventory tests, 693 application tests, 28 desktop/mobile browser cases, isolated database rollback/ownership/access/retry checks, lint, TypeScript and production build passed. Finance OCR typecheck, build and tests passed (387 passed, 171 skipped). Existing audit and advisor findings remain unchanged.

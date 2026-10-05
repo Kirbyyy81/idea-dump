@@ -80,7 +80,7 @@ export function parseInventoryMutation(input: unknown): InventoryMutation {
                     total_paid: line.total_paid === null && kind === 'existing' ? null : number(line.total_paid, 'line total', 0, 1000000, 2) };
             });
             if (new Set(lines.map((line) => line.batch_id)).size !== lines.length) throw new InventoryError('Each purchase item must appear once.');
-            return { request_id, action: 'edit_purchase', payload: { purchase_id: uuid(p.purchase_id), revision: number(p.revision, 'purchase revision', 1, 2147483646), kind, purchased_on, lines } };
+            return { request_id, action: 'edit_purchase', payload: { ...('finance_transaction_id' in p ? { finance_transaction_id: uuid(p.finance_transaction_id) } : {}), purchase_id: uuid(p.purchase_id), revision: number(p.revision, 'purchase revision', 1, 2147483646), kind, purchased_on, lines } };
         }
         case 'start':
             return { request_id, action: 'start', payload: { batch_id: uuid(p.batch_id), started_on: date(p.started_on, 'Start date')! } };

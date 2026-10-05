@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
         let body: unknown;
         try { body = JSON.parse(raw); } catch { throw new InventoryError('Enter valid inventory details.'); }
         const mutation = parseInventoryMutation(body);
-        if (mutation.action === 'link_finance' && !canAccessModule(session.access, 'finance')) throw new InventoryError('Finance access is required to link expenses.', 403);
+        if ((mutation.action === 'link_finance' || (mutation.action === 'edit_purchase' && mutation.payload.finance_transaction_id !== undefined)) && !canAccessModule(session.access, 'finance')) throw new InventoryError('Finance access is required to link expenses.', 403);
         return NextResponse.json({ data: await mutateInventory(session.user.id, mutation) });
     } catch (error) { return inventoryResponseError(error); }
 }

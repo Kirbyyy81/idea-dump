@@ -27,6 +27,7 @@ async function setup(page: Page, initial: InventoryData = structuredClone(invent
         } else if (command.action === 'edit_purchase') {
             const purchase = data.purchases.find((item) => item.id === command.payload.purchase_id)!;
             Object.assign(purchase, { kind: command.payload.kind, purchased_on: command.payload.purchased_on, revision: purchase.revision + 1 });
+            if (command.payload.finance_transaction_id !== undefined) purchase.finance_transaction_id = command.payload.finance_transaction_id;
             for (const line of command.payload.lines) {
                 const batch = data.batches.find((item) => item.id === line.batch_id)!;
                 const units = line.quantity * batch.snapshot.pack_quantity;
@@ -134,6 +135,12 @@ test('links and unlinks an existing Finance expense from purchase history', asyn
     await page.getByRole('menuitem', { name: 'Link Finance expense', exact: true }).click();
     await expect(page.getByText('Essentials shop', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Link', exact: true }).click();
+    const review = page.getByRole('dialog', { name: 'Edit purchase', exact: true });
+    await expect(review).toBeVisible();
+    expect(commands).toHaveLength(0);
+    await expect(review.getByText(/Essentials shop.*180/)).toBeVisible();
+    await expect(review.getByRole('region', { name: 'Purchase item 1', exact: true }).getByLabel('Line total (RM)')).toHaveValue('54');
+    await review.getByRole('button', { name: 'Save purchase', exact: true }).click();
     await expect(page.getByText('Linked to a Finance expense', { exact: true })).not.toBeVisible();
     await expect(page.getByRole('status')).toHaveText('Changes saved.');
     await page.getByRole('button', { name: 'Dismiss notification' }).click();
@@ -143,7 +150,7 @@ test('links and unlinks an existing Finance expense from purchase history', asyn
     await page.getByRole('button', { name: 'Remove Finance link', exact: true }).click();
     await expect(page.getByText('Linked to a Finance expense', { exact: true })).not.toBeVisible();
     await expect(page.getByRole('status')).toHaveText('Changes saved.');
-    expect(commands.map((command) => command.action)).toEqual(['link_finance', 'link_finance']);
+    expect(commands.map((command) => command.action)).toEqual(['edit_purchase', 'link_finance']);
 });
 
 test('edits size variants while retaining historical quantities', async ({ page }) => {
@@ -306,4 +313,34 @@ test('a failed refresh after saving shows only an error toast', async ({ page })
     await expect(page.getByRole('alert').locator('..')).toHaveCSS('position', 'fixed');
     await expect(page.getByRole('status')).toHaveCount(0);
     expect(commands).toHaveLength(1);
+});
+
+test('Finance suggestion can be cancelled or adjusted before a single atomic save', async ({ page }) => {
+    const fixture = structuredClone(inventoryFixture);
+    fixture.batches = fixture.batches.filter((batch) => batch.id === id.largeBatch);
+    fixture.purchases = [fixture.purchases[0]];
+    const { commands, failNext } = await setup(page, fixture);
+    await page.getByRole('link', { name: 'Purchases', exact: true }).click();
+    const selectExpense = async () => {
+        await page.getByRole('button', { name: 'Purchase actions', exact: true }).click();
+        await page.getByRole('menuitem', { name: 'Link Finance expense', exact: true }).click();
+        await page.getByRole('button', { name: 'Link', exact: true }).click();
+    };
+    await selectExpense();
+    await expect(page.getByLabel('Line total (RM)')).toHaveValue('180');
+    await page.getByRole('button', { name: 'Close', exact: true }).click();
+    expect(commands).toHaveLength(0);
+    await selectExpense();
+    await page.getByLabel('Line total (RM)').fill('42');
+    failNext();
+    await page.getByRole('button', { name: 'Save purchase', exact: true }).click();
+    await expect(page.getByRole('alert')).toBeVisible();
+    await page.getByRole('button', { name: 'Dismiss notification' }).click();
+    await expect(page.getByLabel('Line total (RM)')).toHaveValue('42');
+    await page.getByRole('button', { name: 'Save purchase', exact: true }).click();
+    await expect(page.getByRole('dialog')).not.toBeVisible();
+    expect(commands[0]).toEqual(commands[1]);
+    expect(commands[1]).toMatchObject({ action: 'edit_purchase', payload: { finance_transaction_id: id.purchase, lines: [{ total_paid: 42 }] } });
+    await page.getByRole('button', { name: 'Purchase actions', exact: true }).click();
+    await expect(page.getByRole('menuitem', { name: 'Change Finance link', exact: true })).toBeVisible();
 });

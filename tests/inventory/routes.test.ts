@@ -37,6 +37,7 @@ describe('Inventory API authorization', () => {
         mocks.access.mockReturnValue(false);
         expect((await expenses(new NextRequest('http://localhost/api/inventory/expenses'))).status).toBe(403);
         expect((await POST(request({ ...command, action: 'link_finance', payload: { purchase_id: command.payload.batch_id, finance_transaction_id: null } }))).status).toBe(403);
+        expect((await POST(request({ ...command, action: 'edit_purchase', payload: { purchase_id: command.payload.batch_id, revision: 1, kind: 'existing', purchased_on: null, finance_transaction_id: command.payload.batch_id, lines: [{ batch_id: command.payload.batch_id, quantity: 1, total_paid: 12 }] } }))).status).toBe(403);
         expect(mocks.expenses).not.toHaveBeenCalled(); expect(mocks.write).not.toHaveBeenCalled();
     });
     it('validates expense pagination and keeps snapshots uncached', async () => {

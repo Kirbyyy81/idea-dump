@@ -4,24 +4,28 @@ import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { FormDialog } from '@/components/molecules/FormDialog';
-import type { InventoryData, InventoryPurchase } from '@/lib/types';
+import type { InventoryData, InventoryPurchase, InventoryExpense } from '@/lib/types';
 import { useInventoryAction, type InventorySave } from '@/lib/inventory/core/client';
 import { inventoryToday, money, quantityText } from '@/lib/inventory/core/values';
 import { InventoryDate, InventoryErrorNotice } from './fields';
 
-export function EditPurchase({ purchase, data, save, onClose }: { purchase: InventoryPurchase; data: InventoryData; save: InventorySave; onClose: () => void }) {
+export function EditPurchase({ purchase, data, save, onClose, expense }: { purchase: InventoryPurchase; data: InventoryData; save: InventorySave; onClose: () => void; expense?: InventoryExpense }) {
     const batches = data.batches.filter((batch) => batch.purchase_id === purchase.id);
     const [kind, setKind] = useState(purchase.kind);
     const [purchasedOn, setPurchasedOn] = useState(purchase.purchased_on ?? '');
-    const [lines, setLines] = useState(batches.map((batch) => ({ batch_id: batch.id, quantity: batch.purchased_quantity, total_paid: batch.total_paid })));
+    const [lines, setLines] = useState(batches.map((batch) => ({ batch_id: batch.id, quantity: batch.purchased_quantity, total_paid: expense && batches.length === 1 ? Number(expense.amount) : batch.total_paid })));
     const { busy, error, run } = useInventoryAction(save);
     const invalidStock = lines.some((line, index) => batches[index].unopened_units + line.quantity * batches[index].snapshot.pack_quantity - batches[index].original_units < 0);
     return <FormDialog title="Edit purchase" onClose={onClose} busy={busy}>
         <form className="space-y-5" onSubmit={(event) => {
             event.preventDefault();
-            void run({ action: 'edit_purchase', payload: { purchase_id: purchase.id, revision: purchase.revision, kind, purchased_on: purchasedOn || null, lines } }, onClose);
+            void run({ action: 'edit_purchase', payload: { purchase_id: purchase.id, revision: purchase.revision, kind, purchased_on: purchasedOn || null, lines, ...(expense ? { finance_transaction_id: expense.id } : {}) } }, onClose);
         }}>
             <InventoryErrorNotice error={error} />
+            {expense && <div className="space-y-1 rounded-md border border-border-default p-3 text-sm">
+                <p className="font-semibold">{expense.merchant || 'Finance expense'} · {money(Number(expense.amount))}</p>
+                <p className="text-text-secondary">{batches.length === 1 ? 'Suggested price from Finance. Adjust it if the expense includes other items.' : 'Enter each item’s share of this expense. Your purchase total can differ.'} The link is saved with this purchase.</p>
+            </div>}
             <fieldset disabled={busy} className="space-y-4">
                 <div className="grid gap-4 sm:grid-cols-2">
                     <Select label="Stock source" value={kind} options={[{ value: 'purchase', label: 'Purchase' }, { value: 'existing', label: 'Existing stock' }]} onChange={(value) => {

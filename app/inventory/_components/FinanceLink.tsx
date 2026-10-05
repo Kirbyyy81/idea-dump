@@ -8,7 +8,7 @@ import { inventoryRequest, useInventoryAction, type InventorySave } from '@/lib/
 import { money } from '@/lib/inventory/core/values';
 import { InventoryErrorNotice } from './fields';
 
-export function FinanceLink({ purchase, save, onClose }: { purchase: InventoryPurchase; save: InventorySave; onClose: () => void }) {
+export function FinanceLink({ purchase, save, onClose, onSelect }: { purchase: InventoryPurchase; save: InventorySave; onClose: () => void; onSelect: (expense: InventoryExpense) => void }) {
     const [input, setInput] = useState(''); const [query, setQuery] = useState(''); const [page, setPage] = useState(1);
     const [expenses, setExpenses] = useState<InventoryExpense[]>([]); const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(true); const [loadError, setLoadError] = useState(''); const [attempt, setAttempt] = useState(0);
@@ -27,7 +27,7 @@ export function FinanceLink({ purchase, save, onClose }: { purchase: InventoryPu
         <form className="flex items-end gap-2" onSubmit={(event) => { event.preventDefault(); setPage(1); setQuery(input); }}><Input label="Search merchant" value={input} maxLength={120} onValueChange={setInput} containerClassName="flex-1" /><Button type="submit" disabled={busy}>Search</Button></form>
         {loading ? <p role="status">Loading expenses...</p> : loadError ? <Button variant="secondary" onClick={() => setAttempt(attempt + 1)}>Retry</Button> : <>
             {!expenses.length && <p className="text-text-secondary">No matching expenses.</p>}
-            <div className="divide-y divide-border-default">{expenses.map((expense) => <div key={expense.id} className="flex items-center justify-between gap-3 py-3"><div className="min-w-0"><p className="break-words font-semibold">{expense.merchant || 'Expense'}</p><p className="text-sm text-text-secondary">{expense.transaction_date} · {money(Number(expense.amount))}</p></div><Button variant="secondary" disabled={busy} onClick={() => link(expense.id)}>{purchase.finance_transaction_id === expense.id ? 'Linked' : 'Link'}</Button></div>)}</div>
+            <div className="divide-y divide-border-default">{expenses.map((expense) => <div key={expense.id} className="flex items-center justify-between gap-3 py-3"><div className="min-w-0"><p className="break-words font-semibold">{expense.merchant || 'Expense'}</p><p className="text-sm text-text-secondary">{expense.transaction_date} · {money(Number(expense.amount))}</p></div><Button variant="secondary" disabled={busy} onClick={() => onSelect(expense)}>{purchase.finance_transaction_id === expense.id ? 'Linked' : 'Link'}</Button></div>)}</div>
             <div className="flex items-center justify-between gap-2"><Button variant="ghost" disabled={page === 1 || busy} onClick={() => setPage(page - 1)}>Previous</Button><span className="text-sm">Page {page}</span><Button variant="ghost" disabled={page * 30 >= total || busy} onClick={() => setPage(page + 1)}>Next</Button></div>
         </>}
         {purchase.finance_transaction_id && <Button variant="secondary" disabled={busy} onClick={() => link(null)}>Remove Finance link</Button>}

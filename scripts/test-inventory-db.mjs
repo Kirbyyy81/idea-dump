@@ -38,6 +38,7 @@ try {
     await db.exec(await file('supabase/migrations/20261005075806_add_inventory_stock_keeping.sql'));
     await db.exec(await file('supabase/migrations/20261005092513_add_inventory_subcategory.sql'));
     await db.exec(await file('supabase/migrations/20261005100717_edit_inventory_purchases.sql'));
+    await db.exec(await file('supabase/migrations/20261005103956_inventory_finance_price_review.sql'));
     for (const id of [owner, other, denied]) await db.query('insert into auth.users values($1)', [id]);
     for (const id of [owner, other]) await db.query("insert into public.bridge_user_roles select $1,id from public.dim_roles where role='owner'", [id]);
     await db.exec('set role service_role');
@@ -149,12 +150,12 @@ try {
     data = await snapshot();
     const beforeEdit = structuredClone(data);
     const editLines = data.batches.filter((item) => item.purchase_id === saved.id).map((item) => ({ batch_id: item.id, quantity: item.purchased_quantity, total_paid: item.total_paid }));
-    const edit = { purchase_id: saved.id, revision: 1, kind: 'purchase', purchased_on: '2026-01-01', lines: editLines.map((line) => ({ ...line, quantity: line.quantity + 1, total_paid: 60 })) };
+    const edit = { purchase_id: saved.id, revision: data.purchases.find((item) => item.id === saved.id).revision, kind: 'purchase', purchased_on: '2026-01-01', lines: editLines.map((line) => ({ ...line, quantity: line.quantity + 1, total_paid: 60 })) };
     const editRequest = randomUUID();
     await mutation('edit_purchase', edit, editRequest);
     await mutation('edit_purchase', edit, editRequest);
     data = await snapshot();
-    assert.equal(data.purchases.find((item) => item.id === saved.id).revision, 2);
+    assert.equal(data.purchases.find((item) => item.id === saved.id).revision, edit.revision + 1);
     assert.deepEqual(data.usages, beforeEdit.usages, 'receipt edits preserve usage');
     assert.deepEqual(data.adjustments, beforeEdit.adjustments, 'receipt edits preserve adjustment history');
     for (const original of beforeEdit.batches.filter((item) => item.purchase_id === saved.id)) {
@@ -167,7 +168,7 @@ try {
     await rejects(() => mutation('edit_purchase', edit), '40001');
     await rejects(() => mutation('edit_purchase', { ...edit, purchased_on: null }, editRequest), '40001');
     await rejects(() => mutation('edit_purchase', edit, randomUUID(), other), 'P0002');
-    const currentEdit = { ...edit, revision: 2 };
+    const currentEdit = { ...edit, revision: edit.revision + 1 };
     await rejects(() => mutation('edit_purchase', { ...currentEdit, purchased_on: '2026-04-01' }), '22023');
     await rejects(() => mutation('edit_purchase', { ...currentEdit, lines: currentEdit.lines.slice(1) }), '22023');
     await rejects(() => mutation('edit_purchase', { ...currentEdit, lines: [currentEdit.lines[0], currentEdit.lines[0]] }), '22023');
@@ -180,6 +181,26 @@ try {
     assert.equal((await snapshot()).batches.find((item) => item.id === initialBatch.id).unopened_units, 3);
     await mutation('edit_purchase', { purchase_id: initial.id, revision: 2, kind: 'purchase', purchased_on: '2026-01-01', lines: [{ batch_id: initialBatch.id, quantity: 2, total_paid: 25 }] });
     assert.equal((await snapshot()).purchases.find((item) => item.id === initial.id).kind, 'purchase');
+    const combinedData = await snapshot();
+    const combined = { ...edit, revision: combinedData.purchases.find((item) => item.id === saved.id).revision, finance_transaction_id: otherExpense };
+    await rejects(() => mutation('edit_purchase', combined), 'P0002');
+    const ownExpense = randomUUID();
+    await db.query("insert into public.finance_transactions(id,user_id,direction,status,currency,amount) values($1,$2,'expense','confirmed','MYR',180)", [ownExpense, owner]);
+    combined.finance_transaction_id = ownExpense;
+    await rejects(() => mutation('edit_purchase', { ...combined, lines: combined.lines.map((line, index) => ({ ...line, total_paid: index ? -1 : 99 })) }), '22023');
+    assert.deepEqual(await snapshot(), combinedData, 'failed combined save changes neither price nor Finance link');
+    await db.query("update public.bridge_user_module_overrides set effect='deny' where user_id=$1 and module_id=(select id from public.dim_modules where modules='finance')", [owner]);
+    await rejects(() => mutation('edit_purchase', combined), '42501');
+    await db.query("update public.bridge_user_module_overrides set effect='allow' where user_id=$1", [owner]);
+    const combinedRequest = randomUUID();
+    await mutation('edit_purchase', combined, combinedRequest);
+    await mutation('edit_purchase', combined, combinedRequest);
+    const combinedSaved = await snapshot();
+    assert.equal(combinedSaved.purchases.find((item) => item.id === saved.id).finance_transaction_id, ownExpense);
+    assert.equal(combinedSaved.purchases.find((item) => item.id === saved.id).revision, combined.revision + 1);
+    assert.equal((await db.query('select amount from public.finance_transactions where id=$1', [ownExpense])).rows[0].amount, '180');
+    await mutation('link_finance', { purchase_id: saved.id, finance_transaction_id: null });
+    await rejects(() => mutation('edit_purchase', { ...combined, revision: combined.revision + 1 }), '40001');
     await db.query('delete from auth.users where id=$1', [owner]);
     assert.equal((await db.query('select count(*)::int as n from public.inventory_batches')).rows[0].n, 0, 'owner removal cascades inventory data');
     process.stdout.write('Inventory PostgreSQL lifecycle, snapshots, retry safety, rollback, ownership, module overrides, role grants, and Finance linking passed.\n');
