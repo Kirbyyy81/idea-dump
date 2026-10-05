@@ -14,7 +14,10 @@ export function ProductForm({ data, productId, save, onSaved, onCancel }: {
     const original = data.products.find((product) => product.id === productId);
     const [product, setProduct] = useState<InventoryProductInput>(() => original
         ? { ...original, variants: data.variants.filter((variant) => variant.product_id === original.id) }
-        : { id: crypto.randomUUID(), revision: 0, name: '', brand: null, category: 'Hair Care', unit: 'ml', item_label: 'bottles', variants: [newVariant()] });
+        : { id: crypto.randomUUID(), revision: 0, name: '', brand: null, category: 'Hair Care', subcategory: null, unit: 'ml', item_label: 'bottles', variants: [newVariant()] });
+    const [addingSubcategory, setAddingSubcategory] = useState(false);
+    const subcategories = [...new Set(data.products.filter((item) => item.category.trim().toLowerCase() === product.category.trim().toLowerCase())
+        .map((item) => item.subcategory).filter((value): value is string => Boolean(value)))].sort();
     const { busy, error, run } = useInventoryAction(save);
     const unitFixed = data.batches.some((batch) => batch.product_id === product.id);
     const editVariant = (id: string, change: Partial<InventoryVariantInput>) => setProduct((current) => ({ ...current, variants: current.variants.map((variant) => variant.id === id ? { ...variant, ...change } : variant) }));
@@ -24,7 +27,11 @@ export function ProductForm({ data, productId, save, onSaved, onCancel }: {
             <div className="grid gap-4 sm:grid-cols-2">
                 <Input label="Product name" value={product.name} maxLength={120} onValueChange={(name) => setProduct({ ...product, name })} required />
                 <Input label="Brand (optional)" value={product.brand ?? ''} maxLength={120} onValueChange={(brand) => setProduct({ ...product, brand: brand || null })} />
-                <Input label="Category" value={product.category} maxLength={60} onValueChange={(category) => setProduct({ ...product, category })} required />
+                <Input label="Category" value={product.category} maxLength={60} onValueChange={(category) => { setProduct({ ...product, category, subcategory: null }); setAddingSubcategory(false); }} required />
+                <Select label="Subcategory (optional)" value={addingSubcategory ? '__new__' : product.subcategory ? `saved:${product.subcategory}` : ''}
+                    options={[{ value: '', label: 'None' }, ...subcategories.map((value) => ({ value: `saved:${value}`, label: value })), { value: '__new__', label: 'Add subcategory' }]}
+                    onChange={(value) => { setAddingSubcategory(value === '__new__'); setProduct({ ...product, subcategory: value === '__new__' || !value ? null : value.slice(6) }); }} />
+                {addingSubcategory && <Input label="New subcategory" value={product.subcategory ?? ''} maxLength={60} onValueChange={(subcategory) => setProduct({ ...product, subcategory: subcategory || null })} />}
                 <Select label="Tracking unit" value={product.unit} disabled={unitFixed} options={[{ value: 'ml', label: 'Volume (ml)' }, { value: 'g', label: 'Weight (g)' }, { value: 'count', label: 'Count (individual items)' }]}
                     onChange={(value) => setProduct({ ...product, unit: value as InventoryUnit, item_label: value === 'count' ? 'boxes' : value === 'g' ? 'jars' : 'bottles',
                         variants: product.variants.map((variant) => ({ ...variant, size: value === 'count' ? 1 : variant.size, sheets_per_item: null })) })} />

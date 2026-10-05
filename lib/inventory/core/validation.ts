@@ -49,6 +49,7 @@ export function parseInventoryMutation(input: unknown): InventoryMutation {
             if (new Set(variants.map((v) => v.id)).size !== variants.length || new Set(variants.map((v) => v.label.toLowerCase())).size !== variants.length) throw new InventoryError('Each variant needs a unique name.');
             const payload: InventoryProductInput = { id: uuid(p.id), revision: number(p.revision, 'product revision', 0, 2147483646),
                 name: text(p.name, 'Product name'), brand: p.brand === null ? null : text(p.brand, 'Brand'), category: text(p.category, 'Category', 60),
+                subcategory: p.subcategory == null || (typeof p.subcategory === 'string' && !p.subcategory.trim()) ? null : text(p.subcategory, 'Subcategory', 60),
                 unit, item_label: text(p.item_label, 'Item label', 30), variants };
             return { request_id, action: 'save_product', payload };
         }

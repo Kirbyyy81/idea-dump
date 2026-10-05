@@ -163,3 +163,39 @@ test('Inventory submodules have persistent routes and browser history', async ({
     await expect(page.getByRole('heading', { name: 'Usage history', exact: true })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
+
+
+test('subcategories can be added, reused, filtered, and cleared', async ({ page }) => {
+    const { commands } = await setup(page);
+    await expect(page.getByRole('combobox', { name: 'Subcategory', exact: true })).toBeDisabled();
+    await page.getByRole('button', { name: 'Dove Shampoo', exact: true }).click();
+    await page.getByRole('button', { name: 'Edit product', exact: true }).click();
+    await expect(page.getByRole('combobox', { name: 'Subcategory (optional)', exact: true })).toHaveText('Shampoo');
+    await choose(page, 'Subcategory (optional)', 'Add subcategory');
+    await page.getByLabel('New subcategory', { exact: true }).fill('Conditioner');
+    await page.getByRole('button', { name: 'Save product', exact: true }).click();
+    await expect(page.getByRole('dialog')).not.toBeVisible();
+    expect(commands[0]).toMatchObject({ action: 'save_product', payload: { category: 'Hair Care', subcategory: 'Conditioner' } });
+    await choose(page, 'Category', 'Hair Care');
+    await choose(page, 'Subcategory', 'Conditioner');
+    await expect(page.getByRole('article', { name: 'Dove Shampoo' })).toBeVisible();
+    await expect(page.getByRole('article', { name: 'Tissues' })).not.toBeVisible();
+    await choose(page, 'Category', 'Household');
+    await expect(page.getByRole('combobox', { name: 'Subcategory', exact: true })).toHaveText('All subcategories');
+    await expect(page.getByRole('article', { name: 'Tissues' })).toBeVisible();
+    await page.getByRole('button', { name: 'Add product', exact: true }).click();
+    await choose(page, 'Subcategory (optional)', 'Conditioner');
+    await page.getByRole('dialog').getByRole('textbox', { name: /^Category/ }).fill('Skin Care');
+    await expect(page.getByRole('combobox', { name: 'Subcategory (optional)', exact: true })).toHaveText('None');
+    await page.getByRole('combobox', { name: 'Subcategory (optional)', exact: true }).click();
+    await expect(page.getByRole('option', { name: 'Conditioner', exact: true })).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape');
+    await choose(page, 'Category', 'Hair Care');
+    await page.getByRole('button', { name: 'Dove Shampoo', exact: true }).click();
+    await page.getByRole('button', { name: 'Edit product', exact: true }).click();
+    await choose(page, 'Subcategory (optional)', 'None');
+    await page.getByRole('button', { name: 'Save product', exact: true }).click();
+    await expect(page.getByRole('dialog')).not.toBeVisible();
+    expect(commands[1]).toMatchObject({ action: 'save_product', payload: { subcategory: null } });
+});

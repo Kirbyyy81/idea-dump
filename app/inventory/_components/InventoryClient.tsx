@@ -22,11 +22,13 @@ type Dialog = { type: 'product'; id?: string } | { type: 'cart'; productId?: str
     | { type: 'stock'; choice: StockActionChoice } | { type: 'finance'; purchase: InventoryPurchase };
 export function InventoryClient({ initialData, canLinkFinance, view = 'shelf' }: { initialData: InventoryData; canLinkFinance: boolean; view?: 'shelf' | 'purchases' | 'usage' }) {
     const [data, setData] = useState(initialData);
-    const [search, setSearch] = useState(''); const [category, setCategory] = useState('');
+    const [search, setSearch] = useState(''); const [category, setCategory] = useState(''); const [subcategory, setSubcategory] = useState('');
     const [dialog, setDialog] = useState<Dialog | null>(null);
     const [error, setError] = useState(''); const [notice, setNotice] = useState(''); const [refreshing, setRefreshing] = useState(false);
     const categories = useMemo(() => [...new Set(data.products.map((product) => product.category))].sort(), [data.products]);
-    const products = data.products.filter((product) => (!category || product.category === category) && `${product.name} ${product.brand ?? ''}`.toLowerCase().includes(search.toLowerCase()));
+    const subcategories = useMemo(() => [...new Set(data.products.filter((product) => product.category === category)
+        .map((product) => product.subcategory).filter((value): value is string => Boolean(value)))].sort(), [data.products, category]);
+    const products = data.products.filter((product) => (!category || product.category === category) && (!subcategory || product.subcategory === subcategory) && `${product.name} ${product.brand ?? ''}`.toLowerCase().includes(search.toLowerCase()));
     const detail = dialog?.type === 'detail' ? data.products.find((product) => product.id === dialog.id) : null;
     async function refresh() {
         setRefreshing(true); setError('');
@@ -51,14 +53,15 @@ export function InventoryClient({ initialData, canLinkFinance, view = 'shelf' }:
             <div className="flex justify-end"><Button variant="ghost" disabled={refreshing} onClick={() => void refresh()}>{refreshing ? 'Refreshing...' : 'Refresh'}</Button></div>
             {view === 'shelf' && <>
                 <div className="flex flex-wrap items-end gap-3"><Input label="Search products" value={search} onValueChange={setSearch} containerClassName="min-w-0 flex-1 basis-52" />
-                    <Select label="Category" value={category} onChange={setCategory} options={[{ value: '', label: 'All categories' }, ...categories.map((item) => ({ value: item, label: item }))]} className="w-full sm:w-48" />
+                    <Select label="Category" value={category} onChange={(value) => { setCategory(value); setSubcategory(''); }} options={[{ value: '', label: 'All categories' }, ...categories.map((item) => ({ value: item, label: item }))]} className="w-full sm:w-48" />
+                    <Select label="Subcategory" value={subcategory} onChange={setSubcategory} disabled={!category} options={[{ value: '', label: 'All subcategories' }, ...subcategories.map((value) => ({ value, label: value }))]} className="w-full sm:w-48" />
                     <Button variant="secondary" onClick={() => setDialog({ type: 'product' })}>Add product</Button></div>
                 {!products.length && <div className={`${panelClass} flex flex-col items-center gap-3 py-12`}><Package size={30} aria-hidden="true" /><h2 className="text-lg font-bold">{data.products.length ? 'No matching products' : 'Your shelf is ready'}</h2>
                     {!data.products.length && <Button onClick={() => setDialog({ type: 'product' })}>Create your first product</Button>}</div>}
                 <div className="space-y-3">{products.map((product) => {
                     const stock = productStock(data, product.id);
                     return <article key={product.id} aria-label={product.name} className={`${panelClass} grid items-center gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]`}>
-                        <div className="min-w-0"><button type="button" onClick={() => setDialog({ type: 'detail', id: product.id })} className="break-words text-left text-base font-bold underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-border-strong">{product.name}</button><p className="mt-1 text-xs text-text-secondary">{[product.brand, product.category].filter(Boolean).join(' · ')}</p></div>
+                        <div className="min-w-0"><button type="button" onClick={() => setDialog({ type: 'detail', id: product.id })} className="break-words text-left text-base font-bold underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-border-strong">{product.name}</button><p className="mt-1 text-xs text-text-secondary">{[product.brand, product.category, product.subcategory].filter(Boolean).join(' · ')}</p></div>
                         <StockSummary data={data} product={product} onOpen={() => setDialog({ type: 'detail', id: product.id })} />
                         <div className="flex flex-wrap gap-2"><Button variant="secondary" onClick={() => setDialog({ type: 'cart', productId: product.id })}>Add stock</Button><Button disabled={!stock.units} onClick={() => action({ action: 'start', productId: product.id })}>Start using</Button></div>
                     </article>;

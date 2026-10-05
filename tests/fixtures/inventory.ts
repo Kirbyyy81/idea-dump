@@ -12,8 +12,8 @@ const created = '2026-10-01T00:00:00Z';
 const shampooSnapshot = { product_name: 'Dove Shampoo', variant_label: '500 ml bottle', unit: 'ml' as const, item_label: 'bottles', size: 500, pack_quantity: 1, sheets_per_item: null };
 export const inventoryFixture: InventoryData = {
     products: [
-        { id: id.shampoo, name: 'Dove Shampoo', brand: 'Dove', category: 'Hair Care', unit: 'ml', item_label: 'bottles', revision: 1, created_at: created },
-        { id: id.tissues, name: 'Tissues', brand: null, category: 'Household', unit: 'count', item_label: 'boxes', revision: 1, created_at: created },
+        { id: id.shampoo, name: 'Dove Shampoo', brand: 'Dove', category: 'Hair Care', subcategory: 'Shampoo', unit: 'ml', item_label: 'bottles', revision: 1, created_at: created },
+        { id: id.tissues, name: 'Tissues', brand: null, category: 'Household', subcategory: null, unit: 'count', item_label: 'boxes', revision: 1, created_at: created },
     ],
     variants: [
         { id: id.large, product_id: id.shampoo, label: '500 ml bottle', size: 500, pack_quantity: 1, sheets_per_item: null },

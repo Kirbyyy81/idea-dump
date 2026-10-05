@@ -36,11 +36,13 @@ try {
     assert.ok(accessFunction, 'real module-access function is present');
     await db.exec(accessFunction);
     await db.exec(await file('supabase/migrations/20261005075806_add_inventory_stock_keeping.sql'));
+    await db.exec(await file('supabase/migrations/20261005092513_add_inventory_subcategory.sql'));
     for (const id of [owner, other, denied]) await db.query('insert into auth.users values($1)', [id]);
     for (const id of [owner, other]) await db.query("insert into public.bridge_user_roles select $1,id from public.dim_roles where role='owner'", [id]);
     await db.exec('set role service_role');
-    const product = { id: productId, revision: 0, name: 'Shampoo', brand: 'Fixture', category: 'Hair Care', unit: 'ml', item_label: 'bottles', variants: [{ id: variantId, label: '500 ml bottle', size: 500, pack_quantity: 1, sheets_per_item: null }] };
+    const product = { id: productId, revision: 0, name: 'Shampoo', brand: 'Fixture', category: 'Hair Care', subcategory: 'Shampoo', unit: 'ml', item_label: 'bottles', variants: [{ id: variantId, label: '500 ml bottle', size: 500, pack_quantity: 1, sheets_per_item: null }] };
     await mutation('save_product', product);
+    assert.equal((await snapshot()).products[0].subcategory, 'Shampoo');
     await mutation('save_product', { ...product, id: tissueId, name: 'Tissues', unit: 'count', item_label: 'boxes', variants: [{ id: tissueVariant, label: 'Five boxes', size: 1, pack_quantity: 5, sheets_per_item: 100 }] });
     const receipt = { kind: 'purchase', purchased_on: '2026-01-01', lines: [
         { variant_id: variantId, product_revision: 1, quantity: 3, price: 18, price_mode: 'unit', in_use_quantity: 0, started_on: null },
@@ -128,6 +130,21 @@ try {
     assert.equal(tables.length, 7); assert.ok(tables.every((table) => table.relrowsecurity));
     const functions = (await db.query("select prosecdef,proconfig from pg_proc where proname in ('inventory_read','inventory_mutate')")).rows;
     assert.ok(functions.every((fn) => !fn.prosecdef && fn.proconfig?.some((config) => config.startsWith('search_path='))));
+    const classification = { ...product, id: randomUUID(), name: 'Classification test', variants: [{ ...product.variants[0], id: randomUUID() }] };
+    await mutation('save_product', classification);
+    const readClassification = async () => (await snapshot()).products.find((item) => item.id === classification.id);
+    assert.equal((await readClassification()).subcategory, 'Shampoo');
+    const { subcategory: omitted, ...legacy } = classification;
+    await mutation('save_product', { ...legacy, revision: 1 });
+    assert.equal((await readClassification()).subcategory, 'Shampoo', 'old payload preserves classification');
+    await mutation('save_product', { ...legacy, revision: 2, category: 'Skin Care' });
+    assert.equal((await readClassification()).subcategory, null, 'changing category clears old classification');
+    await mutation('save_product', { ...classification, revision: 3, subcategory: ' Conditioner ' });
+    assert.equal((await readClassification()).subcategory, 'Conditioner');
+    await mutation('save_product', { ...classification, revision: 4, subcategory: '' });
+    assert.equal((await readClassification()).subcategory, null);
+    await rejects(() => mutation('save_product', { ...classification, revision: 5, subcategory: 'x'.repeat(61) }), '23514');
+    assert.equal((await readClassification()).revision, 5, 'invalid classification rolls back');
     await db.query('delete from auth.users where id=$1', [owner]);
     assert.equal((await db.query('select count(*)::int as n from public.inventory_batches')).rows[0].n, 0, 'owner removal cascades inventory data');
     process.stdout.write('Inventory PostgreSQL lifecycle, snapshots, retry safety, rollback, ownership, module overrides, role grants, and Finance linking passed.\n');

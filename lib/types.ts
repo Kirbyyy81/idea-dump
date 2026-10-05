@@ -1481,6 +1481,7 @@ export interface InventoryProductInput {
     name: string;
     brand: string | null;
     category: string;
+    subcategory: string | null;
     unit: InventoryUnit;
     item_label: string;
     variants: InventoryVariantInput[];

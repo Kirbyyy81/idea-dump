@@ -4,9 +4,11 @@ PRD: [PRD 016](prd/PRD_016.md). Entry point: `/inventory`. The Inventory parent 
 
 ## Workflow
 
-Create a product with size or pack variants, then receive repeat purchases through **Add stock**. The receiving cart supports several products, editable quantities, per-purchased-unit or line-total MYR prices, and one purchase date. **Add to shelf** confirms the complete receipt. Products can also be created directly inside the cart, which preserves its existing lines.
+Create a product with a required category, optional subcategory, and size or pack variants, then receive repeat purchases through **Add stock**. The receiving cart supports several products, editable quantities, per-purchased-unit or line-total MYR prices, and one purchase date. **Add to shelf** confirms the complete receipt. Products can also be created directly inside the cart, which preserves its existing lines.
 
 **Existing stock** allows unknown purchase dates and prices and individual items already in use, with an optional usage start date. Two five-box tissue packs become ten usable boxes. Opening the outer packaging is not a usage event.
+
+Subcategory choices come from products in the selected category. Choose **Add subcategory** to enter a new name, or **None** to leave it blank. Changing category clears the subcategory. The shelf category filter enables a matching subcategory filter; changing the filter category resets that filter. Existing products keep their categories and initially have no subcategory.
 
 **My Shelf** shows unopened quantities and a separate in-use count. Hover over a quantity for a brief breakdown, or activate it by touch or keyboard for product details. Product details include historical batches, prices, usage records, and adjustments. Products remain in the catalogue at zero stock.
 
@@ -79,3 +81,9 @@ The root `npm test` command also runs the Inventory SQL suite, so the existing C
 
 - All 42 Inventory unit/API/page-access tests, the isolated PostgreSQL suite, and 16 desktop/mobile browser cases passed. Coverage includes direct URLs, refresh, browser back/forward, and the existing stock workflows.
 - Verified the hosted-data local preview shows the Inventory group and opens Purchases from the mobile navigation.
+
+### Subcategory rollout, 2026-10-05
+
+Applied [20261005092513_add_inventory_subcategory.sql](../supabase/migrations/20261005092513_add_inventory_subcategory.sql) to the connected Supabase project. It adds nullable product subcategories and updates transactional product saves. Verified the column, owner read, RLS, and revoked browser grants. Older direct mutation payloads preserve a subcategory when category is unchanged, and clear it when category changes. Blank values normalize to null; names are limited to 60 characters.
+
+Subcategory verification: 47 focused Inventory tests, all 681 application tests, isolated PostgreSQL classification and compatibility checks, and desktop/mobile browser coverage passed. Finance OCR typecheck, build, and tests also passed (387 passed, 171 existing skipped). Existing dependency audit and Supabase advisor findings above remain unchanged.

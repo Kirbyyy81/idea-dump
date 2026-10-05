@@ -6,6 +6,13 @@ const request_id = '16000000-0000-4000-8000-000000000099';
 const product = { ...inventoryFixture.products[0], variants: inventoryFixture.variants.slice(0, 2) };
 const line = { variant_id: id.large, product_revision: 1, quantity: 2, price: 18, price_mode: 'unit', in_use_quantity: 0, started_on: null };
 describe('Inventory validation', () => {
+    it.each([undefined, null, '', '   '])('accepts an omitted subcategory (%s)', (subcategory) => {
+        expect(parseInventoryMutation({ request_id, action: 'save_product', payload: { ...product, subcategory } }).payload).toMatchObject({ subcategory: null });
+    });
+    it('trims subcategories and rejects invalid values', () => {
+        expect(parseInventoryMutation({ request_id, action: 'save_product', payload: { ...product, subcategory: ' Shampoo ' } }).payload).toMatchObject({ subcategory: 'Shampoo' });
+        for (const subcategory of [12, {}, 'x'.repeat(61)]) expect(() => parseInventoryMutation({ request_id, action: 'save_product', payload: { ...product, subcategory } })).toThrow('Subcategory');
+    });
     it('accepts size variants and trims catalogue text', () => {
         const parsed = parseInventoryMutation({ request_id, action: 'save_product', payload: { ...product, name: ' Shampoo ' } });
         expect(parsed.payload).toMatchObject({ name: 'Shampoo', variants: expect.any(Array) });
