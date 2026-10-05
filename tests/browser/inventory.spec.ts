@@ -47,3 +47,46 @@ test('edits size variants while retaining historical quantities', async ({ page 
     await expect(page.getByRole('article', { name: 'Dove Shampoo' }).getByText('1,250 ml unopened', { exact: true })).toBeVisible();
     expect(commands[0]).toMatchObject({ action: 'save_product', payload: { revision: 1, variants: [{ size: 450 }, { size: 250 }] } });
 });
+
+
+test('receives a multi-item cart and retries with the same identity', async ({ page }) => {
+    const state = await setup(page);
+    await page.getByRole('button', { name: 'Add stock', exact: true }).first().click();
+    await choose(page, 'Product', 'Tissues');
+    await page.getByRole('button', { name: 'Add to cart', exact: true }).click();
+    let line = page.getByRole('region', { name: 'Cart item 1' });
+    await line.getByLabel('Quantity purchased').fill('2');
+    await line.getByLabel('Price (RM)', { exact: true }).fill('15');
+    await expect(line.getByText(/Adds 10 boxes unopened/)).toBeVisible();
+    await choose(page, 'Product', 'Dove Shampoo');
+    await page.getByRole('button', { name: 'Add to cart', exact: true }).click();
+    line = page.getByRole('region', { name: 'Cart item 2' });
+    await line.getByLabel('Price (RM)', { exact: true }).fill('18');
+    state.failNext();
+    await page.getByRole('button', { name: 'Add to shelf', exact: true }).click();
+    await expect(page.getByRole('alert')).toContainText('Temporary failure');
+    await expect(page.getByRole('region', { name: 'Cart item 1' })).toBeVisible();
+    await page.getByRole('button', { name: 'Add to shelf', exact: true }).click();
+    await expect(page.getByRole('dialog')).not.toBeVisible();
+    expect(state.commands).toHaveLength(2);
+    expect(state.commands[0]).toEqual(state.commands[1]);
+    expect(state.commands[0]).toMatchObject({ action: 'receive', payload: { kind: 'purchase', lines: [{ quantity: 2, price: 15 }, { quantity: 1, price: 18 }] } });
+});
+
+test('creates a product from the receiving cart and adds existing opened stock', async ({ page }) => {
+    const { commands } = await setup(page);
+    await page.getByRole('button', { name: 'Add stock', exact: true }).first().click();
+    await page.getByRole('button', { name: 'New product', exact: true }).click();
+    await page.getByLabel('Product name').fill('Face cleanser');
+    await page.getByLabel('Variant 1 name').fill('150 ml bottle');
+    await page.getByLabel('Size per item (ml)').fill('150');
+    await page.getByRole('button', { name: 'Create product', exact: true }).click();
+    await expect(page.getByRole('dialog', { name: 'Receive stock', exact: true })).toBeVisible();
+    await choose(page, 'Stock source', 'Existing stock');
+    await page.getByRole('button', { name: 'Clear purchase date' }).click();
+    await page.getByRole('button', { name: 'Add to cart', exact: true }).click();
+    await page.getByLabel('Items already in use').fill('1');
+    await page.getByRole('button', { name: 'Add to shelf', exact: true }).click();
+    await expect(page.getByRole('dialog')).not.toBeVisible();
+    expect(commands[1]).toMatchObject({ action: 'receive', payload: { kind: 'existing', purchased_on: null, lines: [{ price: null, in_use_quantity: 1, started_on: null }] } });
+});
