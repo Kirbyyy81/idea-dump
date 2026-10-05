@@ -90,3 +90,29 @@ test('creates a product from the receiving cart and adds existing opened stock',
     await expect(page.getByRole('dialog')).not.toBeVisible();
     expect(commands[1]).toMatchObject({ action: 'receive', payload: { kind: 'existing', purchased_on: null, lines: [{ price: null, in_use_quantity: 1, started_on: null }] } });
 });
+
+test('starts a box rather than a multipack and finishes it through usage history', async ({ page }) => {
+    const { commands } = await setup(page);
+    await page.getByRole('article', { name: 'Tissues' }).getByRole('button', { name: 'Start using' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Start using', exact: true }).click();
+    await expect(page.getByRole('article', { name: 'Tissues' }).getByText('9 boxes unopened')).toBeVisible();
+    await page.getByRole('button', { name: 'Usage history', exact: true }).click();
+    const usage = page.getByText('Tissues · Five boxes', { exact: true }).locator('..').locator('..');
+    await usage.getByRole('button', { name: 'Finished', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Finished', exact: true }).getByRole('button', { name: 'Finished', exact: true }).click();
+    await expect(page.getByRole('dialog')).not.toBeVisible();
+    expect(commands.map((command) => command.action)).toEqual(['start', 'finish']);
+    await page.getByRole('button', { name: 'My Shelf', exact: true }).click();
+    await expect(page.getByRole('article', { name: 'Tissues' }).getByText('0 in use')).toBeVisible();
+});
+
+test('records stock corrections separately from usage', async ({ page }) => {
+    const { commands } = await setup(page);
+    await page.getByRole('button', { name: 'Tissues', exact: true }).click();
+    await page.getByRole('button', { name: 'Adjust stock', exact: true }).click();
+    await choose(page, 'Reason', 'Given away');
+    await page.getByLabel('Change in individual items').fill('-2');
+    await page.getByRole('dialog').getByRole('button', { name: 'Adjust stock', exact: true }).click();
+    await expect(page.getByRole('dialog')).not.toBeVisible();
+    expect(commands[0]).toMatchObject({ action: 'adjust', payload: { batch_id: id.tissueBatch, usage_id: null, quantity: -2, reason: 'given_away' } });
+});
