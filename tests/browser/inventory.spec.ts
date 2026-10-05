@@ -33,8 +33,9 @@ async function setup(page: Page, initial: InventoryData = structuredClone(invent
     await page.goto('/inventory');
     return { commands, failNext: () => { failNext = true; } };
 }
-async function choose(page: Page, label: string, option: string) {
-    await page.getByRole('combobox', { name: label, exact: true }).click();
+async function choose(page: Page, label: string, option: string, inDialog = false) {
+    const scope = inDialog ? page.getByRole('dialog') : page;
+    await scope.getByRole('combobox', { name: label, exact: true }).click();
     await page.getByRole('option', { name: option, exact: true }).click();
 }
 test('shelf totals, breakdown, estimate, and read-only price comparison', async ({ page }, info) => {
@@ -170,14 +171,14 @@ test('subcategories can be added, reused, filtered, and cleared', async ({ page 
     await expect(page.getByRole('combobox', { name: 'Subcategory', exact: true })).toBeDisabled();
     await page.getByRole('button', { name: 'Dove Shampoo', exact: true }).click();
     await page.getByRole('button', { name: 'Edit product', exact: true }).click();
-    await expect(page.getByRole('combobox', { name: 'Subcategory (optional)', exact: true })).toHaveText('Shampoo');
-    await choose(page, 'Subcategory (optional)', 'Add subcategory');
-    const subcategoryInput = page.getByRole('textbox', { name: 'Subcategory (optional)', exact: true });
+    await expect(page.getByRole('dialog').getByRole('combobox', { name: 'Subcategory', exact: true })).toHaveText('Shampoo');
+    await choose(page, 'Subcategory', 'Add subcategory', true);
+    const subcategoryInput = page.getByRole('dialog').getByRole('textbox', { name: 'Subcategory', exact: true });
     await expect(subcategoryInput).toBeFocused();
-    await expect(page.getByRole('combobox', { name: 'Subcategory (optional)', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('dialog').getByRole('combobox', { name: 'Subcategory', exact: true })).toHaveCount(0);
     await subcategoryInput.fill('Conditioner');
     await page.getByRole('button', { name: 'Choose existing subcategory', exact: true }).click();
-    await expect(page.getByRole('combobox', { name: 'Subcategory (optional)', exact: true })).toHaveText('Conditioner');
+    await expect(page.getByRole('dialog').getByRole('combobox', { name: 'Subcategory', exact: true })).toHaveText('Conditioner');
     await page.getByRole('button', { name: 'Save product', exact: true }).click();
     await expect(page.getByRole('dialog')).not.toBeVisible();
     expect(commands[0]).toMatchObject({ action: 'save_product', payload: { category: 'Hair Care', subcategory: 'Conditioner' } });
@@ -189,17 +190,17 @@ test('subcategories can be added, reused, filtered, and cleared', async ({ page 
     await expect(page.getByRole('combobox', { name: 'Subcategory', exact: true })).toHaveText('All subcategories');
     await expect(page.getByRole('article', { name: 'Tissues' })).toBeVisible();
     await page.getByRole('button', { name: 'Add product', exact: true }).click();
-    await choose(page, 'Subcategory (optional)', 'Conditioner');
+    await choose(page, 'Subcategory', 'Conditioner', true);
     await page.getByRole('dialog').getByRole('textbox', { name: /^Category/ }).fill('Skin Care');
-    await expect(page.getByRole('combobox', { name: 'Subcategory (optional)', exact: true })).toHaveText('None');
-    await page.getByRole('combobox', { name: 'Subcategory (optional)', exact: true }).click();
+    await expect(page.getByRole('dialog').getByRole('combobox', { name: 'Subcategory', exact: true })).toHaveText('None');
+    await page.getByRole('dialog').getByRole('combobox', { name: 'Subcategory', exact: true }).click();
     await expect(page.getByRole('option', { name: 'Conditioner', exact: true })).toHaveCount(0);
     await page.keyboard.press('Escape');
     await page.keyboard.press('Escape');
     await choose(page, 'Category', 'Hair Care');
     await page.getByRole('button', { name: 'Dove Shampoo', exact: true }).click();
     await page.getByRole('button', { name: 'Edit product', exact: true }).click();
-    await choose(page, 'Subcategory (optional)', 'None');
+    await choose(page, 'Subcategory', 'None', true);
     await page.getByRole('button', { name: 'Save product', exact: true }).click();
     await expect(page.getByRole('dialog')).not.toBeVisible();
     expect(commands[1]).toMatchObject({ action: 'save_product', payload: { subcategory: null } });

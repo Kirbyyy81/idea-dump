@@ -19,6 +19,7 @@
 
 - Use the design tokens and visual rules in `document/DESIGN_SYSTEM.md`.
 - Do not expose raw browser form controls in user-facing UI. Wrap them in an existing or reusable styled component.
+- Omit "(optional)" from form labels. Use the shared required-field asterisk for required inputs, and leave optional labels unmarked.
 - Keep copy direct and necessary. Do not add decorative descriptions or generic `Description` labels.
 - Use `next/image` for application images when image optimization applies.
 - Keep components focused. Extract stateful workflows, dialogs, and feature-specific sections when a shared component starts owning unrelated responsibilities.

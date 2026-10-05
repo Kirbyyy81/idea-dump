@@ -28,15 +28,15 @@ export function ProductForm({ data, productId, save, onSaved, onCancel }: {
         <fieldset disabled={busy} className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
                 <Input label="Product name" value={product.name} maxLength={120} onValueChange={(name) => setProduct({ ...product, name })} required />
-                <Input label="Brand (optional)" value={product.brand ?? ''} maxLength={120} onValueChange={(brand) => setProduct({ ...product, brand: brand || null })} />
+                <Input label="Brand" value={product.brand ?? ''} maxLength={120} onValueChange={(brand) => setProduct({ ...product, brand: brand || null })} />
                 <Input label="Category" value={product.category} maxLength={60} onValueChange={(category) => { setProduct({ ...product, category, subcategory: null }); setAddingSubcategory(false); }} required />
                 {addingSubcategory ? <div className="relative">
-                    <Input id={subcategoryId} label="Subcategory (optional)" autoFocus value={product.subcategory ?? ''} maxLength={60} className="pr-12"
+                    <Input id={subcategoryId} label="Subcategory" autoFocus value={product.subcategory ?? ''} maxLength={60} className="pr-12"
                         onValueChange={(subcategory) => setProduct({ ...product, subcategory: subcategory || null })} />
                     <button type="button" aria-label="Choose existing subcategory" title="Choose existing subcategory"
                         className="absolute bottom-0 right-0 grid size-10 place-items-center rounded-md text-text-secondary hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-border-strong"
                         onClick={() => { setProduct({ ...product, subcategory: product.subcategory?.trim() || null }); setAddingSubcategory(false); requestAnimationFrame(() => document.getElementById(subcategoryId)?.focus()); }}><ChevronDown size={16} aria-hidden="true" /></button>
-                </div> : <Select id={subcategoryId} label="Subcategory (optional)" value={product.subcategory ? `saved:${product.subcategory}` : ''}
+                </div> : <Select id={subcategoryId} label="Subcategory" value={product.subcategory ? `saved:${product.subcategory}` : ''}
                     options={[{ value: '', label: 'None' }, ...subcategories.map((value) => ({ value: `saved:${value}`, label: value })), { value: '__new__', label: 'Add subcategory' }]}
                     onChange={(value) => { setAddingSubcategory(value === '__new__'); setProduct({ ...product, subcategory: value === '__new__' || !value ? null : value.slice(6) }); }} />}
                 <Select label="Tracking unit" value={product.unit} disabled={unitFixed} options={[{ value: 'ml', label: 'Volume (ml)' }, { value: 'g', label: 'Weight (g)' }, { value: 'count', label: 'Count (individual items)' }]}
@@ -50,7 +50,7 @@ export function ProductForm({ data, productId, save, onSaved, onCancel }: {
                 <div className="grid gap-3 sm:grid-cols-2">
                     {product.unit !== 'count' && <Input label={`Size per item (${product.unit})`} type="number" min="0.001" step="0.001" value={variant.size || ''} onValueChange={(size) => editVariant(variant.id, { size: Number(size) })} />}
                     <Input label="Items per purchased pack" type="number" min="1" step="1" value={variant.pack_quantity || ''} onValueChange={(value) => editVariant(variant.id, { pack_quantity: Number(value) })} />
-                    {product.unit === 'count' && <Input label="Sheets per item (optional)" type="number" min="1" step="1" value={variant.sheets_per_item ?? ''} onValueChange={(value) => editVariant(variant.id, { sheets_per_item: value ? Number(value) : null })} />}
+                    {product.unit === 'count' && <Input label="Sheets per item" type="number" min="1" step="1" value={variant.sheets_per_item ?? ''} onValueChange={(value) => editVariant(variant.id, { sheets_per_item: value ? Number(value) : null })} />}
                 </div>
                 {product.variants.length > 1 && !data.variants.some((existing) => existing.id === variant.id) && <Button type="button" variant="ghost" onClick={() => setProduct({ ...product, variants: product.variants.filter((item) => item.id !== variant.id) })}>Remove variant</Button>}
             </section>)}
