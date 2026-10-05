@@ -172,7 +172,12 @@ test('subcategories can be added, reused, filtered, and cleared', async ({ page 
     await page.getByRole('button', { name: 'Edit product', exact: true }).click();
     await expect(page.getByRole('combobox', { name: 'Subcategory (optional)', exact: true })).toHaveText('Shampoo');
     await choose(page, 'Subcategory (optional)', 'Add subcategory');
-    await page.getByLabel('New subcategory', { exact: true }).fill('Conditioner');
+    const subcategoryInput = page.getByRole('textbox', { name: 'Subcategory (optional)', exact: true });
+    await expect(subcategoryInput).toBeFocused();
+    await expect(page.getByRole('combobox', { name: 'Subcategory (optional)', exact: true })).toHaveCount(0);
+    await subcategoryInput.fill('Conditioner');
+    await page.getByRole('button', { name: 'Choose existing subcategory', exact: true }).click();
+    await expect(page.getByRole('combobox', { name: 'Subcategory (optional)', exact: true })).toHaveText('Conditioner');
     await page.getByRole('button', { name: 'Save product', exact: true }).click();
     await expect(page.getByRole('dialog')).not.toBeVisible();
     expect(commands[0]).toMatchObject({ action: 'save_product', payload: { category: 'Hair Care', subcategory: 'Conditioner' } });

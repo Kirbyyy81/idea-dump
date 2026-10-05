@@ -1,5 +1,6 @@
 'use client';
-import { useState } from 'react';
+import { useId, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
@@ -15,9 +16,10 @@ export function ProductForm({ data, productId, save, onSaved, onCancel }: {
     const [product, setProduct] = useState<InventoryProductInput>(() => original
         ? { ...original, variants: data.variants.filter((variant) => variant.product_id === original.id) }
         : { id: crypto.randomUUID(), revision: 0, name: '', brand: null, category: 'Hair Care', subcategory: null, unit: 'ml', item_label: 'bottles', variants: [newVariant()] });
+    const subcategoryId = useId();
     const [addingSubcategory, setAddingSubcategory] = useState(false);
-    const subcategories = [...new Set(data.products.filter((item) => item.category.trim().toLowerCase() === product.category.trim().toLowerCase())
-        .map((item) => item.subcategory).filter((value): value is string => Boolean(value)))].sort();
+    const subcategories = [...new Set([...data.products.filter((item) => item.category.trim().toLowerCase() === product.category.trim().toLowerCase())
+        .map((item) => item.subcategory), product.subcategory?.trim()].filter((value): value is string => Boolean(value)))].sort();
     const { busy, error, run } = useInventoryAction(save);
     const unitFixed = data.batches.some((batch) => batch.product_id === product.id);
     const editVariant = (id: string, change: Partial<InventoryVariantInput>) => setProduct((current) => ({ ...current, variants: current.variants.map((variant) => variant.id === id ? { ...variant, ...change } : variant) }));
@@ -28,10 +30,15 @@ export function ProductForm({ data, productId, save, onSaved, onCancel }: {
                 <Input label="Product name" value={product.name} maxLength={120} onValueChange={(name) => setProduct({ ...product, name })} required />
                 <Input label="Brand (optional)" value={product.brand ?? ''} maxLength={120} onValueChange={(brand) => setProduct({ ...product, brand: brand || null })} />
                 <Input label="Category" value={product.category} maxLength={60} onValueChange={(category) => { setProduct({ ...product, category, subcategory: null }); setAddingSubcategory(false); }} required />
-                <Select label="Subcategory (optional)" value={addingSubcategory ? '__new__' : product.subcategory ? `saved:${product.subcategory}` : ''}
+                {addingSubcategory ? <div className="relative">
+                    <Input id={subcategoryId} label="Subcategory (optional)" autoFocus value={product.subcategory ?? ''} maxLength={60} className="pr-12"
+                        onValueChange={(subcategory) => setProduct({ ...product, subcategory: subcategory || null })} />
+                    <button type="button" aria-label="Choose existing subcategory" title="Choose existing subcategory"
+                        className="absolute bottom-0 right-0 grid size-10 place-items-center rounded-md text-text-secondary hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-border-strong"
+                        onClick={() => { setProduct({ ...product, subcategory: product.subcategory?.trim() || null }); setAddingSubcategory(false); requestAnimationFrame(() => document.getElementById(subcategoryId)?.focus()); }}><ChevronDown size={16} aria-hidden="true" /></button>
+                </div> : <Select id={subcategoryId} label="Subcategory (optional)" value={product.subcategory ? `saved:${product.subcategory}` : ''}
                     options={[{ value: '', label: 'None' }, ...subcategories.map((value) => ({ value: `saved:${value}`, label: value })), { value: '__new__', label: 'Add subcategory' }]}
-                    onChange={(value) => { setAddingSubcategory(value === '__new__'); setProduct({ ...product, subcategory: value === '__new__' || !value ? null : value.slice(6) }); }} />
-                {addingSubcategory && <Input label="New subcategory" value={product.subcategory ?? ''} maxLength={60} onValueChange={(subcategory) => setProduct({ ...product, subcategory: subcategory || null })} />}
+                    onChange={(value) => { setAddingSubcategory(value === '__new__'); setProduct({ ...product, subcategory: value === '__new__' || !value ? null : value.slice(6) }); }} />}
                 <Select label="Tracking unit" value={product.unit} disabled={unitFixed} options={[{ value: 'ml', label: 'Volume (ml)' }, { value: 'g', label: 'Weight (g)' }, { value: 'count', label: 'Count (individual items)' }]}
                     onChange={(value) => setProduct({ ...product, unit: value as InventoryUnit, item_label: value === 'count' ? 'boxes' : value === 'g' ? 'jars' : 'bottles',
                         variants: product.variants.map((variant) => ({ ...variant, size: value === 'count' ? 1 : variant.size, sheets_per_item: null })) })} />
