@@ -32,11 +32,11 @@ The link does not create an expense or overwrite Inventory prices. Different tot
 
 ## Data and access
 
-`inventory_products` and `inventory_variants` store the reusable catalogue. `inventory_purchases` groups confirmed carts. `inventory_batches` holds each purchase line, its immutable size and price snapshot, and its unopened count. `inventory_usages` tracks individual consumption; `inventory_adjustments` records corrections and removals. `inventory_requests` preserves mutation identities for safe retries.
+`inventory_products` and `inventory_variants` store the reusable catalogue. `inventory_purchases` groups confirmed carts. `inventory_batches` holds each purchase line, its immutable product/size snapshot and editable receipt cost, and its unopened count. `inventory_usages` tracks individual consumption; `inventory_adjustments` records corrections and removals. `inventory_requests` preserves mutation identities for safe retries.
 
 All tables enable RLS and revoke browser-role access. The server uses the established admin client only after shared module authorization. `inventory_read` and `inventory_mutate` are security-invoker RPCs with an empty search path, executable only by the trusted service role. They recheck module access and scope all records to the verified user. Finance links also recheck Finance access and expense ownership.
 
-Mutations serialize by owner, with one stable request UUID per form session, retained after an uncertain response even if the form is edited. Repeating the same committed payload returns its prior result. Reusing a committed key for a different payload fails instead of adding stock again. A bad receipt line rolls back the entire receipt. Product and usage revisions reject stale edits. Historical batch snapshots are independent of catalogue edits; tracking units cannot change once a product has purchase history.
+Mutations serialize by owner, with one stable request UUID per form session, retained after an uncertain response even if the form is edited. Repeating the same committed payload returns its prior result. Reusing a committed key for a different payload fails instead of adding stock again. A bad receipt line rolls back the entire receipt. Product, purchase and usage revisions reject stale edits. Historical batch snapshots are independent of catalogue edits; tracking units cannot change once a product has purchase history.
 
 The primary API is session-only `GET /api/inventory` and `POST /api/inventory`. Mutation bodies contain `request_id`, `action`, and `payload`. Expense discovery is `GET /api/inventory/expenses?q=...&page=...`. No user-supplied identity controls ownership. These endpoints are not API-key endpoints.
 
@@ -87,3 +87,15 @@ The root `npm test` command also runs the Inventory SQL suite, so the existing C
 Applied [20261005092513_add_inventory_subcategory.sql](../supabase/migrations/20261005092513_add_inventory_subcategory.sql) to the connected Supabase project. It adds nullable product subcategories and updates transactional product saves. Verified the column, owner read, RLS, and revoked browser grants. Older direct mutation payloads preserve a subcategory when category is unchanged, and clear it when category changes. Blank values normalize to null; names are limited to 60 characters.
 
 Subcategory verification: 47 focused Inventory tests, all 681 application tests, isolated PostgreSQL classification and compatibility checks, and desktop/mobile browser coverage passed. Finance OCR typecheck, build, and tests also passed (387 passed, 171 existing skipped). Existing dependency audit and Supabase advisor findings above remain unchanged.
+
+### Purchase corrections and notifications, 2026-10-05
+
+Choose **Edit purchase** from Purchases or a product's purchase history. The editor includes every line in that receipt and allows corrections to stock source, purchase date, purchased quantities, and MYR line totals. Existing stock can retain unknown dates and prices. Historical products, sizes and pack contents remain fixed; receive additional shopping through Add stock.
+
+Quantity changes apply only the difference to unopened stock. Usage and adjustment records remain intact, and corrections cannot make stock negative or put a purchase after recorded usage or adjustments. Purchase revisions reject stale editors, and retries keep their original request identity. Editing does not change the Finance link or its expense.
+
+Successful Inventory actions use the shared Finance Toast, including dismissal and automatic expiry, instead of an inline confirmation row.
+
+Applied [20261005100717_edit_inventory_purchases.sql](../supabase/migrations/20261005100717_edit_inventory_purchases.sql) to the connected Supabase project. Verified the purchase revision default, edit action, owner read and unchanged server-only access boundary. Apply this migration before deploying the purchase editor to other environments.
+
+Verification: 57 focused Inventory tests, 691 application tests, isolated PostgreSQL checks and all 22 desktop/mobile browser cases passed. Root lint, TypeScript and production build passed. Finance OCR typecheck, build and tests passed (387 passed, 171 existing skipped). Dependency audit findings and Supabase advisor findings remain as documented above. Verified the rebuilt local preview opens the existing purchase editor with its original values; no user purchase was changed during verification.

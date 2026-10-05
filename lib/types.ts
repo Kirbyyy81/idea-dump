@@ -1499,6 +1499,7 @@ export interface InventorySnapshot {
 }
 export interface InventoryPurchase {
     id: string;
+    revision: number;
     kind: 'purchase' | 'existing';
     purchased_on: string | null;
     currency: 'MYR';
@@ -1560,6 +1561,7 @@ export interface InventoryReceiptInput {
 export type InventoryMutation = { request_id: string } & (
     | { action: 'save_product'; payload: InventoryProductInput }
     | { action: 'receive'; payload: InventoryReceiptInput }
+    | { action: 'edit_purchase'; payload: { purchase_id: string; revision: number; kind: InventoryPurchase['kind']; purchased_on: string | null; lines: { batch_id: string; quantity: number; total_paid: number | null }[] } }
     | { action: 'start'; payload: { batch_id: string; started_on: string } }
     | { action: 'finish' | 'edit_usage'; payload: { usage_id: string; revision: number; started_on: string | null; finished_on: string | null } }
     | { action: 'adjust'; payload: { batch_id: string; usage_id: string | null; quantity: number; reason: InventoryAdjustment['reason']; adjusted_on: string } }

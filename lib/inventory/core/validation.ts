@@ -70,6 +70,18 @@ export function parseInventoryMutation(input: unknown): InventoryMutation {
             });
             return { request_id, action: 'receive', payload: { kind, purchased_on, lines } };
         }
+        case 'edit_purchase': {
+            const kind = choice(p.kind, ['purchase', 'existing'], 'stock source');
+            const purchased_on = date(p.purchased_on, 'Purchase date', kind === 'existing');
+            if (!Array.isArray(p.lines) || !p.lines.length || p.lines.length > 50) throw new InventoryError('Include all purchase items.');
+            const lines = p.lines.map((value) => {
+                const line = object(value);
+                return { batch_id: uuid(line.batch_id), quantity: number(line.quantity, 'quantity', 1, 1000),
+                    total_paid: line.total_paid === null && kind === 'existing' ? null : number(line.total_paid, 'line total', 0, 1000000, 2) };
+            });
+            if (new Set(lines.map((line) => line.batch_id)).size !== lines.length) throw new InventoryError('Each purchase item must appear once.');
+            return { request_id, action: 'edit_purchase', payload: { purchase_id: uuid(p.purchase_id), revision: number(p.revision, 'purchase revision', 1, 2147483646), kind, purchased_on, lines } };
+        }
         case 'start':
             return { request_id, action: 'start', payload: { batch_id: uuid(p.batch_id), started_on: date(p.started_on, 'Start date')! } };
         case 'finish': case 'edit_usage': {

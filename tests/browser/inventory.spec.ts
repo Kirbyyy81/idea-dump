@@ -24,6 +24,14 @@ async function setup(page: Page, initial: InventoryData = structuredClone(invent
         } else if (command.action === 'finish' || command.action === 'edit_usage') {
             const usage = data.usages.find((item) => item.id === command.payload.usage_id)!;
             Object.assign(usage, command.payload, { status: command.action === 'finish' ? 'finished' : usage.status, revision: usage.revision + 1 });
+        } else if (command.action === 'edit_purchase') {
+            const purchase = data.purchases.find((item) => item.id === command.payload.purchase_id)!;
+            Object.assign(purchase, { kind: command.payload.kind, purchased_on: command.payload.purchased_on, revision: purchase.revision + 1 });
+            for (const line of command.payload.lines) {
+                const batch = data.batches.find((item) => item.id === line.batch_id)!;
+                const units = line.quantity * batch.snapshot.pack_quantity;
+                Object.assign(batch, { purchased_quantity: line.quantity, original_units: units, unopened_units: batch.unopened_units + units - batch.original_units, total_paid: line.total_paid });
+            }
         } else if (command.action === 'link_finance') {
             data.purchases.find((purchase) => purchase.id === command.payload.purchase_id)!.finance_transaction_id = command.payload.finance_transaction_id;
         }
@@ -208,4 +216,50 @@ test('subcategories can be added, reused, filtered, and cleared', async ({ page 
     await page.getByRole('button', { name: 'Save product', exact: true }).click();
     await expect(page.getByRole('dialog')).not.toBeVisible();
     expect(commands[1]).toMatchObject({ action: 'save_product', payload: { subcategory: null } });
+});
+
+test('edits a complete purchase from product history and preserves usage and Finance links', async ({ page }) => {
+    const fixture = structuredClone(inventoryFixture);
+    fixture.purchases[0].finance_transaction_id = id.purchase;
+    const { commands, failNext } = await setup(page, fixture);
+    await page.getByRole('button', { name: 'Dove Shampoo', exact: true }).click();
+    await page.getByRole('button', { name: 'Edit purchase', exact: true }).first().click();
+    const dialog = page.getByRole('dialog', { name: 'Edit purchase', exact: true });
+    await expect(dialog.getByRole('region')).toHaveCount(3);
+    const line = dialog.getByRole('region', { name: 'Purchase item 1', exact: true });
+    await line.getByLabel('Quantity purchased').fill('4');
+    await line.getByLabel('Line total (RM)').fill('68');
+    await expect(line.getByText(/1,500 ml unopened after saving/)).toBeVisible();
+    failNext();
+    await dialog.getByRole('button', { name: 'Save purchase', exact: true }).click();
+    await expect(dialog.getByRole('alert')).toBeVisible();
+    await expect(line.getByLabel('Line total (RM)')).toHaveValue('68');
+    await dialog.getByRole('button', { name: 'Save purchase', exact: true }).click();
+    await expect(dialog).not.toBeVisible();
+    expect(commands[0]).toEqual(commands[1]);
+    expect(commands[1]).toMatchObject({ action: 'edit_purchase', payload: { purchase_id: id.purchase, revision: 1, lines: [{ batch_id: id.largeBatch, quantity: 4, total_paid: 68 }, { batch_id: id.smallBatch }, { batch_id: id.tissueBatch }] } });
+    await expect(page.getByRole('article', { name: 'Dove Shampoo' }).getByText('1,750 ml unopened', { exact: true })).toBeVisible();
+    await expect(page.getByRole('article', { name: 'Dove Shampoo' }).getByText('1 in use', { exact: true })).toBeVisible();
+    await page.getByRole('link', { name: 'Purchases', exact: true }).click();
+    await expect(page.getByText('Linked to a Finance expense', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Edit purchase', exact: true }).first().click();
+    await expect(page.getByRole('region', { name: 'Purchase item 1', exact: true }).getByLabel('Line total (RM)')).toHaveValue('68');
+    await page.keyboard.press('Escape');
+    expect(commands).toHaveLength(2);
+});
+
+test('edits existing stock with unknown price and date', async ({ page }) => {
+    const fixture = structuredClone(inventoryFixture);
+    fixture.purchases[0].kind = 'existing'; fixture.purchases[0].purchased_on = null;
+    fixture.batches[0].total_paid = null;
+    const { commands } = await setup(page, fixture);
+    await page.getByRole('link', { name: 'Purchases', exact: true }).click();
+    await page.getByRole('button', { name: 'Edit purchase', exact: true }).first().click();
+    const line = page.getByRole('region', { name: 'Purchase item 1', exact: true });
+    await expect(line.getByLabel('Line total (RM)')).toHaveValue('');
+    await line.getByLabel('Line total (RM)').fill('42');
+    await page.getByRole('button', { name: 'Save purchase', exact: true }).click();
+    await expect(page.getByRole('dialog')).not.toBeVisible();
+    expect(commands[0]).toMatchObject({ action: 'edit_purchase', payload: { kind: 'existing', purchased_on: null, lines: [{ total_paid: 42 }, { total_paid: 10 }, { total_paid: 30 }] } });
+    await expect(page.getByRole('status')).toHaveText('Changes saved.');
 });

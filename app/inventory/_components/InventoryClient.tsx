@@ -13,6 +13,7 @@ import { productStock, quantityText } from '@/lib/inventory/core/values';
 import { ProductForm } from './ProductForm';
 import { ReceiveCart } from './ReceiveCart';
 import { StockAction, type StockActionChoice } from './StockAction';
+import { EditPurchase } from './EditPurchase';
 import { FinanceLink } from './FinanceLink';
 import { PriceCheck } from './PriceCheck';
 import { StockSummary } from './StockSummary';
@@ -20,7 +21,7 @@ import { PurchaseHistory, UsageHistory } from './InventoryHistory';
 import { InventoryErrorNotice, panelClass } from './fields';
 
 type Dialog = { type: 'product'; id?: string } | { type: 'cart'; productId?: string } | { type: 'detail'; id: string }
-    | { type: 'stock'; choice: StockActionChoice } | { type: 'finance'; purchase: InventoryPurchase };
+    | { type: 'stock'; choice: StockActionChoice } | { type: 'finance' | 'edit_purchase'; purchase: InventoryPurchase };
 export function InventoryClient({ initialData, canLinkFinance, view = 'shelf' }: { initialData: InventoryData; canLinkFinance: boolean; view?: 'shelf' | 'purchases' | 'usage' }) {
     const [data, setData] = useState(initialData);
     const [search, setSearch] = useState(''); const [category, setCategory] = useState(''); const [subcategory, setSubcategory] = useState('');
@@ -60,12 +61,13 @@ export function InventoryClient({ initialData, canLinkFinance, view = 'shelf' }:
                     </article>;
                 })}</div>
             </>}
-            {view === 'purchases' && <PurchaseHistory data={data} canLinkFinance={canLinkFinance} onLink={link} />}
+            {view === 'purchases' && <PurchaseHistory data={data} canLinkFinance={canLinkFinance} onLink={link} onEdit={(purchase) => setDialog({ type: 'edit_purchase', purchase })} />}
             {view === 'usage' && <UsageHistory data={data} onAction={action} />}
         </div>
         {dialog?.type === 'product' && <FormDialog title={dialog.id ? 'Edit product' : 'Add product'} onClose={close}><ProductForm key={dialog.id ?? 'new'} productId={dialog.id} data={data} save={save} onSaved={close} /></FormDialog>}
         {dialog?.type === 'cart' && <ReceiveCart initialProductId={dialog.productId} data={data} save={save} onClose={close} />}
         {dialog?.type === 'stock' && <StockAction choice={dialog.choice} data={data} save={save} onClose={close} />}
+        {dialog?.type === 'edit_purchase' && <EditPurchase purchase={dialog.purchase} data={data} save={save} onClose={close} />}
         {dialog?.type === 'finance' && <FinanceLink purchase={dialog.purchase} save={save} onClose={close} />}
         {detail && <FormDialog title={detail.name} onClose={close}><div className="space-y-6">
             <div className="flex flex-wrap gap-2"><Button variant="secondary" onClick={() => setDialog({ type: 'product', id: detail.id })}>Edit product</Button><Button onClick={() => setDialog({ type: 'cart', productId: detail.id })}>Add stock</Button><Button variant="secondary" disabled={!data.batches.some((batch) => batch.product_id === detail.id)} onClick={() => action({ action: 'adjust', productId: detail.id })}>Adjust stock</Button></div>
@@ -74,7 +76,7 @@ export function InventoryClient({ initialData, canLinkFinance, view = 'shelf' }:
             <section className="space-y-2"><h3 className="font-bold">Usage estimate</h3><p className="text-sm">{productStock(data, detail.id).estimate.days === null ? 'No usage estimate yet' : `Approximately ${productStock(data, detail.id).estimate.days} days of unopened stock`}</p>
                 {productStock(data, detail.id).estimate.basis.map((basis) => <p key={basis} className="text-xs text-text-secondary">{basis}</p>)}<p className="text-xs text-text-secondary">Uses all comparable completed usage. Overlapping days count once; gaps between recorded usage periods are excluded. In-use quantities are excluded.</p></section>
             <PriceCheck data={data} product={detail} />
-            <section className="space-y-3"><h3 className="font-bold">Purchase history</h3><PurchaseHistory data={data} productId={detail.id} canLinkFinance={canLinkFinance} onLink={link} /></section>
+            <section className="space-y-3"><h3 className="font-bold">Purchase history</h3><PurchaseHistory data={data} productId={detail.id} canLinkFinance={canLinkFinance} onLink={link} onEdit={(purchase) => setDialog({ type: 'edit_purchase', purchase })} /></section>
             <section className="space-y-3"><h3 className="font-bold">Usage history</h3><UsageHistory data={data} productId={detail.id} onAction={action} /></section>
             <section className="space-y-2"><h3 className="font-bold">Stock adjustments</h3>{data.adjustments.filter((adjustment) => data.batches.some((batch) => batch.id === adjustment.batch_id && batch.product_id === detail.id)).map((adjustment) => <p key={adjustment.id} className="text-sm">{adjustment.adjusted_on} · {data.batches.find((batch) => batch.id === adjustment.batch_id)?.snapshot.variant_label} · {adjustment.quantity > 0 ? '+' : ''}{adjustment.quantity} {detail.item_label} · {adjustment.reason.replace('_', ' ')}{adjustment.usage_id ? ' (in use)' : ''}</p>)}
                 {!data.adjustments.some((adjustment) => data.batches.some((batch) => batch.id === adjustment.batch_id && batch.product_id === detail.id)) && <p className="text-sm text-text-secondary">No adjustments recorded.</p>}</section>

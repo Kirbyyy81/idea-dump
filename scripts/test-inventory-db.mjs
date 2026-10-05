@@ -37,6 +37,7 @@ try {
     await db.exec(accessFunction);
     await db.exec(await file('supabase/migrations/20261005075806_add_inventory_stock_keeping.sql'));
     await db.exec(await file('supabase/migrations/20261005092513_add_inventory_subcategory.sql'));
+    await db.exec(await file('supabase/migrations/20261005100717_edit_inventory_purchases.sql'));
     for (const id of [owner, other, denied]) await db.query('insert into auth.users values($1)', [id]);
     for (const id of [owner, other]) await db.query("insert into public.bridge_user_roles select $1,id from public.dim_roles where role='owner'", [id]);
     await db.exec('set role service_role');
@@ -145,6 +146,40 @@ try {
     assert.equal((await readClassification()).subcategory, null);
     await rejects(() => mutation('save_product', { ...classification, revision: 5, subcategory: 'x'.repeat(61) }), '23514');
     assert.equal((await readClassification()).revision, 5, 'invalid classification rolls back');
+    data = await snapshot();
+    const beforeEdit = structuredClone(data);
+    const editLines = data.batches.filter((item) => item.purchase_id === saved.id).map((item) => ({ batch_id: item.id, quantity: item.purchased_quantity, total_paid: item.total_paid }));
+    const edit = { purchase_id: saved.id, revision: 1, kind: 'purchase', purchased_on: '2026-01-01', lines: editLines.map((line) => ({ ...line, quantity: line.quantity + 1, total_paid: 60 })) };
+    const editRequest = randomUUID();
+    await mutation('edit_purchase', edit, editRequest);
+    await mutation('edit_purchase', edit, editRequest);
+    data = await snapshot();
+    assert.equal(data.purchases.find((item) => item.id === saved.id).revision, 2);
+    assert.deepEqual(data.usages, beforeEdit.usages, 'receipt edits preserve usage');
+    assert.deepEqual(data.adjustments, beforeEdit.adjustments, 'receipt edits preserve adjustment history');
+    for (const original of beforeEdit.batches.filter((item) => item.purchase_id === saved.id)) {
+        const edited = data.batches.find((item) => item.id === original.id);
+        assert.deepEqual(edited.snapshot, original.snapshot);
+        assert.equal(edited.unopened_units, original.unopened_units + original.snapshot.pack_quantity);
+        assert.equal(edited.original_units, original.original_units + original.snapshot.pack_quantity);
+        assert.equal(edited.total_paid, 60);
+    }
+    await rejects(() => mutation('edit_purchase', edit), '40001');
+    await rejects(() => mutation('edit_purchase', { ...edit, purchased_on: null }, editRequest), '40001');
+    await rejects(() => mutation('edit_purchase', edit, randomUUID(), other), 'P0002');
+    const currentEdit = { ...edit, revision: 2 };
+    await rejects(() => mutation('edit_purchase', { ...currentEdit, purchased_on: '2026-04-01' }), '22023');
+    await rejects(() => mutation('edit_purchase', { ...currentEdit, lines: currentEdit.lines.slice(1) }), '22023');
+    await rejects(() => mutation('edit_purchase', { ...currentEdit, lines: [currentEdit.lines[0], currentEdit.lines[0]] }), '22023');
+    await rejects(() => mutation('edit_purchase', { ...currentEdit, lines: [currentEdit.lines[0], { ...currentEdit.lines[1], batch_id: initialBatch.id }] }), 'P0002');
+    await rejects(() => mutation('edit_purchase', { ...currentEdit, lines: currentEdit.lines.map((line) => ({ ...line, quantity: 1 })) }), '22023');
+    assert.deepEqual(await snapshot(), data, 'failed edits roll back every receipt line and revision');
+    await mutation('edit_purchase', { ...currentEdit, lines: editLines });
+    assert.equal((await snapshot()).batches.find((item) => item.id === batch.id).unopened_units, beforeEdit.batches.find((item) => item.id === batch.id).unopened_units, 'decrease applies only receipt difference');
+    await mutation('edit_purchase', { purchase_id: initial.id, revision: 1, kind: 'existing', purchased_on: null, lines: [{ batch_id: initialBatch.id, quantity: 2, total_paid: null }] });
+    assert.equal((await snapshot()).batches.find((item) => item.id === initialBatch.id).unopened_units, 3);
+    await mutation('edit_purchase', { purchase_id: initial.id, revision: 2, kind: 'purchase', purchased_on: '2026-01-01', lines: [{ batch_id: initialBatch.id, quantity: 2, total_paid: 25 }] });
+    assert.equal((await snapshot()).purchases.find((item) => item.id === initial.id).kind, 'purchase');
     await db.query('delete from auth.users where id=$1', [owner]);
     assert.equal((await db.query('select count(*)::int as n from public.inventory_batches')).rows[0].n, 0, 'owner removal cascades inventory data');
     process.stdout.write('Inventory PostgreSQL lifecycle, snapshots, retry safety, rollback, ownership, module overrides, role grants, and Finance linking passed.\n');

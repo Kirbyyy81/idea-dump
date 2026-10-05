@@ -6,6 +6,16 @@ const request_id = '16000000-0000-4000-8000-000000000099';
 const product = { ...inventoryFixture.products[0], variants: inventoryFixture.variants.slice(0, 2) };
 const line = { variant_id: id.large, product_revision: 1, quantity: 2, price: 18, price_mode: 'unit', in_use_quantity: 0, started_on: null };
 describe('Inventory validation', () => {
+    const purchaseEdit = { purchase_id: id.purchase, revision: 1, kind: 'purchase', purchased_on: '2026-01-01', lines: [{ batch_id: id.largeBatch, quantity: 2, total_paid: 36 }] };
+    it('validates purchase corrections and supports unknown existing-stock prices', () => {
+        expect(parseInventoryMutation({ request_id, action: 'edit_purchase', payload: purchaseEdit }).payload).toEqual(purchaseEdit);
+        expect(parseInventoryMutation({ request_id, action: 'edit_purchase', payload: { ...purchaseEdit, kind: 'existing', purchased_on: null, lines: [{ ...purchaseEdit.lines[0], total_paid: null }] } }).action).toBe('edit_purchase');
+    });
+    it.each([{ revision: 0 }, { purchased_on: null }, { lines: [] }, { lines: [purchaseEdit.lines[0], purchaseEdit.lines[0]] },
+        ...[{ quantity: 0 }, { quantity: 1.5 }, { total_paid: null }, { total_paid: -1 }, { total_paid: 1.001 }].map((change) => ({ lines: [{ ...purchaseEdit.lines[0], ...change }] }))
+    ])('rejects invalid purchase corrections %o', (change) => {
+        expect(() => parseInventoryMutation({ request_id, action: 'edit_purchase', payload: { ...purchaseEdit, ...change } })).toThrow();
+    });
     it.each([undefined, null, '', '   '])('accepts an omitted subcategory (%s)', (subcategory) => {
         expect(parseInventoryMutation({ request_id, action: 'save_product', payload: { ...product, subcategory } }).payload).toMatchObject({ subcategory: null });
     });

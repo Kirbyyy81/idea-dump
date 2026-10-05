@@ -21,8 +21,8 @@ export const inventoryFixture: InventoryData = {
         { id: id.tissuePack, product_id: id.tissues, label: 'Five boxes', size: 1, pack_quantity: 5, sheets_per_item: 100 },
     ],
     purchases: [
-        { id: id.purchase, kind: 'purchase', purchased_on: '2026-10-01', currency: 'MYR', finance_transaction_id: null, created_at: created },
-        { id: id.oldPurchase, kind: 'purchase', purchased_on: '2026-08-01', currency: 'MYR', finance_transaction_id: null, created_at: '2026-08-01T00:00:00Z' },
+        { id: id.purchase, kind: 'purchase', revision: 1, purchased_on: '2026-10-01', currency: 'MYR', finance_transaction_id: null, created_at: created },
+        { id: id.oldPurchase, kind: 'purchase', revision: 1, purchased_on: '2026-08-01', currency: 'MYR', finance_transaction_id: null, created_at: '2026-08-01T00:00:00Z' },
     ],
     batches: [
         { id: id.largeBatch, product_id: id.shampoo, variant_id: id.large, purchase_id: id.purchase, purchased_quantity: 3, original_units: 3, unopened_units: 2, total_paid: 54, snapshot: shampooSnapshot, created_at: created },
