@@ -312,12 +312,6 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
                     children: (
                         <div>
                             {renderSubItem({
-                                href: '/tickets',
-                                icon: <Ticket size={14} />,
-                                isActive: isExactPath(pathname, '/tickets'),
-                                label: 'My Tickets',
-                            })}
-                            {renderSubItem({
                                 href: '/tickets/new',
                                 icon: <Plus size={14} />,
                                 isActive: isExactPath(pathname, '/tickets/new'),
@@ -407,7 +401,6 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
                     label: getModuleLabel('inventory', 'Inventory'),
                     children: (
                         <div>
-                            {renderSubItem({ href: '/inventory', icon: <Package size={14} />, isActive: isExactPath(pathname, '/inventory'), label: 'My Shelf' })}
                             {renderSubItem({ href: '/inventory/purchases', icon: <ReceiptText size={14} />, isActive: isExactPath(pathname, '/inventory/purchases'), label: 'Purchases' })}
                             {renderSubItem({ href: '/inventory/usage', icon: <ClipboardCheck size={14} />, isActive: isExactPath(pathname, '/inventory/usage'), label: 'Usage history' })}
                         </div>

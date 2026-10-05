@@ -1,6 +1,6 @@
 # Inventory Module
 
-PRD: [PRD 016](prd/PRD_016.md). Entry point: `/inventory`. Inventory has three sidebar submodules: **My Shelf** (`/inventory`), **Purchases** (`/inventory/purchases`), and **Usage history** (`/inventory/usage`). Each has its own URL and page title, supports refresh and browser history, and inherits Inventory access. On mobile, open navigation to switch submodules.
+PRD: [PRD 016](prd/PRD_016.md). Entry point: `/inventory`. The Inventory parent opens the shelf at `/inventory`. Its two sidebar submodules are **Purchases** (`/inventory/purchases`) and **Usage history** (`/inventory/usage`); the shelf is not repeated in the submenu. Each has its own URL and page title, supports refresh and browser history, and inherits Inventory access. On mobile, open navigation to switch submodules.
 
 ## Workflow
 

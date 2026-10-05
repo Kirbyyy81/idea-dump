@@ -105,7 +105,7 @@ test('starts a box rather than a multipack and finishes it through usage history
     await page.getByRole('dialog', { name: 'Finished', exact: true }).getByRole('button', { name: 'Finished', exact: true }).click();
     await expect(page.getByRole('dialog')).not.toBeVisible();
     expect(commands.map((command) => command.action)).toEqual(['start', 'finish']);
-    await page.getByRole('link', { name: 'My Shelf', exact: true }).click();
+    await page.getByRole('link', { name: 'Inventory', exact: true }).click();
     await expect(page.getByRole('article', { name: 'Tissues' }).getByText('0 in use')).toBeVisible();
 });
 test('links and unlinks an existing Finance expense from purchase history', async ({ page }) => {
@@ -146,7 +146,9 @@ test('records stock corrections separately from usage', async ({ page }) => {
 
 test('Inventory submodules have persistent routes and browser history', async ({ page }) => {
     await setup(page);
-    await expect(page.getByRole('heading', { name: 'My Shelf', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Inventory', exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'My Shelf', exact: true })).toHaveCount(0);
+    await expect(page.locator('a[href="/inventory"]')).toHaveCount(1);
     await page.getByRole('link', { name: 'Purchases', exact: true }).click();
     await expect(page).toHaveURL(/\/inventory\/purchases$/);
     await expect(page.getByRole('heading', { name: 'Purchases', exact: true })).toBeVisible();
