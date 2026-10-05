@@ -107,3 +107,6 @@ The production build passed and the local review server was rebuilt with these c
 
 Purchase cards keep Edit purchase and Finance linking inside the shared three-dot **Purchase actions** menu, including purchase history in product details. The card does not display Finance link status. Linked purchases expose **Change Finance link** in the menu; access checks and saved links are unchanged.
 Purchase menu verification: all 692 application tests, 26 desktop/mobile browser cases, the isolated database suite, lint, TypeScript and production build passed. Production audit is clear; existing development dependency findings remain unchanged.
+
+Receiving-cart prices use one Price (RM) row with the amount beside a pricing-basis selector. The selector offers Per pack for multipacks, Per item for individual items, and Total for the complete line. Changing the basis keeps the entered amount and recalculates the line total. Both controls stay on the same row on mobile.
+Price-row verification: 692 application tests, 26 desktop/mobile browser cases, database checks, lint, TypeScript and production build passed. Browser coverage verifies same-row alignment and both price calculations. The local preview was rebuilt and checked without saving stock. Existing audit findings are unchanged.

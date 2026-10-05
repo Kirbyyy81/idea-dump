@@ -71,6 +71,13 @@ test('receives a multi-item cart and retries with the same identity', async ({ p
     let line = page.getByRole('region', { name: 'Cart item 1' });
     await line.getByLabel('Quantity purchased').fill('2');
     await line.getByLabel('Price (RM)', { exact: true }).fill('15');
+    const priceBounds = await line.getByLabel('Price (RM)', { exact: true }).boundingBox();
+    const basisBounds = await line.getByRole('combobox', { name: 'Price basis' }).boundingBox();
+    expect(Math.abs(priceBounds!.y - basisBounds!.y)).toBeLessThan(2);
+    await choose(page, 'Price basis', 'Total');
+    await expect(line.getByText(/RM\s*15\.00/)).toBeVisible();
+    await choose(page, 'Price basis', 'Per pack');
+    await expect(line.getByText(/RM\s*30\.00/)).toBeVisible();
     await expect(line.getByText(/Adds 10 boxes unopened/)).toBeVisible();
     await choose(page, 'Product', 'Dove Shampoo');
     await page.getByRole('button', { name: 'Add to cart', exact: true }).click();
