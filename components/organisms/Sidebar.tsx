@@ -25,6 +25,7 @@ import {
     Landmark,
     LayoutDashboard,
     PanelLeftClose,
+    Package,
     Plus,
     ReceiptText,
     Settings,
@@ -53,6 +54,7 @@ const SHELL_MODULES: Record<'dashboard' | 'settings', { href: string; label: str
 };
 
 const MODULE_ICONS: Record<string, JSX.Element> = {
+    Package: <Package size={18} />,
     BookOpen: <BookOpen size={18} />,
     ClipboardList: <ClipboardList size={18} />,
     FilePenLine: <FilePenLine size={18} />,
