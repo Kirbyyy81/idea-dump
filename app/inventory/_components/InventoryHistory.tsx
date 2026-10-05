@@ -1,4 +1,5 @@
 'use client';
+import { ActionMenu } from '@/components/molecules/ActionMenu';
 import { Button } from '@/components/atoms/Button';
 import type { InventoryData, InventoryPurchase } from '@/lib/types';
 import { money, quantityText } from '@/lib/inventory/core/values';
@@ -24,10 +25,11 @@ export function PurchaseHistory({ data, productId, canLinkFinance, onLink, onEdi
     return <div className="space-y-4">{!purchases.length && <p className="text-sm text-text-secondary">No purchases recorded yet.</p>}
         {purchases.map((purchase) => {
             const batches = data.batches.filter((batch) => batch.purchase_id === purchase.id && (!productId || batch.product_id === productId));
-            return <section key={purchase.id} className="space-y-3 rounded-md border border-border-default p-3"><div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-bold">{purchase.kind === 'existing' ? 'Existing stock' : 'Purchase'} · {purchase.purchased_on ?? 'Date unknown'}</h3>
-                <div className="flex flex-wrap gap-2"><Button variant="secondary" onClick={() => onEdit(purchase)}>Edit purchase</Button>
-                    {canLinkFinance && <Button variant="secondary" onClick={() => onLink(purchase)}>{purchase.finance_transaction_id ? 'Change Finance link' : 'Link Finance expense'}</Button>}</div></div>
-                {purchase.finance_transaction_id && <p className="text-xs text-text-secondary">Linked to a Finance expense</p>}
+            return <section key={purchase.id} className="space-y-3 rounded-md border border-border-default p-3"><div className="flex items-start justify-between gap-2"><h3 className="min-w-0 break-words font-bold">{purchase.kind === 'existing' ? 'Existing stock' : 'Purchase'} · {purchase.purchased_on ?? 'Date unknown'}</h3>
+                <ActionMenu label="Purchase actions" items={[
+                    { label: 'Edit purchase', onSelect: () => onEdit(purchase) },
+                    ...(canLinkFinance ? [{ label: purchase.finance_transaction_id ? 'Change Finance link' : 'Link Finance expense', onSelect: () => onLink(purchase) }] : []),
+                ]} /></div>
                 <ul className="divide-y divide-border-subtle">{batches.map((batch) => <li key={batch.id} className="flex items-start justify-between gap-3 py-2 text-sm"><div className="min-w-0"><p className="break-words font-semibold">{batch.snapshot.product_name} · {batch.snapshot.variant_label}</p>
                     <p className="text-text-secondary">{batch.purchased_quantity} purchased × {batch.snapshot.pack_quantity} {batch.snapshot.item_label} · {quantityText(batch.original_units * batch.snapshot.size, batch.snapshot.unit === 'count' ? batch.snapshot.item_label : batch.snapshot.unit)}{batch.snapshot.sheets_per_item ? ` · ${batch.snapshot.sheets_per_item} sheets each` : ''}</p>
                     {batch.total_paid !== null && <p className="text-xs text-text-secondary">{money(batch.total_paid / batch.original_units)} / item{batch.snapshot.unit !== 'count' ? ` · ${money(batch.total_paid / (batch.original_units * batch.snapshot.size) * 100)} / 100 ${batch.snapshot.unit}` : ''}</p>}</div><span className="shrink-0">{batch.total_paid === null ? 'Price unknown' : money(batch.total_paid)}</span></li>)}</ul>

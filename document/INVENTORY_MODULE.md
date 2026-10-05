@@ -104,3 +104,6 @@ Inventory notification policy: success confirmations, save failures, expense-loa
 
 Notification verification: 26 desktop/mobile cases passed, including dismissal, retries, preserved form input and post-save refresh errors. The application run completed 679 tests successfully but encountered one Finance test timeout and one worker startup timeout. Both affected Finance files passed on focused reruns (14 tests); Inventory and Toast checks also passed (60 tests). The isolated Inventory database suite, lint and TypeScript checks passed. Root production audit remains clear; the seven existing development dependency findings are unchanged.
 The production build passed and the local review server was rebuilt with these changes.
+
+Purchase cards keep Edit purchase and Finance linking inside the shared three-dot **Purchase actions** menu, including purchase history in product details. The card does not display Finance link status. Linked purchases expose **Change Finance link** in the menu; access checks and saved links are unchanged.
+Purchase menu verification: all 692 application tests, 26 desktop/mobile browser cases, the isolated database suite, lint, TypeScript and production build passed. Production audit is clear; existing development dependency findings remain unchanged.

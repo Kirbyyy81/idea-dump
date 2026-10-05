@@ -123,14 +123,16 @@ test('starts a box rather than a multipack and finishes it through usage history
 test('links and unlinks an existing Finance expense from purchase history', async ({ page }) => {
     const { commands } = await setup(page);
     await page.getByRole('link', { name: 'Purchases', exact: true }).click();
-    await page.getByRole('button', { name: 'Link Finance expense', exact: true }).first().click();
+    await page.getByRole('button', { name: 'Purchase actions', exact: true }).first().click();
+    await page.getByRole('menuitem', { name: 'Link Finance expense', exact: true }).click();
     await expect(page.getByText('Essentials shop', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Link', exact: true }).click();
-    await expect(page.getByText('Linked to a Finance expense', { exact: true })).toBeVisible();
+    await expect(page.getByText('Linked to a Finance expense', { exact: true })).not.toBeVisible();
     await expect(page.getByRole('status')).toHaveText('Changes saved.');
     await page.getByRole('button', { name: 'Dismiss notification' }).click();
     await expect(page.getByRole('status')).toHaveCount(0);
-    await page.getByRole('button', { name: 'Change Finance link', exact: true }).click();
+    await page.getByRole('button', { name: 'Purchase actions', exact: true }).first().click();
+    await page.getByRole('menuitem', { name: 'Change Finance link', exact: true }).click();
     await page.getByRole('button', { name: 'Remove Finance link', exact: true }).click();
     await expect(page.getByText('Linked to a Finance expense', { exact: true })).not.toBeVisible();
     await expect(page.getByRole('status')).toHaveText('Changes saved.');
@@ -226,7 +228,8 @@ test('edits a complete purchase from product history and preserves usage and Fin
     fixture.purchases[0].finance_transaction_id = id.purchase;
     const { commands, failNext } = await setup(page, fixture);
     await page.getByRole('button', { name: 'Dove Shampoo', exact: true }).click();
-    await page.getByRole('button', { name: 'Edit purchase', exact: true }).first().click();
+    await page.getByRole('button', { name: 'Purchase actions', exact: true }).first().click();
+    await page.getByRole('menuitem', { name: 'Edit purchase', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Edit purchase', exact: true });
     await expect(dialog.getByRole('region')).toHaveCount(3);
     const line = dialog.getByRole('region', { name: 'Purchase item 1', exact: true });
@@ -245,8 +248,9 @@ test('edits a complete purchase from product history and preserves usage and Fin
     await expect(page.getByRole('article', { name: 'Dove Shampoo' }).getByText('1,750 ml unopened', { exact: true })).toBeVisible();
     await expect(page.getByRole('article', { name: 'Dove Shampoo' }).getByText('1 in use', { exact: true })).toBeVisible();
     await page.getByRole('link', { name: 'Purchases', exact: true }).click();
-    await expect(page.getByText('Linked to a Finance expense', { exact: true })).toBeVisible();
-    await page.getByRole('button', { name: 'Edit purchase', exact: true }).first().click();
+    await expect(page.getByText('Linked to a Finance expense', { exact: true })).not.toBeVisible();
+    await page.getByRole('button', { name: 'Purchase actions', exact: true }).first().click();
+    await page.getByRole('menuitem', { name: 'Edit purchase', exact: true }).click();
     await expect(page.getByRole('region', { name: 'Purchase item 1', exact: true }).getByLabel('Line total (RM)')).toHaveValue('68');
     await page.keyboard.press('Escape');
     expect(commands).toHaveLength(2);
@@ -258,7 +262,8 @@ test('edits existing stock with unknown price and date', async ({ page }) => {
     fixture.batches[0].total_paid = null;
     const { commands } = await setup(page, fixture);
     await page.getByRole('link', { name: 'Purchases', exact: true }).click();
-    await page.getByRole('button', { name: 'Edit purchase', exact: true }).first().click();
+    await page.getByRole('button', { name: 'Purchase actions', exact: true }).first().click();
+    await page.getByRole('menuitem', { name: 'Edit purchase', exact: true }).click();
     const line = page.getByRole('region', { name: 'Purchase item 1', exact: true });
     await expect(line.getByLabel('Line total (RM)')).toHaveValue('');
     await line.getByLabel('Line total (RM)').fill('42');
@@ -272,7 +277,8 @@ test('Finance expense loading errors use a toast and keep retry available', asyn
     await setup(page);
     await page.route('**/api/inventory/expenses?*', (route) => route.fulfill({ status: 503, json: { error: 'Could not load expenses.' } }));
     await page.getByRole('link', { name: 'Purchases', exact: true }).click();
-    await page.getByRole('button', { name: 'Link Finance expense', exact: true }).first().click();
+    await page.getByRole('button', { name: 'Purchase actions', exact: true }).first().click();
+    await page.getByRole('menuitem', { name: 'Link Finance expense', exact: true }).click();
     await expect(page.getByRole('alert')).toHaveText('Could not load expenses.');
     await expect(page.getByRole('alert').locator('..')).toHaveCSS('position', 'fixed');
     await page.getByRole('button', { name: 'Dismiss notification' }).click();
