@@ -79,6 +79,9 @@ test('receives a multi-item cart and retries with the same identity', async ({ p
     state.failNext();
     await page.getByRole('button', { name: 'Add to shelf', exact: true }).click();
     await expect(page.getByRole('alert')).toContainText('Temporary failure');
+    await expect(page.getByRole('alert').locator('..')).toHaveCSS('position', 'fixed');
+    await page.getByRole('button', { name: 'Dismiss notification' }).click();
+    await expect(page.getByRole('alert')).toHaveCount(0);
     await expect(page.getByRole('region', { name: 'Cart item 1' })).toBeVisible();
     await page.getByRole('button', { name: 'Add to shelf', exact: true }).click();
     await expect(page.getByRole('dialog')).not.toBeVisible();
@@ -234,6 +237,7 @@ test('edits a complete purchase from product history and preserves usage and Fin
     await dialog.getByRole('button', { name: 'Save purchase', exact: true }).click();
     await expect(dialog.getByRole('alert')).toBeVisible();
     await expect(line.getByLabel('Line total (RM)')).toHaveValue('68');
+    await dialog.getByRole('button', { name: 'Dismiss notification' }).click();
     await dialog.getByRole('button', { name: 'Save purchase', exact: true }).click();
     await expect(dialog).not.toBeVisible();
     expect(commands[0]).toEqual(commands[1]);
@@ -262,4 +266,31 @@ test('edits existing stock with unknown price and date', async ({ page }) => {
     await expect(page.getByRole('dialog')).not.toBeVisible();
     expect(commands[0]).toMatchObject({ action: 'edit_purchase', payload: { kind: 'existing', purchased_on: null, lines: [{ total_paid: 42 }, { total_paid: 10 }, { total_paid: 30 }] } });
     await expect(page.getByRole('status')).toHaveText('Changes saved.');
+});
+
+test('Finance expense loading errors use a toast and keep retry available', async ({ page }) => {
+    await setup(page);
+    await page.route('**/api/inventory/expenses?*', (route) => route.fulfill({ status: 503, json: { error: 'Could not load expenses.' } }));
+    await page.getByRole('link', { name: 'Purchases', exact: true }).click();
+    await page.getByRole('button', { name: 'Link Finance expense', exact: true }).first().click();
+    await expect(page.getByRole('alert')).toHaveText('Could not load expenses.');
+    await expect(page.getByRole('alert').locator('..')).toHaveCSS('position', 'fixed');
+    await page.getByRole('button', { name: 'Dismiss notification' }).click();
+    await expect(page.getByRole('alert')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Retry', exact: true }).click();
+    await expect(page.getByRole('alert')).toHaveText('Could not load expenses.');
+});
+
+test('a failed refresh after saving shows only an error toast', async ({ page }) => {
+    const { commands } = await setup(page);
+    await page.getByRole('button', { name: 'Dove Shampoo', exact: true }).click();
+    await page.getByRole('button', { name: 'Edit product', exact: true }).click();
+    await page.route('**/api/inventory', (route) => route.request().method() === 'GET'
+        ? route.fulfill({ status: 503, json: { error: 'Read failed' } }) : route.fallback());
+    await page.getByRole('button', { name: 'Save product', exact: true }).click();
+    await expect(page.getByRole('dialog')).not.toBeVisible();
+    await expect(page.getByRole('alert')).toContainText('Saved successfully, but the latest stock could not load.');
+    await expect(page.getByRole('alert').locator('..')).toHaveCSS('position', 'fixed');
+    await expect(page.getByRole('status')).toHaveCount(0);
+    expect(commands).toHaveLength(1);
 });

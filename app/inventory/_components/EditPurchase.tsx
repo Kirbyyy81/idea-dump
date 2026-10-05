@@ -41,7 +41,7 @@ export function EditPurchase({ purchase, data, save, onClose }: { purchase: Inve
                                 onValueChange={(value) => setLines(lines.map((item, i) => i === index ? { ...item, total_paid: value === '' ? null : Number(value) } : item))} />
                         </div>
                         <p className="text-sm text-text-secondary">{batch.snapshot.pack_quantity} {batch.snapshot.item_label} per purchased pack / item · {quantityText(remaining * batch.snapshot.size, batch.snapshot.unit === 'count' ? batch.snapshot.item_label : batch.snapshot.unit)} unopened after saving</p>
-                        {remaining < 0 && <InventoryErrorNotice error="Quantity cannot be reduced below stock already used or removed." />}
+                        {remaining < 0 && <p role="alert" className="text-sm text-error">Quantity cannot be reduced below stock already used or removed.</p>}
                     </section>;
                 })}
             </fieldset>
