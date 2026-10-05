@@ -99,18 +99,18 @@ test('starts a box rather than a multipack and finishes it through usage history
     await page.getByRole('article', { name: 'Tissues' }).getByRole('button', { name: 'Start using' }).click();
     await page.getByRole('dialog').getByRole('button', { name: 'Start using', exact: true }).click();
     await expect(page.getByRole('article', { name: 'Tissues' }).getByText('9 boxes unopened')).toBeVisible();
-    await page.getByRole('button', { name: 'Usage history', exact: true }).click();
+    await page.getByRole('link', { name: 'Usage history', exact: true }).click();
     const usage = page.getByText('Tissues · Five boxes', { exact: true }).locator('..').locator('..');
     await usage.getByRole('button', { name: 'Finished', exact: true }).click();
     await page.getByRole('dialog', { name: 'Finished', exact: true }).getByRole('button', { name: 'Finished', exact: true }).click();
     await expect(page.getByRole('dialog')).not.toBeVisible();
     expect(commands.map((command) => command.action)).toEqual(['start', 'finish']);
-    await page.getByRole('button', { name: 'My Shelf', exact: true }).click();
+    await page.getByRole('link', { name: 'My Shelf', exact: true }).click();
     await expect(page.getByRole('article', { name: 'Tissues' }).getByText('0 in use')).toBeVisible();
 });
 test('links and unlinks an existing Finance expense from purchase history', async ({ page }) => {
     const { commands } = await setup(page);
-    await page.getByRole('button', { name: 'Purchases', exact: true }).click();
+    await page.getByRole('link', { name: 'Purchases', exact: true }).click();
     await page.getByRole('button', { name: 'Link Finance expense', exact: true }).first().click();
     await expect(page.getByText('Essentials shop', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Link', exact: true }).click();
@@ -141,4 +141,23 @@ test('records stock corrections separately from usage', async ({ page }) => {
     await page.getByRole('dialog').getByRole('button', { name: 'Adjust stock', exact: true }).click();
     await expect(page.getByRole('dialog')).not.toBeVisible();
     expect(commands[0]).toMatchObject({ action: 'adjust', payload: { batch_id: id.tissueBatch, usage_id: null, quantity: -2, reason: 'given_away' } });
+});
+
+
+test('Inventory submodules have persistent routes and browser history', async ({ page }) => {
+    await setup(page);
+    await expect(page.getByRole('heading', { name: 'My Shelf', exact: true })).toBeVisible();
+    await page.getByRole('link', { name: 'Purchases', exact: true }).click();
+    await expect(page).toHaveURL(/\/inventory\/purchases$/);
+    await expect(page.getByRole('heading', { name: 'Purchases', exact: true })).toBeVisible();
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'Purchases', exact: true })).toBeVisible();
+    await page.getByRole('link', { name: 'Usage history', exact: true }).click();
+    await expect(page).toHaveURL(/\/inventory\/usage$/);
+    await expect(page.getByRole('heading', { name: 'Usage history', exact: true })).toBeVisible();
+    await page.goBack();
+    await expect(page.getByRole('heading', { name: 'Purchases', exact: true })).toBeVisible();
+    await page.goForward();
+    await expect(page.getByRole('heading', { name: 'Usage history', exact: true })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });

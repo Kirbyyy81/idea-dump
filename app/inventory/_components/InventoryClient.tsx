@@ -20,9 +20,8 @@ import { InventoryErrorNotice, panelClass } from './fields';
 
 type Dialog = { type: 'product'; id?: string } | { type: 'cart'; productId?: string } | { type: 'detail'; id: string }
     | { type: 'stock'; choice: StockActionChoice } | { type: 'finance'; purchase: InventoryPurchase };
-export function InventoryClient({ initialData, canLinkFinance }: { initialData: InventoryData; canLinkFinance: boolean }) {
+export function InventoryClient({ initialData, canLinkFinance, view = 'shelf' }: { initialData: InventoryData; canLinkFinance: boolean; view?: 'shelf' | 'purchases' | 'usage' }) {
     const [data, setData] = useState(initialData);
-    const [tab, setTab] = useState<'shelf' | 'purchases' | 'usage'>('shelf');
     const [search, setSearch] = useState(''); const [category, setCategory] = useState('');
     const [dialog, setDialog] = useState<Dialog | null>(null);
     const [error, setError] = useState(''); const [notice, setNotice] = useState(''); const [refreshing, setRefreshing] = useState(false);
@@ -45,12 +44,12 @@ export function InventoryClient({ initialData, canLinkFinance }: { initialData: 
     const close = () => setDialog(null);
     const action = (choice: StockActionChoice) => setDialog({ type: 'stock', choice });
     const link = (purchase: InventoryPurchase) => setDialog({ type: 'finance', purchase });
-    return <AppShell pageTitle="Inventory" contentClassName="p-4 md:p-6" headerAction={<Button icon={<Plus size={16} />} onClick={() => setDialog({ type: 'cart' })}>Add stock</Button>}>
+    return <AppShell pageTitle={view === 'shelf' ? 'My Shelf' : view === 'purchases' ? 'Purchases' : 'Usage history'} contentClassName="p-4 md:p-6" headerAction={<Button icon={<Plus size={16} />} onClick={() => setDialog({ type: 'cart' })}>Add stock</Button>}>
         <div className="space-y-5">
             <InventoryErrorNotice error={error} />
             {notice && <p role="status" className="text-sm text-success">{notice}</p>}
-            <div className="flex flex-wrap items-center justify-between gap-3"><nav aria-label="Inventory views" className="flex flex-wrap gap-2">{(['shelf', 'purchases', 'usage'] as const).map((value) => <Button key={value} variant={tab === value ? 'primary' : 'secondary'} aria-pressed={tab === value} onClick={() => setTab(value)}>{value === 'shelf' ? 'My Shelf' : value === 'purchases' ? 'Purchases' : 'Usage history'}</Button>)}</nav><Button variant="ghost" disabled={refreshing} onClick={() => void refresh()}>{refreshing ? 'Refreshing...' : 'Refresh'}</Button></div>
-            {tab === 'shelf' && <>
+            <div className="flex justify-end"><Button variant="ghost" disabled={refreshing} onClick={() => void refresh()}>{refreshing ? 'Refreshing...' : 'Refresh'}</Button></div>
+            {view === 'shelf' && <>
                 <div className="flex flex-wrap items-end gap-3"><Input label="Search products" value={search} onValueChange={setSearch} containerClassName="min-w-0 flex-1 basis-52" />
                     <Select label="Category" value={category} onChange={setCategory} options={[{ value: '', label: 'All categories' }, ...categories.map((item) => ({ value: item, label: item }))]} className="w-full sm:w-48" />
                     <Button variant="secondary" onClick={() => setDialog({ type: 'product' })}>Add product</Button></div>
@@ -65,8 +64,8 @@ export function InventoryClient({ initialData, canLinkFinance }: { initialData: 
                     </article>;
                 })}</div>
             </>}
-            {tab === 'purchases' && <PurchaseHistory data={data} canLinkFinance={canLinkFinance} onLink={link} />}
-            {tab === 'usage' && <UsageHistory data={data} onAction={action} />}
+            {view === 'purchases' && <PurchaseHistory data={data} canLinkFinance={canLinkFinance} onLink={link} />}
+            {view === 'usage' && <UsageHistory data={data} onAction={action} />}
         </div>
         {dialog?.type === 'product' && <FormDialog title={dialog.id ? 'Edit product' : 'Add product'} onClose={close}><ProductForm key={dialog.id ?? 'new'} productId={dialog.id} data={data} save={save} onSaved={close} /></FormDialog>}
         {dialog?.type === 'cart' && <ReceiveCart initialProductId={dialog.productId} data={data} save={save} onClose={close} />}

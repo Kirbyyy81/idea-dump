@@ -48,6 +48,9 @@ The current app is organized around these modules:
 - `Finance`
   Transaction tracking with manual entry, screenshot OCR, review, duplicate detection, automatic rules, categories, sources, and background share batches.
 
+- `Inventory`
+  Personal essentials catalogue, receiving cart, unopened shelf quantities, consumption history, price comparisons, and optional Finance expense links. See [Inventory setup and calculations](document/INVENTORY_MODULE.md).
+
 - `Log Viewer`  
   Interactive viewer for logs and productivity entries.
 
