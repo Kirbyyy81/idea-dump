@@ -116,3 +116,21 @@ test('records stock corrections separately from usage', async ({ page }) => {
     await expect(page.getByRole('dialog')).not.toBeVisible();
     expect(commands[0]).toMatchObject({ action: 'adjust', payload: { batch_id: id.tissueBatch, usage_id: null, quantity: -2, reason: 'given_away' } });
 });
+
+test('shelf totals, breakdown, estimate, and read-only price comparison', async ({ page }, info) => {
+    const { commands } = await setup(page);
+    const shampoo = page.getByRole('article', { name: 'Dove Shampoo' });
+    await expect(shampoo.getByText('1,250 ml unopened', { exact: true })).toBeVisible();
+    await expect(shampoo.getByText('1 in use', { exact: true })).toBeVisible();
+    await expect(shampoo.getByText('Approximately 100 days of unopened stock')).toBeVisible();
+    await expect(page.getByRole('article', { name: 'Tissues' }).getByText('10 boxes unopened')).toBeVisible();
+    await shampoo.getByRole('button', { name: /View breakdown/ }).click();
+    const dialog = page.getByRole('dialog', { name: 'Dove Shampoo', exact: true });
+    await expect(dialog.getByText('2 unopened · 1 in use')).toBeVisible();
+    await dialog.getByLabel('Price for one pack / item (RM)').fill('22');
+    await expect(dialog.getByText(/more expensive than usual/)).toBeVisible();
+    expect(commands).toHaveLength(0);
+    await page.keyboard.press('Escape'); await expect(dialog).not.toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await page.screenshot({ path: info.outputPath('inventory-shelf.png'), fullPage: true });
+});
