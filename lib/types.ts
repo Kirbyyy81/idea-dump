@@ -1472,6 +1472,38 @@ export interface FinanceNotificationPrepared extends FinanceNotificationParseRes
     duplicate_outcome?: FinanceDuplicateOutcome; duplicate_score?: number; duplicate_signals?: FinanceDuplicateSignal[];
     duplicate_explanation?: string; duplicate_checked_at?: string;
 }
+export type FinanceNotificationField = 'amount' | 'direction' | 'merchant' | 'payee_name' | 'transaction_date' | 'reference_number';
+export type FinanceNotificationPart = string | {
+    kind: 'amount' | 'date' | 'time' | 'text' | 'reference';
+    field?: Exclude<FinanceNotificationField, 'direction'>;
+};
+export interface FinanceNotificationPatternDefinition {
+    version: 1;
+    parts: FinanceNotificationPart[];
+    direction?: FinanceTransactionDirection;
+    trailing_sentence?: boolean;
+    match?: "contains";
+}
+export interface FinanceNotificationPattern {
+    origin?: 'starter' | 'learned' | 'override';
+    id: string;
+    user_id: string | null;
+    source_id: string | null;
+    source_package: string;
+    format_key: string;
+    name: string;
+    definition: FinanceNotificationPatternDefinition;
+    is_active: boolean;
+    evidence_valid: boolean;
+    revision: number;
+}
+export interface FinanceNotificationExtractionTrace {
+    date_provenance?: FinanceNotificationDateProvenance;
+    version: 1;
+    fields: Partial<Record<FinanceNotificationField, { pattern_id: string; revision: number; learned: boolean }>>;
+    conflicts: FinanceNotificationField[];
+}
+
 // Personal inventory. Quantities use ml, g, or individual usable items.
 export type InventoryUnit = 'ml' | 'g' | 'count';
 export interface InventoryVariantInput {
