@@ -61,6 +61,7 @@
     "@types/react-dom": "19.2.4",
     "@zxing/library": "0.21.3",
     "autoprefixer": "^10.4.17",
+    "braces": "file:vendor/braces",
     "esbuild": "^0.28.2",
     "eslint": "^8.56.0",
     "eslint-config-next": "15.5.25",
@@ -75,6 +76,10 @@
       "postcss": "8.5.26",
       "sharp": "0.35.4"
     },
-    "ws": "8.21.3"
+    "ws": "8.21.3",
+    "braces": "$braces",
+    "source-map-js": "1.2.2",
+    "postcss-selector-parser": "7.1.6",
+    "katex": "0.18.2"
   }
 }
