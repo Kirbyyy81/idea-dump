@@ -1,5 +1,6 @@
 'use client';
 
+import { NotificationExtractionStatus } from './NotificationExtractionStatus';
 import { FinanceDuplicateLink } from './FinanceDuplicateLink';
 import type { FinanceLinkChanges } from '@/lib/types';
 import { FormEvent, useEffect, useMemo, useRef, useState, useTransition } from 'react';
@@ -319,7 +320,9 @@ export function FinanceReviewClient({
                 showSuccess('Rules and duplicate checks applied again');
             } else {
                 setCandidates((current) => current.filter((item) => item.id !== selected.id));
-                showSuccess(action === 'confirm'
+                showSuccess(action === 'retry'
+                    ? 'Transaction added automatically'
+                    : action === 'confirm'
                     ? 'Transaction confirmed'
                     : action === 'link_duplicate'
                         ? 'Details linked to the existing transaction'
@@ -388,7 +391,7 @@ export function FinanceReviewClient({
                     {selected && form ? (
                         <form onSubmit={(event) => void resolveItem('confirm', event)}>
                             <Card className="p-5">
-                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-center gap-2"><OcrDoodleIcon size={18} className="text-accent-blue" /><h2 className="text-base font-bold">Candidate details</h2></div><Button type="button" variant="ghost" icon={<RefreshDoodleIcon size={15} />} onClick={() => void resolveItem('retry')} disabled={isSaving}>Retry rules</Button></div>
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-center gap-2"><OcrDoodleIcon size={18} className="text-accent-blue" /><h2 className="text-base font-bold">Candidate details</h2></div><Button type="button" variant="ghost" icon={<RefreshDoodleIcon size={15} />} onClick={() => void resolveItem('retry')} disabled={isSaving}>{selected.intake?.source === 'notification' ? 'Retry and add if complete' : 'Retry rules'}</Button></div>
                                 {referenceStatus !== 'ready' && (
                                     <div className="mt-4 border border-dashed border-border-default">
                                         <FinanceReferenceDataState
@@ -400,6 +403,7 @@ export function FinanceReviewClient({
                                 )}
                                 {selected.payload.matched_rule_names.length > 0 && <p className="mt-3 text-sm text-text-muted">Matched: {selected.payload.matched_rule_names.join(', ')}</p>}
                                 {selected.intake?.source === 'notification' ? <p className="mt-2 text-xs text-text-muted">Bank notification. {selected.intake.notification?.date_provenance === 'posted_at' ? 'Date suggested from notification time in Malaysia. Verify before confirming.' : selected.intake.notification?.date_provenance === 'notification_text' ? 'Date read from notification.' : 'Transaction date unavailable.'}</p> : <p className="mt-2 text-xs text-text-muted">OCR confidence: {selected.intake?.ocr_confidence === null || selected.intake?.ocr_confidence === undefined ? 'Unavailable' : `${Math.round(selected.intake.ocr_confidence)}%`} Â· Normalizer version: {selected.intake?.normalizer_version ?? 'Legacy'}</p>}
+                                {selected.intake?.source === 'notification' ? <NotificationExtractionStatus trace={selected.payload.notification_extraction} /> : null}
                                 <FinanceFormErrorSummary errors={fieldErrors} />
 
                                 {duplicateOutcome(selected) !== 'none' && (

@@ -728,3 +728,13 @@ export async function listFinanceDuplicateCandidates(input: {
     }
     return { transactions, textHashTransactionIds };
 }
+
+export async function listFinanceNotificationPatterns(userId: string, sourceId: string) {
+    return createAdminClient().rpc('finance_notification_patterns_for_user_v1', { p_user_id: userId, p_source_id: sourceId });
+}
+
+export async function updateFinanceNotificationPatternStatus(userId: string, sourceId: string, id: string, active: boolean, revision: number) {
+    return createAdminClient().rpc('finance_set_notification_pattern_v1', {
+        p_user_id:userId,p_source_id:sourceId,p_pattern_id:id,p_is_active:active,p_expected_revision:revision,
+    });
+}

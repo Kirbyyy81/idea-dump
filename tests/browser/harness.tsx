@@ -1,3 +1,4 @@
+import { NotificationPatternsPanel } from '@/app/finance/settings/_components/NotificationPatternsPanel';
 import { AlertDialog } from '@/components/molecules/AlertDialog';
 import { createRoot } from 'react-dom/client';
 import { FinanceBudgetsClient } from '@/app/finance/budgets/_components/FinanceBudgetsClient';
