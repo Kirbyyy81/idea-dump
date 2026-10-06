@@ -1,3 +1,4 @@
+import { BarcodeSessionProvider } from '@/app/log-viewer/barcode-generator/_components/BarcodeSessionProvider';
 import { AppShell } from '@/components/organisms/AppShell';
 import { AccessProvider } from '@/lib/contexts/AccessContext';
 import { getSessionUserAppAccess } from '@/lib/rbac/access';
@@ -13,7 +14,9 @@ export async function AuthenticatedAppShell({
     return (
         <AccessProvider access={session?.access ?? null}>
             <FinanceShareRejectionBridge />
-            <AppShell persistent>{children}</AppShell>
+            <BarcodeSessionProvider>
+                <AppShell persistent>{children}</AppShell>
+            </BarcodeSessionProvider>
         </AccessProvider>
     );
 }

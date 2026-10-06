@@ -756,6 +756,7 @@ export interface FinanceIntakeItem {
 }
 
 export interface FinanceCandidatePayload {
+    notification_extraction?: FinanceNotificationExtractionTrace;
     amount: number | null;
     currency: FinanceCurrency;
     merchant: string | null;
@@ -1459,6 +1460,11 @@ export interface FinanceNotificationReview {
 }
 export interface FinanceNotificationRecord extends FinanceNotificationReview {
     source_id: string; captured_at: string; client_event_id: string; notification_key_hash: string;
+}
+
+export interface FinanceNotificationRetryResult {
+    confirmed: boolean;
+    candidate?: FinanceCandidateTransaction;
 }
 
 export interface FinanceNotificationPrepared extends FinanceNotificationParseResult {

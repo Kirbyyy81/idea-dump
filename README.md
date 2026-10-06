@@ -183,6 +183,7 @@ The application build regenerates the worker before Next.js compilation. The roo
 - `/logs/api-tools`
 - `/api-tools` redirects to `/logs/api-tools` for the database-backed API module path
 - `/log-viewer`
+- `/log-viewer/barcode-generator`
 - `/tickets`
 - `/tickets/new`
 - `/tickets/manage`
