@@ -5,6 +5,14 @@ import { Toast } from '@/components/molecules/Toast';
 afterEach(() => vi.useRealTimers());
 
 describe('toast notifications', () => {
+    it('announces errors assertively and allows dismissal', () => {
+        const dismiss = vi.fn();
+        render(<Toast message="Could not save inventory" variant="error" onDismiss={dismiss} />);
+        expect(screen.getByRole('alert').getAttribute('aria-live')).toBe('assertive');
+        expect(screen.queryByRole('status')).toBeNull();
+        fireEvent.click(screen.getByRole('button', { name: 'Dismiss notification' }));
+        expect(dismiss).toHaveBeenCalledOnce();
+    });
     it('announces success and dismisses after five seconds', () => {
         vi.useFakeTimers();
         const dismiss = vi.fn();
