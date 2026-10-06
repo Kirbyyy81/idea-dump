@@ -1,5 +1,41 @@
 # Changelog
 
+## [0.18.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.17.0...idea-dump-v0.18.0) (2026-10-06)
+
+
+### Features
+
+* add product subcategories ([53d1726](https://github.com/Kirbyyy81/idea-dump/commit/53d172625f08cae85841d904df77fcaa238ef319))
+* calculate stock coverage and prices ([3640f07](https://github.com/Kirbyyy81/idea-dump/commit/3640f07cf1a7966af427f1a6309775daf69d9911))
+* compare prospective purchase prices ([aa8ba69](https://github.com/Kirbyyy81/idea-dump/commit/aa8ba6960d6ad55eee9db4a69df4cdb012cee86f))
+* link purchases to Finance expenses ([800be92](https://github.com/Kirbyyy81/idea-dump/commit/800be92ced821bb930c795b272f28f6570d1abbb))
+* manage product sizes and shelf ([26d65e9](https://github.com/Kirbyyy81/idea-dump/commit/26d65e9a34e4825fe4c2f4b65a7b4d78ba1d5554))
+* navigate Inventory submodules ([d345eeb](https://github.com/Kirbyyy81/idea-dump/commit/d345eeb027b75784ea2d9c215eb6da1dd76a58df))
+* persist stock receipts and consumption ([b8f12cc](https://github.com/Kirbyyy81/idea-dump/commit/b8f12cc41c5ab576360f268e22059a04d8027dd7))
+* receive purchases through stock cart ([9944d3a](https://github.com/Kirbyyy81/idea-dump/commit/9944d3aff58001c16cf8817a3c641366c4cba18e))
+* record usage and stock adjustments ([4459485](https://github.com/Kirbyyy81/idea-dump/commit/44594853863c08221be904fe8bf3232200e7bbc4))
+
+
+### Bug Fixes
+
+* align mobile inventory header ([32bf6db](https://github.com/Kirbyyy81/idea-dump/commit/32bf6db00af85815f28a9619dd88edca668fb1c9))
+* combine stock price controls ([3993bb1](https://github.com/Kirbyyy81/idea-dump/commit/3993bb161432cb1dadc99d4683cc2059ee098da9))
+* display inventory stock table ([378b9c0](https://github.com/Kirbyyy81/idea-dump/commit/378b9c0429d00a208075cfe4c7ea821819eb4cae))
+* edit inventory purchases ([84ddb42](https://github.com/Kirbyyy81/idea-dump/commit/84ddb42d36beedfb7c69d4cdb8b7bf7f4a3d3222))
+* enter subcategories inline ([42e1947](https://github.com/Kirbyyy81/idea-dump/commit/42e1947d64af27a7042e8cbfb1dc6c61bf960a27))
+* hide purchase actions ([7d9962c](https://github.com/Kirbyyy81/idea-dump/commit/7d9962cbea560e0575079d8e763792490bf6ce13))
+* overlap budget excess fill ([07abcb7](https://github.com/Kirbyyy81/idea-dump/commit/07abcb7c8dd728317b4036848472156768e8bca9))
+* patch vulnerable dependency chains ([ea57f56](https://github.com/Kirbyyy81/idea-dump/commit/ea57f56cd41d9ba949674742b3365e11fc478c8a))
+* preserve follow-up commit history ([b5de94e](https://github.com/Kirbyyy81/idea-dump/commit/b5de94efaf6ab09b323d9cc442a4bcd8627ef78f))
+* remove duplicate module destinations ([20efa02](https://github.com/Kirbyyy81/idea-dump/commit/20efa02ddb3446d2c1b68105d6e2ebe3a06be78e))
+* remove inventory refresh row ([cc3edf5](https://github.com/Kirbyyy81/idea-dump/commit/cc3edf5010232d7ac5b7071b21e5d62556a442e6))
+* restore notification pattern types ([f8510dd](https://github.com/Kirbyyy81/idea-dump/commit/f8510ddb2ae1c6edb959b2943d23d942f85f8428))
+* review linked expense prices ([513c868](https://github.com/Kirbyyy81/idea-dump/commit/513c86827d4d8977d5d1268b287206959aa7d59c))
+* simplify inventory field labels ([086a11d](https://github.com/Kirbyyy81/idea-dump/commit/086a11ddf8e8f4de1ad29fac0874031e2cf2c92d))
+* toast inventory confirmations ([6aefe59](https://github.com/Kirbyyy81/idea-dump/commit/6aefe59dbde75cd134e35ec501fc6cbedca997ce))
+* toast inventory errors ([6735329](https://github.com/Kirbyyy81/idea-dump/commit/6735329b5d64df7bf4e9b7628a6e5a4e4755e526))
+* use chart for usage history ([fb70f56](https://github.com/Kirbyyy81/idea-dump/commit/fb70f562f24ac159e097e0cab7bfde72ab0da736))
+
 ## [0.17.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.16.2...idea-dump-v0.17.0) (2026-10-02)
 
 
