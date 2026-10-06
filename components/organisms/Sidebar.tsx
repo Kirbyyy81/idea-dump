@@ -26,6 +26,7 @@ import {
     Landmark,
     LayoutDashboard,
     PanelLeftClose,
+    Package,
     Plus,
     ReceiptText,
     Settings,
@@ -54,6 +55,7 @@ const SHELL_MODULES: Record<'dashboard' | 'settings', { href: string; label: str
 };
 
 const MODULE_ICONS: Record<string, JSX.Element> = {
+    Package: <Package size={18} />,
     BookOpen: <BookOpen size={18} />,
     ClipboardList: <ClipboardList size={18} />,
     FilePenLine: <FilePenLine size={18} />,
@@ -82,7 +84,7 @@ function isExactPath(pathname: string, href: string) {
 
 export function Sidebar({ projects, collapsed = false, className, onToggleCollapsed }: SidebarProps) {
     const pathname = usePathname();
-    const [openGroups, setOpenGroups] = useState<Partial<Record<'projects' | 'tickets' | 'film' | 'finance' | 'log_viewer', boolean>>>({});
+    const [openGroups, setOpenGroups] = useState<Partial<Record<'projects' | 'tickets' | 'film' | 'finance' | 'log_viewer' | 'inventory', boolean>>>({});
     const access = useAccess();
     const allowedModules = access?.allowedModules ?? [];
     const modules = access?.modules ?? [];
@@ -101,6 +103,7 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
         moduleRow.slug !== 'tickets' &&
         moduleRow.slug !== 'film_journal' &&
         moduleRow.slug !== 'finance' &&
+        moduleRow.slug !== 'inventory' &&
         canAccessModule(moduleRow.slug)
     );
 
@@ -157,7 +160,7 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
     }: {
         active: boolean;
         children: JSX.Element;
-        group: 'projects' | 'tickets' | 'film' | 'finance' | 'log_viewer';
+        group: 'projects' | 'tickets' | 'film' | 'finance' | 'log_viewer' | 'inventory';
         href: string;
         icon: JSX.Element;
         label: string;
@@ -312,12 +315,6 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
                     children: (
                         <div>
                             {renderSubItem({
-                                href: '/tickets',
-                                icon: <Ticket size={14} />,
-                                isActive: isExactPath(pathname, '/tickets'),
-                                label: 'My Tickets',
-                            })}
-                            {renderSubItem({
                                 href: '/tickets/new',
                                 icon: <Plus size={14} />,
                                 isActive: isExactPath(pathname, '/tickets/new'),
@@ -395,6 +392,20 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
                                 isActive: isExactPath(pathname, '/finance/settings'),
                                 label: 'Settings',
                             })}
+                        </div>
+                    ),
+                })}
+
+                {canAccessModule('inventory') && renderModuleGroup({
+                    active: isModuleActive('inventory'),
+                    group: 'inventory',
+                    href: getModulePath('inventory', '/inventory'),
+                    icon: <Package size={18} />,
+                    label: getModuleLabel('inventory', 'Inventory'),
+                    children: (
+                        <div>
+                            {renderSubItem({ href: '/inventory/purchases', icon: <ReceiptText size={14} />, isActive: isExactPath(pathname, '/inventory/purchases'), label: 'Purchases' })}
+                            {renderSubItem({ href: '/inventory/usage', icon: <BarChart3 size={14} />, isActive: isExactPath(pathname, '/inventory/usage'), label: 'Usage history' })}
                         </div>
                     ),
                 })}

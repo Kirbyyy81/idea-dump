@@ -1,0 +1,104 @@
+'use client';
+import { useMemo, useState } from 'react';
+import { Package, Plus } from 'lucide-react';
+import { AppShell } from '@/components/organisms/AppShell';
+import { Button } from '@/components/atoms/Button';
+import { Input } from '@/components/atoms/Input';
+import { Select } from '@/components/atoms/Select';
+import { FormDialog } from '@/components/molecules/FormDialog';
+import { Toast } from '@/components/molecules/Toast';
+import type { InventoryData, InventoryMutation, InventoryPurchase, InventoryExpense } from '@/lib/types';
+import { inventoryRequest } from '@/lib/inventory/core/client';
+import { productStock, quantityText } from '@/lib/inventory/core/values';
+import { ProductForm } from './ProductForm';
+import { ReceiveCart } from './ReceiveCart';
+import { StockAction, type StockActionChoice } from './StockAction';
+import { EditPurchase } from './EditPurchase';
+import { FinanceLink } from './FinanceLink';
+import { PriceCheck } from './PriceCheck';
+import { UnitPrice } from './UnitPrice';
+import { ActionMenu } from '@/components/molecules/ActionMenu';
+import { StockSummary } from './StockSummary';
+import { PurchaseHistory, UsageHistory } from './InventoryHistory';
+import { panelClass } from './fields';
+
+type Dialog = { type: 'product'; id?: string } | { type: 'cart'; productId?: string } | { type: 'detail'; id: string }
+    | { type: 'stock'; choice: StockActionChoice } | { type: 'finance' | 'edit_purchase'; purchase: InventoryPurchase; expense?: InventoryExpense };
+export function InventoryClient({ initialData, canLinkFinance, view = 'shelf' }: { initialData: InventoryData; canLinkFinance: boolean; view?: 'shelf' | 'purchases' | 'usage' }) {
+    const [data, setData] = useState(initialData);
+    const [search, setSearch] = useState(''); const [category, setCategory] = useState(''); const [subcategory, setSubcategory] = useState('');
+    const [dialog, setDialog] = useState<Dialog | null>(null);
+    const [notice, setNotice] = useState<{ id: string; message: string; variant: 'success' | 'error' } | null>(null);
+    const categories = useMemo(() => [...new Set(data.products.map((product) => product.category))].sort(), [data.products]);
+    const subcategories = useMemo(() => [...new Set(data.products.filter((product) => product.category === category)
+        .map((product) => product.subcategory).filter((value): value is string => Boolean(value)))].sort(), [data.products, category]);
+    const products = data.products.filter((product) => (!category || product.category === category) && (!subcategory || product.subcategory === subcategory) && `${product.name} ${product.brand ?? ''}`.toLowerCase().includes(search.toLowerCase()));
+    const detail = dialog?.type === 'detail' ? data.products.find((product) => product.id === dialog.id) : null;
+    async function save(mutation: InventoryMutation) {
+        setNotice(null);
+        const result = await inventoryRequest<{ id: string }>('/api/inventory', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(mutation) });
+        try {
+            setData(await inventoryRequest<InventoryData>('/api/inventory'));
+            setNotice({ id: crypto.randomUUID(), variant: 'success', message: mutation.action === 'receive' ? 'Stock added to your shelf.' : 'Changes saved.' });
+        } catch {
+            setNotice({ id: crypto.randomUUID(), variant: 'error', message: 'Saved successfully, but the latest stock could not load. Reload the page before making another change.' });
+        }
+        return result;
+    }
+    const close = () => setDialog(null);
+    const action = (choice: StockActionChoice) => setDialog({ type: 'stock', choice });
+    const link = (purchase: InventoryPurchase) => setDialog({ type: 'finance', purchase });
+    return <AppShell pageTitle={view === 'shelf' ? 'Inventory' : view === 'purchases' ? 'Purchases' : 'Usage history'} contentClassName="p-4 md:p-6" headerClassName="flex-row items-center justify-between gap-3" headerAction={<Button className="whitespace-nowrap" icon={<Plus size={16} />} onClick={() => setDialog({ type: 'cart' })}>Add stock</Button>}>
+        <div className="space-y-5">
+            {view === 'shelf' && <>
+                <div className="flex flex-wrap items-end gap-3"><Input label="Search products" value={search} onValueChange={setSearch} containerClassName="min-w-0 flex-1 basis-52" />
+                    <Select label="Category" value={category} onChange={(value) => { setCategory(value); setSubcategory(''); }} options={[{ value: '', label: 'All categories' }, ...categories.map((item) => ({ value: item, label: item }))]} className="w-full sm:w-48" />
+                    <Select label="Subcategory" value={subcategory} onChange={setSubcategory} disabled={!category} options={[{ value: '', label: 'All subcategories' }, ...subcategories.map((value) => ({ value, label: value }))]} className="w-full sm:w-48" />
+                    <Button variant="secondary" onClick={() => setDialog({ type: 'product' })}>Add product</Button></div>
+                {!products.length && <div className={`${panelClass} flex flex-col items-center gap-3 py-12`}><Package size={30} aria-hidden="true" /><h2 className="text-lg font-bold">{data.products.length ? 'No matching products' : 'Your shelf is ready'}</h2>
+                    {!data.products.length && <Button onClick={() => setDialog({ type: 'product' })}>Create your first product</Button>}</div>}
+                {products.length > 0 && <div role="region" aria-label="Inventory table" tabIndex={0} className="relative overflow-x-auto rounded-lg border border-border-default bg-bg-surface">
+                    <table className="w-full min-w-[44rem] table-fixed text-left text-sm">
+                        <colgroup><col className="w-40 sm:w-64" /><col className="w-32" /><col className="w-48" /><col className="w-36" /><col className="w-16" /></colgroup>
+                        <thead className="border-b border-border-default bg-bg-subtle"><tr>{['Product', 'Stock', 'Unit price', 'Stock lasts', 'Actions'].map((label) => <th key={label} scope="col" className="px-3 py-3 font-semibold">{label === 'Actions' ? <span className="sr-only">Actions</span> : label}</th>)}</tr></thead>
+                        <tbody className="divide-y divide-border-default">{products.map((product) => {
+                            const stock = productStock(data, product.id);
+                            return <tr key={product.id} aria-label={product.name} className="align-top">
+                                <th scope="row" className="px-3 py-4 font-normal"><button type="button" onClick={() => setDialog({ type: 'detail', id: product.id })} className="break-words text-left font-bold underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-border-strong">{product.name}</button><p className="mt-1 text-xs text-text-secondary">{[product.brand, product.category, product.subcategory].filter(Boolean).join(' · ')}</p></th>
+                                <td className="px-3 py-4"><StockSummary data={data} product={product} onOpen={() => setDialog({ type: 'detail', id: product.id })} /></td>
+                                <td className="px-3 py-4"><UnitPrice data={data} product={product} /></td>
+                                <td className="px-3 py-4 text-text-secondary">{stock.estimate.days === null ? 'No estimate yet' : `Approximately ${stock.estimate.days} days`}</td>
+                                <td className="px-2 py-3"><ActionMenu portal label={`${product.name} actions`} items={[
+                                    { label: 'Add stock', onSelect: () => setDialog({ type: 'cart', productId: product.id }) },
+                                    { label: 'Start using', disabled: !stock.units, onSelect: () => action({ action: 'start', productId: product.id }) },
+                                    { label: 'Edit product', onSelect: () => setDialog({ type: 'product', id: product.id }) },
+                                    { label: 'Adjust stock', disabled: !stock.batches.length, onSelect: () => action({ action: 'adjust', productId: product.id }) },
+                                ]} /></td>
+                            </tr>;
+                        })}</tbody>
+                    </table>
+                </div>}
+            </>}
+            {view === 'purchases' && <PurchaseHistory data={data} canLinkFinance={canLinkFinance} onLink={link} onEdit={(purchase) => setDialog({ type: 'edit_purchase', purchase })} />}
+            {view === 'usage' && <UsageHistory data={data} onAction={action} />}
+        </div>
+        {dialog?.type === 'product' && <FormDialog title={dialog.id ? 'Edit product' : 'Add product'} onClose={close}><ProductForm key={dialog.id ?? 'new'} productId={dialog.id} data={data} save={save} onSaved={close} /></FormDialog>}
+        {dialog?.type === 'cart' && <ReceiveCart initialProductId={dialog.productId} data={data} save={save} onClose={close} />}
+        {dialog?.type === 'stock' && <StockAction choice={dialog.choice} data={data} save={save} onClose={close} />}
+        {dialog?.type === 'edit_purchase' && <EditPurchase purchase={dialog.purchase} expense={dialog.expense} data={data} save={save} onClose={close} />}
+        {dialog?.type === 'finance' && <FinanceLink purchase={dialog.purchase} save={save} onClose={close} onSelect={(expense) => setDialog({ type: 'edit_purchase', purchase: dialog.purchase, expense })} />}
+        {detail && <FormDialog title={detail.name} onClose={close}><div className="space-y-6">
+            <div className="flex flex-wrap gap-2"><Button variant="secondary" onClick={() => setDialog({ type: 'product', id: detail.id })}>Edit product</Button><Button onClick={() => setDialog({ type: 'cart', productId: detail.id })}>Add stock</Button><Button variant="secondary" disabled={!data.batches.some((batch) => batch.product_id === detail.id)} onClick={() => action({ action: 'adjust', productId: detail.id })}>Adjust stock</Button></div>
+            <section className="space-y-2"><h3 className="font-bold">Stock breakdown</h3>{data.batches.filter((batch) => batch.product_id === detail.id).map((batch) => <div key={batch.id} className="rounded-md border border-border-default p-3 text-sm"><p className="font-semibold">{batch.snapshot.variant_label} · {quantityText(batch.snapshot.size, detail.unit === 'count' ? 'item' : batch.snapshot.unit)} each</p><p>{batch.unopened_units} unopened · {data.usages.filter((usage) => usage.batch_id === batch.id && usage.status === 'in_use').length} in use</p><p className="text-text-secondary">Purchased {data.purchases.find((purchase) => purchase.id === batch.purchase_id)?.purchased_on ?? 'on an unknown date'}</p></div>)}
+                {!data.batches.some((batch) => batch.product_id === detail.id) && <p className="text-sm text-text-secondary">No stock received yet.</p>}</section>
+            <section className="space-y-2"><h3 className="font-bold">Usage estimate</h3><p className="text-sm">{productStock(data, detail.id).estimate.days === null ? 'No usage estimate yet' : `Approximately ${productStock(data, detail.id).estimate.days} days of unopened stock`}</p>
+                {productStock(data, detail.id).estimate.basis.map((basis) => <p key={basis} className="text-xs text-text-secondary">{basis}</p>)}<p className="text-xs text-text-secondary">Uses all comparable completed usage. Overlapping days count once; gaps between recorded usage periods are excluded. In-use quantities are excluded.</p></section>
+            <PriceCheck data={data} product={detail} />
+            <section className="space-y-3"><h3 className="font-bold">Purchase history</h3><PurchaseHistory data={data} productId={detail.id} canLinkFinance={canLinkFinance} onLink={link} onEdit={(purchase) => setDialog({ type: 'edit_purchase', purchase })} /></section>
+            <section className="space-y-3"><h3 className="font-bold">Usage history</h3><UsageHistory data={data} productId={detail.id} onAction={action} /></section>
+            <section className="space-y-2"><h3 className="font-bold">Stock adjustments</h3>{data.adjustments.filter((adjustment) => data.batches.some((batch) => batch.id === adjustment.batch_id && batch.product_id === detail.id)).map((adjustment) => <p key={adjustment.id} className="text-sm">{adjustment.adjusted_on} · {data.batches.find((batch) => batch.id === adjustment.batch_id)?.snapshot.variant_label} · {adjustment.quantity > 0 ? '+' : ''}{adjustment.quantity} {detail.item_label} · {adjustment.reason.replace('_', ' ')}{adjustment.usage_id ? ' (in use)' : ''}</p>)}
+                {!data.adjustments.some((adjustment) => data.batches.some((batch) => batch.id === adjustment.batch_id && batch.product_id === detail.id)) && <p className="text-sm text-text-secondary">No adjustments recorded.</p>}</section>
+        </div></FormDialog>}
+        {notice && <Toast key={notice.id} message={notice.message} variant={notice.variant} onDismiss={() => setNotice(null)} />}
+    </AppShell>;
+}

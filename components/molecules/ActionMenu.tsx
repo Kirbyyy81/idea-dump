@@ -2,14 +2,17 @@
 
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { MoreHorizontal } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { Button } from '@/components/atoms/Button';
 
-export function ActionMenu({ label, items, disabled = false }: {
+export function ActionMenu({ label, items, disabled = false, portal = false }: {
     label: string;
     items: { label: string; icon?: ReactNode; onSelect: () => void; disabled?: boolean }[];
     disabled?: boolean;
+    portal?: boolean;
 }) {
     const [open, setOpen] = useState(false);
+    const [position, setPosition] = useState({ top: 0, left: 0 });
     const container = useRef<HTMLDivElement>(null);
     const trigger = useRef<HTMLButtonElement>(null);
     const menu = useRef<HTMLDivElement>(null);
@@ -19,18 +22,26 @@ export function ActionMenu({ label, items, disabled = false }: {
     useEffect(() => { if (disabled) setOpen(false); }, [disabled]);
     useEffect(() => {
         if (!open) return;
+        const place = () => {
+            const rect = trigger.current?.getBoundingClientRect();
+            if (!rect) return;
+            const height = menu.current?.offsetHeight ?? items.length * 44 + 8;
+            setPosition({ left: Math.max(8, Math.min(rect.right - 176, window.innerWidth - 184)), top: rect.bottom + height + 8 < window.innerHeight ? rect.bottom + 4 : Math.max(8, rect.top - height - 4) });
+        };
+        if (portal) { place(); window.addEventListener('resize', place); window.addEventListener('scroll', place, true); }
         const frame = requestAnimationFrame(() => {
             const controls = menu.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not([disabled])');
             controls?.[focusLast.current ? controls.length - 1 : 0]?.focus();
         });
         const outside = (event: PointerEvent) => {
-            if (!container.current?.contains(event.target as Node)) setOpen(false);
+            if (!container.current?.contains(event.target as Node) && !menu.current?.contains(event.target as Node)) setOpen(false);
         };
         document.addEventListener('pointerdown', outside);
-        return () => { cancelAnimationFrame(frame); document.removeEventListener('pointerdown', outside); };
-    }, [open]);
+        return () => { cancelAnimationFrame(frame); document.removeEventListener('pointerdown', outside); window.removeEventListener('resize', place); window.removeEventListener('scroll', place, true); };
+    }, [open, portal, items.length]);
 
     const close = () => { trigger.current?.focus(); setOpen(false); };
+    const renderMenu = (content: ReactNode) => portal ? createPortal(content, document.body) : content;
     return <div ref={container} className="relative shrink-0">
         <Button ref={trigger} id={triggerId} type="button" variant="ghost" className="size-10 p-0" disabled={disabled}
             aria-label={label} aria-haspopup="menu" aria-expanded={open && !disabled} aria-controls={menuId}
@@ -40,8 +51,9 @@ export function ActionMenu({ label, items, disabled = false }: {
                     event.preventDefault(); focusLast.current = event.key === 'ArrowUp'; setOpen(true);
                 }
             }}><MoreHorizontal size={20} aria-hidden="true" /></Button>
-        {open && !disabled && <div ref={menu} id={menuId} role="menu" aria-labelledby={triggerId}
-            className="absolute right-0 top-full z-30 mt-1 w-44 max-w-[calc(100vw-2rem)] rounded-md border border-border-default bg-bg-elevated p-1 shadow-subtle"
+        {open && !disabled && renderMenu(<div ref={menu} id={menuId} role="menu" aria-labelledby={triggerId}
+            style={portal ? position : undefined}
+            className={`${portal ? 'fixed z-50' : 'absolute right-0 top-full z-30 mt-1'} w-44 max-w-[calc(100vw-2rem)] rounded-md border border-border-default bg-bg-elevated p-1 shadow-subtle`}
             onKeyDown={(event) => {
                 if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); return; }
                 if (event.key === 'Tab') { close(); return; }
@@ -56,6 +68,6 @@ export function ActionMenu({ label, items, disabled = false }: {
             {items.map((item) => <Button key={item.label} type="button" role="menuitem" variant="ghost" tabIndex={-1} disabled={item.disabled}
                 className="min-h-10 w-full justify-start gap-2 rounded-sm px-3 text-left text-sm"
                 onClick={() => { close(); item.onSelect(); }}>{item.icon}<span>{item.label}</span></Button>)}
-        </div>}
+        </div>)}
     </div>;
 }

@@ -12,12 +12,14 @@
 - Use `molecules/` for small reusable compositions with one focused interaction.
 - Use `organisms/` for cross-feature layout or workflow compositions. Do not place a feature-owned component here only because it is large.
 - Reuse existing components before introducing a new primitive or a parallel variant.
+- Keep each module landing page on its parent navigation item only. Submenus must lead to distinct destinations; do not repeat the parent destination as an overview, shelf, or list submodule.
 - Use `AppShell` `pageTitle`, `headerAction`, and `headerClassName` for authenticated page headers. `AppShell` renders `PageHeader` centrally. Supply the current page name and only pass an action when the page has a relevant primary control. Do not add breadcrumbs.
 
 ## UI Rules
 
 - Use the design tokens and visual rules in `document/DESIGN_SYSTEM.md`.
 - Do not expose raw browser form controls in user-facing UI. Wrap them in an existing or reusable styled component.
+- Omit "(optional)" from form labels. Use the shared required-field asterisk for required inputs, and leave optional labels unmarked.
 - Keep copy direct and necessary. Do not add decorative descriptions or generic `Description` labels.
 - Use `next/image` for application images when image optimization applies.
 - Keep components focused. Extract stateful workflows, dialogs, and feature-specific sections when a shared component starts owning unrelated responsibilities.

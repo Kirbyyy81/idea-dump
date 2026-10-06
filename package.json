@@ -12,13 +12,16 @@
     "check:service-worker": "node scripts/build-service-worker.mjs --check && npm run typecheck:service-worker",
     "start": "next start",
     "lint": "next lint",
-    "test": "npm run check:service-worker && vitest run",
+    "test": "npm run check:service-worker && vitest run && npm run test:inventory:db",
     "test:log-viewer": "vitest run tests/log-viewer",
     "test:finance-security": "vitest run tests/finance-security.test.ts",
     "test:finance-validation": "vitest run tests/finance-validation.test.ts",
     "test:finance-budgets": "vitest run tests/finance-budget",
     "test:finance-budgets:browser": "playwright test",
     "test:finance-budgets:db": "node scripts/test-finance-budget-db.mjs",
+    "test:inventory": "vitest run tests/inventory",
+    "test:inventory:db": "node scripts/test-inventory-db.mjs",
+    "test:inventory:browser": "playwright test tests/browser/inventory.spec.ts",
     "test:finance-payees": "vitest run tests/finance-payees-contract.test.ts tests/finance-payee-classification.test.ts",
     "test:finance-idempotency": "vitest run tests/finance-idempotency.test.ts",
     "test:finance-ordering": "vitest run tests/finance-ordering.test.ts",
@@ -48,6 +51,7 @@
     "tailwind-merge": "^2.2.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
     "@playwright/test": "1.63.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/react": "^16.3.2",
@@ -57,6 +61,7 @@
     "@types/react-dom": "19.2.4",
     "@zxing/library": "0.21.3",
     "autoprefixer": "^10.4.17",
+    "braces": "file:vendor/braces",
     "esbuild": "^0.28.2",
     "eslint": "^8.56.0",
     "eslint-config-next": "15.5.25",
@@ -71,6 +76,10 @@
       "postcss": "8.5.26",
       "sharp": "0.35.4"
     },
-    "ws": "8.21.3"
+    "ws": "8.21.3",
+    "braces": "$braces",
+    "source-map-js": "1.2.2",
+    "postcss-selector-parser": "7.1.6",
+    "katex": "0.18.2"
   }
 }
