@@ -14,6 +14,12 @@ test('month navigation shows separate frozen cycles, current progress and empty 
     await expect(history).toContainText('21 to 27 Sept 2026');
     await expect(history).toContainText('RM 25.00 over');
     await expect(history).not.toContainText('October groceries');
+    const meter = history.getByRole('meter').nth(1);
+    const track = meter.locator(':scope > div');
+    await expect(track).toHaveCount(1);
+    const overlay = track.locator(':scope > div').nth(1);
+    await expect(overlay).toHaveAttribute('style', 'width: 25%;');
+    await expect(overlay).toHaveCSS('position', 'absolute');
     await page.evaluate(() => { document.documentElement.style.zoom = '2'; });
     await expect(history.getByRole('heading', { name: 'Weekly groceries' }).first()).toBeVisible();
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);

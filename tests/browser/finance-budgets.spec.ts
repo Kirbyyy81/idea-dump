@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { budgetDetailFixture, budgetFixture } from '../fixtures/finance-budgets';
 import type { FinanceBudgetSummary } from '../../lib/types';
+import { calculateBudgetMetrics } from '../../lib/finance/budgets/calculations';
 
 const sourceId = 'b0110000-0000-4000-8000-000000000011';
 async function references(page: Page) {
@@ -47,7 +48,7 @@ test('simple calendar budget defaults and optional customization', async ({ page
     expect(body).toMatchObject({ configuration: { cycle_type: 'monthly', start_date: '2026-09-01', anchor_day: 1, amount: '500.00', source_ids: [], category_ids: [] } });
 });
 
-test('over-budget spending fills a second darker bar', async ({ page }, testInfo) => {
+test('excess spending animates over the base within one track', async ({ page }, testInfo) => {
     await references(page);
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     const budget = budgetFixture({ status: 'over_budget' });
@@ -59,9 +60,9 @@ test('over-budget spending fills a second darker bar', async ({ page }, testInfo
     const details = page.getByRole('region', { name: 'Everyday spending details' });
     const meter = details.getByRole('meter');
     const tracks = meter.locator(':scope > div');
-    await expect(tracks).toHaveCount(2);
-    const firstFill = tracks.nth(0).locator('div');
-    const overflowFill = tracks.nth(1).locator('div');
+    await expect(tracks).toHaveCount(1);
+    const firstFill = tracks.locator(':scope > div').nth(0);
+    const overflowFill = tracks.locator(':scope > div').nth(1);
     for (const fill of [firstFill, overflowFill]) {
         await expect(fill).toHaveCSS('animation-name', 'budgetFill');
         await expect(fill).toHaveCSS('animation-duration', '0.45s');
@@ -87,7 +88,10 @@ test('over-budget spending fills a second darker bar', async ({ page }, testInfo
     const firstBounds = await tracks.nth(0).boundingBox();
     const overflowBounds = await overflowFill.boundingBox();
     expect(overflowBounds!.width).toBeCloseTo(firstBounds!.width / 4, 0);
-    expect(overflowBounds!.y).toBeGreaterThan(firstBounds!.y + firstBounds!.height);
+    expect(overflowBounds!.x).toBeCloseTo(firstBounds!.x, 0);
+    expect(overflowBounds!.y).toBeCloseTo(firstBounds!.y, 0);
+    expect(overflowBounds!.height).toBeCloseTo(firstBounds!.height, 0);
+    await expect(tracks.locator('span')).toHaveCSS('z-index', '10');
     await expect(details.getByText('125% used')).toBeVisible();
     await expect(details.getByText('RM 25.00 over')).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
@@ -98,6 +102,46 @@ test('over-budget spending fills a second darker bar', async ({ page }, testInfo
         await expect(fill).toHaveCSS('transform', 'none');
     }
 });
+
+for (const usage of [75, 100, 100.5, 196.4, 200, 350]) {
+    test(`one progress track at ${usage}% in cards and details`, async ({ page }, testInfo) => {
+        await references(page);
+        await page.emulateMedia({ reducedMotion: 'reduce' });
+        if (testInfo.project.name === 'mobile') await page.setViewportSize({ width: 330, height: 700 });
+        const budget = budgetFixture();
+        budget.current_cycle!.metrics = calculateBudgetMetrics('100.00', usage.toFixed(2), '0.00', '2026-09-14', '2026-09-21', '2026-09-15');
+        budget.status = budget.current_cycle!.metrics.status;
+        await page.addInitScript((detail) => { (window as unknown as { budgetInitial: unknown }).budgetInitial = {
+            list: { data: [detail.budget], page: 1, page_size: 20, total: 1 }, detail,
+        }; }, budgetDetailFixture(budget));
+        await page.goto('/finance/budgets');
+        const meters = page.getByRole('meter');
+        await expect(meters).toHaveCount(2);
+        for (const meter of await meters.all()) {
+            await expect(meter).toHaveAttribute('aria-valuenow', String(usage));
+            const track = meter.locator(':scope > div');
+            await expect(track).toHaveCount(1);
+            const fills = track.locator(':scope > div');
+            await expect(fills).toHaveCount(usage > 100 ? 2 : 1);
+            await expect(fills.first()).toHaveAttribute('style', `width: ${Math.min(usage, 100)}%;`);
+            if (usage > 100) {
+                const overlay = fills.nth(1);
+                await expect(overlay).toHaveAttribute('style', `width: ${Math.min(Number((usage - 100).toFixed(6)), 100)}%;`);
+                await expect(overlay).toHaveCSS('filter', 'brightness(0.75)');
+                const bounds = await track.boundingBox();
+                const over = await overlay.boundingBox();
+                expect(over!.x).toBeCloseTo(bounds!.x, 0);
+                expect(over!.y).toBeCloseTo(bounds!.y, 0);
+                expect(over!.height).toBeCloseTo(bounds!.height, 0);
+                expect(over!.width).toBeCloseTo(bounds!.width * Math.min(usage - 100, 100) / 100, 0);
+            }
+        }
+        await expect(page.getByRole('region', { name: 'Everyday spending details' }).getByText(`${usage}% used`)).toBeVisible();
+        if (usage === 196.4) await page.getByRole('region', { name: 'Everyday spending details' }).screenshot({ path: testInfo.outputPath('budget-overlap-196.png') });
+        await page.evaluate(() => { document.documentElement.style.zoom = '2'; });
+        await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+    });
+}
 
 test('custom dates and durations remain available without losing edits', async ({ page }) => {
     await references(page);
