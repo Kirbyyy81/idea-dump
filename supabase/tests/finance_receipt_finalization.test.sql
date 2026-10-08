@@ -19,12 +19,22 @@ returns jsonb language sql security invoker as $f$
  case when diagnostics->>'format'='unknown' then null else 'b5000000-0000-4000-8000-000000000004'::uuid end,'[]',
  case when diagnostics->>'format'='unknown' then '{}'::jsonb else '{"source_id":"b5000000-0000-4000-8000-000000000004"}'::jsonb end,0.7,null,'none',0,'[]',null,null,diagnostics);
 $f$;
+create function pg_temp.finalize_legacy(attempt uuid default 'b5000000-0000-4000-8000-000000000006')
+returns jsonb language sql security invoker as $f$
+ select public.finance_finalize_screenshot_intake_v2('b5000000-0000-4000-8000-000000000001',
+ 'b5000000-0000-4000-8000-000000000005',attempt,'original synthetic OCR','synthetic OCR',90,repeat('a',64),1,
+ null,'[]','{}',0.7,null,'none',0,'[]',null,null);
+$f$;
 set local role service_role;
 do $security$ begin
  begin
   perform pg_temp.finalize_receipt(attempt=>'b5000000-0000-4000-8000-000000000099');
   raise exception 'Stale attempt accepted';
- exception when serialization_failure then null; end;
+ exception when sqlstate 'PT409' then null; end;
+ begin
+  perform pg_temp.finalize_legacy('b5000000-0000-4000-8000-000000000099');
+  raise exception 'Legacy finalization accepted a stale attempt';
+ exception when sqlstate 'PT409' then null; end;
  begin
   perform pg_temp.finalize_receipt(actor=>'b5000000-0000-4000-8000-000000000002',diagnostics=>'{"format":"unknown","detector_version":1,"failed_regions":[],"conflicts":[]}');
   raise exception 'Other owner accepted';
@@ -45,6 +55,14 @@ end; $security$;
 select pg_temp.check_final((select receipt_format='unknown' and receipt_processing is null and ocr_raw_text is null and status='processing' from public.finance_intake_items),'all failed finalisations roll back format and OCR together');
 select pg_temp.check_final(not exists(select 1 from public.finance_candidate_transactions),'failed finalisation creates no candidate');
 reset role;
+update public.finance_intake_items set status='failed',processing_attempt_id=null,processing_started_at=null,processing_lease_expires_at=null;
+set local role service_role;
+do $inactive$ begin
+ begin perform pg_temp.finalize_legacy(); raise exception 'Inactive intake accepted by v2'; exception when sqlstate 'PT409' then null; end;
+ begin perform pg_temp.finalize_receipt(); raise exception 'Inactive intake accepted by v3'; exception when sqlstate 'PT409' then null; end;
+end; $inactive$;
+reset role;
+update public.finance_intake_items set status='processing',processing_attempt_id='b5000000-0000-4000-8000-000000000006',processing_started_at=clock_timestamp(),processing_lease_expires_at=clock_timestamp()+interval '5 minutes';
 update public.finance_intake_items set receipt_format_eligible=false;
 set local role service_role;
 do $historical$ begin

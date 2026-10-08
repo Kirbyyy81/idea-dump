@@ -27,6 +27,13 @@ function persistenceError(error: RepositoryError) {
     );
 }
 
+function isOwnershipConflict(error: unknown): error is RepositoryError {
+    if (!(error instanceof RepositoryError) || error.operation !== 'finalize_intake') return false;
+    const cause = error.cause;
+    return typeof cause === 'object' && cause !== null && 'code' in cause
+        && (cause.code === 'PT409' || cause.code === '40001');
+}
+
 function failureDetails(error: unknown): {
     code: string;
     stage: FailureStage;
@@ -210,6 +217,38 @@ export async function processScreenshot(
             },
         };
     } catch (error) {
+        if (isOwnershipConflict(error)) {
+            let current;
+            try {
+                current = await dependencies.repository.readIntakeState(userId, intakeId);
+            } catch (readError) {
+                if (readError instanceof RepositoryError) throw persistenceError(readError);
+                throw readError;
+            }
+            if (current?.candidate) {
+                return {
+                    statusCode: 200,
+                    data: {
+                        ...current,
+                        candidate: current.candidate,
+                        auto_confirmed: Boolean(current.transaction),
+                        recovered: true,
+                    },
+                };
+            }
+            if (current?.intake.status === 'processing') {
+                throw safeError(
+                    503, 'intake_busy',
+                    'This screenshot is already being processed. Please retry shortly.',
+                    true, 'intake', config.busyRetryAfterSeconds, intakeId,
+                );
+            }
+            throw safeError(
+                409, 'intake_ownership_changed',
+                'This screenshot changed while it was being processed. Upload it again to retry.',
+                false, 'intake', undefined, intakeId,
+            );
+        }
         const details = failureDetails(error);
         try {
             await dependencies.repository.fail({

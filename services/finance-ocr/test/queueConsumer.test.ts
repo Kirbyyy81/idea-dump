@@ -4,6 +4,7 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { SingleSlotCapacity } from '../src/capacity.js';
 import type { FinanceRepository } from '../src/contracts.js';
 import { FinanceQueueConsumer } from '../src/queueConsumer.js';
+import { RepositoryError } from '../src/repository.js';
 import type {
     ShareQueueJob,
     ShareQueueRepository,
@@ -94,6 +95,7 @@ function repository(overrides: Record<string, unknown> = {}) {
             auto_confirmed: false,
         }),
         fail: vi.fn().mockResolvedValue(undefined),
+        readIntakeState: vi.fn(),
         claimShareQueueItem: vi.fn(),
         downloadShareObject: vi.fn().mockResolvedValue(png),
         findShareImageDuplicate: vi.fn().mockResolvedValue(null),
@@ -131,6 +133,24 @@ function consumer(
 }
 
 describe('durable Finance share queue consumer', () => {
+    it('leaves a replacement intake for recovery after a finalization conflict', async () => {
+        const repo = repository({
+            claimShareQueueItem: vi.fn().mockResolvedValueOnce({ kind: 'item', job: job() }),
+            finalize: vi.fn().mockRejectedValue(new RepositoryError('finalize_intake', { code: 'PT409' })),
+            readIntakeState: vi.fn().mockResolvedValue({
+                intake: { id: 'replacement', status: 'processing' }, candidate: null, transaction: null,
+            }),
+        });
+        const { instance } = consumer(repo);
+        instance.wake();
+        await instance.whenIdle();
+        expect(repo.readIntakeState).toHaveBeenCalledTimes(1);
+        expect(repo.fail).not.toHaveBeenCalled();
+        expect(repo.retryShareQueueItem).not.toHaveBeenCalled();
+        expect(repo.completeShareQueueItem).not.toHaveBeenCalled();
+        expect(repo.claimShareQueueItem).toHaveBeenCalledTimes(1);
+    });
+
     it('processes one item, binds its intake before OCR, and stops at an empty queue', async () => {
         const queued = job();
         const repo = repository();

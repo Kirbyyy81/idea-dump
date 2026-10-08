@@ -82,6 +82,14 @@ The Render build runs from the repository root because the bundle imports the sh
 - Logs contain request IDs, safe stage/code data, intake and transient identifiers, durations, and recovery state-not screenshots, Storage paths, tokens, API keys, signed URLs, or OCR text.
 - Queued items are downloaded only from the authoritative private path returned by the claim RPC and are revalidated before OCR.
 - A recoverable first queue attempt retries immediately. Database leases and fencing enforce the two-attempt maximum and safe redelivery.
+- Stale intake ownership returns `PT409` from the finalization and queue-binding RPCs. Never raise `40001` for a business conflict: older PostgREST versions retry it internally without a bound.
+- After a finalization conflict, the worker reads the current owner-scoped receipt state once. An existing result is returned as recovered; an active replacement attempt is left for recovery; other states return a non-retryable conflict. The obsolete attempt never records a failure against the replacement.
 - Exact-image duplicates skip OCR. Terminal completion removes a queue message only after the durable Finance result and transient item status are committed.
 - When the final item becomes terminal, the consumer deletes and verifies every temporary object before removing transient batch state. Failed cleanup remains available to a later recovery wake.
 - Ordinary direct-upload bytes remain in browser/request memory only. Confirmed Android share-batch bytes use temporary private Supabase Storage and are deleted at terminal batch cleanup.
+
+### Ownership conflict rollout
+
+Apply `20261008020815_fix_finance_ocr_ownership_conflicts.sql` to stop database transaction retries, then deploy the OCR service from this commit to enable state recovery. The migration replaces four error codes in three existing functions and preserves their bodies, invoker security, ownership checks and grants. It does not require new environment variables. Roll back the worker separately if needed; retain the database error-code fix.
+
+On a disposable predecessor database, run `supabase/tests/finance_ocr_ownership_conflicts_migration.test.sql` with `psql -v ON_ERROR_STOP=1 -f` to verify that only the error codes change. After applying the migration to that disposable database, run `finance_receipt_finalization.test.sql`, `finance_receipt_format.test.sql` and `finance_receipt_format_v3.test.sql` from the same test directory. The OCR unit suite covers recovery reads, stale finalization and leaving an active replacement queue attempt untouched.
