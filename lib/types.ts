@@ -1519,7 +1519,7 @@ export interface InventoryReceiptInput {
     purchased_on: string | null;
     lines: InventoryReceiptLine[];
 }
-export type InventoryMutation = { request_id: string } & (
+export type InventoryMutation = (
     | { action: 'save_product'; payload: InventoryProductInput }
     | { action: 'receive'; payload: InventoryReceiptInput }
     | { action: 'edit_purchase'; payload: { finance_transaction_id?: string; purchase_id: string; revision: number; kind: InventoryPurchase['kind']; purchased_on: string | null; lines: { batch_id: string; quantity: number; total_paid: number | null }[] } }

@@ -8,7 +8,7 @@ vi.mock('@/lib/inventory/core/service', () => ({ getInventory: mocks.read, mutat
 import { GET, POST } from '@/app/api/inventory/route';
 import { GET as expenses } from '@/app/api/inventory/expenses/route';
 const request = (body: unknown, headers: Record<string, string> = {}) => new NextRequest('http://localhost/api/inventory', { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(body) });
-const command = { request_id: '16000000-0000-4000-8000-000000000099', action: 'start', payload: { batch_id: '16000000-0000-4000-8000-000000000031', started_on: '2026-01-01' } };
+const command = { action: 'start', payload: { batch_id: '16000000-0000-4000-8000-000000000031', started_on: '2026-01-01' } };
 beforeEach(() => {
     vi.clearAllMocks(); mocks.authorize.mockResolvedValue({ user: { id: 'verified-owner' }, access: {} }); mocks.access.mockReturnValue(true); mocks.read.mockResolvedValue({}); mocks.write.mockResolvedValue({ id: 'saved' }); mocks.expenses.mockResolvedValue({ expenses: [], total: 0 });
 });

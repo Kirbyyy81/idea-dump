@@ -4,7 +4,7 @@ import type { InventoryMutation } from '@/lib/types';
 
 export const readInventory = (userId: string) => createAdminClient().rpc('inventory_read', { p_user_id: userId });
 export const writeInventory = (userId: string, mutation: InventoryMutation) => createAdminClient().rpc('inventory_mutate', {
-    p_user_id: userId, p_request_id: mutation.request_id, p_action: mutation.action, p_payload: mutation.payload,
+    p_user_id: userId, p_action: mutation.action, p_payload: mutation.payload,
 });
 export function readInventoryExpenses(userId: string, query: string, page: number) {
     let request = createAdminClient().from('finance_transactions')

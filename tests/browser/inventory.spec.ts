@@ -64,7 +64,7 @@ test('shelf totals, breakdown, estimate, and read-only price comparison', async 
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.screenshot({ path: info.outputPath('inventory-shelf.png'), fullPage: true });
 });
-test('receives a multi-item cart and retries with the same identity', async ({ page }) => {
+test('receives a multi-item cart and allows retry after a reported failure', async ({ page }) => {
     const state = await setup(page);
     await page.getByRole('button', { name: 'Add stock', exact: true }).first().click();
     await choose(page, 'Product', 'Tissues');
@@ -95,6 +95,7 @@ test('receives a multi-item cart and retries with the same identity', async ({ p
     await expect(page.getByRole('dialog')).not.toBeVisible();
     expect(state.commands).toHaveLength(2);
     expect(state.commands[0]).toEqual(state.commands[1]);
+    expect(state.commands[0]).not.toHaveProperty('request_id');
     expect(state.commands[0]).toMatchObject({ action: 'receive', payload: { kind: 'purchase', lines: [{ quantity: 2, price: 15 }, { quantity: 1, price: 18 }] } });
 });
 test('creates a product from the receiving cart and adds existing opened stock', async ({ page }) => {

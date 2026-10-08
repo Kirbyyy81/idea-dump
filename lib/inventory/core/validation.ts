@@ -33,7 +33,7 @@ function choice<T extends string>(value: unknown, choices: readonly T[], label: 
     return value as T;
 }
 export function parseInventoryMutation(input: unknown): InventoryMutation {
-    const body = object(input); const p = object(body.payload); const request_id = uuid(body.request_id);
+    const body = object(input); const p = object(body.payload);
     switch (body.action) {
         case 'save_product': {
             const unit = choice(p.unit, ['ml', 'g', 'count'], 'unit');
@@ -51,7 +51,7 @@ export function parseInventoryMutation(input: unknown): InventoryMutation {
                 name: text(p.name, 'Product name'), brand: p.brand === null ? null : text(p.brand, 'Brand'), category: text(p.category, 'Category', 60),
                 subcategory: p.subcategory == null || (typeof p.subcategory === 'string' && !p.subcategory.trim()) ? null : text(p.subcategory, 'Subcategory', 60),
                 unit, item_label: text(p.item_label, 'Item label', 30), variants };
-            return { request_id, action: 'save_product', payload };
+            return { action: 'save_product', payload };
         }
         case 'receive': {
             const kind = choice(p.kind, ['purchase', 'existing'], 'stock source');
@@ -68,7 +68,7 @@ export function parseInventoryMutation(input: unknown): InventoryMutation {
                 if ((!in_use_quantity && started_on) || (started_on && purchased_on && started_on < purchased_on)) throw new InventoryError('Check the purchase and usage start dates.');
                 return { variant_id: uuid(line.variant_id), product_revision: number(line.product_revision, 'product revision', 1, 2147483646), quantity, price_mode, price, in_use_quantity, started_on };
             });
-            return { request_id, action: 'receive', payload: { kind, purchased_on, lines } };
+            return { action: 'receive', payload: { kind, purchased_on, lines } };
         }
         case 'edit_purchase': {
             const kind = choice(p.kind, ['purchase', 'existing'], 'stock source');
@@ -80,18 +80,18 @@ export function parseInventoryMutation(input: unknown): InventoryMutation {
                     total_paid: line.total_paid === null && kind === 'existing' ? null : number(line.total_paid, 'line total', 0, 1000000, 2) };
             });
             if (new Set(lines.map((line) => line.batch_id)).size !== lines.length) throw new InventoryError('Each purchase item must appear once.');
-            return { request_id, action: 'edit_purchase', payload: { ...('finance_transaction_id' in p ? { finance_transaction_id: uuid(p.finance_transaction_id) } : {}), purchase_id: uuid(p.purchase_id), revision: number(p.revision, 'purchase revision', 1, 2147483646), kind, purchased_on, lines } };
+            return { action: 'edit_purchase', payload: { ...('finance_transaction_id' in p ? { finance_transaction_id: uuid(p.finance_transaction_id) } : {}), purchase_id: uuid(p.purchase_id), revision: number(p.revision, 'purchase revision', 1, 2147483646), kind, purchased_on, lines } };
         }
         case 'start':
-            return { request_id, action: 'start', payload: { batch_id: uuid(p.batch_id), started_on: date(p.started_on, 'Start date')! } };
+            return { action: 'start', payload: { batch_id: uuid(p.batch_id), started_on: date(p.started_on, 'Start date')! } };
         case 'finish': case 'edit_usage': {
             const started_on = date(p.started_on, 'Start date', true);
             const finished_on = date(p.finished_on, 'Finish date', body.action !== 'finish');
             if (started_on && finished_on && finished_on < started_on) throw new InventoryError('Finish date cannot be before the start date.');
-            return { request_id, action: body.action, payload: { usage_id: uuid(p.usage_id), revision: number(p.revision, 'usage revision', 1, 2147483646), started_on, finished_on } };
+            return { action: body.action, payload: { usage_id: uuid(p.usage_id), revision: number(p.revision, 'usage revision', 1, 2147483646), started_on, finished_on } };
         }
         case 'link_finance':
-            return { request_id, action: 'link_finance', payload: { purchase_id: uuid(p.purchase_id), finance_transaction_id: p.finance_transaction_id === null ? null : uuid(p.finance_transaction_id) } };
+            return { action: 'link_finance', payload: { purchase_id: uuid(p.purchase_id), finance_transaction_id: p.finance_transaction_id === null ? null : uuid(p.finance_transaction_id) } };
         default: throw new InventoryError('Select a valid inventory action.');
     }
 }

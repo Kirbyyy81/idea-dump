@@ -32,13 +32,13 @@ Selecting an expense opens a price review; prices and the link change only when 
 
 ## Data and access
 
-`inventory_products` and `inventory_variants` store the reusable catalogue. `inventory_purchases` groups confirmed carts. `inventory_batches` holds each purchase line, its immutable product/size snapshot and editable receipt cost, and its unopened count. `inventory_usages` tracks individual consumption with `in_use` and `finished` states. `inventory_requests` preserves mutation identities for safe retries.
+`inventory_products` and `inventory_variants` store the reusable catalogue. `inventory_purchases` groups confirmed carts. `inventory_batches` holds each purchase line, its immutable product/size snapshot and editable receipt cost, and its unopened count. `inventory_usages` tracks individual consumption with `in_use` and `finished` states. These five tables contain the complete Inventory storage model.
 
 All tables enable RLS and revoke browser-role access. The server uses the established admin client only after shared module authorization. `inventory_read` and `inventory_mutate` are security-invoker RPCs with an empty search path, executable only by the trusted service role. They recheck module access and scope all records to the verified user. Finance links also recheck Finance access and expense ownership.
 
-Mutations serialize by owner, with one stable request UUID per form session, retained after an uncertain response even if the form is edited. Repeating the same committed payload returns its prior result. Reusing a committed key for a different payload fails instead of adding stock again. A bad receipt line rolls back the entire receipt. Product, purchase and usage revisions reject stale edits. Historical batch snapshots are independent of catalogue edits; tracking units cannot change once a product has purchase history.
+Mutations serialize by owner. The client blocks simultaneous submissions while a save is pending, but there is no stored request receipt or replay deduplication. Repeating a purchase or Start using call after it succeeds applies another operation. Check saved inventory after an uncertain response before retrying. A bad receipt line rolls back the entire receipt. Product, purchase and usage revisions reject stale edits. Historical batch snapshots are independent of catalogue edits; tracking units cannot change once a product has purchase history.
 
-The primary API is session-only `GET /api/inventory` and `POST /api/inventory`. Mutation bodies contain `request_id`, `action`, and `payload`. Expense discovery is `GET /api/inventory/expenses?q=...&page=...`. No user-supplied identity controls ownership. These endpoints are not API-key endpoints.
+The primary API is session-only `GET /api/inventory` and `POST /api/inventory`. Mutation bodies contain `action` and `payload`. Expense discovery is `GET /api/inventory/expenses?q=...&page=...`. No user-supplied identity controls ownership. These endpoints are not API-key endpoints.
 
 ## Rollout
 
@@ -60,7 +60,7 @@ npm run test:inventory:db
 npm run test:inventory:browser
 ```
 
-The SQL suite starts a disposable PGlite PostgreSQL instance with minimal dependency tables, the real module-access function, and the Inventory migration. It verifies transaction rollback, retry identities, ownership, role grants, RLS enablement, revisions, historical snapshots, and Finance links. It requires no local database server or project credentials. PGlite does not reproduce multi-session lock contention; validate that behavior against a staging PostgreSQL deployment before high-concurrency use.
+The SQL suite starts a disposable PGlite PostgreSQL instance with minimal dependency tables, the real module-access function, and the Inventory migration. It verifies transaction rollback, repeated-save behavior, ownership, role grants, RLS enablement, revisions, historical snapshots, and Finance links. It requires no local database server or project credentials. PGlite does not reproduce multi-session lock contention; validate that behavior against a staging PostgreSQL deployment before high-concurrency use.
 
 Browser tests use the real Inventory UI with isolated API fixtures on desktop and mobile. They exercise shelf breakdowns, price checks, cart retries, product creation inside a cart, initial stock, starting and finishing items, and Finance links. These do not replace a hosted smoke test after migration rollout.
 
@@ -92,7 +92,7 @@ Subcategory verification: 47 focused Inventory tests, all 681 application tests,
 
 Choose **Edit purchase** from Purchases or a product's purchase history. The editor includes every line in that receipt and allows corrections to stock source, purchase date, purchased quantities, and MYR line totals. Existing stock can retain unknown dates and prices. Historical products, sizes and pack contents remain fixed; receive additional shopping through Add stock.
 
-Quantity changes apply only the difference to unopened stock. Usage records remain intact, and corrections cannot make stock negative or put a purchase after recorded usage. Purchase revisions reject stale editors, and retries keep their original request identity. Editing does not change the Finance link or its expense.
+Quantity changes apply only the difference to unopened stock. Usage records remain intact, and corrections cannot make stock negative or put a purchase after recorded usage. Purchase revisions reject stale editors, and repeated edits with a stale revision are rejected. Editing does not change the Finance link or its expense.
 
 Successful Inventory actions use the shared Finance Toast, including dismissal and automatic expiry, instead of an inline confirmation row.
 
@@ -115,7 +115,7 @@ Price-row verification: 692 application tests, 26 desktop/mobile browser cases, 
 
 Selecting a Finance expense opens Edit purchase without saving a link immediately. A receipt with one line gets the expense amount suggested as its line total; multiple lines retain their current prices and show the expense amount as a reference for allocation. Users can adjust prices freely, including totals different from the expense amount. Closing the editor discards the suggested price and pending link.
 
-Save purchase commits the receipt corrections and selected Finance link atomically. The API and database both recheck Finance access; the database verifies the expense is still owned, confirmed and MYR. A failed save changes neither prices nor link, and retries retain request identity. Finance transactions are never edited. Standalone link removal also advances the purchase revision to reject stale editors.
+Save purchase commits the receipt corrections and selected Finance link atomically. The API and database both recheck Finance access; the database verifies the expense is still owned, confirmed and MYR. A failed save changes neither prices nor link, and repeated edits with a stale revision are rejected. Finance transactions are never edited. Standalone link removal also advances the purchase revision to reject stale editors.
 
 Applied [20261005103956_inventory_finance_price_review.sql](../supabase/migrations/20261005103956_inventory_finance_price_review.sql) to the connected Supabase project. Deploy this migration before the updated application. Verified the combined-save function and unchanged RLS/browser permissions.
 Finance price review verification: 58 Inventory tests, 693 application tests, 28 desktop/mobile browser cases, isolated database rollback/ownership/access/retry checks, lint, TypeScript and production build passed. Finance OCR typecheck, build and tests passed (387 passed, 171 skipped). Existing audit and advisor findings remain unchanged.
@@ -126,16 +126,26 @@ The Inventory landing page uses one table row per product with Product, Stock, U
 
 Unit price comes from the most recent dated purchase, using receipt creation time and ID to break ties; unknown-date receipts sort after dated receipts. All matching lines from that receipt are shown when it contains multiple sizes. Unknown latest prices stay unknown. Prices divide line cost by original usable-item count, including boxes inside multipacks. Size labels remain visible. Hover reveals purchase date and comparable prices; activating the price opens a keyboard/touch-accessible breakdown including pack cost and usual normalized price.
 
-Product names and stock quantities open product details. The row menu provides Add stock, Start using, Edit product and Adjust stock. The table scrolls horizontally on mobile, with Product and Stock first. Row menus render outside the scroll container so their actions remain reachable.
+Product names and stock quantities open product details. The row menu provides Add stock, Start using and Edit product. The table scrolls horizontally on mobile, with Product and Stock first. Row menus render outside the scroll container so their actions remain reachable.
 
 Shelf table verification: 695 application tests, 30 desktop/mobile browser cases, isolated Inventory database checks, lint, TypeScript, service-worker checks and production build passed. The rebuilt local preview was verified against saved stock and unit prices without changing records. Production audit is clear; seven existing development dependency findings remain unchanged.
 
 ## Scope simplification, October 8, 2026
 
-Stock adjustments, their history section, Adjust stock controls and the Remove action on in-use items were removed. Six Inventory tables remain. Purchases, receipt editing, normal Start using/Finished actions, usage-date editing and Finance linking continue. `inventory_requests` stays because an interrupted response must not cause a retry to add stock twice.
+Stock adjustments, their history section, Adjust stock controls and the Remove action on in-use items were removed. Five Inventory tables remain after the subsequent request-history removal. Purchases, receipt editing, normal Start using/Finished actions, usage-date editing and Finance linking continue. The owner later chose to remove `inventory_requests` and accept duplicate-save risk after uncertain responses.
 
 The forward migration refuses nonempty adjustment history or removed usage states. It replaces both Inventory RPC bodies before dropping the empty adjustments table and tightens usage states to `in_use` and `finished`. `inventory_read` keeps an empty `adjustments` JSON property for previously deployed clients, without a table query. UI removal takes effect when this application revision is deployed.
 
-The live migration is `20261008032658_remove_inventory_adjustments.sql`. Verification found the table absent, zero function/view/cron callers, unchanged stock/catalogue/purchase/usage/request records and unchanged RPC permissions. Inventory now uses six tables. The isolated database lifecycle suite and all 30 desktop/mobile Inventory browser cases passed. The application changes are committed locally; production UI removal requires deploying that revision.
+The live migration is `20261008032658_remove_inventory_adjustments.sql`. Verification found the table absent, zero function/view/cron callers, unchanged stock/catalogue/purchase/usage/request records and unchanged RPC permissions. That migration left six tables; the subsequent request-history removal leaves five. The isolated database lifecycle suite and all 30 desktop/mobile Inventory browser cases passed. The application changes are committed locally; production UI removal requires deploying that revision.
 
 Combined validation: 742 application tests, 402 OCR tests (171 existing skips), 40 Inventory/notification desktop/mobile browser cases, companion SQL and concurrency checks, both migration upgrade checks, lint, TypeScript, service-worker consistency and both production builds passed. Full and production dependency audits returned no findings in this run. Supabase advisors added no new notices.
+
+## Request-history removal, October 8, 2026
+
+The owner explicitly authorized deleting the request receipts and accepted that retrying an uncertain purchase or Start using action can apply it again. The application no longer creates, validates or sends request IDs. The mutation RPC has no request-table reads, writes, row types or replay logic. Its unused optional request parameter allows older deployed clients to keep calling the same RPC until the app update is deployed. No replacement history table was added.
+
+Per-owner serialization, atomic multi-line receipts, tenant ownership, module permissions, nonnegative stock, historical snapshots and product/purchase/usage revision checks remain. Timeout recovery asks users to check stock before retrying.
+
+The connected Supabase project applied `20261008035239_remove_inventory_requests.sql`. Live verification confirmed the table and all function, view and cron callers are absent. Checksums of all five remaining Inventory tables and the mutation function's owner, grants and security configuration are unchanged. No new security or performance advisor findings were introduced.
+
+Validation passed: 742 application unit tests (including 60 Inventory tests), the isolated PostgreSQL upgrade and lifecycle suite, 30 Inventory desktop/mobile browser cases, application lint/typecheck/build, and Finance OCR typecheck/build with 402 passed tests and 171 skipped. Application and OCR dependency audits reported zero vulnerabilities. The database migration is live; application changes require deployment.
