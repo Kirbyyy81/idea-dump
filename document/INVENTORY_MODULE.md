@@ -10,9 +10,9 @@ Create a product with a required category, optional subcategory, and size or pac
 
 Subcategory choices come from products in the selected category. Choose **Add subcategory** to type a new name in the same field, which receives focus without adding a form row. The arrow returns to the existing choices while retaining the typed name. Choose **None** to leave it blank. Changing category clears the subcategory. The shelf category filter enables a matching subcategory filter; changing the filter category resets that filter. Existing products keep their categories and initially have no subcategory.
 
-**My Shelf** shows unopened quantities and a separate in-use count. Hover over a quantity for a brief breakdown, or activate it by touch or keyboard for product details. Product details include historical batches, prices, usage records, and adjustments. Products remain in the catalogue at zero stock.
+**My Shelf** shows unopened quantities and a separate in-use count. Hover over a quantity for a brief breakdown, or activate it by touch or keyboard for product details. Product details include historical batches, prices, usage records. Products remain in the catalogue at zero stock.
 
-**Start using** removes one usable item from unopened stock and starts its usage record. **Finished** closes it; **Edit dates** corrects late or mistaken entries. Stock adjustments record corrections, discarded items, losses, and gifts separately from consumption. Positive corrections do not change original purchase quantities or costs.
+**Start using** removes one usable item from unopened stock and starts its usage record. **Finished** closes it; **Edit dates** corrects late or mistaken entries.
 
 ## Calculation rules
 
@@ -32,7 +32,7 @@ Selecting an expense opens a price review; prices and the link change only when 
 
 ## Data and access
 
-`inventory_products` and `inventory_variants` store the reusable catalogue. `inventory_purchases` groups confirmed carts. `inventory_batches` holds each purchase line, its immutable product/size snapshot and editable receipt cost, and its unopened count. `inventory_usages` tracks individual consumption; `inventory_adjustments` records corrections and removals. `inventory_requests` preserves mutation identities for safe retries.
+`inventory_products` and `inventory_variants` store the reusable catalogue. `inventory_purchases` groups confirmed carts. `inventory_batches` holds each purchase line, its immutable product/size snapshot and editable receipt cost, and its unopened count. `inventory_usages` tracks individual consumption with `in_use` and `finished` states. `inventory_requests` preserves mutation identities for safe retries.
 
 All tables enable RLS and revoke browser-role access. The server uses the established admin client only after shared module authorization. `inventory_read` and `inventory_mutate` are security-invoker RPCs with an empty search path, executable only by the trusted service role. They recheck module access and scope all records to the verified user. Finance links also recheck Finance access and expense ownership.
 
@@ -92,7 +92,7 @@ Subcategory verification: 47 focused Inventory tests, all 681 application tests,
 
 Choose **Edit purchase** from Purchases or a product's purchase history. The editor includes every line in that receipt and allows corrections to stock source, purchase date, purchased quantities, and MYR line totals. Existing stock can retain unknown dates and prices. Historical products, sizes and pack contents remain fixed; receive additional shopping through Add stock.
 
-Quantity changes apply only the difference to unopened stock. Usage and adjustment records remain intact, and corrections cannot make stock negative or put a purchase after recorded usage or adjustments. Purchase revisions reject stale editors, and retries keep their original request identity. Editing does not change the Finance link or its expense.
+Quantity changes apply only the difference to unopened stock. Usage records remain intact, and corrections cannot make stock negative or put a purchase after recorded usage. Purchase revisions reject stale editors, and retries keep their original request identity. Editing does not change the Finance link or its expense.
 
 Successful Inventory actions use the shared Finance Toast, including dismissal and automatic expiry, instead of an inline confirmation row.
 
@@ -129,3 +129,13 @@ Unit price comes from the most recent dated purchase, using receipt creation tim
 Product names and stock quantities open product details. The row menu provides Add stock, Start using, Edit product and Adjust stock. The table scrolls horizontally on mobile, with Product and Stock first. Row menus render outside the scroll container so their actions remain reachable.
 
 Shelf table verification: 695 application tests, 30 desktop/mobile browser cases, isolated Inventory database checks, lint, TypeScript, service-worker checks and production build passed. The rebuilt local preview was verified against saved stock and unit prices without changing records. Production audit is clear; seven existing development dependency findings remain unchanged.
+
+## Scope simplification, October 8, 2026
+
+Stock adjustments, their history section, Adjust stock controls and the Remove action on in-use items were removed. Six Inventory tables remain. Purchases, receipt editing, normal Start using/Finished actions, usage-date editing and Finance linking continue. `inventory_requests` stays because an interrupted response must not cause a retry to add stock twice.
+
+The forward migration refuses nonempty adjustment history or removed usage states. It replaces both Inventory RPC bodies before dropping the empty adjustments table and tightens usage states to `in_use` and `finished`. `inventory_read` keeps an empty `adjustments` JSON property for previously deployed clients, without a table query. UI removal takes effect when this application revision is deployed.
+
+The live migration is `20261008032658_remove_inventory_adjustments.sql`. Verification found the table absent, zero function/view/cron callers, unchanged stock/catalogue/purchase/usage/request records and unchanged RPC permissions. Inventory now uses six tables. The isolated database lifecycle suite and all 30 desktop/mobile Inventory browser cases passed. The application changes are committed locally; production UI removal requires deploying that revision.
+
+Combined validation: 742 application tests, 402 OCR tests (171 existing skips), 40 Inventory/notification desktop/mobile browser cases, companion SQL and concurrency checks, both migration upgrade checks, lint, TypeScript, service-worker consistency and both production builds passed. Full and production dependency audits returned no findings in this run. Supabase advisors added no new notices.

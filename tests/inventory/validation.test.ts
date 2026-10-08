@@ -43,9 +43,9 @@ describe('Inventory validation', () => {
     it.each(['2026-02-30', '2100-01-01', '1899-12-31'])('rejects impossible or unsupported dates %s', (date) => {
         expect(() => parseInventoryMutation({ request_id, action: 'start', payload: { batch_id: id.largeBatch, started_on: date } })).toThrow();
     });
-    it('rejects backwards usage dates and positive removals', () => {
+    it('rejects backwards usage dates and unsupported stock adjustments', () => {
         expect(() => parseInventoryMutation({ request_id, action: 'finish', payload: { usage_id: id.active, revision: 1, started_on: '2026-02-01', finished_on: '2026-01-01' } })).toThrow();
-        expect(() => parseInventoryMutation({ request_id, action: 'adjust', payload: { batch_id: id.largeBatch, usage_id: null, quantity: 2, reason: 'lost', adjusted_on: '2026-01-01' } })).toThrow();
+        expect(() => parseInventoryMutation({ request_id, action: 'adjust', payload: { batch_id: id.largeBatch, usage_id: null, quantity: -2, reason: 'lost', adjusted_on: '2026-01-01' } })).toThrow();
     });
     it('requires count variants to represent one usable item and unique variant names', () => {
         expect(() => parseInventoryMutation({ request_id, action: 'save_product', payload: { ...product, unit: 'count' } })).toThrow();

@@ -1,6 +1,6 @@
 import type { InventoryBatch, InventoryData, InventorySnapshot, InventoryUsage, InventoryVariant } from '@/lib/types';
 
-export const EMPTY_INVENTORY: InventoryData = { products: [], variants: [], purchases: [], batches: [], usages: [], adjustments: [] };
+export const EMPTY_INVENTORY: InventoryData = { products: [], variants: [], purchases: [], batches: [], usages: [] };
 const DAY = 86_400_000;
 export const inventoryToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kuala_Lumpur', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 export const money = (amount: number) => new Intl.NumberFormat('en-MY', { style: 'currency', currency: 'MYR' }).format(amount);

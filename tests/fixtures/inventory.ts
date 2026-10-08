@@ -34,5 +34,4 @@ export const inventoryFixture: InventoryData = {
         { id: id.active, batch_id: id.largeBatch, status: 'in_use', started_on: '2026-10-01', finished_on: null, revision: 1, created_at: created },
         { id: id.finished, batch_id: id.oldBatch, status: 'finished', started_on: '2026-08-01', finished_on: '2026-09-10', revision: 2, created_at: '2026-08-01T00:00:00Z' },
     ],
-    adjustments: [],
 };

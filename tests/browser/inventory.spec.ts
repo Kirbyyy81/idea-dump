@@ -165,15 +165,17 @@ test('edits size variants while retaining historical quantities', async ({ page 
     expect(commands[0]).toMatchObject({ action: 'save_product', payload: { revision: 1, variants: [{ size: 450 }, { size: 250 }] } });
 });
 
-test('records stock corrections separately from usage', async ({ page }) => {
+test('offers purchases and normal usage without adjustment controls', async ({ page }) => {
     const { commands } = await setup(page);
     await page.getByRole('button', { name: 'Tissues', exact: true }).click();
-    await page.getByRole('button', { name: 'Adjust stock', exact: true }).click();
-    await choose(page, 'Reason', 'Given away');
-    await page.getByLabel('Change in individual items').fill('-2');
-    await page.getByRole('dialog').getByRole('button', { name: 'Adjust stock', exact: true }).click();
-    await expect(page.getByRole('dialog')).not.toBeVisible();
-    expect(commands[0]).toMatchObject({ action: 'adjust', payload: { batch_id: id.tissueBatch, usage_id: null, quantity: -2, reason: 'given_away' } });
+    await expect(page.getByRole('button', { name: 'Adjust stock', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Stock adjustments', exact: true })).toHaveCount(0);
+    await page.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click();
+    await page.getByRole('link', { name: 'Usage history', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Remove', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Finished', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Edit dates', exact: true })).toHaveCount(2);
+    expect(commands).toEqual([]);
 });
 
 

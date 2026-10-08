@@ -29,11 +29,11 @@ describe('Inventory stock and consumption', () => {
         const usages = [{ ...stock.usages[1] }, { ...stock.usages[1], id: 'second', started_on: '2026-08-21', finished_on: '2026-09-30' }];
         expect(estimateStock(stock.batches, usages)).toMatchObject({ days: 75, samples: 2 });
     });
-    it('excludes gaps, removals, active items, and unknown start dates', () => {
+    it('excludes gaps, active items, and unknown start dates', () => {
         const stock = productStock(inventoryFixture, id.shampoo);
         const usage = inventoryFixture.usages[1];
         const records = [usage, { ...usage, started_on: '2026-01-01', finished_on: '2026-02-10' },
-            { ...usage, status: 'removed' as const }, { ...usage, started_on: null }, inventoryFixture.usages[0]];
+            { ...usage, started_on: null }, inventoryFixture.usages[0]];
         expect(estimateStock(stock.batches, records)).toMatchObject({ days: 100, samples: 2 });
     });
     it('uses one observed day for same-day completion', () => {

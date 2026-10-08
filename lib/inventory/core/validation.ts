@@ -90,13 +90,6 @@ export function parseInventoryMutation(input: unknown): InventoryMutation {
             if (started_on && finished_on && finished_on < started_on) throw new InventoryError('Finish date cannot be before the start date.');
             return { request_id, action: body.action, payload: { usage_id: uuid(p.usage_id), revision: number(p.revision, 'usage revision', 1, 2147483646), started_on, finished_on } };
         }
-        case 'adjust': {
-            const reason = choice(p.reason, ['correction', 'discarded', 'lost', 'given_away'], 'adjustment reason');
-            const quantity = number(p.quantity, 'adjustment quantity', -10000, 10000);
-            const usage_id = p.usage_id === null ? null : uuid(p.usage_id);
-            if (quantity === 0 || (reason !== 'correction' && quantity > 0) || (usage_id && quantity !== -1)) throw new InventoryError('Removals use negative quantities; an in-use removal is one item.');
-            return { request_id, action: 'adjust', payload: { batch_id: uuid(p.batch_id), usage_id, quantity, reason, adjusted_on: date(p.adjusted_on, 'Adjustment date')! } };
-        }
         case 'link_finance':
             return { request_id, action: 'link_finance', payload: { purchase_id: uuid(p.purchase_id), finance_transaction_id: p.finance_transaction_id === null ? null : uuid(p.finance_transaction_id) } };
         default: throw new InventoryError('Select a valid inventory action.');

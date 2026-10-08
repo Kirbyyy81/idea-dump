@@ -12,10 +12,10 @@ export function UsageHistory({ data, productId, onAction }: { data: InventoryDat
         {usages.map((usage) => {
             const batch = batches.get(usage.batch_id)!;
             return <div key={usage.id} className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border-default p-3">
-                <div className="min-w-0"><p className="break-words font-semibold">{batch.snapshot.product_name} · {batch.snapshot.variant_label}</p><p className="text-sm text-text-secondary">{usage.status === 'in_use' ? 'In use' : usage.status === 'finished' ? 'Finished' : 'Removed'} · Started {usage.started_on ?? 'on an unknown date'}{usage.finished_on ? ` · Finished ${usage.finished_on}` : ''}</p>
+                <div className="min-w-0"><p className="break-words font-semibold">{batch.snapshot.product_name} · {batch.snapshot.variant_label}</p><p className="text-sm text-text-secondary">{usage.status === 'in_use' ? 'In use' : 'Finished'} · Started {usage.started_on ?? 'on an unknown date'}{usage.finished_on ? ` · Finished ${usage.finished_on}` : ''}</p>
                     {usage.status === 'finished' && usage.started_on && usage.finished_on && <p className="text-xs text-text-secondary">{Math.max(1, Math.round((Date.parse(usage.finished_on) - Date.parse(usage.started_on)) / 86400000))} days of use</p>}</div>
-                <div className="flex flex-wrap gap-2">{usage.status === 'in_use' && <><Button onClick={() => onAction({ action: 'finish', usage })}>Finished</Button><Button variant="ghost" onClick={() => onAction({ action: 'adjust', productId: batch.product_id, usage })}>Remove</Button></>}
-                    {usage.status !== 'removed' && <Button variant="secondary" onClick={() => onAction({ action: 'edit_usage', usage })}>Edit dates</Button>}</div>
+                <div className="flex flex-wrap gap-2">{usage.status === 'in_use' && <Button onClick={() => onAction({ action: 'finish', usage })}>Finished</Button>}
+                    <Button variant="secondary" onClick={() => onAction({ action: 'edit_usage', usage })}>Edit dates</Button></div>
             </div>;
         })}
     </div>;

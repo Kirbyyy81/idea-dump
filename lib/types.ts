@@ -1492,19 +1492,10 @@ export interface InventoryBatch {
 export interface InventoryUsage {
     id: string;
     batch_id: string;
-    status: 'in_use' | 'finished' | 'removed';
+    status: 'in_use' | 'finished';
     started_on: string | null;
     finished_on: string | null;
     revision: number;
-    created_at: string;
-}
-export interface InventoryAdjustment {
-    id: string;
-    batch_id: string;
-    usage_id: string | null;
-    quantity: number;
-    reason: 'correction' | 'discarded' | 'lost' | 'given_away';
-    adjusted_on: string;
     created_at: string;
 }
 export interface InventoryData {
@@ -1513,7 +1504,6 @@ export interface InventoryData {
     purchases: InventoryPurchase[];
     batches: InventoryBatch[];
     usages: InventoryUsage[];
-    adjustments: InventoryAdjustment[];
 }
 export interface InventoryReceiptLine {
     variant_id: string;
@@ -1535,7 +1525,6 @@ export type InventoryMutation = { request_id: string } & (
     | { action: 'edit_purchase'; payload: { finance_transaction_id?: string; purchase_id: string; revision: number; kind: InventoryPurchase['kind']; purchased_on: string | null; lines: { batch_id: string; quantity: number; total_paid: number | null }[] } }
     | { action: 'start'; payload: { batch_id: string; started_on: string } }
     | { action: 'finish' | 'edit_usage'; payload: { usage_id: string; revision: number; started_on: string | null; finished_on: string | null } }
-    | { action: 'adjust'; payload: { batch_id: string; usage_id: string | null; quantity: number; reason: InventoryAdjustment['reason']; adjusted_on: string } }
     | { action: 'link_finance'; payload: { purchase_id: string; finance_transaction_id: string | null } }
 );
 export interface InventoryExpense {
