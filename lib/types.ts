@@ -896,27 +896,6 @@ export interface FinanceRuleView extends Pick<
     category?: Pick<FinanceReferenceOption, 'name'> | null;
 }
 
-export type FinanceLearnedFieldName = 'reference_number';
-
-export type FinanceLearnedTransformType =
-    | 'strip_prefix'
-    | 'strip_suffix'
-    | 'digits_only'
-    | 'alphanumeric_only';
-
-export interface FinanceFieldLearningRule {
-    id: string;
-    user_id: string;
-    source_id: string;
-    field_name: FinanceLearnedFieldName;
-    transform_type: FinanceLearnedTransformType;
-    transform_value: string | null;
-    evidence_count: number;
-    is_active: boolean;
-    created_at: string;
-    updated_at: string;
-}
-
 export type FinanceParserTemplateField =
     | 'source_id'
     | 'reference_number'
@@ -1224,40 +1203,6 @@ export interface FinanceParserTemplateEvaluation {
     value_hash?: string;
 }
 
-export interface FinanceRuleSuggestion {
-    id: string;
-    user_id: string;
-    name: string;
-    pattern: string;
-    match_type: FinanceRule['match_type'];
-    category_id: string;
-    source_id: string | null;
-    direction: 'expense' | 'income';
-    priority: number;
-    evidence_count: number;
-    status: 'pending' | 'accepted' | 'rejected';
-    created_at: string;
-    updated_at: string;
-    category?: FinanceCategory | null;
-    finance_source?: FinanceSource | null;
-}
-
-export interface FinanceRuleSuggestionView extends Pick<
-    FinanceRuleSuggestion,
-    | 'id'
-    | 'name'
-    | 'pattern'
-    | 'match_type'
-    | 'category_id'
-    | 'source_id'
-    | 'direction'
-    | 'priority'
-    | 'evidence_count'
-> {
-    category?: Pick<FinanceReferenceOption, 'name'> | null;
-    finance_source?: Pick<FinanceReferenceOption, 'name'> | null;
-}
-
 export type FinanceOcrSource = Pick<
     FinanceSource,
     'id' | 'name' | 'filename_aliases' | 'ocr_aliases' | 'is_archived'
@@ -1276,18 +1221,6 @@ export type FinanceOcrRule = Pick<
     | 'is_active'
     | 'source'
     | 'auto_created_at'
-    | 'created_at'
->;
-
-export type FinanceOcrFieldLearningRule = Pick<
-    FinanceFieldLearningRule,
-    | 'id'
-    | 'source_id'
-    | 'field_name'
-    | 'transform_type'
-    | 'transform_value'
-    | 'evidence_count'
-    | 'is_active'
     | 'created_at'
 >;
 

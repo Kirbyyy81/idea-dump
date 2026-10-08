@@ -9,19 +9,12 @@ import type {
     FinanceParserTemplateField,
     FinanceReviewCandidate,
     FinanceRule,
-    FinanceRuleSuggestion,
-    FinanceRuleSuggestionView,
     FinanceRuleView,
     FinanceTransaction,
     FinanceTransactionView,
 } from '@/lib/types';
 
 type FinanceRuleWithRelations = FinanceRule & {
-    finance_source?: { name: string } | null;
-    category?: { name: string } | null;
-};
-
-type FinanceRuleSuggestionWithRelations = FinanceRuleSuggestion & {
     finance_source?: { name: string } | null;
     category?: { name: string } | null;
 };
@@ -242,24 +235,6 @@ export function toFinanceRuleView(rule: FinanceRuleWithRelations): FinanceRuleVi
         created_at: rule.created_at,
         finance_source: namedReference(rule.finance_source),
         category: namedReference(rule.category),
-    };
-}
-
-export function toFinanceRuleSuggestionView(
-    suggestion: FinanceRuleSuggestionWithRelations
-): FinanceRuleSuggestionView {
-    return {
-        id: suggestion.id,
-        name: suggestion.name,
-        pattern: suggestion.pattern,
-        match_type: suggestion.match_type,
-        category_id: suggestion.category_id,
-        source_id: suggestion.source_id || null,
-        direction: suggestion.direction,
-        priority: suggestion.priority,
-        evidence_count: suggestion.evidence_count,
-        category: namedReference(suggestion.category),
-        finance_source: namedReference(suggestion.finance_source),
     };
 }
 

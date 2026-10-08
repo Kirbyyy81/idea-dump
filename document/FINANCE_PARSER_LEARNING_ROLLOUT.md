@@ -408,6 +408,8 @@ Combined-branch validation (2026-09-14): 259 application tests, 454 OCR tests in
 
 ## Legacy learning retirement
 
+The original retirement below is followed by `20261008025952_remove_legacy_finance_learning_tables.sql`. That cleanup removes the empty suggestion/reference tables and obsolete RPC chain. The application removes the suggestion endpoint and response field instead of returning retirement responses. Run `finance_legacy_cleanup_upgrade.test.sql` on the retired predecessor before cleanup, then the current parser suites on the cleaned schema. Historical learning-run metrics, correction payloads and manual-rule guards remain intact.
+
 `20260915172224_retire_legacy_finance_learning.sql` disables legacy category/direction rules (`finance_rules.source='learning'`) and reference transforms, including previously accepted suggestions. Their rows and evidence remain. New inserts, reactivation and changing a rule's origin are blocked. Pending suggestions remain historical pending rows, are omitted from API responses, and cannot be activated. The legacy entry point returns zero. Existing manual rules and algorithm 2/3 learning continue; no replacement category learner is introduced.
 
 The scheduled refresh retains its signature, invocation replay, advisory lock, safe failure reporting and 90-day retention. New runs report zero legacy activity; retries of historical invocations return the original stored result. New parsing baselines exclude legacy transforms, while stored candidates and evidence are not rewritten. Run explicit operator promotion only after the existing evidence checks succeed; retirement does not promote or reset templates.
