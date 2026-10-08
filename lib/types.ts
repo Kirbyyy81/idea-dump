@@ -1470,28 +1470,34 @@ export interface InventorySnapshot {
 }
 export interface InventoryPurchase {
     id: string;
+    receipt_id: string;
+    product_id: string;
+    variant_id: string;
     revision: number;
     kind: 'purchase' | 'existing';
     purchased_on: string | null;
     currency: 'MYR';
     finance_transaction_id: string | null;
-    created_at: string;
-}
-export interface InventoryBatch {
-    id: string;
-    purchase_id: string;
-    product_id: string;
-    variant_id: string;
     purchased_quantity: number;
     original_units: number;
     unopened_units: number;
     total_paid: number | null;
     snapshot: InventorySnapshot;
     created_at: string;
+    receipt_created_at: string;
+}
+export interface InventoryReceipt {
+    id: string;
+    revision: number;
+    kind: InventoryPurchase['kind'];
+    purchased_on: string | null;
+    currency: 'MYR';
+    finance_transaction_id: string | null;
+    created_at: string;
 }
 export interface InventoryUsage {
     id: string;
-    batch_id: string;
+    purchase_id: string;
     status: 'in_use' | 'finished';
     started_on: string | null;
     finished_on: string | null;
@@ -1502,7 +1508,6 @@ export interface InventoryData {
     products: InventoryProduct[];
     variants: InventoryVariant[];
     purchases: InventoryPurchase[];
-    batches: InventoryBatch[];
     usages: InventoryUsage[];
 }
 export interface InventoryReceiptLine {
@@ -1522,10 +1527,10 @@ export interface InventoryReceiptInput {
 export type InventoryMutation = (
     | { action: 'save_product'; payload: InventoryProductInput }
     | { action: 'receive'; payload: InventoryReceiptInput }
-    | { action: 'edit_purchase'; payload: { finance_transaction_id?: string; purchase_id: string; revision: number; kind: InventoryPurchase['kind']; purchased_on: string | null; lines: { batch_id: string; quantity: number; total_paid: number | null }[] } }
-    | { action: 'start'; payload: { batch_id: string; started_on: string } }
+    | { action: 'edit_purchase'; payload: { finance_transaction_id?: string; receipt_id: string; revision: number; kind: InventoryPurchase['kind']; purchased_on: string | null; lines: { purchase_id: string; quantity: number; total_paid: number | null }[] } }
+    | { action: 'start'; payload: { purchase_id: string; started_on: string } }
     | { action: 'finish' | 'edit_usage'; payload: { usage_id: string; revision: number; started_on: string | null; finished_on: string | null } }
-    | { action: 'link_finance'; payload: { purchase_id: string; finance_transaction_id: string | null } }
+    | { action: 'link_finance'; payload: { receipt_id: string; finance_transaction_id: string | null } }
 );
 export interface InventoryExpense {
     id: string;

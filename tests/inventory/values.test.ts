@@ -1,23 +1,29 @@
 import { describe, expect, it } from 'vitest';
-import { comparePrice, estimateStock, latestPurchasePrices, lineTotal, productStock } from '@/lib/inventory/core/values';
+import { comparePrice, estimateStock, inventoryReceipts, latestPurchasePrices, lineTotal, productStock } from '@/lib/inventory/core/values';
 import { inventoryFixture, inventoryIds as id } from '../fixtures/inventory';
 
 describe('Inventory stock and consumption', () => {
+    it('groups purchase items into receipts without a separate receipt collection', () => {
+        const receipts = inventoryReceipts(inventoryFixture);
+        expect(receipts.map((receipt) => receipt.id)).toEqual([id.purchase, id.oldPurchase]);
+        expect(inventoryFixture.purchases.filter((item) => item.receipt_id === receipts[0].id)).toHaveLength(3);
+        expect(inventoryFixture).not.toHaveProperty('batches');
+    });
     it('shows all sizes from the latest purchase, including unknown prices', () => {
         const data = structuredClone(inventoryFixture);
-        data.batches[0].total_paid = null;
+        data.purchases[0].total_paid = null;
         const result = latestPurchasePrices(data, id.shampoo);
-        expect(result.purchase?.id).toBe(id.purchase);
-        expect(result.batches.map((batch) => batch.id)).toEqual([id.largeBatch, id.smallBatch]);
-        expect(result.batches[0].total_paid).toBeNull();
+        expect(result.receipt?.id).toBe(id.purchase);
+        expect(result.purchases.map((batch) => batch.id)).toEqual([id.largeBatch, id.smallBatch]);
+        expect(result.purchases[0].total_paid).toBeNull();
     });
     it('orders unit prices by purchase date instead of receipt entry order', () => {
         const data = structuredClone(inventoryFixture);
-        data.purchases[1].created_at = '2026-10-05T00:00:00Z';
-        expect(latestPurchasePrices(data, id.shampoo).purchase?.id).toBe(id.purchase);
-        data.purchases[0].purchased_on = null;
-        expect(latestPurchasePrices(data, id.shampoo).purchase?.id).toBe(id.oldPurchase);
-        expect(latestPurchasePrices(data, 'missing').batches).toEqual([]);
+        data.purchases[3].receipt_created_at = '2026-10-05T00:00:00Z';
+        expect(latestPurchasePrices(data, id.shampoo).receipt?.id).toBe(id.purchase);
+        data.purchases.filter((item) => item.receipt_id === id.purchase).forEach((item) => { item.purchased_on = null; });
+        expect(latestPurchasePrices(data, id.shampoo).receipt?.id).toBe(id.oldPurchase);
+        expect(latestPurchasePrices(data, 'missing').purchases).toEqual([]);
     });
     it('excludes opened bottles and combines unopened sizes', () => {
         const stock = productStock(inventoryFixture, id.shampoo);
@@ -27,23 +33,23 @@ describe('Inventory stock and consumption', () => {
     it('uses the union of overlapping periods instead of double-counting time', () => {
         const stock = productStock(inventoryFixture, id.shampoo);
         const usages = [{ ...stock.usages[1] }, { ...stock.usages[1], id: 'second', started_on: '2026-08-21', finished_on: '2026-09-30' }];
-        expect(estimateStock(stock.batches, usages)).toMatchObject({ days: 75, samples: 2 });
+        expect(estimateStock(stock.purchases, usages)).toMatchObject({ days: 75, samples: 2 });
     });
     it('excludes gaps, active items, and unknown start dates', () => {
         const stock = productStock(inventoryFixture, id.shampoo);
         const usage = inventoryFixture.usages[1];
         const records = [usage, { ...usage, started_on: '2026-01-01', finished_on: '2026-02-10' },
             { ...usage, started_on: null }, inventoryFixture.usages[0]];
-        expect(estimateStock(stock.batches, records)).toMatchObject({ days: 100, samples: 2 });
+        expect(estimateStock(stock.purchases, records)).toMatchObject({ days: 100, samples: 2 });
     });
     it('uses one observed day for same-day completion', () => {
         const stock = productStock(inventoryFixture, id.shampoo);
-        expect(estimateStock(stock.batches, [{ ...inventoryFixture.usages[1], finished_on: '2026-08-01' }]).days).toBe(2);
+        expect(estimateStock(stock.purchases, [{ ...inventoryFixture.usages[1], finished_on: '2026-08-01' }]).days).toBe(2);
     });
     it('does not use 100-sheet history to predict 200-sheet boxes', () => {
-        const batch = inventoryFixture.batches[2];
+        const batch = inventoryFixture.purchases[2];
         const changed = { ...batch, id: 'different', snapshot: { ...batch.snapshot, sheets_per_item: 200 } };
-        const usage = { ...inventoryFixture.usages[1], batch_id: batch.id };
+        const usage = { ...inventoryFixture.usages[1], purchase_id: batch.id };
         expect(estimateStock([batch, changed], [usage]).days).toBeNull();
     });
 });
@@ -57,13 +63,13 @@ describe('Price comparison', () => {
     });
     it('excludes unknown prices and incompatible tissue contents', () => {
         const data = structuredClone(inventoryFixture);
-        data.batches[0].total_paid = null;
+        data.purchases[0].total_paid = null;
         expect(comparePrice(data, id.shampoo, { unit: 'ml', sheets_per_item: null }).count).toBe(2);
         expect(comparePrice(data, id.tissues, { unit: 'count', sheets_per_item: 200 }).usual).toBeNull();
         expect(comparePrice(data, id.tissues, { unit: 'count', sheets_per_item: 100 }).usual).toBe(3);
     });
     it('does not divide by a zero-price baseline', () => {
-        const data = structuredClone(inventoryFixture); data.batches.forEach((batch) => { batch.total_paid = 0; });
+        const data = structuredClone(inventoryFixture); data.purchases.forEach((batch) => { batch.total_paid = 0; });
         expect(comparePrice(data, id.shampoo, { unit: 'ml', sheets_per_item: null }, 4)).toMatchObject({ usual: 0, difference: null });
     });
     it('calculates unit and total prices in cents', () => {

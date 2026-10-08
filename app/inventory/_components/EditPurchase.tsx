@@ -4,27 +4,27 @@ import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { FormDialog } from '@/components/molecules/FormDialog';
-import type { InventoryData, InventoryPurchase, InventoryExpense } from '@/lib/types';
+import type { InventoryData, InventoryReceipt, InventoryExpense } from '@/lib/types';
 import { useInventoryAction, type InventorySave } from '@/lib/inventory/core/client';
 import { inventoryToday, money, quantityText } from '@/lib/inventory/core/values';
 import { InventoryDate, InventoryErrorNotice } from './fields';
 
-export function EditPurchase({ purchase, data, save, onClose, expense }: { purchase: InventoryPurchase; data: InventoryData; save: InventorySave; onClose: () => void; expense?: InventoryExpense }) {
-    const batches = data.batches.filter((batch) => batch.purchase_id === purchase.id);
+export function EditPurchase({ purchase, data, save, onClose, expense }: { purchase: InventoryReceipt; data: InventoryData; save: InventorySave; onClose: () => void; expense?: InventoryExpense }) {
+    const items = data.purchases.filter((item) => item.receipt_id === purchase.id);
     const [kind, setKind] = useState(purchase.kind);
     const [purchasedOn, setPurchasedOn] = useState(purchase.purchased_on ?? '');
-    const [lines, setLines] = useState(batches.map((batch) => ({ batch_id: batch.id, quantity: batch.purchased_quantity, total_paid: expense && batches.length === 1 ? Number(expense.amount) : batch.total_paid })));
+    const [lines, setLines] = useState(items.map((item) => ({ purchase_id: item.id, quantity: item.purchased_quantity, total_paid: expense && items.length === 1 ? Number(expense.amount) : item.total_paid })));
     const { busy, error, run } = useInventoryAction(save);
-    const invalidStock = lines.some((line, index) => batches[index].unopened_units + line.quantity * batches[index].snapshot.pack_quantity - batches[index].original_units < 0);
+    const invalidStock = lines.some((line, index) => items[index].unopened_units + line.quantity * items[index].snapshot.pack_quantity - items[index].original_units < 0);
     return <FormDialog title="Edit purchase" onClose={onClose} busy={busy}>
         <form className="space-y-5" onSubmit={(event) => {
             event.preventDefault();
-            void run({ action: 'edit_purchase', payload: { purchase_id: purchase.id, revision: purchase.revision, kind, purchased_on: purchasedOn || null, lines, ...(expense ? { finance_transaction_id: expense.id } : {}) } }, onClose);
+            void run({ action: 'edit_purchase', payload: { receipt_id: purchase.id, revision: purchase.revision, kind, purchased_on: purchasedOn || null, lines, ...(expense ? { finance_transaction_id: expense.id } : {}) } }, onClose);
         }}>
             <InventoryErrorNotice error={error} />
             {expense && <div className="space-y-1 rounded-md border border-border-default p-3 text-sm">
                 <p className="font-semibold">{expense.merchant || 'Finance expense'} · {money(Number(expense.amount))}</p>
-                <p className="text-text-secondary">{batches.length === 1 ? 'Suggested price from Finance. Adjust it if the expense includes other items.' : 'Enter each item’s share of this expense. Your purchase total can differ.'} The link is saved with this purchase.</p>
+                <p className="text-text-secondary">{items.length === 1 ? 'Suggested price from Finance. Adjust it if the expense includes other items.' : 'Enter each item’s share of this expense. Your purchase total can differ.'} The link is saved with this purchase.</p>
             </div>}
             <fieldset disabled={busy} className="space-y-4">
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -34,17 +34,17 @@ export function EditPurchase({ purchase, data, save, onClose, expense }: { purch
                     <InventoryDate label="Purchase date" value={purchasedOn} onChange={setPurchasedOn} optional={kind === 'existing'} />
                 </div>
                 {lines.map((line, index) => {
-                    const batch = batches[index];
-                    const remaining = batch.unopened_units + line.quantity * batch.snapshot.pack_quantity - batch.original_units;
-                    return <section key={line.batch_id} aria-label={`Purchase item ${index + 1}`} className="space-y-3 rounded-md border border-border-default p-3">
-                        <h3 className="break-words font-bold">{batch.snapshot.product_name} · {batch.snapshot.variant_label}</h3>
+                    const item = items[index];
+                    const remaining = item.unopened_units + line.quantity * item.snapshot.pack_quantity - item.original_units;
+                    return <section key={line.purchase_id} aria-label={`Purchase item ${index + 1}`} className="space-y-3 rounded-md border border-border-default p-3">
+                        <h3 className="break-words font-bold">{item.snapshot.product_name} · {item.snapshot.variant_label}</h3>
                         <div className="grid gap-3 sm:grid-cols-2">
-                            <Input label="Quantity purchased" required type="number" min={Math.max(1, Math.ceil((batch.original_units - batch.unopened_units) / batch.snapshot.pack_quantity))} max={Math.min(1000, Math.floor(10000 / batch.snapshot.pack_quantity))} step="1" value={line.quantity || ''}
+                            <Input label="Quantity purchased" required type="number" min={Math.max(1, Math.ceil((item.original_units - item.unopened_units) / item.snapshot.pack_quantity))} max={Math.min(1000, Math.floor(10000 / item.snapshot.pack_quantity))} step="1" value={line.quantity || ''}
                                 onValueChange={(value) => setLines(lines.map((item, i) => i === index ? { ...item, quantity: Number(value) } : item))} />
                             <Input label="Line total (RM)" required={kind === 'purchase'} type="number" min="0" max="1000000" step="0.01" value={line.total_paid ?? ''}
                                 onValueChange={(value) => setLines(lines.map((item, i) => i === index ? { ...item, total_paid: value === '' ? null : Number(value) } : item))} />
                         </div>
-                        <p className="text-sm text-text-secondary">{batch.snapshot.pack_quantity} {batch.snapshot.item_label} per purchased pack / item · {quantityText(remaining * batch.snapshot.size, batch.snapshot.unit === 'count' ? batch.snapshot.item_label : batch.snapshot.unit)} unopened after saving</p>
+                        <p className="text-sm text-text-secondary">{item.snapshot.pack_quantity} {item.snapshot.item_label} per purchased pack / item · {quantityText(remaining * item.snapshot.size, item.snapshot.unit === 'count' ? item.snapshot.item_label : item.snapshot.unit)} unopened after saving</p>
                         {remaining < 0 && <p role="alert" className="text-sm text-error">Quantity cannot be reduced below stock already used.</p>}
                     </section>;
                 })}

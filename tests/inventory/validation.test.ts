@@ -5,7 +5,7 @@ import { inventoryFixture, inventoryIds as id } from '../fixtures/inventory';
 const product = { ...inventoryFixture.products[0], variants: inventoryFixture.variants.slice(0, 2) };
 const line = { variant_id: id.large, product_revision: 1, quantity: 2, price: 18, price_mode: 'unit', in_use_quantity: 0, started_on: null };
 describe('Inventory validation', () => {
-    const purchaseEdit = { purchase_id: id.purchase, revision: 1, kind: 'purchase', purchased_on: '2026-01-01', lines: [{ batch_id: id.largeBatch, quantity: 2, total_paid: 36 }] };
+    const purchaseEdit = { receipt_id: id.purchase, revision: 1, kind: 'purchase', purchased_on: '2026-01-01', lines: [{ purchase_id: id.largeBatch, quantity: 2, total_paid: 36 }] };
     it('validates purchase corrections and supports unknown existing-stock prices', () => {
         expect(parseInventoryMutation({ action: 'edit_purchase', payload: purchaseEdit }).payload).toEqual(purchaseEdit);
         expect(parseInventoryMutation({ action: 'edit_purchase', payload: { ...purchaseEdit, kind: 'existing', purchased_on: null, lines: [{ ...purchaseEdit.lines[0], total_paid: null }] } }).action).toBe('edit_purchase');
@@ -40,11 +40,11 @@ describe('Inventory validation', () => {
         expect(parseInventoryMutation({ action: 'receive', payload: { kind: 'existing', purchased_on: null, lines: [{ ...line, price: null, in_use_quantity: 1 }] } }).action).toBe('receive');
     });
     it.each(['2026-02-30', '2100-01-01', '1899-12-31'])('rejects impossible or unsupported dates %s', (date) => {
-        expect(() => parseInventoryMutation({ action: 'start', payload: { batch_id: id.largeBatch, started_on: date } })).toThrow();
+        expect(() => parseInventoryMutation({ action: 'start', payload: { purchase_id: id.largeBatch, started_on: date } })).toThrow();
     });
     it('rejects backwards usage dates and unsupported stock adjustments', () => {
         expect(() => parseInventoryMutation({ action: 'finish', payload: { usage_id: id.active, revision: 1, started_on: '2026-02-01', finished_on: '2026-01-01' } })).toThrow();
-        expect(() => parseInventoryMutation({ action: 'adjust', payload: { batch_id: id.largeBatch, usage_id: null, quantity: -2, reason: 'lost', adjusted_on: '2026-01-01' } })).toThrow();
+        expect(() => parseInventoryMutation({ action: 'adjust', payload: { purchase_id: id.largeBatch, usage_id: null, quantity: -2, reason: 'lost', adjusted_on: '2026-01-01' } })).toThrow();
     });
     it('requires count variants to represent one usable item and unique variant names', () => {
         expect(() => parseInventoryMutation({ action: 'save_product', payload: { ...product, unit: 'count' } })).toThrow();
