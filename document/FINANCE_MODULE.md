@@ -1136,3 +1136,7 @@ See [`ARCHITECTURE_CLEAN_CODE_REVIEW.md`](./ARCHITECTURE_CLEAN_CODE_REVIEW.md) f
 - Share queue consumer: [`services/finance-ocr/src/queueConsumer.ts`](../services/finance-ocr/src/queueConsumer.ts)
 - OCR operations: [`services/finance-ocr/README.md`](../services/finance-ocr/README.md)
 - Current recipient-reference and mutation migration: [`supabase/migrations/20260813034905_merge_recipient_reference_into_notes.sql`](../supabase/migrations/20260813034905_merge_recipient_reference_into_notes.sql)
+
+## Notification pattern storage, October 8, 2026
+
+Manual notification confirmation saves reusable definitions directly into `finance_notification_patterns` in the same transaction as confirmation and raw-text deletion. The separate `finance_notification_learning_reviews` audit table and its writer were removed. Existing patterns, supporting transactions, disabled overrides, source/package ownership and evidence invalidation remain. The existing confirmation RPC signature is preserved for deployed clients.

@@ -59,10 +59,10 @@ begin
  t:=(r->'transaction'->>'id')::uuid;
  select * into p from public.finance_notification_patterns where user_id=u;
  perform pg_temp.check_companion(p.is_active and p.evidence_valid and p.origin='learned','active after one review');
- perform pg_temp.check_companion((select count(*)=1 from public.finance_notification_learning_reviews where user_id=u),'one evidence entry');
+ perform pg_temp.check_companion(p.evidence_transaction_id=t,'pattern stores its supporting transaction');
  perform pg_temp.check_companion((select body is null and title is null from public.finance_notification_events where intake_item_id=i),'raw text deleted');
  perform public.finance_confirm_notification_v1(u,c,null,args,config);
- perform pg_temp.check_companion((select count(*)=1 from public.finance_notification_learning_reviews where user_id=u),'confirmation replay does not retrain');
+ perform pg_temp.check_companion((select count(*)=1 from public.finance_notification_patterns where user_id=u),'confirmation replay does not duplicate patterns');
  perform pg_temp.check_companion((select revision=p.revision from public.finance_notification_patterns where id=p.id),'replay preserves version');
  p:=public.finance_set_notification_pattern_v1(u,s,p.id,false,p.revision);
  r:=pg_temp.accept_notification(302); c:=(r->>'candidate_id')::uuid;
@@ -88,18 +88,40 @@ begin
  p:=public.finance_set_notification_pattern_v1(u,s,p.id,false,p.revision);
  perform pg_temp.check_companion(p.user_id=u and not p.is_active,'starter disable is owner scoped');
  perform pg_temp.check_companion((select is_active from public.finance_notification_patterns where user_id is null and format_key='ryt-card-payment'),'global starter remains active');
- before_count:=(select count(*) from public.finance_notification_learning_reviews where user_id=u);
+ before_count:=(select count(*) from public.finance_notification_patterns where user_id=u);
  r:=pg_temp.accept_notification(303); c:=(r->>'candidate_id')::uuid;
  perform public.finance_reject_candidate(u,c);
  r:=pg_temp.accept_notification(304); c:=(r->>'candidate_id')::uuid;
  perform public.finance_mark_candidate_duplicate(u,c,t);
- perform pg_temp.check_companion((select count(*)=before_count from public.finance_notification_learning_reviews where user_id=u),'reject and duplicate do not train');
+ perform pg_temp.check_companion((select count(*)=before_count from public.finance_notification_patterns where user_id=u),'reject and duplicate do not save patterns');
  -- Deletion invalidates the currently supporting evidence before cascades remove it.
  r:=pg_temp.accept_notification(305); c:=(r->>'candidate_id')::uuid;
  r:=public.finance_confirm_notification_v1(u,c,md5('305')||md5('305'),args,config);
  t:=(r->'transaction'->>'id')::uuid;
  perform public.finance_delete_transaction(u,t);
  perform pg_temp.check_companion((select not evidence_valid from public.finance_notification_patterns where user_id=u and format_key='tng-incoming'),'deleted evidence invalidated');
+ -- Pattern storage has the same cap and source-change behavior without audit rows.
+ insert into public.finance_notification_patterns(user_id,source_id,source_package,format_key,name,definition,origin)
+ select u,s,'my.com.tngdigital.ewallet','capacity-'||n,'Synthetic capacity pattern',config->'definition','learned'
+ from generate_series(1,198) n;
+ perform pg_temp.check_companion((select count(*)=200 from public.finance_notification_patterns where user_id=u and source_id=s),'source pattern limit fixture');
+ r:=pg_temp.accept_notification(306); c:=(r->>'candidate_id')::uuid; i:=(r->>'intake_item_id')::uuid;
+ r:=public.finance_confirm_notification_v1(u,c,md5('306')||md5('306'),args,config||'{"format_key":"over-capacity"}');
+ perform pg_temp.check_companion((r->>'confirmed')::boolean,'cap does not prevent confirmation');
+ perform pg_temp.check_companion((select count(*)=200 from public.finance_notification_patterns where user_id=u and source_id=s),'cap skips new pattern');
+ perform pg_temp.check_companion((select body is null from public.finance_notification_events where intake_item_id=i),'cap still scrubs raw text');
+ select revision into rev from public.finance_notification_patterns where user_id=u and source_id=s and format_key='tng-incoming';
+ r:=pg_temp.accept_notification(307); c:=(r->>'candidate_id')::uuid;
+ perform public.finance_confirm_notification_v1(u,c,md5('307')||md5('307'),args,config);
+ perform pg_temp.check_companion((select revision=rev+1 from public.finance_notification_patterns where user_id=u and source_id=s and format_key='tng-incoming'),'existing pattern updates at cap');
+ insert into public.dim_finance_sources(id,user_id,name) values('21000000-0000-4000-8000-000000000013',u,'Changed source');
+ r:=pg_temp.accept_notification(308); c:=(r->>'candidate_id')::uuid;
+ perform public.finance_confirm_notification_v1(u,c,md5('308')||md5('308'),args||'{"p_source_id":"21000000-0000-4000-8000-000000000013"}',config);
+ perform pg_temp.check_companion(not exists(select 1 from public.finance_notification_patterns where user_id=u and source_id='21000000-0000-4000-8000-000000000013'),'source change saves no mismatched pattern');
+ r:=pg_temp.accept_notification(309); c:=(r->>'candidate_id')::uuid;
+ perform public.finance_confirm_notification_v1(u,c,md5('309')||md5('309'),args,null);
+ perform pg_temp.check_companion((select count(*)=200 from public.finance_notification_patterns where user_id=u and source_id=s),'confirmation without a pattern remains supported');
+
 end $$;
 reset role;
 select pg_temp.check_companion(not has_table_privilege('authenticated','public.finance_notification_patterns','SELECT'),'browser cannot read patterns directly');
