@@ -8,6 +8,7 @@ const cameraFixture = [
 
 async function setup(page: Page, empty = false, rollCount = 1) {
     let cameras = empty ? [] : structuredClone(cameraFixture);
+    const rolls = empty ? [] : Array.from({ length: rollCount }, (_, index) => ({ id: `roll-${index}`, film_name: index ? `Fujifilm 200 (${index + 1})` : 'Fujifilm 200', brand: 'Fuji', format: '35mm', iso: 200, status: 'PROCESSED', camera_id: 'camera-a', camera: cameras[0], frames_taken: 36, purchase_price: 35, cover_image_url: '/logo.png' }));
     let maintenance = [{ id: 'service-b', camera_id: 'camera-b', service_type: 'Lens Cleaning', provider_name: 'Travel lab', maintenance_cost: 30, notes: '', service_date: '2026-01-01' }];
     let cameraReads = 0;
     await page.route('**/api/film/**', async (route) => {
@@ -35,7 +36,12 @@ async function setup(page: Page, empty = false, rollCount = 1) {
             }
             if (method === 'DELETE') { maintenance = maintenance.filter((item) => item.id !== url.searchParams.get('id')); data = null; }
         } else if (url.pathname === '/api/film/rolls') {
-            data = empty ? [] : Array.from({ length: rollCount }, (_, index) => ({ id: `roll-${index}`, film_name: index ? `Fujifilm 200 (${index + 1})` : 'Fujifilm 200', brand: 'Fuji', format: '35mm', iso: 200, status: 'PROCESSED', camera_id: 'camera-a', camera: cameras[0], frames_taken: 36, purchase_price: 35, cover_image_url: '/logo.png' }));
+            if (method === 'POST') {
+                const roll = { ...request.postDataJSON(), id: 'roll-new' };
+                rolls.push(roll); data = roll;
+            } else data = rolls;
+        } else if (url.pathname.startsWith('/api/film/rolls/')) {
+            data = rolls.find((roll) => roll.id === url.pathname.split('/').at(-1));
         }
         await route.fulfill({ json: { data } });
     });
@@ -87,12 +93,14 @@ test('packs rolls closely and moves following rolls only when details expand', a
     await expect(first).toBeVisible();
     const initialFirst = (await first.boundingBox())!;
     const initialSecond = (await second.boundingBox())!;
-    expect(initialSecond.x - initialFirst.x).toBeLessThan(160);
+    if (!isMobile) expect(initialSecond.x - initialFirst.x).toBeLessThan(160);
     await page.screenshot({ path: testInfo.outputPath('compact-rolls.png'), fullPage: true });
 
     if (isMobile) await first.focus();
     else await first.hover();
-    await expect.poll(async () => (await second.boundingBox())!.x - initialSecond.x).toBeGreaterThan(130);
+    await expect.poll(async () => (await first.boundingBox())!.width).toBeGreaterThan(250);
+    if (!isMobile) await expect.poll(async () => (await second.boundingBox())!.x - initialSecond.x).toBeGreaterThan(130);
+    else expect((await second.boundingBox())!.x).toBe(initialSecond.x);
     expect((await second.boundingBox())!.y).toBe(initialSecond.y);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width);
     await page.screenshot({ path: testInfo.outputPath('expanded-roll.png'), fullPage: true });
@@ -105,6 +113,69 @@ test('packs rolls closely and moves following rolls only when details expand', a
     await expect(addRoll).toBeInViewport();
     await page.keyboard.press('Enter');
     await expect(page).toHaveURL(/\/film\/new-roll$/);
+});
+
+test('keeps multiple rows fixed during hover and reflows on resize', async ({ page, isMobile }, testInfo) => {
+    await setup(page, false, 24);
+    await page.goto('/film');
+    const shelf = page.getByRole('region', { name: 'Roll Library' });
+    const rows = shelf.locator('[data-film-row]');
+    const links = shelf.getByRole('link', { name: /^Open .* roll$/ });
+    await expect(links).toHaveCount(24);
+    await expect.poll(() => rows.count()).toBeGreaterThan(1);
+    const rowMembership = () => rows.evaluateAll((elements) => elements.map((row) => Array.from(row.querySelectorAll('a')).map((link) => link.getAttribute('href'))));
+    const initialMembership = await rowMembership();
+    const cameraTop = await page.getByRole('region', { name: 'Camera Collection' }).evaluate((element) => element.getBoundingClientRect().top + window.scrollY);
+    const firstRowLinks = rows.first().getByRole('link', { name: /^Open .* roll$/ });
+    const count = await firstRowLinks.count();
+    for (const index of [...new Set([0, Math.floor(count / 2), count - 1])]) {
+        const link = firstRowLinks.nth(index);
+        if (isMobile) await link.focus(); else await link.hover();
+        await expect.poll(async () => (await link.boundingBox())!.width).toBeGreaterThan(250);
+        await expect(shelf.locator('[data-expanded=true]')).toHaveCount(1);
+        expect(await rowMembership()).toEqual(initialMembership);
+        expect(await page.getByRole('region', { name: 'Camera Collection' }).evaluate((element) => element.getBoundingClientRect().top + window.scrollY)).toBe(cameraTop);
+    }
+    await page.screenshot({ path: testInfo.outputPath('stable-shelf.png'), fullPage: !isMobile });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await links.first().focus();
+    await expect.poll(async () => (await links.first().boundingBox())!.width).toBeGreaterThan(250);
+    expect(await links.first().evaluate((element) => element.parentElement!.getAnimations({ subtree: true }).length)).toBe(0);
+    await links.first().blur();
+    for (const width of [768, 320, 1440]) {
+        await page.setViewportSize({ width, height: 900 });
+        await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+        await expect(links).toHaveCount(24);
+    }
+    await page.getByPlaceholder('Search', { exact: true }).fill('(24)');
+    await expect(links).toHaveCount(1);
+    await page.getByRole('button', { name: 'Clear search' }).click();
+    await expect(links).toHaveCount(24);
+    await expect.poll(() => rows.count()).toBeGreaterThan(1);
+});
+
+test('preserves multiple rows after adding a roll, navigation and reload', async ({ page }) => {
+    await setup(page, false, 24);
+    await page.goto('/film');
+    const rows = page.locator('[data-film-row]');
+    await expect.poll(() => rows.count()).toBeGreaterThan(1);
+    await page.getByRole('link', { name: 'Add roll', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Register a Film Roll' })).toBeVisible();
+    await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(page).toHaveURL(/\/film$/);
+    await expect.poll(() => rows.count()).toBeGreaterThan(1);
+    await page.getByRole('link', { name: 'Add roll', exact: true }).click();
+    await page.getByRole('textbox', { name: 'Film name' }).fill('Added roll');
+    await page.getByRole('textbox', { name: 'Brand' }).fill('Kodak');
+    await page.getByRole('button', { name: 'Place on Shelf' }).click();
+    await expect(page).toHaveURL(/\/film\/rolls\/roll-new$/);
+    await expect(page.getByRole('textbox', { name: 'Film name' })).toHaveValue('Added roll');
+    await page.goto('/film');
+    await expect(page.getByText('25 of 25 rolls')).toBeVisible();
+    await expect.poll(() => rows.count()).toBeGreaterThan(1);
+    await page.reload();
+    await expect(page.getByText('25 of 25 rolls')).toBeVisible();
+    await expect.poll(() => rows.count()).toBeGreaterThan(1);
 });
 
 test('keeps camera switching, creating, editing, deleting and maintenance working', async ({ page }) => {
