@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { ReactNode, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { ReactNode, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { ExternalLink, FolderSync, Heart, Save, Star, X } from 'lucide-react';
@@ -116,7 +116,8 @@ function RollDetailContent() {
     const [coverFile, setCoverFile] = useState<File | null>(null);
     const [isUploadingCover, setIsUploadingCover] = useState(false);
     const [selectedPhoto, setSelectedPhoto] = useState<FilmPhoto | null>(null);
-    const [updatingPhotoId, setUpdatingPhotoId] = useState<string | null>(null);
+    const [updatingPhotoIds, setUpdatingPhotoIds] = useState<ReadonlySet<string>>(() => new Set());
+    const pendingPhotoIds = useRef(new Set<string>());
 
     const loadRoll = useCallback(async () => {
         setError(null);
@@ -176,9 +177,10 @@ function RollDetailContent() {
         photo: FilmPhoto,
         updates: { is_favorite?: boolean; set_as_cover?: boolean }
     ) => {
-        if (!roll) return;
+        if (!roll || pendingPhotoIds.current.has(photo.id)) return;
 
-        setUpdatingPhotoId(photo.id);
+        pendingPhotoIds.current.add(photo.id);
+        setUpdatingPhotoIds(new Set(pendingPhotoIds.current));
         setError(null);
         try {
             const updatedPhoto = await updateFilmPhoto({
@@ -187,7 +189,14 @@ function RollDetailContent() {
                 ...updates,
             });
 
-            await loadRoll();
+            if (updates.set_as_cover) {
+                await loadRoll();
+            } else {
+                setRoll((current) => current?.id === roll.id ? {
+                    ...current,
+                    photos: current.photos?.map((item) => item.id === updatedPhoto.id ? updatedPhoto : item),
+                } : current);
+            }
             setSelectedPhoto((current) => current && current.id === photo.id
                 ? { ...current, ...updatedPhoto }
                 : current);
@@ -195,7 +204,8 @@ function RollDetailContent() {
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to update photo');
         } finally {
-            setUpdatingPhotoId(null);
+            pendingPhotoIds.current.delete(photo.id);
+            setUpdatingPhotoIds(new Set(pendingPhotoIds.current));
         }
     };
 
@@ -482,7 +492,7 @@ function RollDetailContent() {
                     <PhotobookContactSheet
                         roll={roll}
                         photos={photos}
-                        isUpdatingPhotoId={updatingPhotoId}
+                        updatingPhotoIds={updatingPhotoIds}
                         onSelectPhoto={setSelectedPhoto}
                         onToggleFavorite={(photo) => handleUpdatePhoto(photo, { is_favorite: !photo.is_favorite })}
                         onSetCover={(photo) => handleUpdatePhoto(photo, { set_as_cover: true })}
@@ -493,7 +503,7 @@ function RollDetailContent() {
                     <PhotoPreviewDialog
                         roll={roll}
                         photo={selectedPhoto}
-                        isUpdating={updatingPhotoId === selectedPhoto.id}
+                        isUpdating={updatingPhotoIds.has(selectedPhoto.id)}
                         onClose={() => setSelectedPhoto(null)}
                         onToggleFavorite={() => handleUpdatePhoto(selectedPhoto, { is_favorite: !selectedPhoto.is_favorite })}
                         onSetCover={() => handleUpdatePhoto(selectedPhoto, { set_as_cover: true })}
@@ -515,14 +525,14 @@ function chunkPhotos(photos: FilmPhoto[], size: number) {
 function PhotobookContactSheet({
     roll,
     photos,
-    isUpdatingPhotoId,
+    updatingPhotoIds,
     onSelectPhoto,
     onToggleFavorite,
     onSetCover,
 }: {
     roll: FilmRoll;
     photos: FilmPhoto[];
-    isUpdatingPhotoId: string | null;
+    updatingPhotoIds: ReadonlySet<string>;
     onSelectPhoto: (photo: FilmPhoto) => void;
     onToggleFavorite: (photo: FilmPhoto) => void;
     onSetCover: (photo: FilmPhoto) => void;
@@ -543,7 +553,7 @@ function PhotobookContactSheet({
                                         key={photo.id}
                                         roll={roll}
                                         photo={photo}
-                                        isUpdating={isUpdatingPhotoId === photo.id}
+                                        isUpdating={updatingPhotoIds.has(photo.id)}
                                         onSelect={() => onSelectPhoto(photo)}
                                         onToggleFavorite={() => onToggleFavorite(photo)}
                                         onSetCover={() => onSetCover(photo)}
