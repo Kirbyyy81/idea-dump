@@ -15,6 +15,7 @@ import {
 } from '@/lib/types';
 import { listFilmCameras, listFilmRolls } from '@/lib/film/core/client';
 import { formatCurrencyMYR } from '@/lib/utils';
+import { CameraCollection } from './_components/CameraCollection';
 
 function getFilmShellClassName(className = 'p-5 md:p-8') {
     return `film-module ${className}`;
@@ -275,7 +276,7 @@ export default function FilmJournalPage() {
     }
 
     return (
-        <AppShell pageTitle="The Film Cupboard" contentClassName={getFilmShellClassName()}>
+        <AppShell pageTitle="Film & Camera Cupboard" contentClassName={getFilmShellClassName()}>
             <div className="mx-auto max-w-7xl space-y-5">
                 {error && (
                     <div className="rounded-lg border border-error bg-error-bg px-4 py-3 text-sm text-error">
@@ -283,13 +284,13 @@ export default function FilmJournalPage() {
                     </div>
                 )}
 
-                <section className="overflow-hidden rounded-2xl border border-border-strong bg-nav-bg">
+                <section aria-labelledby="roll-library-title" className="overflow-hidden rounded-2xl border border-border-strong bg-nav-bg">
                     <div className="border-b border-border-strong bg-nav-bg-hover px-6 py-4 text-text-on-dark">
                         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                             <div className="flex items-center justify-between gap-4">
                                 <div className="flex items-center gap-3">
                                     <Film size={19} />
-                                    <h2 className="text-lg font-bold !text-text-on-dark">Roll Library</h2>
+                                    <h2 id="roll-library-title" className="text-lg font-bold !text-text-on-dark">Roll Library</h2>
                                 </div>
                                 <span className="shrink-0 text-sm text-nav-text-muted">{filteredRolls.length} of {rolls.length} rolls</span>
                             </div>
@@ -350,6 +351,7 @@ export default function FilmJournalPage() {
                         </div>
                     )}
                 </section>
+                <CameraCollection cameras={cameras} />
             </div>
         </AppShell>
     );

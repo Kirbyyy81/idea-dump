@@ -1,6 +1,7 @@
 'use client';
 
-import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { FormEvent, Suspense, useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Camera, Plus, Save, Trash2, Wrench } from 'lucide-react';
 import { AppShell } from '@/components/organisms/AppShell';
 import { Button } from '@/components/atoms/Button';
@@ -48,9 +49,23 @@ function cameraForm(camera: FilmCamera) {
 }
 
 export default function FilmCamerasPage() {
+    return (
+        <Suspense fallback={<AppShell isLoading loadingMessage="Opening camera cabinet..." contentClassName="film-module p-5 md:p-8"><div /></AppShell>}>
+            <CameraRoute />
+        </Suspense>
+    );
+}
+
+function CameraRoute() {
+    const searchParams = useSearchParams();
+    const cameraId = searchParams.get('camera') ?? '';
+    return <CameraManager key={cameraId} initialCameraId={cameraId} />;
+}
+
+function CameraManager({ initialCameraId }: { initialCameraId: string }) {
     const { showSuccess } = useAlert();
     const [cameras, setCameras] = useState<FilmCamera[]>([]);
-    const [selectedId, setSelectedId] = useState('');
+    const [selectedId, setSelectedId] = useState(initialCameraId);
     const [form, setForm] = useState(blankCamera);
     const [maintenance, setMaintenance] = useState<FilmMaintenanceRecord[]>([]);
     const [maintenanceForm, setMaintenanceForm] = useState(blankMaintenance);
@@ -58,14 +73,17 @@ export default function FilmCamerasPage() {
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const selected = cameras.find((camera) => camera.id === selectedId) || null;
+    const activeCameraId = selected?.id ?? '';
 
     const loadCameras = useCallback(async (preferredId?: string) => {
         const next = await listFilmCameras();
         setCameras(next);
 
-        const nextId = preferredId || selectedId || next[0]?.id || '';
-        setSelectedId(next.some((camera: FilmCamera) => camera.id === nextId) ? nextId : next[0]?.id || '');
-    }, [selectedId]);
+        setSelectedId((currentId) => {
+            const nextId = preferredId ?? currentId;
+            return next.some((camera) => camera.id === nextId) ? nextId : next[0]?.id || '';
+        });
+    }, []);
 
     useEffect(() => {
         loadCameras()
@@ -79,15 +97,16 @@ export default function FilmCamerasPage() {
     }, [selected]);
 
     useEffect(() => {
-        if (!selectedId) {
-            setMaintenance([]);
-            return;
-        }
+        let cancelled = false;
+        setMaintenance([]);
+        setMaintenanceForm(blankMaintenance);
+        if (!activeCameraId) return;
 
-        listFilmMaintenance(selectedId)
-            .then(setMaintenance)
-            .catch((loadError) => setError(loadError.message || 'Failed to load maintenance'));
-    }, [selectedId]);
+        listFilmMaintenance(activeCameraId)
+            .then((records) => { if (!cancelled) setMaintenance(records); })
+            .catch((loadError) => { if (!cancelled) setError(loadError.message || 'Failed to load maintenance'); });
+        return () => { cancelled = true; };
+    }, [activeCameraId]);
 
     async function saveCamera(event: FormEvent) {
         event.preventDefault();
@@ -173,7 +192,7 @@ export default function FilmCamerasPage() {
 
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
                     <Card className="h-fit p-3">
-                        <Button className="mb-3 w-full" icon={<Plus size={16} />} onClick={() => setSelectedId('')}>
+                        <Button className="mb-3 w-full" icon={<Plus size={16} />} onClick={() => setSelectedId('')} disabled={isSaving}>
                             Add Camera
                         </Button>
                         <div className="space-y-2">
@@ -182,6 +201,8 @@ export default function FilmCamerasPage() {
                                     key={item.id}
                                     type="button"
                                     onClick={() => setSelectedId(item.id)}
+                                    aria-pressed={selectedId === item.id}
+                                    disabled={isSaving}
                                     className={cn(
                                         'w-full rounded-lg border p-3 text-left transition-colors',
                                         selectedId === item.id
