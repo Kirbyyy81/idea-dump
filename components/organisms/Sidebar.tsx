@@ -338,12 +338,6 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
                     children: (
                         <div>
                             {renderSubItem({
-                                href: '/film/new-roll',
-                                icon: <Plus size={14} />,
-                                isActive: isExactPath(pathname, '/film/new-roll'),
-                                label: 'Add Roll',
-                            })}
-                            {renderSubItem({
                                 href: '/film/dashboard',
                                 icon: <BarChart3 size={14} />,
                                 isActive: isExactPath(pathname, '/film/dashboard'),

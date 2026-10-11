@@ -51,9 +51,14 @@ test('shows cameras below rolls, preserves filters and opens the selected camera
     await expect(cameras.getByRole('listitem')).toHaveCount(3);
     await expect(cameras.getByText('3 cameras')).toBeVisible();
     await expect(rolls.getByRole('img', { name: 'Fujifilm 200 cover' })).toBeVisible();
+    const addRoll = rolls.getByRole('link', { name: 'Add roll', exact: true });
+    await expect(addRoll).toHaveAttribute('href', '/film/new-roll');
+    await addRoll.focus();
+    await expect(addRoll).toBeFocused();
     expect((await cameras.boundingBox())!.y).toBeGreaterThan((await rolls.boundingBox())!.y);
     await page.getByPlaceholder('Search', { exact: true }).fill('no matching film');
     await expect(rolls.getByText('No rolls match these filters.')).toBeVisible();
+    await expect(addRoll).toBeVisible();
     await expect(cameras.getByRole('listitem')).toHaveCount(3);
     await page.getByRole('button', { name: 'Clear search' }).click();
     await page.getByRole('combobox').filter({ hasText: 'All cameras' }).click();
@@ -111,6 +116,7 @@ test('falls back for missing or invalid camera links and handles empty cupboards
     await setup(page, true);
     await page.goto('/film');
     await expect(page.getByText('No rolls yet.')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Add roll', exact: true })).toHaveAttribute('href', '/film/new-roll');
     await expect(page.getByText('No cameras yet.')).toBeVisible();
     await page.getByRole('link', { name: 'Add Camera', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'New camera' })).toBeVisible();

@@ -16,6 +16,7 @@ import {
 import { listFilmCameras, listFilmRolls } from '@/lib/film/core/client';
 import { formatCurrencyMYR } from '@/lib/utils';
 import { CameraCollection } from './_components/CameraCollection';
+import { AddRollLink } from './_components/AddRollLink';
 
 function getFilmShellClassName(className = 'p-5 md:p-8') {
     return `film-module ${className}`;
@@ -337,17 +338,16 @@ export default function FilmJournalPage() {
                         <div className="px-6 py-20 text-center text-nav-text-muted">
                             <Film className="mx-auto mb-4 opacity-60" size={38} />
                             <p>{rolls.length ? 'No rolls match these filters.' : 'No rolls yet.'}</p>
-                            {!rolls.length && (
-                                <Link href="/film/new-roll" className="action-link mt-4 inline-flex rounded-full bg-action-primary px-5 py-2 text-sm font-medium text-action-primary-text">
-                                    Register a roll
-                                </Link>
-                            )}
+                            <div className="mt-4"><AddRollLink /></div>
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 gap-x-5 gap-y-8 bg-surface-film-shelf px-3 py-8 sm:grid-cols-2 sm:px-5 lg:grid-cols-3 xl:grid-cols-4">
                             {filteredRolls.map((roll, index) => (
                                 <FilmCanister key={roll.id} roll={roll} index={index} />
                             ))}
+                            <div className="flex items-center justify-center py-4">
+                                <AddRollLink />
+                            </div>
                         </div>
                     )}
                 </section>
