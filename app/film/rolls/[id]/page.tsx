@@ -530,10 +530,6 @@ function PhotobookContactSheet({
 
     return (
         <Card className="overflow-hidden p-0">
-            <div className="flex items-center justify-between gap-3 border-b border-border-default bg-bg-elevated p-5">
-                <h2 className="text-xl font-bold sm:text-2xl">Contact Sheet</h2>
-            </div>
-
             <div className="bg-[#f8f3e7] p-2 sm:p-4">
                 <div className="space-y-3 rounded-sm bg-[#171310] p-2 shadow-subtle">
                     {rows.map((row, rowIndex) => {
