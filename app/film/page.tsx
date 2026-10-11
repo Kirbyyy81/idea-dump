@@ -95,19 +95,19 @@ function FilmCanister({ roll, index }: { roll: FilmRoll; index: number }) {
     const stripeCount = index % 2 === 0 ? 8 : 0;
 
     return (
-        <div className="mx-auto flex max-w-[300px] flex-col items-center">
+        <div className="group w-[128px] shrink-0 overflow-hidden transition-[width] duration-500 ease-out hover:w-[270px] focus-within:w-[270px] motion-reduce:transition-none">
             <Link
                 href={`/film/rolls/${roll.id}`}
-                className="action-link group block"
+                className="action-link block rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-border-dark"
                 aria-label={`Open ${roll.film_name} roll`}
             >
-                <article className="relative flex min-h-[300px] flex-col items-center justify-center sm:min-h-[330px]">
-                    <div className="relative h-[300px] w-[300px] origin-top scale-[0.9] sm:scale-100">
+                <article className="relative h-[260px]">
+                    <div className="absolute -top-5 left-0 h-[300px] w-[270px]">
                         <div
                             className="absolute left-[106px] top-[90px] z-0 h-[136px] w-[160px] [clip-path:inset(-50px_-50px_-50px_0)]"
                             aria-hidden="true"
                         >
-                            <div className="absolute left-0 top-0 h-full w-[154px] -translate-x-[116px] overflow-hidden rounded-r-3xl border-y-2 border-r-2 border-border-dark/40 bg-black/80 backdrop-blur-md shadow-[14px_16px_24px_rgba(0,0,0,0.35)] transition-transform duration-500 ease-out group-hover:translate-x-0">
+                            <div className="absolute left-0 top-0 h-full w-[154px] -translate-x-[116px] overflow-hidden rounded-r-3xl border-y-2 border-r-2 border-border-dark/40 bg-black/80 backdrop-blur-md shadow-[14px_16px_24px_rgba(0,0,0,0.35)] transition-transform duration-500 ease-out group-hover:translate-x-0 group-focus-within:translate-x-0 motion-reduce:transition-none">
                                 <div className="absolute inset-x-0 top-2 flex justify-around">
                                     {Array.from({ length: 12 }).map((_, holeIndex) => (
                                         <span key={`top-strip-hole-${holeIndex}`} className="h-2 w-1.5 rounded-sm bg-bg-surface/20 shadow-[inset_0_1px_3px_rgba(0,0,0,0.8)]" />
@@ -118,7 +118,7 @@ function FilmCanister({ roll, index }: { roll: FilmRoll; index: number }) {
                                         <span key={`bottom-strip-hole-${holeIndex}`} className="h-2 w-1.5 rounded-sm bg-bg-surface/20 shadow-[inset_0_1px_3px_rgba(0,0,0,0.8)]" />
                                     ))}
                                 </div>
-                                <div className="ml-8 flex h-full flex-col justify-center pr-4 text-[#ffcc88] opacity-0 mix-blend-screen transition-opacity delay-100 duration-300 group-hover:opacity-100 [text-shadow:_0_0_8px_rgba(255,166,77,0.6)]">
+                                <div className="ml-8 flex h-full flex-col justify-center pr-4 text-[#ffcc88] opacity-0 mix-blend-screen transition-opacity delay-100 duration-300 group-hover:opacity-100 group-focus-within:opacity-100 motion-reduce:transition-none [text-shadow:_0_0_8px_rgba(255,166,77,0.6)]">
                                     <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-[#ffb84d]">
                                         {roll.brand}
                                     </p>
@@ -341,11 +341,11 @@ export default function FilmJournalPage() {
                             <div className="mt-4"><AddRollLink /></div>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 gap-x-5 gap-y-8 bg-surface-film-shelf px-3 py-8 sm:grid-cols-2 sm:px-5 lg:grid-cols-3 xl:grid-cols-4">
+                        <div className="flex items-center gap-3 overflow-x-auto bg-surface-film-shelf px-3 py-4 sm:px-5">
                             {filteredRolls.map((roll, index) => (
                                 <FilmCanister key={roll.id} roll={roll} index={index} />
                             ))}
-                            <div className="flex items-center justify-center py-4">
+                            <div className="flex shrink-0 items-center justify-center px-3 py-4">
                                 <AddRollLink />
                             </div>
                         </div>

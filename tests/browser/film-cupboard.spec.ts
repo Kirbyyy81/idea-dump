@@ -6,7 +6,7 @@ const cameraFixture = [
     { id: 'camera-c', name: 'A camera with a very long name for the collection shelf', brand: 'Olympus', model: 'OM-1', notes: '', purchase_date: '' },
 ];
 
-async function setup(page: Page, empty = false) {
+async function setup(page: Page, empty = false, rollCount = 1) {
     let cameras = empty ? [] : structuredClone(cameraFixture);
     let maintenance = [{ id: 'service-b', camera_id: 'camera-b', service_type: 'Lens Cleaning', provider_name: 'Travel lab', maintenance_cost: 30, notes: '', service_date: '2026-01-01' }];
     let cameraReads = 0;
@@ -35,7 +35,7 @@ async function setup(page: Page, empty = false) {
             }
             if (method === 'DELETE') { maintenance = maintenance.filter((item) => item.id !== url.searchParams.get('id')); data = null; }
         } else if (url.pathname === '/api/film/rolls') {
-            data = empty ? [] : [{ id: 'roll-a', film_name: 'Fujifilm 200', brand: 'Fuji', format: '35mm', iso: 200, status: 'PROCESSED', camera_id: 'camera-a', camera: cameras[0], frames_taken: 36, purchase_price: 35, cover_image_url: '/logo.png' }];
+            data = empty ? [] : Array.from({ length: rollCount }, (_, index) => ({ id: `roll-${index}`, film_name: index ? `Fujifilm 200 (${index + 1})` : 'Fujifilm 200', brand: 'Fuji', format: '35mm', iso: 200, status: 'PROCESSED', camera_id: 'camera-a', camera: cameras[0], frames_taken: 36, purchase_price: 35, cover_image_url: '/logo.png' }));
         }
         await route.fulfill({ json: { data } });
     });
@@ -76,6 +76,35 @@ test('shows cameras below rolls, preserves filters and opens the selected camera
     await expect(page).toHaveURL(/\/film\/cameras\?camera=camera-b$/);
     await expect(page.getByRole('textbox', { name: 'Camera name' })).toHaveValue('Travel camera');
     await expect(page.getByText('Travel lab', { exact: false })).toBeVisible();
+});
+
+test('packs rolls closely and moves following rolls only when details expand', async ({ page, isMobile }, testInfo) => {
+    await setup(page, false, 3);
+    await page.goto('/film');
+    const rolls = page.getByRole('region', { name: 'Roll Library' });
+    const first = rolls.getByRole('link', { name: 'Open Fujifilm 200 roll', exact: true });
+    const second = rolls.getByRole('link', { name: 'Open Fujifilm 200 (2) roll', exact: true });
+    await expect(first).toBeVisible();
+    const initialFirst = (await first.boundingBox())!;
+    const initialSecond = (await second.boundingBox())!;
+    expect(initialSecond.x - initialFirst.x).toBeLessThan(160);
+    await page.screenshot({ path: testInfo.outputPath('compact-rolls.png'), fullPage: true });
+
+    if (isMobile) await first.focus();
+    else await first.hover();
+    await expect.poll(async () => (await second.boundingBox())!.x - initialSecond.x).toBeGreaterThan(130);
+    expect((await second.boundingBox())!.y).toBe(initialSecond.y);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width);
+    await page.screenshot({ path: testInfo.outputPath('expanded-roll.png'), fullPage: true });
+
+    if (isMobile) await first.blur();
+    else await page.getByRole('heading', { name: 'Film & Camera Cupboard' }).hover();
+    await expect.poll(async () => Math.abs((await second.boundingBox())!.x - initialSecond.x)).toBeLessThan(2);
+    const addRoll = rolls.getByRole('link', { name: 'Add roll', exact: true });
+    await addRoll.focus();
+    await expect(addRoll).toBeInViewport();
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/\/film\/new-roll$/);
 });
 
 test('keeps camera switching, creating, editing, deleting and maintenance working', async ({ page }) => {
