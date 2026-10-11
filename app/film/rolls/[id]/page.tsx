@@ -532,9 +532,6 @@ function PhotobookContactSheet({
         <Card className="overflow-hidden p-0">
             <div className="flex items-center justify-between gap-3 border-b border-border-default bg-bg-elevated p-5">
                 <h2 className="text-xl font-bold sm:text-2xl">Contact Sheet</h2>
-                <Link href={`/film/rolls/${roll.id}?step=drive`} className="btn-ghost min-h-8 shrink-0 px-2.5 py-1 text-xs">
-                    Manage Drive
-                </Link>
             </div>
 
             <div className="bg-[#f8f3e7] p-2 sm:p-4">
