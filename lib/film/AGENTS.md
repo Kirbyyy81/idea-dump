@@ -18,3 +18,4 @@
 - Repositories must scope every query and mutation to the authenticated user ID.
 - `client.ts` is browser-only. Do not import Supabase admin, server credentials, or server-only provider modules into it.
 - Keep normalization, workflow transitions, and validation pure where possible.
+- A successful Drive sync sets `frames_taken` to the number of distinct supported images directly in the linked folder, including zero for an empty folder. Fetch every Drive result page before persisting changes; failed or incomplete listings must not replace the frame count or remove saved photos. Resyncing replaces any manually entered frame count.

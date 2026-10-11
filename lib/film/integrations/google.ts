@@ -208,7 +208,7 @@ export async function getValidDriveAccessToken(userId: string) {
 export async function listDriveImages(folderId: string, accessToken: string) {
     const mimeQuery = DRIVE_IMAGE_MIME_TYPES.map((mimeType) => `mimeType='${mimeType}'`).join(' or ');
     const params = new URLSearchParams({
-        fields: 'files(id,name,mimeType,webViewLink,thumbnailLink,imageMediaMetadata(width,height))',
+        fields: 'nextPageToken,incompleteSearch,files(id,name,mimeType,webViewLink,thumbnailLink,imageMediaMetadata(width,height))',
         includeItemsFromAllDrives: 'true',
         orderBy: 'name_natural',
         pageSize: '1000',
@@ -216,16 +216,32 @@ export async function listDriveImages(folderId: string, accessToken: string) {
         supportsAllDrives: 'true',
     });
 
-    const res = await fetch(`https://www.googleapis.com/drive/v3/files?${params.toString()}`, {
-        headers: {
-            Authorization: `Bearer ${accessToken}`,
-        },
-    });
+    const files = new Map<string, DriveFile>();
+    let nextPageToken: string | undefined;
 
-    if (!res.ok) {
-        throw new Error(await getGoogleApiErrorMessage(res, 'Failed to list Google Drive folder images'));
-    }
+    do {
+        if (nextPageToken) params.set('pageToken', nextPageToken);
+        const res = await fetch(`https://www.googleapis.com/drive/v3/files?${params.toString()}`, {
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+            },
+        });
 
-    const payload = (await res.json()) as { files?: DriveFile[] };
-    return payload.files ?? [];
+        if (!res.ok) {
+            throw new Error(await getGoogleApiErrorMessage(res, 'Failed to list Google Drive folder images'));
+        }
+
+        const payload = (await res.json()) as {
+            files?: DriveFile[];
+            nextPageToken?: string;
+            incompleteSearch?: boolean;
+        };
+        if (payload.incompleteSearch) {
+            throw new Error('Google Drive returned an incomplete folder listing. Try syncing again.');
+        }
+        for (const file of payload.files ?? []) files.set(file.id, file);
+        nextPageToken = payload.nextPageToken;
+    } while (nextPageToken);
+
+    return [...files.values()];
 }

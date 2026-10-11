@@ -453,7 +453,12 @@ export async function syncFilmDriveImages(
 
     const { error: rollError } = await admin
         .from('film_rolls')
-        .update({ drive_folder_id: command.folder_id, status: 'PROCESSED', updated_at: now })
+        .update({
+            drive_folder_id: command.folder_id,
+            frames_taken: currentDriveFileIds.size,
+            status: 'PROCESSED',
+            updated_at: now,
+        })
         .eq('id', command.film_roll_id)
         .eq('user_id', userId);
     if (rollError) throw rollError;
