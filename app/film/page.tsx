@@ -95,19 +95,19 @@ function FilmCanister({ roll, index }: { roll: FilmRoll; index: number }) {
     const stripeCount = index % 2 === 0 ? 8 : 0;
 
     return (
-        <div className="group w-[128px] shrink-0 overflow-hidden transition-[width] duration-500 ease-out hover:w-[270px] focus-within:w-[270px] motion-reduce:transition-none">
+        <div className="group w-[128px] shrink-0 overflow-visible transition-[width] duration-500 ease-out hover:w-[270px] focus-within:w-[270px] motion-reduce:transition-none">
             <Link
                 href={`/film/rolls/${roll.id}`}
                 className="action-link block rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-border-dark"
                 aria-label={`Open ${roll.film_name} roll`}
             >
                 <article className="relative h-[260px]">
-                    <div className="absolute -top-5 left-0 h-[300px] w-[270px]">
+                    <div className="pointer-events-none absolute -top-5 left-0 h-[300px] w-[270px]">
                         <div
                             className="absolute left-[106px] top-[90px] z-0 h-[136px] w-[160px] [clip-path:inset(-50px_-50px_-50px_0)]"
                             aria-hidden="true"
                         >
-                            <div className="absolute left-0 top-0 h-full w-[154px] -translate-x-[116px] overflow-hidden rounded-r-3xl border-y-2 border-r-2 border-border-dark/40 bg-black/80 backdrop-blur-md shadow-[14px_16px_24px_rgba(0,0,0,0.35)] transition-transform duration-500 ease-out group-hover:translate-x-0 group-focus-within:translate-x-0 motion-reduce:transition-none">
+                            <div className="absolute left-0 top-0 h-full w-[154px] -translate-x-[134px] overflow-hidden rounded-r-3xl border-y-2 border-r-2 border-border-dark/40 bg-black/80 backdrop-blur-md shadow-none transition-[transform,box-shadow] duration-500 ease-out group-hover:translate-x-0 group-hover:shadow-[8px_10px_14px_rgba(0,0,0,0.20)] group-focus-within:translate-x-0 group-focus-within:shadow-[8px_10px_14px_rgba(0,0,0,0.20)] motion-reduce:transition-none">
                                 <div className="absolute inset-x-0 top-2 flex justify-around">
                                     {Array.from({ length: 12 }).map((_, holeIndex) => (
                                         <span key={`top-strip-hole-${holeIndex}`} className="h-2 w-1.5 rounded-sm bg-bg-surface/20 shadow-[inset_0_1px_3px_rgba(0,0,0,0.8)]" />
