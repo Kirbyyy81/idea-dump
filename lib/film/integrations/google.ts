@@ -2,6 +2,42 @@ import crypto from 'node:crypto';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { DRIVE_IMAGE_MIME_TYPES, GOOGLE_DRIVE_READONLY_SCOPE } from '../core/constants';
 
+// Thumbnail links expire. Resolve them from Drive rather than using synced URLs.
+export async function getDriveThumbnail(fileId: string, accessToken: string): Promise<Response | null> {
+    const params = new URLSearchParams({ fields: 'thumbnailLink', supportsAllDrives: 'true' });
+    const headers = { Authorization: `Bearer ${accessToken}` };
+    const metadata = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?${params}`, {
+        headers, cache: 'no-store',
+    });
+    if (!metadata.ok) return null;
+    const file = await metadata.json() as { thumbnailLink?: unknown };
+    if (typeof file.thumbnailLink !== 'string') return null;
+
+    let target = file.thumbnailLink;
+    for (let redirects = 0; redirects <= 3; redirects++) {
+        let url: URL;
+        try { url = new URL(target); } catch { return null; }
+        if (url.protocol !== 'https:' || url.username || url.password || url.port
+            || !(url.hostname.endsWith('.googleusercontent.com') || url.hostname === 'drive.google.com')) {
+            return null;
+        }
+        const response = await fetch(url.toString(), { headers, cache: 'no-store', redirect: 'manual' });
+        if ([301, 302, 303, 307, 308].includes(response.status)) {
+            const location = response.headers.get('location');
+            await response.body?.cancel();
+            if (!location) return null;
+            target = new URL(location, url).toString();
+            continue;
+        }
+        if (response.ok && /^(image\/(jpeg|png|webp|gif))(;|$)/i.test(response.headers.get('content-type') ?? '')) {
+            return response;
+        }
+        await response.body?.cancel();
+        return null;
+    }
+    return null;
+}
+
 interface GoogleTokenResponse {
     access_token: string;
     expires_in?: number;

@@ -1,3 +1,4 @@
+import { filmCameraView, filmMaintenanceView, filmPhotoView, filmRollView, filmRollSummary } from './responses';
 import type { FilmDashboardSummary, FilmRoll } from '@/lib/types';
 import {
     createFilmCoverPath,
@@ -12,6 +13,7 @@ import { FILM_COVER_MIME_TYPES, FILM_FORMATS, FILM_ROLL_STATUSES, getFilmCoverPr
 import {
     exchangeCodeForTokens,
     getGoogleAuthUrl,
+    getDriveThumbnail,
     getValidDriveAccessToken,
     listDriveImages,
     storeDriveTokens,
@@ -124,15 +126,15 @@ async function requireFilmRoll(userId: string, rollId: string) {
 }
 
 export async function listFilmCamerasForUser(userId: string) {
-    return listFilmCameras(userId);
+    return (await listFilmCameras(userId)).map(filmCameraView);
 }
 
 export async function createFilmCameraForUser(userId: string, command: FilmCameraCreateCommand) {
-    return createFilmCamera(userId, command);
+    return filmCameraView(await createFilmCamera(userId, command));
 }
 
 export async function updateFilmCameraForUser(userId: string, command: FilmCameraUpdateCommand) {
-    return updateFilmCamera(userId, command);
+    return filmCameraView(await updateFilmCamera(userId, command));
 }
 
 export async function deleteFilmCameraForUser(userId: string, cameraId: string) {
@@ -141,17 +143,17 @@ export async function deleteFilmCameraForUser(userId: string, cameraId: string) 
 
 export async function listFilmMaintenanceForUser(userId: string, cameraId: string) {
     await requireFilmCamera(userId, cameraId);
-    return listFilmMaintenanceRecords(userId, cameraId);
+    return (await listFilmMaintenanceRecords(userId, cameraId)).map(filmMaintenanceView);
 }
 
 export async function createFilmMaintenanceForUser(userId: string, command: FilmMaintenanceCreateCommand) {
     await requireFilmCamera(userId, command.camera_id);
-    return createFilmMaintenanceRecord(userId, command);
+    return filmMaintenanceView(await createFilmMaintenanceRecord(userId, command));
 }
 
 export async function updateFilmMaintenanceForUser(userId: string, command: FilmMaintenanceUpdateCommand) {
     if (command.camera_id) await requireFilmCamera(userId, command.camera_id);
-    return updateFilmMaintenanceRecord(userId, command);
+    return filmMaintenanceView(await updateFilmMaintenanceRecord(userId, command));
 }
 
 export async function deleteFilmMaintenanceForUser(userId: string, recordId: string) {
@@ -159,13 +161,13 @@ export async function deleteFilmMaintenanceForUser(userId: string, recordId: str
 }
 
 export async function listFilmRollsForUser(userId: string, query: FilmRollListQuery) {
-    return listFilmRolls(userId, query);
+    return (await listFilmRolls(userId, query)).map(filmRollSummary);
 }
 
 export async function getFilmRollForUser(userId: string, rollId: string) {
     const roll = await getFilmRollDetails(userId, rollId);
     if (!roll) throw new FilmServiceError('Film roll not found', 404);
-    return roll;
+    return filmRollView(roll);
 }
 
 export async function createFilmRollForUser(userId: string, command: FilmRollCreateCommand) {
@@ -173,7 +175,7 @@ export async function createFilmRollForUser(userId: string, command: FilmRollCre
         throw new FilmServiceError('Cover photo cannot be set before the roll is created');
     }
     if (command.camera_id) await requireFilmCamera(userId, command.camera_id);
-    return createFilmRoll(userId, command);
+    return filmRollView(await createFilmRoll(userId, command));
 }
 
 export async function updateFilmRollForUser(userId: string, command: FilmRollUpdateCommand) {
@@ -183,7 +185,7 @@ export async function updateFilmRollForUser(userId: string, command: FilmRollUpd
         const isRollPhoto = await findFilmRollPhotoForUser(userId, command.id, command.cover_photo_id);
         if (!isRollPhoto) throw new FilmServiceError('Cover photo not found for this roll', 404);
     }
-    return updateFilmRoll(userId, command);
+    return filmRollView(await updateFilmRoll(userId, command));
 }
 
 export async function deleteFilmRollForUser(userId: string, rollId: string) {
@@ -200,7 +202,7 @@ export async function deleteFilmRollForUser(userId: string, rollId: string) {
 
 export async function listFilmPhotosForUser(userId: string, rollId: string) {
     await requireFilmRoll(userId, rollId);
-    return listFilmPhotos(userId, rollId);
+    return (await listFilmPhotos(userId, rollId)).map(filmPhotoView);
 }
 
 export async function updateFilmPhotoForUser(userId: string, command: FilmPhotoUpdateCommand) {
@@ -210,17 +212,13 @@ export async function updateFilmPhotoForUser(userId: string, command: FilmPhotoU
         throw new FilmServiceError('Photo does not belong to the requested roll');
     }
 
-    const updatedPhoto = await updateFilmPhoto(userId, command);
-    if (!command.set_as_cover) return { photo: updatedPhoto };
-
-    return {
-        photo: updatedPhoto,
-        roll: await setFilmRollCoverPhoto(userId, photo.film_roll_id, photo.id),
-    };
+    const updatedPhoto = filmPhotoView(await updateFilmPhoto(userId, command));
+    if (command.set_as_cover) await setFilmRollCoverPhoto(userId, photo.film_roll_id, photo.id);
+    return { photo: updatedPhoto };
 }
 
 export async function getFilmDashboardForUser(userId: string): Promise<FilmDashboardSummary> {
-    const { rolls, cameras, maintenanceRecords, photos, favoritePhotos } = await getFilmDashboardData(userId);
+    const { rolls, cameras, maintenanceRecords, favoritePhotos } = await getFilmDashboardData(userId);
     const camerasById = new Map(cameras.map((camera) => [camera.id, camera]));
     const rollCountsByCamera = new Map<string, number>();
     const latestRollDateByCamera = new Map<string, string>();
@@ -245,8 +243,6 @@ export async function getFilmDashboardForUser(userId: string): Promise<FilmDashb
         frames_taken: 0,
         spend: 0,
     }]));
-    const mostUsedCameraId = Array.from(rollCountsByCamera.entries())
-        .sort(([, countA], [, countB]) => countB - countA)[0]?.[0];
 
     for (const roll of rolls) {
         const activity = activityByMonth.get(getMonthKey(new Date(roll.created_at)));
@@ -259,20 +255,9 @@ export async function getFilmDashboardForUser(userId: string): Promise<FilmDashb
     return {
         total_pictures_taken: rolls.reduce((total, roll) => total + Number(roll.frames_taken || 0), 0),
         total_money_spent: totalMoneySpent,
-        total_cameras: cameras.length,
         total_rolls: rolls.length,
-        processed_rolls: rolls.filter((roll) => roll.status === 'PROCESSED').length,
-        unprocessed_rolls: rolls.filter((roll) => roll.status !== 'PROCESSED').length,
         favorite_photos: favoritePhotos,
-        average_spend_per_roll: rolls.length ? totalMoneySpent / rolls.length : 0,
-        maintenance_cost: maintenanceCost,
-        total_photos: photos,
         successful_photos: successfulPhotos,
-        average_cost_per_photo: successfulPhotos ? totalMoneySpent / successfulPhotos : 0,
-        rolls_loaded_or_shooting: rolls.filter((roll) => roll.status === 'SHOOTING').length,
-        latest_camera_added: cameras[0] ?? null,
-        cameras_with_maintenance_records: new Set(maintenanceRecords.map((record) => record.camera_id)).size,
-        most_used_camera: mostUsedCameraId ? camerasById.get(mostUsedCameraId) ?? null : null,
         status_breakdown: FILM_ROLL_STATUSES.map((status) => {
             const count = rolls.filter((roll) => roll.status === status).length;
             return { status, label: filmRollStatusConfig[status].label, count, percentage: rolls.length ? (count / rolls.length) * 100 : 0 };
@@ -292,8 +277,6 @@ export async function getFilmDashboardForUser(userId: string): Promise<FilmDashb
             .map(([cameraId, rollCount]) => {
                 const camera = camerasById.get(cameraId) ?? null;
                 return {
-                    camera_id: cameraId,
-                    camera,
                     label: camera?.name ?? 'Unknown camera',
                     roll_count: rollCount,
                     latest_roll_at: latestRollDateByCamera.get(cameraId) ?? null,
@@ -303,15 +286,13 @@ export async function getFilmDashboardForUser(userId: string): Promise<FilmDashb
                 if (cameraB.roll_count !== cameraA.roll_count) return cameraB.roll_count - cameraA.roll_count;
                 return (cameraB.latest_roll_at ?? '').localeCompare(cameraA.latest_roll_at ?? '');
             })
-            .slice(0, 5),
+            .slice(0, 5)
+            .map(({ label, roll_count }) => ({ label, roll_count })),
         activity_trend: lastSixMonthKeys.map((month) => {
             const activity = activityByMonth.get(month) ?? { roll_count: 0, frames_taken: 0, spend: 0 };
             return { month, label: getMonthLabel(month), ...activity };
         }),
-        recent_rolls: [...rolls]
-            .sort((rollA, rollB) => rollB.created_at.localeCompare(rollA.created_at))
-            .slice(0, 6)
-            .map((roll) => ({ ...roll, camera: roll.camera_id ? camerasById.get(roll.camera_id) ?? null : null })),
+
     };
 }
 
@@ -336,19 +317,23 @@ export async function syncFilmDriveForUser(userId: string, command: FilmDriveSyn
     );
 
     return {
-        folder_id: command.folder_id,
         synced_count: files.length,
         removed_count: synced.removedCount,
-        photos: synced.photos,
     };
 }
 
-export async function getFilmPhotoImageForUser(userId: string, photoId: string) {
+export async function getFilmPhotoImageForUser(userId: string, photoId: string, thumbnail = false) {
     const photo = await findFilmPhotoFileForUser(userId, photoId);
     if (!photo) throw new FilmServiceError('Photo not found', 404);
 
     const accessToken = await getValidDriveAccessToken(userId);
     if (!accessToken) throw new FilmServiceError('Google Drive is not connected');
+
+    if (thumbnail) {
+        const response = await getDriveThumbnail(photo.drive_file_id, accessToken);
+        if (!response?.body) throw new FilmServiceError('Photo preview is unavailable', 404);
+        return { photo, response };
+    }
 
     const driveParams = new URLSearchParams({ alt: 'media', supportsAllDrives: 'true' });
     const response = await fetch(
@@ -410,7 +395,7 @@ export async function replaceFilmCoverForUser(
             }
         }
 
-        return updated;
+        return filmRollView(updated);
     } catch (error) {
         if (shouldRemoveUploadedPath) {
             try {

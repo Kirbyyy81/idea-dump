@@ -12,7 +12,7 @@ import { Textarea } from '@/components/atoms/Textarea';
 import { FileUpload } from '@/components/molecules/FileUpload';
 import { useAlert } from '@/lib/contexts/AlertContext';
 import {
-    FilmCamera,
+    FilmCameraView as FilmCamera,
     FilmFormat,
     FilmProcessType,
     FilmType,

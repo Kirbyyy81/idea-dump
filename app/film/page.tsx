@@ -6,8 +6,8 @@ import { AppShell } from '@/components/organisms/AppShell';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import {
-    FilmCamera,
-    FilmRoll,
+    FilmCameraView as FilmCamera,
+    FilmRollSummary as FilmRoll,
     FilmRollStatus,
     filmRollStatusConfig,
 } from '@/lib/types';

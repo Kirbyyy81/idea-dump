@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
+import { getFilmPhotoThumbnailUrl } from '@/lib/film/core/client';
 import Image from 'next/image';
-import type { FilmRoll } from '@/lib/types';
+import type { FilmRollSummary as FilmRoll } from '@/lib/types';
 import { formatCurrencyMYR } from '@/lib/utils';
 
 export const FILM_ROLL_WIDTH = 128;
@@ -86,7 +87,7 @@ function FilmCoverFallback({
 
 export function FilmCanister({ roll, index, expanded, scale, onHover, onFocus, onBlur }: FilmCanisterProps) {
     const theme = CANISTER_THEMES[index % CANISTER_THEMES.length];
-    const thumbnail = roll.cover_image_url || (roll.cover_photo ? `/api/film/photos/${roll.cover_photo.id}/image` : null);
+    const thumbnail = roll.cover_image_url || (roll.cover_photo_id ? getFilmPhotoThumbnailUrl(roll.cover_photo_id) : null);
     const stripeCount = index % 2 === 0 ? 8 : 0;
 
     return (

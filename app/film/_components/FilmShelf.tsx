@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import type { FilmRoll } from '@/lib/types';
+import type { FilmRollSummary as FilmRoll } from '@/lib/types';
 import { AddRollLink } from './AddRollLink';
 import { FilmCanister, FILM_ROLL_EXPANDED_WIDTH, FILM_ROLL_WIDTH } from './FilmCanister';
 

@@ -41,8 +41,7 @@ describe('Drive sync frame count', () => {
         const existing = query({ data: [{ id: 'stale-photo', drive_file_id: 'old-file' }] });
         const remove = query();
         const roll = query();
-        const photos = query({ data: files });
-        const queries = [...(count ? [upsert] : []), existing, remove, roll, photos];
+        const queries = [...(count ? [upsert] : []), existing, remove, roll];
         const from = vi.fn(() => queries.shift());
         mocks.createAdminClient.mockReturnValue({ from });
 
@@ -55,7 +54,7 @@ describe('Drive sync frame count', () => {
         }));
         expect(roll.eq.mock.calls).toEqual([['id', 'roll-1'], ['user_id', 'owner-1']]);
         expect(remove.in).toHaveBeenCalledWith('id', ['stale-photo']);
-        expect(result).toEqual({ photos: files, removedCount: 1 });
+        expect(result).toEqual({ removedCount: 1 });
         expect(queries).toHaveLength(0);
     });
 

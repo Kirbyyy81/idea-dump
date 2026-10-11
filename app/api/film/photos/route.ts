@@ -33,7 +33,7 @@ export async function PUT(request: NextRequest) {
         const input = parseFilmPhotoUpdate(body.data);
         if ('error' in input) return jsonError(input.error);
         const result = await updateFilmPhotoForUser(session.user.id, input.data);
-        return NextResponse.json(result.roll ? { data: result.photo, roll: result.roll } : { data: result.photo });
+        return NextResponse.json({ data: result.photo });
     } catch (error) {
         const serviceError = filmServiceErrorResponse(error);
         if (serviceError) return serviceError;

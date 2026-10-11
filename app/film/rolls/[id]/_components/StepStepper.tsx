@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { CheckCircle } from 'lucide-react';
-import { FilmPhoto, FilmRoll } from '@/lib/types';
+import { FilmPhotoView as FilmPhoto, FilmRollView as FilmRoll } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 interface StepStepperProps {

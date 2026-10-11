@@ -18,4 +18,6 @@
 - Repositories must scope every query and mutation to the authenticated user ID.
 - `client.ts` is browser-only. Do not import Supabase admin, server credentials, or server-only provider modules into it.
 - Keep normalization, workflow transitions, and validation pure where possible.
+- Build browser responses through the explicit field allowlists in `core/responses.ts`. Keep database records separate from the view types in `lib/types.ts`, and update the client and OpenAPI contract together.
+- Gallery and cover-photo previews use the authenticated photo image endpoint with `size=thumbnail`; original images load only when opened. Resolve expiring thumbnail links server-side, verify every redirect target, and keep browser caches private and varied by credentials.
 - A successful Drive sync sets `frames_taken` to the number of distinct supported images directly in the linked folder, including zero for an empty folder. Fetch every Drive result page before persisting changes; failed or incomplete listings must not replace the frame count or remove saved photos. Resyncing replaces any manually entered frame count.

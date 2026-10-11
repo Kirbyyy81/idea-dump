@@ -9,7 +9,7 @@ import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
-import { FilmCamera, FilmMaintenanceRecord } from '@/lib/types';
+import { FilmCameraView as FilmCamera, FilmMaintenanceView as FilmMaintenanceRecord } from '@/lib/types';
 import { useAlert } from '@/lib/contexts/AlertContext';
 import {
     createFilmCamera,

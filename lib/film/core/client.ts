@@ -1,11 +1,12 @@
 'use client';
 
 import type {
-    FilmCamera,
+    FilmCameraView as FilmCamera,
     FilmDashboardSummary,
-    FilmMaintenanceRecord,
-    FilmPhoto,
-    FilmRoll,
+    FilmMaintenanceView as FilmMaintenanceRecord,
+    FilmPhotoView as FilmPhoto,
+    FilmRollView as FilmRoll,
+    FilmRollSummary,
 } from '@/lib/types';
 
 interface FilmResponse<T> {
@@ -17,8 +18,6 @@ interface FilmErrorResponse {
 }
 
 export interface FilmDriveSyncResult {
-    folder_id: string;
-    photos: FilmPhoto[];
     removed_count: number;
     synced_count: number;
 }
@@ -82,7 +81,7 @@ export async function deleteFilmMaintenance(recordId: string) {
 }
 
 export function listFilmRolls() {
-    return requestFilm<FilmRoll[]>('/api/film/rolls');
+    return requestFilm<FilmRollSummary[]>('/api/film/rolls');
 }
 
 export function getFilmRoll(rollId: string) {
@@ -120,6 +119,10 @@ export function getFilmDashboard() {
 
 export function getFilmPhotoImageUrl(photoId: string) {
     return `/api/film/photos/${encodeURIComponent(photoId)}/image`;
+}
+
+export function getFilmPhotoThumbnailUrl(photoId: string) {
+    return `${getFilmPhotoImageUrl(photoId)}?size=thumbnail`;
 }
 
 export function getFilmGoogleConnectUrl(rollId: string) {

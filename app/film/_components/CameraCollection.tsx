@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Camera } from 'lucide-react';
-import type { FilmCamera } from '@/lib/types';
+import type { FilmCameraView as FilmCamera } from '@/lib/types';
 import { CameraIllustration } from './CameraIllustration';
 
 export function CameraCollection({ cameras }: { cameras: FilmCamera[] }) {

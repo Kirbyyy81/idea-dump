@@ -1,7 +1,7 @@
 'use client';
 
 import { Card } from '@/components/atoms/Card';
-import { FilmRoll } from '@/lib/types';
+import { FilmRollView as FilmRoll } from '@/lib/types';
 import { formatCurrencyMYR } from '@/lib/utils';
 
 interface StatsCardsProps {
