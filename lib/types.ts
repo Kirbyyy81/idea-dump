@@ -322,6 +322,22 @@ export interface FilmRoll {
     photos?: FilmPhoto[];
 }
 
+// Browser responses deliberately exclude ownership and provider storage metadata.
+export type FilmCameraView = Pick<FilmCamera, 'id' | 'name' | 'brand' | 'model' | 'purchase_date' | 'notes'>;
+export type FilmMaintenanceView = Pick<FilmMaintenanceRecord,
+    'id' | 'camera_id' | 'service_date' | 'service_type' | 'provider_name' | 'maintenance_cost' | 'notes'>;
+export type FilmPhotoView = Pick<FilmPhoto,
+    'id' | 'name' | 'mime_type' | 'web_view_link' | 'width' | 'height' | 'is_favorite'>;
+export type FilmRollView = Omit<FilmRoll,
+    'user_id' | 'created_at' | 'updated_at' | 'cover_image_path' | 'camera' | 'cover_photo' | 'photos'> & {
+    photos?: FilmPhotoView[];
+};
+export type FilmRollSummary = Pick<FilmRollView,
+    'id' | 'camera_id' | 'film_name' | 'brand' | 'format' | 'film_type' | 'process_type' | 'iso' |
+    'status' | 'purchase_price' | 'location_name' | 'frames_taken' | 'notes' | 'cover_photo_id' | 'cover_image_url'> & {
+    camera: Pick<FilmCameraView, 'name'> | null;
+};
+
 export interface CreateFilmCameraInput {
     name: string;
     brand?: string;
@@ -384,20 +400,9 @@ export interface UpdateFilmPhotoInput {
 export interface FilmDashboardSummary {
     total_pictures_taken: number;
     total_money_spent: number;
-    total_cameras: number;
     total_rolls: number;
-    processed_rolls: number;
-    unprocessed_rolls: number;
     favorite_photos: number;
-    average_spend_per_roll: number;
-    maintenance_cost: number;
-    total_photos: number;
     successful_photos: number;
-    average_cost_per_photo: number;
-    rolls_loaded_or_shooting: number;
-    latest_camera_added: FilmCamera | null;
-    cameras_with_maintenance_records: number;
-    most_used_camera: FilmCamera | null;
     status_breakdown: Array<{
         status: FilmRollStatus;
         label: string;
@@ -416,11 +421,8 @@ export interface FilmDashboardSummary {
         percentage: number;
     }>;
     camera_usage: Array<{
-        camera_id: string | null;
-        camera: FilmCamera | null;
         label: string;
         roll_count: number;
-        latest_roll_at: string | null;
     }>;
     activity_trend: Array<{
         month: string;
@@ -429,7 +431,6 @@ export interface FilmDashboardSummary {
         frames_taken: number;
         spend: number;
     }>;
-    recent_rolls: FilmRoll[];
 }
 
 export const filmRollStatusConfig: Record<FilmRollStatus, { label: string; colorClass: string }> = {

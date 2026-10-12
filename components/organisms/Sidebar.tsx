@@ -14,7 +14,6 @@ import {
     Barcode,
     BarChart3,
     BookOpen,
-    Camera,
     ChevronRight,
     ClipboardCheck,
     ClipboardList,
@@ -338,18 +337,6 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
                     label: getModuleLabel('film_journal', 'Film Journal'),
                     children: (
                         <div>
-                            {renderSubItem({
-                                href: '/film/new-roll',
-                                icon: <Plus size={14} />,
-                                isActive: isExactPath(pathname, '/film/new-roll'),
-                                label: 'Add Roll',
-                            })}
-                            {renderSubItem({
-                                href: '/film/cameras',
-                                icon: <Camera size={14} />,
-                                isActive: isExactPath(pathname, '/film/cameras'),
-                                label: 'Cameras',
-                            })}
                             {renderSubItem({
                                 href: '/film/dashboard',
                                 icon: <BarChart3 size={14} />,

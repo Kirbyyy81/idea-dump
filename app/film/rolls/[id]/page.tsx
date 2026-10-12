@@ -2,10 +2,10 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { ReactNode, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { ReactNode, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { ExternalLink, FolderSync, Heart, ImageIcon, Save, Star, X } from 'lucide-react';
+import { ExternalLink, FolderSync, Heart, Save, Star, X } from 'lucide-react';
 import { AppShell } from '@/components/organisms/AppShell';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
@@ -15,11 +15,11 @@ import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
 import { FileUpload } from '@/components/molecules/FileUpload';
 import {
-    FilmCamera,
+    FilmCameraView as FilmCamera,
     FilmFormat,
-    FilmPhoto,
+    FilmPhotoView as FilmPhoto,
     FilmProcessType,
-    FilmRoll,
+    FilmRollView as FilmRoll,
     FilmType,
     filmFormats,
     filmProcessTypeConfig,
@@ -32,6 +32,7 @@ import { useAlert } from '@/lib/contexts/AlertContext';
 import {
     getFilmGoogleConnectUrl,
     getFilmPhotoImageUrl,
+    getFilmPhotoThumbnailUrl,
     getFilmRoll,
     listFilmCameras,
     syncFilmDrive,
@@ -47,6 +48,7 @@ import {
     isFilmRollStep,
 } from '@/lib/film/rolls/workflow';
 import { StepStepper } from './_components/StepStepper';
+import { FilmPhotoImage } from '../../_components/FilmPhotoImage';
 import { StatsCards } from './_components/StatsCards';
 
 function getTodayInputDate() {
@@ -114,7 +116,8 @@ function RollDetailContent() {
     const [coverFile, setCoverFile] = useState<File | null>(null);
     const [isUploadingCover, setIsUploadingCover] = useState(false);
     const [selectedPhoto, setSelectedPhoto] = useState<FilmPhoto | null>(null);
-    const [updatingPhotoId, setUpdatingPhotoId] = useState<string | null>(null);
+    const [updatingPhotoIds, setUpdatingPhotoIds] = useState<ReadonlySet<string>>(() => new Set());
+    const pendingPhotoIds = useRef(new Set<string>());
 
     const loadRoll = useCallback(async () => {
         setError(null);
@@ -174,9 +177,10 @@ function RollDetailContent() {
         photo: FilmPhoto,
         updates: { is_favorite?: boolean; set_as_cover?: boolean }
     ) => {
-        if (!roll) return;
+        if (!roll || pendingPhotoIds.current.has(photo.id)) return;
 
-        setUpdatingPhotoId(photo.id);
+        pendingPhotoIds.current.add(photo.id);
+        setUpdatingPhotoIds(new Set(pendingPhotoIds.current));
         setError(null);
         try {
             const updatedPhoto = await updateFilmPhoto({
@@ -185,7 +189,14 @@ function RollDetailContent() {
                 ...updates,
             });
 
-            await loadRoll();
+            if (updates.set_as_cover) {
+                await loadRoll();
+            } else {
+                setRoll((current) => current?.id === roll.id ? {
+                    ...current,
+                    photos: current.photos?.map((item) => item.id === updatedPhoto.id ? updatedPhoto : item),
+                } : current);
+            }
             setSelectedPhoto((current) => current && current.id === photo.id
                 ? { ...current, ...updatedPhoto }
                 : current);
@@ -193,7 +204,8 @@ function RollDetailContent() {
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to update photo');
         } finally {
-            setUpdatingPhotoId(null);
+            pendingPhotoIds.current.delete(photo.id);
+            setUpdatingPhotoIds(new Set(pendingPhotoIds.current));
         }
     };
 
@@ -314,10 +326,10 @@ function RollDetailContent() {
                         <Card className="p-5">
                             <h2 className="text-lg font-bold">Roll Details</h2>
                             <div className="mt-4 space-y-3">
-                                {(roll.cover_image_url || roll.cover_photo?.thumbnail_link) && (
+                                {(roll.cover_image_url || roll.cover_photo_id) && (
                                     <div className="overflow-hidden rounded-lg border border-border-default bg-bg-hover">
                                         <img
-                                            src={roll.cover_image_url || (roll.cover_photo ? getPhotoImageUrl(roll.cover_photo) : '')}
+                                            src={roll.cover_image_url || (roll.cover_photo_id ? getFilmPhotoThumbnailUrl(roll.cover_photo_id) : '')}
                                             alt={`${roll.film_name} cover`}
                                             className="aspect-[4/3] w-full object-cover"
                                         />
@@ -329,7 +341,7 @@ function RollDetailContent() {
                                         accept="image/jpeg,image/png,image/webp"
                                         value={coverFile}
                                         onChange={setCoverFile}
-                                        previewUrl={roll.cover_image_url || (roll.cover_photo ? getPhotoImageUrl(roll.cover_photo) : undefined)}
+                                        previewUrl={roll.cover_image_url || (roll.cover_photo_id ? getFilmPhotoThumbnailUrl(roll.cover_photo_id) : undefined)}
                                         disabled={isUploadingCover}
                                     />
                                     <Button type="button" variant="secondary" onClick={handleCoverUpload} disabled={!coverFile} isLoading={isUploadingCover} className="w-full sm:w-auto">
@@ -480,7 +492,7 @@ function RollDetailContent() {
                     <PhotobookContactSheet
                         roll={roll}
                         photos={photos}
-                        isUpdatingPhotoId={updatingPhotoId}
+                        updatingPhotoIds={updatingPhotoIds}
                         onSelectPhoto={setSelectedPhoto}
                         onToggleFavorite={(photo) => handleUpdatePhoto(photo, { is_favorite: !photo.is_favorite })}
                         onSetCover={(photo) => handleUpdatePhoto(photo, { set_as_cover: true })}
@@ -491,7 +503,7 @@ function RollDetailContent() {
                     <PhotoPreviewDialog
                         roll={roll}
                         photo={selectedPhoto}
-                        isUpdating={updatingPhotoId === selectedPhoto.id}
+                        isUpdating={updatingPhotoIds.has(selectedPhoto.id)}
                         onClose={() => setSelectedPhoto(null)}
                         onToggleFavorite={() => handleUpdatePhoto(selectedPhoto, { is_favorite: !selectedPhoto.is_favorite })}
                         onSetCover={() => handleUpdatePhoto(selectedPhoto, { set_as_cover: true })}
@@ -513,14 +525,14 @@ function chunkPhotos(photos: FilmPhoto[], size: number) {
 function PhotobookContactSheet({
     roll,
     photos,
-    isUpdatingPhotoId,
+    updatingPhotoIds,
     onSelectPhoto,
     onToggleFavorite,
     onSetCover,
 }: {
     roll: FilmRoll;
     photos: FilmPhoto[];
-    isUpdatingPhotoId: string | null;
+    updatingPhotoIds: ReadonlySet<string>;
     onSelectPhoto: (photo: FilmPhoto) => void;
     onToggleFavorite: (photo: FilmPhoto) => void;
     onSetCover: (photo: FilmPhoto) => void;
@@ -530,13 +542,6 @@ function PhotobookContactSheet({
 
     return (
         <Card className="overflow-hidden p-0">
-            <div className="flex items-center justify-between gap-3 border-b border-border-default bg-bg-elevated p-5">
-                <h2 className="text-xl font-bold sm:text-2xl">Contact Sheet</h2>
-                <Link href={`/film/rolls/${roll.id}?step=drive`} className="btn-ghost min-h-8 shrink-0 px-2.5 py-1 text-xs">
-                    Manage Drive
-                </Link>
-            </div>
-
             <div className="bg-[#f8f3e7] p-2 sm:p-4">
                 <div className="space-y-3 rounded-sm bg-[#171310] p-2 shadow-subtle">
                     {rows.map((row, rowIndex) => {
@@ -548,7 +553,7 @@ function PhotobookContactSheet({
                                         key={photo.id}
                                         roll={roll}
                                         photo={photo}
-                                        isUpdating={isUpdatingPhotoId === photo.id}
+                                        isUpdating={updatingPhotoIds.has(photo.id)}
                                         onSelect={() => onSelectPhoto(photo)}
                                         onToggleFavorite={() => onToggleFavorite(photo)}
                                         onSetCover={() => onSetCover(photo)}
@@ -598,14 +603,7 @@ function FilmFrame({
     return (
         <div className="group relative aspect-[4/3] overflow-hidden bg-black">
             <button type="button" onClick={onSelect} className="h-full w-full text-left">
-                {photo.thumbnail_link ? (
-                    <img src={getPhotoImageUrl(photo)} alt={photo.name} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
-                ) : (
-                    <div className="grid h-full place-items-center p-3 text-center text-xs text-on-dark/70">
-                        <ImageIcon size={22} className="mx-auto mb-2" />
-                        <span className="line-clamp-2">{photo.name}</span>
-                    </div>
-                )}
+                <FilmPhotoImage src={getFilmPhotoThumbnailUrl(photo.id)} alt={photo.name} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
             </button>
 
             <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-gradient-to-t from-black/85 to-transparent p-2 opacity-100 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
@@ -673,14 +671,7 @@ function PhotoPreviewDialog({
 
                 <div className="grid gap-0 md:grid-cols-[1fr_260px]">
                     <div className="grid min-h-[320px] place-items-center bg-[#120f0d] p-4">
-                        {photo.thumbnail_link ? (
-                            <img src={getPhotoImageUrl(photo)} alt={photo.name} className="max-h-[70vh] max-w-full rounded-lg object-contain" />
-                        ) : (
-                            <div className="text-center text-on-dark/70">
-                                <ImageIcon size={36} className="mx-auto mb-3" />
-                                <p>No thumbnail.</p>
-                            </div>
-                        )}
+                        <FilmPhotoImage src={getPhotoImageUrl(photo)} alt={photo.name} loading="eager" className="max-h-[70vh] max-w-full rounded-lg object-contain" />
                     </div>
                     <aside className="space-y-3 border-t border-border-default p-4 md:border-l md:border-t-0">
                         <Button type="button" variant="secondary" icon={<Heart size={16} />} onClick={onToggleFavorite} disabled={isUpdating} className="w-full">

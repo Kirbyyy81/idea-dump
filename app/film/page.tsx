@@ -1,228 +1,23 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
 import { Film, Search, X } from 'lucide-react';
 import { AppShell } from '@/components/organisms/AppShell';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import {
-    FilmCamera,
-    FilmRoll,
+    FilmCameraView as FilmCamera,
+    FilmRollSummary as FilmRoll,
     FilmRollStatus,
     filmRollStatusConfig,
 } from '@/lib/types';
 import { listFilmCameras, listFilmRolls } from '@/lib/film/core/client';
-import { formatCurrencyMYR } from '@/lib/utils';
+import { CameraCollection } from './_components/CameraCollection';
+import { AddRollLink } from './_components/AddRollLink';
+import { FilmShelf } from './_components/FilmShelf';
 
 function getFilmShellClassName(className = 'p-5 md:p-8') {
     return `film-module ${className}`;
-}
-
-const CANISTER_THEMES = [
-    {
-        body: 'var(--pastel-pink)',
-        bodyDark: 'var(--error)',
-        bodyLight: 'var(--pastel-pink-soft)',
-        cap: 'var(--nav-bg)',
-        label: 'var(--bg-surface)',
-        accent: 'var(--pastel-pink)',
-    },
-    {
-        body: 'var(--pastel-yellow)',
-        bodyDark: 'var(--warning)',
-        bodyLight: 'var(--pastel-yellow-soft)',
-        cap: 'var(--nav-bg)',
-        label: 'var(--bg-surface)',
-        accent: 'var(--pastel-yellow)',
-    },
-    {
-        body: 'var(--pastel-olive)',
-        bodyDark: 'var(--success)',
-        bodyLight: 'var(--pastel-olive-soft)',
-        cap: 'var(--nav-bg)',
-        label: 'var(--bg-surface)',
-        accent: 'var(--pastel-olive)',
-    },
-    {
-        body: 'var(--pastel-blue)',
-        bodyDark: 'var(--info)',
-        bodyLight: 'var(--pastel-blue-soft)',
-        cap: 'var(--nav-bg)',
-        label: 'var(--bg-surface)',
-        accent: 'var(--pastel-blue)',
-    },
-    {
-        body: 'var(--pastel-peach)',
-        bodyDark: 'var(--text-secondary)',
-        bodyLight: 'var(--bg-subtle)',
-        cap: 'var(--nav-bg)',
-        label: 'var(--bg-surface)',
-        accent: 'var(--pastel-peach)',
-    },
-];
-
-function FilmCoverFallback({
-    roll,
-    accentColor,
-}: {
-    roll: FilmRoll;
-    accentColor: string;
-}) {
-    return (
-        <div className="flex h-full flex-col justify-between bg-bg-subtle p-3 text-text-primary">
-            <div>
-                <div className="mb-3 h-1.5 w-12 rounded-full" style={{ backgroundColor: accentColor }} />
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-text-secondary">
-                    {roll.brand}
-                </p>
-                <p className="mt-1 text-lg font-bold leading-tight">{roll.film_name}</p>
-            </div>
-            <div className="flex items-end justify-between gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-text-secondary">
-                <span>{roll.format}</span>
-                <span>ISO {roll.iso}</span>
-            </div>
-        </div>
-    );
-}
-
-function FilmCanister({ roll, index }: { roll: FilmRoll; index: number }) {
-    const theme = CANISTER_THEMES[index % CANISTER_THEMES.length];
-    const thumbnail = roll.cover_image_url || (roll.cover_photo ? `/api/film/photos/${roll.cover_photo.id}/image` : null);
-    const stripeCount = index % 2 === 0 ? 8 : 0;
-
-    return (
-        <div className="mx-auto flex max-w-[300px] flex-col items-center">
-            <Link
-                href={`/film/rolls/${roll.id}`}
-                className="action-link group block"
-                aria-label={`Open ${roll.film_name} roll`}
-            >
-                <article className="relative flex min-h-[300px] flex-col items-center justify-center sm:min-h-[330px]">
-                    <div className="relative h-[300px] w-[300px] origin-top scale-[0.9] sm:scale-100">
-                        <div
-                            className="absolute left-[106px] top-[90px] z-0 h-[136px] w-[160px] [clip-path:inset(-50px_-50px_-50px_0)]"
-                            aria-hidden="true"
-                        >
-                            <div className="absolute left-0 top-0 h-full w-[154px] -translate-x-[116px] overflow-hidden rounded-r-3xl border-y-2 border-r-2 border-border-dark/40 bg-black/80 backdrop-blur-md shadow-[14px_16px_24px_rgba(0,0,0,0.35)] transition-transform duration-500 ease-out group-hover:translate-x-0">
-                                <div className="absolute inset-x-0 top-2 flex justify-around">
-                                    {Array.from({ length: 12 }).map((_, holeIndex) => (
-                                        <span key={`top-strip-hole-${holeIndex}`} className="h-2 w-1.5 rounded-sm bg-bg-surface/20 shadow-[inset_0_1px_3px_rgba(0,0,0,0.8)]" />
-                                    ))}
-                                </div>
-                                <div className="absolute inset-x-0 bottom-2 flex justify-around">
-                                    {Array.from({ length: 12 }).map((_, holeIndex) => (
-                                        <span key={`bottom-strip-hole-${holeIndex}`} className="h-2 w-1.5 rounded-sm bg-bg-surface/20 shadow-[inset_0_1px_3px_rgba(0,0,0,0.8)]" />
-                                    ))}
-                                </div>
-                                <div className="ml-8 flex h-full flex-col justify-center pr-4 text-[#ffcc88] opacity-0 mix-blend-screen transition-opacity delay-100 duration-300 group-hover:opacity-100 [text-shadow:_0_0_8px_rgba(255,166,77,0.6)]">
-                                    <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-[#ffb84d]">
-                                        {roll.brand}
-                                    </p>
-                                    <h2 className="mt-1 line-clamp-2 text-lg font-bold leading-tight text-[#ffcc88]">{roll.film_name}</h2>
-                                    <div className="mt-2 flex items-center justify-between gap-2 text-[10px] font-semibold text-[#ffb84d]">
-                                        <span>{formatCurrencyMYR(Number(roll.purchase_price || 0))}</span>
-                                        <span>{roll.frames_taken || 0} frames</span>
-                                    </div>
-                                    <div className="mt-1 truncate text-[10px] font-semibold text-[#ffb84d]">
-                                        {roll.camera?.name || 'No camera'}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <svg
-                            viewBox="0 0 230 300"
-                            role="img"
-                            aria-labelledby={`film-roll-${roll.id}`}
-                            className="absolute inset-y-0 left-0 z-10 h-full w-[230px] overflow-visible"
-                        >
-                            <title id={`film-roll-${roll.id}`}>{`${roll.brand} ${roll.film_name}`}</title>
-                            <defs>
-                                <linearGradient id={`body-${roll.id}`} x1="0" x2="1" y1="0" y2="1">
-                                    <stop offset="0%" stopColor={theme.bodyLight} />
-                                    <stop offset="48%" stopColor={theme.body} />
-                                    <stop offset="100%" stopColor={theme.bodyDark} />
-                                </linearGradient>
-                            </defs>
-
-                            <rect x="15" y="52" width="94" height="188" rx="4" fill={`url(#body-${roll.id})`} stroke="var(--border-dark)" strokeWidth="3" />
-                            <rect x="9" y="42" width="108" height="14" rx="2" fill={theme.cap} />
-                            <rect x="22" y="35" width="82" height="7" rx="1.5" fill="var(--bg-surface)" />
-                            <rect x="9" y="239" width="108" height="14" rx="2" fill={theme.cap} />
-                            <rect x="22" y="253" width="82" height="7" rx="1.5" fill="var(--bg-surface)" />
-                            <rect x="30" y="64" width="64" height="164" rx="2" fill={theme.label} opacity="0.96" />
-                            <line x1="99" y1="65" x2="99" y2="226" stroke="var(--border-dark)" strokeWidth="2" />
-                            <line x1="24" y1="64" x2="24" y2="226" stroke="var(--border-dark)" strokeWidth="2" opacity="0.35" />
-
-                            {Array.from({ length: 8 }).map((_, holeIndex) => (
-                                <rect
-                                    key={`body-hole-${holeIndex}`}
-                                    x="103"
-                                    y={75 + holeIndex * 17}
-                                    width="6"
-                                    height="9"
-                                    rx="1"
-                                    fill="var(--bg-surface)"
-                                    opacity="0.95"
-                                />
-                            ))}
-                            {stripeCount > 0 && Array.from({ length: stripeCount }).map((_, stripeIndex) => (
-                                <line
-                                    key={`stripe-${stripeIndex}`}
-                                    x1={38 + stripeIndex * 7}
-                                    x2={38 + stripeIndex * 7}
-                                    y1="68"
-                                    y2="224"
-                                    stroke={theme.accent}
-                                    strokeWidth="2.5"
-                                    opacity="0.82"
-                                />
-                            ))}
-                            <text
-                                x="47"
-                                y="178"
-                                fill="var(--text-primary)"
-                                fontSize="15"
-                                fontWeight="700"
-                                transform="rotate(-90 47 178)"
-                            >
-                                {roll.format}
-                            </text>
-                            <text
-                                x="67"
-                                y="168"
-                                fill="var(--text-primary)"
-                                fontSize="18"
-                                fontWeight="800"
-                                transform="rotate(-90 67 168)"
-                            >
-                                {roll.iso}
-                            </text>
-                        </svg>
-
-                        <div className="absolute left-[16px] top-[56px] z-20 h-[183px] w-[92px] overflow-hidden bg-bg-surface">
-                            {thumbnail ? (
-                                <Image
-                                    src={thumbnail}
-                                    alt={`${roll.film_name} cover`}
-                                    fill
-                                    sizes="92px"
-                                    unoptimized
-                                    className="h-full w-full object-cover"
-                                />
-                            ) : (
-                                <FilmCoverFallback roll={roll} accentColor={theme.accent} />
-                            )}
-                            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.4)_0%,rgba(0,0,0,0)_20%,rgba(255,255,255,0.1)_40%,rgba(0,0,0,0)_80%,rgba(0,0,0,0.3)_100%)]" />
-                            <div className="pointer-events-none absolute inset-0 border border-border-dark/20" />
-                        </div>
-                    </div>
-                </article>
-            </Link>
-        </div>
-    );
 }
 
 export default function FilmJournalPage() {
@@ -275,7 +70,7 @@ export default function FilmJournalPage() {
     }
 
     return (
-        <AppShell pageTitle="The Film Cupboard" contentClassName={getFilmShellClassName()}>
+        <AppShell pageTitle="Film & Camera Cupboard" contentClassName={getFilmShellClassName()}>
             <div className="mx-auto max-w-7xl space-y-5">
                 {error && (
                     <div className="rounded-lg border border-error bg-error-bg px-4 py-3 text-sm text-error">
@@ -283,13 +78,13 @@ export default function FilmJournalPage() {
                     </div>
                 )}
 
-                <section className="overflow-hidden rounded-2xl border border-border-strong bg-nav-bg">
+                <section aria-labelledby="roll-library-title" className="overflow-hidden rounded-2xl border border-border-strong bg-nav-bg">
                     <div className="border-b border-border-strong bg-nav-bg-hover px-6 py-4 text-text-on-dark">
                         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                             <div className="flex items-center justify-between gap-4">
                                 <div className="flex items-center gap-3">
                                     <Film size={19} />
-                                    <h2 className="text-lg font-bold !text-text-on-dark">Roll Library</h2>
+                                    <h2 id="roll-library-title" className="text-lg font-bold !text-text-on-dark">Roll Library</h2>
                                 </div>
                                 <span className="shrink-0 text-sm text-nav-text-muted">{filteredRolls.length} of {rolls.length} rolls</span>
                             </div>
@@ -336,20 +131,13 @@ export default function FilmJournalPage() {
                         <div className="px-6 py-20 text-center text-nav-text-muted">
                             <Film className="mx-auto mb-4 opacity-60" size={38} />
                             <p>{rolls.length ? 'No rolls match these filters.' : 'No rolls yet.'}</p>
-                            {!rolls.length && (
-                                <Link href="/film/new-roll" className="action-link mt-4 inline-flex rounded-full bg-action-primary px-5 py-2 text-sm font-medium text-action-primary-text">
-                                    Register a roll
-                                </Link>
-                            )}
+                            <div className="mt-4"><AddRollLink /></div>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 gap-x-5 gap-y-8 bg-surface-film-shelf px-3 py-8 sm:grid-cols-2 sm:px-5 lg:grid-cols-3 xl:grid-cols-4">
-                            {filteredRolls.map((roll, index) => (
-                                <FilmCanister key={roll.id} roll={roll} index={index} />
-                            ))}
-                        </div>
+                        <FilmShelf rolls={filteredRolls} />
                     )}
                 </section>
+                <CameraCollection cameras={cameras} />
             </div>
         </AppShell>
     );

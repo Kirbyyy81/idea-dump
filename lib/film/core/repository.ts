@@ -4,6 +4,9 @@ import type {
     FilmMaintenanceRecord,
     FilmPhoto,
     FilmRoll,
+    FilmRollSummary,
+    FilmRollView,
+    FilmPhotoView,
 } from '@/lib/types';
 import type {
     FilmCameraCreateCommand,
@@ -18,7 +21,9 @@ import type {
 } from './schemas';
 import { getStoredFilmRollStatuses, normalizeFilmRoll } from '../rolls/status';
 
-const FILM_ROLL_RELATIONS = '*, camera:dim_film_cameras(*), cover_photo:film_photos!film_rolls_cover_photo_id_fkey(*)';
+const FILM_ROLL_RELATIONS = '*';
+const FILM_PHOTO_DISPLAY = 'id,name,mime_type,web_view_link,width,height,is_favorite';
+const FILM_ROLL_SUMMARY = 'id,camera_id,film_name,brand,format,film_type,process_type,iso,status,purchase_price,location_name,frames_taken,notes,cover_photo_id,cover_image_path,updated_at,camera:dim_film_cameras(name)';
 
 export interface FilmPhotoFile {
     drive_file_id: string;
@@ -27,11 +32,10 @@ export interface FilmPhotoFile {
 }
 
 export interface FilmDashboardData {
-    cameras: FilmCamera[];
+    cameras: Pick<FilmCamera, 'id' | 'name'>[];
     favoritePhotos: number;
-    maintenanceRecords: FilmMaintenanceRecord[];
-    photos: number;
-    rolls: FilmRoll[];
+    maintenanceRecords: Pick<FilmMaintenanceRecord, 'maintenance_cost'>[];
+    rolls: Pick<FilmRoll, 'camera_id' | 'created_at' | 'status' | 'format' | 'frames_taken' | 'successful_photos' | 'purchase_price' | 'processing_cost' | 'scanning_cost' | 'shipping_cost'>[];
 }
 
 export interface FilmDriveImage {
@@ -180,15 +184,13 @@ export async function findFilmRollForUser(userId: string, rollId: string): Promi
     return data ? normalizeFilmRoll(data) as FilmRoll : null;
 }
 
-export async function getFilmRollDetails(userId: string, rollId: string): Promise<FilmRoll | null> {
+export async function getFilmRollDetails(userId: string, rollId: string): Promise<FilmRollView | null> {
     const admin = createAdminClient();
     const { data, error } = await admin
         .from('film_rolls')
         .select(`
             *,
-            camera:dim_film_cameras(*),
-            cover_photo:film_photos!film_rolls_cover_photo_id_fkey(*),
-            photos:film_photos!film_photos_film_roll_id_fkey(*)
+            photos:film_photos!film_photos_film_roll_id_fkey(${FILM_PHOTO_DISPLAY})
         `)
         .eq('id', rollId)
         .eq('user_id', userId)
@@ -196,14 +198,14 @@ export async function getFilmRollDetails(userId: string, rollId: string): Promis
         .maybeSingle();
 
     if (error) throw error;
-    return data ? normalizeFilmRoll(data) as FilmRoll : null;
+    return data ? normalizeFilmRoll(data) as unknown as FilmRollView : null;
 }
 
-export async function listFilmRolls(userId: string, query: FilmRollListQuery): Promise<FilmRoll[]> {
+export async function listFilmRolls(userId: string, query: FilmRollListQuery): Promise<FilmRollSummary[]> {
     const admin = createAdminClient();
     let request = admin
         .from('film_rolls')
-        .select(FILM_ROLL_RELATIONS)
+        .select(FILM_ROLL_SUMMARY)
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
@@ -217,7 +219,7 @@ export async function listFilmRolls(userId: string, query: FilmRollListQuery): P
 
     const { data, error } = await request;
     if (error) throw error;
-    return (data ?? []).map(normalizeFilmRoll) as FilmRoll[];
+    return (data ?? []).map(normalizeFilmRoll) as unknown as FilmRollSummary[];
 }
 
 export async function createFilmRoll(userId: string, command: FilmRollCreateCommand): Promise<FilmRoll> {
@@ -329,17 +331,17 @@ export async function findFilmRollPhotoForUser(userId: string, rollId: string, p
     return Boolean(data);
 }
 
-export async function listFilmPhotos(userId: string, rollId: string): Promise<FilmPhoto[]> {
+export async function listFilmPhotos(userId: string, rollId: string): Promise<FilmPhotoView[]> {
     const admin = createAdminClient();
     const { data, error } = await admin
         .from('film_photos')
-        .select('*')
+        .select(FILM_PHOTO_DISPLAY)
         .eq('film_roll_id', rollId)
         .eq('user_id', userId)
         .order('name', { ascending: true });
 
     if (error) throw error;
-    return (data ?? []) as FilmPhoto[];
+    return (data ?? []) as FilmPhotoView[];
 }
 
 export async function updateFilmPhoto(
@@ -360,41 +362,37 @@ export async function updateFilmPhoto(
     return data as FilmPhoto;
 }
 
-export async function setFilmRollCoverPhoto(userId: string, rollId: string, photoId: string): Promise<FilmRoll> {
+export async function setFilmRollCoverPhoto(userId: string, rollId: string, photoId: string): Promise<void> {
     const admin = createAdminClient();
-    const { data, error } = await admin
+    const { error } = await admin
         .from('film_rolls')
         .update({ cover_photo_id: photoId, updated_at: new Date().toISOString() })
         .eq('id', rollId)
         .eq('user_id', userId)
-        .select('*, camera:dim_film_cameras(*)')
+        .select('id')
         .single();
 
     if (error) throw error;
-    return normalizeFilmRoll(data) as FilmRoll;
 }
 
 export async function getFilmDashboardData(userId: string): Promise<FilmDashboardData> {
     const admin = createAdminClient();
-    const [rollsResult, camerasResult, maintenanceResult, photosResult, favoritesResult] = await Promise.all([
-        admin.from('film_rolls').select('*').eq('user_id', userId),
-        admin.from('dim_film_cameras').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
-        admin.from('film_maintenance_records').select('*').eq('user_id', userId),
-        admin.from('film_photos').select('id', { count: 'exact', head: true }).eq('user_id', userId),
+    const [rollsResult, camerasResult, maintenanceResult, favoritesResult] = await Promise.all([
+        admin.from('film_rolls').select('camera_id,created_at,status,format,frames_taken,successful_photos,purchase_price,processing_cost,scanning_cost,shipping_cost').eq('user_id', userId),
+        admin.from('dim_film_cameras').select('id,name').eq('user_id', userId).order('created_at', { ascending: false }),
+        admin.from('film_maintenance_records').select('maintenance_cost').eq('user_id', userId),
         admin.from('film_photos').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('is_favorite', true),
     ]);
 
     if (rollsResult.error) throw rollsResult.error;
     if (camerasResult.error) throw camerasResult.error;
     if (maintenanceResult.error) throw maintenanceResult.error;
-    if (photosResult.error) throw photosResult.error;
     if (favoritesResult.error) throw favoritesResult.error;
 
     return {
-        rolls: (rollsResult.data ?? []).map(normalizeFilmRoll) as FilmRoll[],
-        cameras: (camerasResult.data ?? []) as FilmCamera[],
-        maintenanceRecords: (maintenanceResult.data ?? []) as FilmMaintenanceRecord[],
-        photos: photosResult.count ?? 0,
+        rolls: (rollsResult.data ?? []).map(normalizeFilmRoll) as FilmDashboardData['rolls'],
+        cameras: (camerasResult.data ?? []) as FilmDashboardData['cameras'],
+        maintenanceRecords: (maintenanceResult.data ?? []) as FilmDashboardData['maintenanceRecords'],
         favoritePhotos: favoritesResult.count ?? 0,
     };
 }
@@ -403,7 +401,7 @@ export async function syncFilmDriveImages(
     userId: string,
     command: FilmDriveSyncCommand,
     files: FilmDriveImage[]
-): Promise<{ photos: FilmPhoto[]; removedCount: number }> {
+): Promise<{ removedCount: number }> {
     const admin = createAdminClient();
     const now = new Date().toISOString();
     const currentDriveFileIds = new Set(files.map((file) => file.driveFileId));
@@ -453,10 +451,15 @@ export async function syncFilmDriveImages(
 
     const { error: rollError } = await admin
         .from('film_rolls')
-        .update({ drive_folder_id: command.folder_id, status: 'PROCESSED', updated_at: now })
+        .update({
+            drive_folder_id: command.folder_id,
+            frames_taken: currentDriveFileIds.size,
+            status: 'PROCESSED',
+            updated_at: now,
+        })
         .eq('id', command.film_roll_id)
         .eq('user_id', userId);
     if (rollError) throw rollError;
 
-    return { photos: await listFilmPhotos(userId, command.film_roll_id), removedCount: stalePhotoIds.length };
+    return { removedCount: stalePhotoIds.length };
 }

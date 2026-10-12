@@ -8,18 +8,21 @@ interface RouteParams {
     params: Promise<{ id: string }>;
 }
 
-export async function GET(_request: NextRequest, { params }: RouteParams) {
+export async function GET(request: NextRequest, { params }: RouteParams) {
     try {
         const session = await authorizeFilmJournal();
         if ('response' in session) return session.response;
         const { id } = await params;
-        const { photo, response } = await getFilmPhotoImageForUser(session.user.id, id);
+        const size = request.nextUrl.searchParams.get('size');
+        if (size !== null && size !== 'thumbnail') return jsonError('Invalid photo size');
+        const thumbnail = size === 'thumbnail';
+        const { photo, response } = await getFilmPhotoImageForUser(session.user.id, id, thumbnail);
         return new Response(response.body, {
             headers: {
-                'Cache-Control': 'private, no-store, max-age=0',
+                'Cache-Control': thumbnail ? 'private, max-age=300' : 'private, no-store, max-age=0',
                 'Content-Disposition': `inline; filename="${String(photo.name).replaceAll('"', '')}"`,
-                'Content-Type': photo.mime_type || response.headers.get('content-type') || 'image/jpeg',
-                'Pragma': 'no-cache',
+                'Content-Type': response.headers.get('content-type') || photo.mime_type || 'image/jpeg',
+                ...(thumbnail ? {} : { 'Pragma': 'no-cache' }),
                 'Vary': 'Cookie, Authorization',
                 'X-Content-Type-Options': 'nosniff',
             },
