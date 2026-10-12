@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { FinanceRepository } from '../src/contracts.js';
 import type { ValidatedImage } from '../src/image.js';
 import { processScreenshot } from '../src/processor.js';
+import { RepositoryError } from '../src/repository.js';
 
 const config = {
     intakeLeaseSeconds: 300,
@@ -38,6 +39,7 @@ function repository(overrides: Partial<FinanceRepository> = {}) {
             explanation: 'No deterministic duplicate signals matched.',
         }),
         finalize: vi.fn(),
+        readIntakeState: vi.fn(),
         fail: vi.fn().mockResolvedValue(undefined),
         ...overrides,
     } as unknown as FinanceRepository;
@@ -239,6 +241,74 @@ describe('fenced screenshot processing', () => {
             failureStage: 'ocr',
             errorMessage: 'Screenshot reading was interrupted. Please retry.',
         });
+    });
+});
+
+describe('obsolete screenshot attempt recovery', () => {
+    function conflictedRepository(code = 'PT409') {
+        return repository({
+            beginIntake: vi.fn().mockResolvedValue({
+                state: 'started', shouldProcess: true, intake: { id: 'intake-1' },
+                candidate: null, transaction: null, attemptId: 'obsolete-attempt',
+            }),
+            finalize: vi.fn().mockRejectedValue(new RepositoryError('finalize_intake', { code })),
+        });
+    }
+
+    const recognize = () => vi.fn().mockResolvedValue({ rawText: 'Paid RM 12.50\n15/07/2026', confidence: 91 });
+
+    it.each(['PT409', '40001'])('recovers the authoritative result after %s without another write', async (code) => {
+        const repo = conflictedRepository(code);
+        const ocr = recognize();
+        vi.mocked(repo.readIntakeState).mockResolvedValue({
+            intake: { id: 'intake-1', status: 'completed' },
+            candidate: { id: 'candidate-current' }, transaction: { id: 'transaction-current' },
+        } as Awaited<ReturnType<FinanceRepository['readIntakeState']>>);
+
+        const result = await processScreenshot('user-1', image, config, { repository: repo, recognize: ocr });
+
+        expect(result).toMatchObject({ statusCode: 200, data: { recovered: true, auto_confirmed: true, candidate: { id: 'candidate-current' } } });
+        expect(repo.readIntakeState).toHaveBeenCalledExactlyOnceWith('user-1', 'intake-1');
+        expect(repo.finalize).toHaveBeenCalledTimes(1);
+        expect(ocr).toHaveBeenCalledTimes(1);
+        expect(repo.fail).not.toHaveBeenCalled();
+    });
+
+    it('leaves an active replacement attempt for later recovery', async () => {
+        const repo = conflictedRepository();
+        vi.mocked(repo.readIntakeState).mockResolvedValue({
+            intake: { id: 'intake-1', status: 'processing' }, candidate: null, transaction: null,
+        } as Awaited<ReturnType<FinanceRepository['readIntakeState']>>);
+        await expect(processScreenshot('user-1', image, config, { repository: repo, recognize: recognize() }))
+            .rejects.toMatchObject({ statusCode: 503, code: 'intake_busy', retryable: true, retryAfterSeconds: 5 });
+        expect(repo.finalize).toHaveBeenCalledTimes(1);
+        expect(repo.fail).not.toHaveBeenCalled();
+    });
+
+    it.each(['failed', 'rejected', null])('stops after a conflict on a %s intake', async (status) => {
+        const repo = conflictedRepository();
+        vi.mocked(repo.readIntakeState).mockResolvedValue(status ? {
+            intake: { id: 'intake-1', status }, candidate: null, transaction: null,
+        } as Awaited<ReturnType<FinanceRepository['readIntakeState']>> : null);
+        await expect(processScreenshot('user-1', image, config, { repository: repo, recognize: recognize() }))
+            .rejects.toMatchObject({ statusCode: 409, code: 'intake_ownership_changed', retryable: false });
+        expect(repo.fail).not.toHaveBeenCalled();
+    });
+
+    it('preserves the replacement attempt when the recovery read fails', async () => {
+        const repo = conflictedRepository();
+        vi.mocked(repo.readIntakeState).mockRejectedValue(new RepositoryError('read_intake_state'));
+        await expect(processScreenshot('user-1', image, config, { repository: repo, recognize: recognize() }))
+            .rejects.toMatchObject({ statusCode: 503, code: 'persistence_unavailable' });
+        expect(repo.fail).not.toHaveBeenCalled();
+    });
+
+    it('handles unrelated persistence errors through the normal fenced failure path', async () => {
+        const repo = conflictedRepository('23503');
+        await expect(processScreenshot('user-1', image, config, { repository: repo, recognize: recognize() }))
+            .rejects.toMatchObject({ statusCode: 503, code: 'persistence_unavailable' });
+        expect(repo.readIntakeState).not.toHaveBeenCalled();
+        expect(repo.fail).toHaveBeenCalledTimes(1);
     });
 });
 

@@ -21,7 +21,7 @@ export function ProductForm({ data, productId, save, onSaved, onCancel }: {
     const subcategories = [...new Set([...data.products.filter((item) => item.category.trim().toLowerCase() === product.category.trim().toLowerCase())
         .map((item) => item.subcategory), product.subcategory?.trim()].filter((value): value is string => Boolean(value)))].sort();
     const { busy, error, run } = useInventoryAction(save);
-    const unitFixed = data.batches.some((batch) => batch.product_id === product.id);
+    const unitFixed = data.purchases.some((item) => item.product_id === product.id);
     const editVariant = (id: string, change: Partial<InventoryVariantInput>) => setProduct((current) => ({ ...current, variants: current.variants.map((variant) => variant.id === id ? { ...variant, ...change } : variant) }));
     return <form noValidate className="space-y-5" onSubmit={(event) => { event.preventDefault(); void run({ action: 'save_product', payload: product }, ({ id }) => onSaved(id)); }}>
         <InventoryErrorNotice error={error} />

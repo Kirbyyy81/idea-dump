@@ -8,8 +8,11 @@ const db = new PGlite();
 const file = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 const owner = randomUUID(); const other = randomUUID(); const denied = randomUUID();
 const productId = randomUUID(); const variantId = randomUUID(); const tissueId = randomUUID(); const tissueVariant = randomUUID();
-const mutation = async (action, payload, request = randomUUID(), user = owner) => (await db.query(
+const legacyMutation = async (action, payload, request = randomUUID(), user = owner) => (await db.query(
     'select public.inventory_mutate($1,$2,$3,$4::jsonb) as data', [user, request, action, JSON.stringify(payload)]
+)).rows[0].data;
+const mutation = async (action, payload, user = owner) => (await db.query(
+    'select public.inventory_mutate(p_user_id=>$1,p_action=>$2,p_payload=>$3::jsonb) as data', [user, action, JSON.stringify(payload)]
 )).rows[0].data;
 const snapshot = async (user = owner) => (await db.query('select public.inventory_read($1) as data', [user])).rows[0].data;
 async function rejects(action, code) {
@@ -39,6 +42,88 @@ try {
     await db.exec(await file('supabase/migrations/20261005092513_add_inventory_subcategory.sql'));
     await db.exec(await file('supabase/migrations/20261005100717_edit_inventory_purchases.sql'));
     await db.exec(await file('supabase/migrations/20261005103956_inventory_finance_price_review.sql'));
+    const cleanup = await file('supabase/migrations/20261008032658_remove_inventory_adjustments.sql');
+    const upgradeOwner = randomUUID(); const upgradeProduct = randomUUID(); const upgradeVariant = randomUUID();
+    await db.query('insert into auth.users values($1)', [upgradeOwner]);
+    await db.query("insert into public.bridge_user_roles select $1,id from public.dim_roles where role='owner'", [upgradeOwner]);
+    await legacyMutation('save_product', { id: upgradeProduct, revision: 0, name: 'Upgrade fixture', brand: null, category: 'Fixture', subcategory: null, unit: 'count', item_label: 'items', variants: [{ id: upgradeVariant, label: 'Single item', size: 1, pack_quantity: 1, sheets_per_item: null }] }, randomUUID(), upgradeOwner);
+    await legacyMutation('receive', { kind: 'purchase', purchased_on: '2026-01-01', lines: [{ variant_id: upgradeVariant, product_revision: 1, quantity: 2, price: 10, price_mode: 'total', in_use_quantity: 0, started_on: null }] }, randomUUID(), upgradeOwner);
+    const upgradeBatch = (await snapshot(upgradeOwner)).batches[0].id;
+    const upgradeUsage = await legacyMutation('start', { batch_id: upgradeBatch, started_on: '2026-01-02' }, randomUUID(), upgradeOwner);
+    const upgradeBefore = await snapshot(upgradeOwner);
+    const contractBefore = (await db.query("select proname,proacl,proconfig,prosecdef,proowner from pg_proc where proname in ('inventory_read','inventory_mutate') order by proname")).rows;
+    const requestsBefore = (await db.query('select * from public.inventory_requests where user_id=$1 order by request_id', [upgradeOwner])).rows;
+    await db.exec('begin');
+    await legacyMutation('adjust', { batch_id: upgradeBatch, usage_id: null, quantity: -1, reason: 'lost', adjusted_on: '2026-01-03' }, randomUUID(), upgradeOwner);
+    await assert.rejects(() => db.exec(cleanup), /Inventory adjustments must be empty/);
+    await db.exec('rollback');
+    await db.exec('begin');
+    await legacyMutation('adjust', { batch_id: upgradeBatch, usage_id: upgradeUsage.id, quantity: -1, reason: 'discarded', adjusted_on: '2026-01-03' }, randomUUID(), upgradeOwner);
+    await db.query('delete from public.inventory_adjustments where user_id=$1', [upgradeOwner]);
+    await assert.rejects(() => db.exec(cleanup), /Removed Inventory usage must be reviewed/);
+    await db.exec('rollback');
+    await db.exec(cleanup);
+    assert.equal((await db.query("select to_regclass('public.inventory_adjustments') as table_id")).rows[0].table_id, null);
+    assert.deepEqual(await snapshot(upgradeOwner), upgradeBefore, 'cleanup preserves existing catalogue, purchases, stock and usage');
+    assert.deepEqual((await db.query('select * from public.inventory_requests where user_id=$1 order by request_id', [upgradeOwner])).rows, requestsBefore, 'cleanup preserves retry receipts');
+    assert.deepEqual((await db.query("select proname,proacl,proconfig,prosecdef,proowner from pg_proc where proname in ('inventory_read','inventory_mutate') order by proname")).rows, contractBefore, 'cleanup preserves RPC permissions');
+    await db.exec(await file('supabase/migrations/20261008035239_remove_inventory_requests.sql'));
+    assert.equal((await db.query("select to_regclass('public.inventory_requests') as table_id")).rows[0].table_id, null);
+    assert.deepEqual(await snapshot(upgradeOwner), upgradeBefore, 'request removal preserves catalogue, purchases, stock and usage');
+    assert.deepEqual((await db.query("select proname,proacl,proconfig,prosecdef,proowner from pg_proc where proname in ('inventory_read','inventory_mutate') order by proname")).rows, contractBefore, 'request removal preserves RPC permissions');
+    assert.equal((await db.query("select count(*)::int as n from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.prosrc like '%inventory_requests%'")).rows[0].n, 0);
+    const repeatedReceipt = { kind: 'purchase', purchased_on: '2026-01-01', lines: [{ variant_id: upgradeVariant, product_revision: 1, quantity: 2, price: 10, price_mode: 'total', in_use_quantity: 0, started_on: null }] };
+    const legacyRequest = randomUUID();
+    const firstReceipt = await legacyMutation('receive', repeatedReceipt, legacyRequest, upgradeOwner);
+    const secondReceipt = await legacyMutation('receive', repeatedReceipt, legacyRequest, upgradeOwner);
+    assert.notEqual(firstReceipt.id, secondReceipt.id, 'old request IDs are accepted but no longer deduplicate receipts');
+    const repeatedBatch = (await snapshot(upgradeOwner)).batches.find((batch) => batch.purchase_id === firstReceipt.id).id;
+    const firstUsage = await mutation('start', { batch_id: repeatedBatch, started_on: '2026-01-02' }, upgradeOwner);
+    const secondUsage = await mutation('start', { batch_id: repeatedBatch, started_on: '2026-01-02' }, upgradeOwner);
+    assert.notEqual(firstUsage.id, secondUsage.id, 'repeated Start using calls consume separate items');
+    const beforeMerge = await snapshot(upgradeOwner);
+    const consolidation = await file('supabase/migrations/20261008043228_combine_inventory_purchases.sql');
+    await db.exec('begin');
+    await db.query("insert into public.inventory_purchases(user_id,kind,purchased_on) values($1,'purchase','2026-01-01')", [upgradeOwner]);
+    await assert.rejects(() => db.exec(consolidation), /Every Inventory receipt must contain an item/);
+    await db.exec('rollback');
+    await db.exec(consolidation);
+    assert.deepEqual(await snapshot(upgradeOwner), beforeMerge, 'deployed clients retain the same receipt and stock response after consolidation');
+    assert.deepEqual((await db.query("select proname,proacl,proconfig,prosecdef,proowner from pg_proc where proname in ('inventory_read','inventory_mutate') order by proname")).rows, contractBefore, 'consolidation preserves existing RPC permissions');
+    const merged = (await db.query('select public.inventory_read_items($1) as data', [upgradeOwner])).rows[0].data;
+    assert.equal(merged.purchases.length, beforeMerge.batches.length);
+    assert.equal('batches' in merged, false, 'new clients read purchase items without a batch collection');
+    for (const item of merged.purchases) {
+        const original = beforeMerge.batches.find((batch) => batch.id === item.id);
+        const receipt = beforeMerge.purchases.find((receipt) => receipt.id === original.purchase_id);
+        assert.deepEqual({ ...item, receipt_id: undefined, kind: undefined, purchased_on: undefined, currency: undefined, finance_transaction_id: undefined, revision: undefined, receipt_created_at: undefined, purchase_id: item.receipt_id },
+            { ...original, receipt_id: undefined, kind: undefined, purchased_on: undefined, currency: undefined, finance_transaction_id: undefined, revision: undefined, receipt_created_at: undefined });
+        assert.equal(item.revision, receipt.revision);
+        assert.equal(item.purchased_on, receipt.purchased_on);
+        assert.equal(item.receipt_created_at, receipt.created_at);
+    }
+    for (const usage of merged.usages) assert.equal(usage.purchase_id, beforeMerge.usages.find((item) => item.id === usage.id).batch_id);
+    assert.equal((await db.query("select to_regclass('public.inventory_batches') as id")).rows[0].id, null);
+    assert.equal((await db.query("select count(*)::int as n from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.prosrc like '%inventory_batches%'")).rows[0].n, 0);
+    const canonicalReceipt = await mutation('receive', { ...repeatedReceipt, lines: [repeatedReceipt.lines[0], repeatedReceipt.lines[0]] }, upgradeOwner);
+    const canonicalItems = (await db.query('select public.inventory_read_items($1) as data', [upgradeOwner])).rows[0].data.purchases.filter((item) => item.receipt_id === canonicalReceipt.id);
+    assert.equal(canonicalItems.length, 2, 'multi-item carts share a receipt ID without a receipt table');
+    const canonicalUsage = await mutation('start', { purchase_id: canonicalItems[0].id, started_on: '2026-01-02' }, upgradeOwner);
+    const canonicalEdit = { receipt_id: canonicalReceipt.id, revision: 1, kind: 'purchase', purchased_on: '2026-01-01', lines: canonicalItems.map((item) => ({ purchase_id: item.id, quantity: 3, total_paid: 15 })) };
+    await mutation('edit_purchase', canonicalEdit, upgradeOwner);
+    await rejects(() => mutation('edit_purchase', canonicalEdit, upgradeOwner), '40001');
+    const afterCanonical = (await db.query('select public.inventory_read_items($1) as data', [upgradeOwner])).rows[0].data;
+    assert.ok(afterCanonical.purchases.filter((item) => item.receipt_id === canonicalReceipt.id).every((item) => item.revision === 2));
+    assert.equal(afterCanonical.usages.find((item) => item.id === canonicalUsage.id).purchase_id, canonicalItems[0].id);
+    assert.equal(afterCanonical.purchases.find((item) => item.id === canonicalItems[0].id).unopened_units, 2);
+    const canonicalExpense = randomUUID();
+    await db.query("insert into public.finance_transactions values($1,$2,'expense','confirmed','MYR')", [canonicalExpense, upgradeOwner]);
+    await mutation('link_finance', { receipt_id: canonicalReceipt.id, finance_transaction_id: canonicalExpense }, upgradeOwner);
+    const linkedItems = (await db.query('select public.inventory_read_items($1) as data', [upgradeOwner])).rows[0].data.purchases.filter((item) => item.receipt_id === canonicalReceipt.id);
+    assert.ok(linkedItems.every((item) => item.finance_transaction_id === canonicalExpense && item.revision === 3), 'Finance links and revisions advance across the complete receipt');
+    await mutation('link_finance', { receipt_id: canonicalReceipt.id, finance_transaction_id: null }, upgradeOwner);
+    await rejects(() => mutation('start', { purchase_id: canonicalItems[0].id, started_on: '2026-01-02' }, other), '42501');
+    await db.query('delete from auth.users where id=$1', [upgradeOwner]);
     for (const id of [owner, other, denied]) await db.query('insert into auth.users values($1)', [id]);
     for (const id of [owner, other]) await db.query("insert into public.bridge_user_roles select $1,id from public.dim_roles where role='owner'", [id]);
     await db.exec('set role service_role');
@@ -50,10 +135,7 @@ try {
         { variant_id: variantId, product_revision: 1, quantity: 3, price: 18, price_mode: 'unit', in_use_quantity: 0, started_on: null },
         { variant_id: tissueVariant, product_revision: 1, quantity: 2, price: 30, price_mode: 'total', in_use_quantity: 0, started_on: null },
     ] };
-    const request = randomUUID();
-    const saved = await mutation('receive', receipt, request);
-    assert.deepEqual(await mutation('receive', receipt, request), saved, 'identical retry returns original purchase');
-    await rejects(() => mutation('receive', { ...receipt, purchased_on: '2026-01-02' }, request), '40001');
+    const saved = await mutation('receive', receipt);
     let data = await snapshot();
     assert.equal(data.purchases.length, 1);
     assert.equal(data.batches.find((batch) => batch.product_id === tissueId).unopened_units, 10);
@@ -62,20 +144,16 @@ try {
     assert.equal(batch.unopened_units, 3);
     await rejects(() => mutation('receive', { ...receipt, lines: [...receipt.lines, { ...receipt.lines[0], variant_id: randomUUID() }] }), 'P0002');
     assert.equal((await snapshot()).purchases.length, 1, 'invalid last line rolls back all additions');
-    await rejects(() => mutation('receive', receipt, randomUUID(), other), 'P0002');
+    await rejects(() => mutation('receive', receipt, other), 'P0002');
     await rejects(() => snapshot(denied), '42501');
-    await rejects(() => mutation('receive', receipt, randomUUID(), denied), '42501');
+    await rejects(() => mutation('receive', receipt, denied), '42501');
     assert.equal((await snapshot(other)).batches.length, 0, 'another owner sees only their inventory');
-    await rejects(() => mutation('start', { batch_id: batch.id, started_on: '2026-01-01' }, randomUUID(), other), 'P0002');
-    const startRequest = randomUUID();
-    const started = await mutation('start', { batch_id: batch.id, started_on: '2026-01-02' }, startRequest);
-    await mutation('start', { batch_id: batch.id, started_on: '2026-01-02' }, startRequest);
+    await rejects(() => mutation('start', { batch_id: batch.id, started_on: '2026-01-01' }, other), 'P0002');
+    const started = await mutation('start', { batch_id: batch.id, started_on: '2026-01-02' });
     assert.equal((await snapshot()).batches.find((item) => item.id === batch.id).unopened_units, 2);
     await rejects(() => mutation('finish', { usage_id: started.id, revision: 1, started_on: '2026-02-02', finished_on: '2026-01-02' }), '22023');
-    const finishRequest = randomUUID();
     const finish = { usage_id: started.id, revision: 1, started_on: '2026-01-02', finished_on: '2026-02-11' };
-    await mutation('finish', finish, finishRequest);
-    await mutation('finish', finish, finishRequest);
+    await mutation('finish', finish);
     await rejects(() => mutation('finish', finish), '40001');
     await mutation('edit_usage', { ...finish, revision: 2, finished_on: '2026-02-10' });
     await rejects(() => mutation('edit_usage', { ...finish, revision: 2 }), '40001');
@@ -90,16 +168,11 @@ try {
     assert.equal(initialBatch.unopened_units, 1);
     assert.equal(initialBatch.total_paid, null);
     assert.equal(data.usages.find((usage) => usage.batch_id === initialBatch.id).started_on, null);
-    await rejects(() => mutation('adjust', { batch_id: batch.id, usage_id: null, quantity: -99, reason: 'lost', adjusted_on: '2026-03-01' }), '23514');
-    const adjustRequest = randomUUID();
-    const adjustment = { batch_id: batch.id, usage_id: null, quantity: -1, reason: 'given_away', adjusted_on: '2026-03-01' };
-    await mutation('adjust', adjustment, adjustRequest); await mutation('adjust', adjustment, adjustRequest);
-    assert.equal((await snapshot()).batches.find((item) => item.id === batch.id).unopened_units, 1);
-    await mutation('adjust', { ...adjustment, quantity: 1, reason: 'correction' });
-    const second = await mutation('start', { batch_id: batch.id, started_on: '2026-03-01' });
-    await mutation('adjust', { ...adjustment, usage_id: second.id, reason: 'discarded' });
-    assert.equal((await snapshot()).usages.find((usage) => usage.id === second.id).status, 'removed');
-    await rejects(() => mutation('finish', { ...finish, usage_id: second.id }), '40001');
+    const beforeUnsupported = await snapshot();
+    await rejects(() => mutation('adjust', { batch_id: batch.id, usage_id: null, quantity: -1, reason: 'given_away', adjusted_on: '2026-03-01' }), '22023');
+    assert.deepEqual(await snapshot(), beforeUnsupported, 'unsupported actions change no stock or history');
+    assert.deepEqual(beforeUnsupported.adjustments, [], 'legacy response remains safe until the app is deployed');
+    await mutation('start', { batch_id: batch.id, started_on: '2026-03-01' });
     const expense = randomUUID(); const otherExpense = randomUUID();
     await db.query("insert into public.finance_transactions(id,user_id,direction,status,currency,amount) values($1,$2,'expense','confirmed','MYR',150),($3,$4,'expense','confirmed','MYR',30)", [expense, owner, otherExpense, other]);
     await rejects(() => mutation('link_finance', { purchase_id: saved.id, finance_transaction_id: otherExpense }), 'P0002');
@@ -123,14 +196,15 @@ try {
     await db.exec('reset role');
     for (const role of ['anon', 'authenticated']) {
         await db.exec(`set role ${role}`);
-        await rejects(() => db.query('select * from public.inventory_batches'), '42501');
+        await rejects(() => db.query('select * from public.inventory_purchases'), '42501');
+        await rejects(() => db.query('select public.inventory_read_items($1)', [owner]), '42501');
         await rejects(() => snapshot(), '42501');
         await rejects(() => mutation('receive', receipt), '42501');
         await db.exec('reset role');
     }
     const tables = (await db.query("select relname,relrowsecurity from pg_class where relnamespace='public'::regnamespace and relname like 'inventory_%' and relkind='r'")).rows;
-    assert.equal(tables.length, 7); assert.ok(tables.every((table) => table.relrowsecurity));
-    const functions = (await db.query("select prosecdef,proconfig from pg_proc where proname in ('inventory_read','inventory_mutate')")).rows;
+    assert.equal(tables.length, 4); assert.ok(tables.every((table) => table.relrowsecurity));
+    const functions = (await db.query("select prosecdef,proconfig from pg_proc where proname in ('inventory_read','inventory_read_items','inventory_mutate')")).rows;
     assert.ok(functions.every((fn) => !fn.prosecdef && fn.proconfig?.some((config) => config.startsWith('search_path='))));
     const classification = { ...product, id: randomUUID(), name: 'Classification test', variants: [{ ...product.variants[0], id: randomUUID() }] };
     await mutation('save_product', classification);
@@ -151,13 +225,10 @@ try {
     const beforeEdit = structuredClone(data);
     const editLines = data.batches.filter((item) => item.purchase_id === saved.id).map((item) => ({ batch_id: item.id, quantity: item.purchased_quantity, total_paid: item.total_paid }));
     const edit = { purchase_id: saved.id, revision: data.purchases.find((item) => item.id === saved.id).revision, kind: 'purchase', purchased_on: '2026-01-01', lines: editLines.map((line) => ({ ...line, quantity: line.quantity + 1, total_paid: 60 })) };
-    const editRequest = randomUUID();
-    await mutation('edit_purchase', edit, editRequest);
-    await mutation('edit_purchase', edit, editRequest);
+    await mutation('edit_purchase', edit);
     data = await snapshot();
     assert.equal(data.purchases.find((item) => item.id === saved.id).revision, edit.revision + 1);
     assert.deepEqual(data.usages, beforeEdit.usages, 'receipt edits preserve usage');
-    assert.deepEqual(data.adjustments, beforeEdit.adjustments, 'receipt edits preserve adjustment history');
     for (const original of beforeEdit.batches.filter((item) => item.purchase_id === saved.id)) {
         const edited = data.batches.find((item) => item.id === original.id);
         assert.deepEqual(edited.snapshot, original.snapshot);
@@ -166,8 +237,8 @@ try {
         assert.equal(edited.total_paid, 60);
     }
     await rejects(() => mutation('edit_purchase', edit), '40001');
-    await rejects(() => mutation('edit_purchase', { ...edit, purchased_on: null }, editRequest), '40001');
-    await rejects(() => mutation('edit_purchase', edit, randomUUID(), other), 'P0002');
+    await rejects(() => mutation('edit_purchase', { ...edit, purchased_on: null }), '40001');
+    await rejects(() => mutation('edit_purchase', edit, other), 'P0002');
     const currentEdit = { ...edit, revision: edit.revision + 1 };
     await rejects(() => mutation('edit_purchase', { ...currentEdit, purchased_on: '2026-04-01' }), '22023');
     await rejects(() => mutation('edit_purchase', { ...currentEdit, lines: currentEdit.lines.slice(1) }), '22023');
@@ -192,9 +263,7 @@ try {
     await db.query("update public.bridge_user_module_overrides set effect='deny' where user_id=$1 and module_id=(select id from public.dim_modules where modules='finance')", [owner]);
     await rejects(() => mutation('edit_purchase', combined), '42501');
     await db.query("update public.bridge_user_module_overrides set effect='allow' where user_id=$1", [owner]);
-    const combinedRequest = randomUUID();
-    await mutation('edit_purchase', combined, combinedRequest);
-    await mutation('edit_purchase', combined, combinedRequest);
+    await mutation('edit_purchase', combined);
     const combinedSaved = await snapshot();
     assert.equal(combinedSaved.purchases.find((item) => item.id === saved.id).finance_transaction_id, ownExpense);
     assert.equal(combinedSaved.purchases.find((item) => item.id === saved.id).revision, combined.revision + 1);
@@ -202,6 +271,6 @@ try {
     await mutation('link_finance', { purchase_id: saved.id, finance_transaction_id: null });
     await rejects(() => mutation('edit_purchase', { ...combined, revision: combined.revision + 1 }), '40001');
     await db.query('delete from auth.users where id=$1', [owner]);
-    assert.equal((await db.query('select count(*)::int as n from public.inventory_batches')).rows[0].n, 0, 'owner removal cascades inventory data');
-    process.stdout.write('Inventory PostgreSQL lifecycle, snapshots, retry safety, rollback, ownership, module overrides, role grants, and Finance linking passed.\n');
+    assert.equal((await db.query('select count(*)::int as n from public.inventory_purchases')).rows[0].n, 0, 'owner removal cascades inventory data');
+    process.stdout.write('Inventory PostgreSQL consolidation, legacy compatibility, lifecycle, snapshots, rollback, ownership, module overrides, role grants, and Finance linking passed.\n');
 } finally { await db.close(); }

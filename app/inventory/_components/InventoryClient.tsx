@@ -7,7 +7,7 @@ import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { FormDialog } from '@/components/molecules/FormDialog';
 import { Toast } from '@/components/molecules/Toast';
-import type { InventoryData, InventoryMutation, InventoryPurchase, InventoryExpense } from '@/lib/types';
+import type { InventoryData, InventoryMutation, InventoryReceipt, InventoryExpense } from '@/lib/types';
 import { inventoryRequest } from '@/lib/inventory/core/client';
 import { productStock, quantityText } from '@/lib/inventory/core/values';
 import { ProductForm } from './ProductForm';
@@ -23,7 +23,7 @@ import { PurchaseHistory, UsageHistory } from './InventoryHistory';
 import { panelClass } from './fields';
 
 type Dialog = { type: 'product'; id?: string } | { type: 'cart'; productId?: string } | { type: 'detail'; id: string }
-    | { type: 'stock'; choice: StockActionChoice } | { type: 'finance' | 'edit_purchase'; purchase: InventoryPurchase; expense?: InventoryExpense };
+    | { type: 'stock'; choice: StockActionChoice } | { type: 'finance' | 'edit_purchase'; purchase: InventoryReceipt; expense?: InventoryExpense };
 export function InventoryClient({ initialData, canLinkFinance, view = 'shelf' }: { initialData: InventoryData; canLinkFinance: boolean; view?: 'shelf' | 'purchases' | 'usage' }) {
     const [data, setData] = useState(initialData);
     const [search, setSearch] = useState(''); const [category, setCategory] = useState(''); const [subcategory, setSubcategory] = useState('');
@@ -47,7 +47,7 @@ export function InventoryClient({ initialData, canLinkFinance, view = 'shelf' }:
     }
     const close = () => setDialog(null);
     const action = (choice: StockActionChoice) => setDialog({ type: 'stock', choice });
-    const link = (purchase: InventoryPurchase) => setDialog({ type: 'finance', purchase });
+    const link = (purchase: InventoryReceipt) => setDialog({ type: 'finance', purchase });
     return <AppShell pageTitle={view === 'shelf' ? 'Inventory' : view === 'purchases' ? 'Purchases' : 'Usage history'} contentClassName="p-4 md:p-6" headerClassName="flex-row items-center justify-between gap-3" headerAction={<Button className="whitespace-nowrap" icon={<Plus size={16} />} onClick={() => setDialog({ type: 'cart' })}>Add stock</Button>}>
         <div className="space-y-5">
             {view === 'shelf' && <>
@@ -72,7 +72,6 @@ export function InventoryClient({ initialData, canLinkFinance, view = 'shelf' }:
                                     { label: 'Add stock', onSelect: () => setDialog({ type: 'cart', productId: product.id }) },
                                     { label: 'Start using', disabled: !stock.units, onSelect: () => action({ action: 'start', productId: product.id }) },
                                     { label: 'Edit product', onSelect: () => setDialog({ type: 'product', id: product.id }) },
-                                    { label: 'Adjust stock', disabled: !stock.batches.length, onSelect: () => action({ action: 'adjust', productId: product.id }) },
                                 ]} /></td>
                             </tr>;
                         })}</tbody>
@@ -88,16 +87,14 @@ export function InventoryClient({ initialData, canLinkFinance, view = 'shelf' }:
         {dialog?.type === 'edit_purchase' && <EditPurchase purchase={dialog.purchase} expense={dialog.expense} data={data} save={save} onClose={close} />}
         {dialog?.type === 'finance' && <FinanceLink purchase={dialog.purchase} save={save} onClose={close} onSelect={(expense) => setDialog({ type: 'edit_purchase', purchase: dialog.purchase, expense })} />}
         {detail && <FormDialog title={detail.name} onClose={close}><div className="space-y-6">
-            <div className="flex flex-wrap gap-2"><Button variant="secondary" onClick={() => setDialog({ type: 'product', id: detail.id })}>Edit product</Button><Button onClick={() => setDialog({ type: 'cart', productId: detail.id })}>Add stock</Button><Button variant="secondary" disabled={!data.batches.some((batch) => batch.product_id === detail.id)} onClick={() => action({ action: 'adjust', productId: detail.id })}>Adjust stock</Button></div>
-            <section className="space-y-2"><h3 className="font-bold">Stock breakdown</h3>{data.batches.filter((batch) => batch.product_id === detail.id).map((batch) => <div key={batch.id} className="rounded-md border border-border-default p-3 text-sm"><p className="font-semibold">{batch.snapshot.variant_label} · {quantityText(batch.snapshot.size, detail.unit === 'count' ? 'item' : batch.snapshot.unit)} each</p><p>{batch.unopened_units} unopened · {data.usages.filter((usage) => usage.batch_id === batch.id && usage.status === 'in_use').length} in use</p><p className="text-text-secondary">Purchased {data.purchases.find((purchase) => purchase.id === batch.purchase_id)?.purchased_on ?? 'on an unknown date'}</p></div>)}
-                {!data.batches.some((batch) => batch.product_id === detail.id) && <p className="text-sm text-text-secondary">No stock received yet.</p>}</section>
+            <div className="flex flex-wrap gap-2"><Button variant="secondary" onClick={() => setDialog({ type: 'product', id: detail.id })}>Edit product</Button><Button onClick={() => setDialog({ type: 'cart', productId: detail.id })}>Add stock</Button></div>
+            <section className="space-y-2"><h3 className="font-bold">Stock breakdown</h3>{data.purchases.filter((item) => item.product_id === detail.id).map((item) => <div key={item.id} className="rounded-md border border-border-default p-3 text-sm"><p className="font-semibold">{item.snapshot.variant_label} · {quantityText(item.snapshot.size, detail.unit === 'count' ? 'item' : item.snapshot.unit)} each</p><p>{item.unopened_units} unopened · {data.usages.filter((usage) => usage.purchase_id === item.id && usage.status === 'in_use').length} in use</p><p className="text-text-secondary">Purchased {item.purchased_on ?? 'on an unknown date'}</p></div>)}
+                {!data.purchases.some((item) => item.product_id === detail.id) && <p className="text-sm text-text-secondary">No stock received yet.</p>}</section>
             <section className="space-y-2"><h3 className="font-bold">Usage estimate</h3><p className="text-sm">{productStock(data, detail.id).estimate.days === null ? 'No usage estimate yet' : `Approximately ${productStock(data, detail.id).estimate.days} days of unopened stock`}</p>
                 {productStock(data, detail.id).estimate.basis.map((basis) => <p key={basis} className="text-xs text-text-secondary">{basis}</p>)}<p className="text-xs text-text-secondary">Uses all comparable completed usage. Overlapping days count once; gaps between recorded usage periods are excluded. In-use quantities are excluded.</p></section>
             <PriceCheck data={data} product={detail} />
             <section className="space-y-3"><h3 className="font-bold">Purchase history</h3><PurchaseHistory data={data} productId={detail.id} canLinkFinance={canLinkFinance} onLink={link} onEdit={(purchase) => setDialog({ type: 'edit_purchase', purchase })} /></section>
             <section className="space-y-3"><h3 className="font-bold">Usage history</h3><UsageHistory data={data} productId={detail.id} onAction={action} /></section>
-            <section className="space-y-2"><h3 className="font-bold">Stock adjustments</h3>{data.adjustments.filter((adjustment) => data.batches.some((batch) => batch.id === adjustment.batch_id && batch.product_id === detail.id)).map((adjustment) => <p key={adjustment.id} className="text-sm">{adjustment.adjusted_on} · {data.batches.find((batch) => batch.id === adjustment.batch_id)?.snapshot.variant_label} · {adjustment.quantity > 0 ? '+' : ''}{adjustment.quantity} {detail.item_label} · {adjustment.reason.replace('_', ' ')}{adjustment.usage_id ? ' (in use)' : ''}</p>)}
-                {!data.adjustments.some((adjustment) => data.batches.some((batch) => batch.id === adjustment.batch_id && batch.product_id === detail.id)) && <p className="text-sm text-text-secondary">No adjustments recorded.</p>}</section>
         </div></FormDialog>}
         {notice && <Toast key={notice.id} message={notice.message} variant={notice.variant} onDismiss={() => setNotice(null)} />}
     </AppShell>;

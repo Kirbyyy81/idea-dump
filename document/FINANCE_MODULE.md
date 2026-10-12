@@ -694,9 +694,9 @@ Rules settings includes source-scoped notification pattern inspection and enable
 
 The daily learning job continues to refresh algorithm 2 and 3 parser templates. Templates retain the existing source/receipt-format scopes, upload cutoff, shadow evidence, contradiction handling, and explicit promotion requirements. Algorithm 3 transforms consume recorded parser baselines; new baselines are captured after standard parsing and manual rules.
 
-Legacy category/direction rules and reference transforms are retired by the forward migration `20260915172224_retire_legacy_finance_learning.sql`. Existing rows are disabled and retained, including accepted suggestions. The database prevents new legacy rules, reactivation, and conversion into manual rules. The compatibility legacy refresh returns zero without generating rules. No replacement category learner is included.
+Legacy category/direction rules and reference transforms were retired by the forward migration `20260915172224_retire_legacy_finance_learning.sql`. Historical learned rows in `finance_rules` stay disabled, with database guards against new learned rules, reactivation and conversion into manual rules. The later October 8 cleanup removes the empty suggestion/reference tables and obsolete learner functions. No replacement category learner is included.
 
-Rules settings shows legacy category rules as read-only retired entries. Manual rules remain editable. Suggestion lists return empty and authorized suggestion mutations return HTTP 410. Historical candidates, traces, baselines, corrections and confirmed transactions are retained. The existing 90-day learning-run retention still applies; new runs report zero legacy activity.
+Rules settings shows legacy category rules as read-only retired entries. Manual rules remain editable. The suggestion endpoint, suggestion response field, payload mapper and unused suggestion/reference-rule types have been removed. Historical candidates, traces, baselines, corrections and confirmed transactions are retained. The existing 90-day learning-run retention still applies; new runs report zero legacy activity.
 
 See [the retirement rollout instructions](FINANCE_PARSER_LEARNING_ROLLOUT.md#legacy-learning-retirement) for migration order and validation.
 
@@ -827,15 +827,19 @@ Share batch items move from queued to processing and then to one terminal state:
 | `finance_transactions` | Confirmed ledger rows and manual or screenshot lineage. |
 | `finance_intake_items` | OCR intake lifecycle, hashes, text, source evidence, leases, and failures. |
 | `finance_candidate_transactions` | Parsed review candidates, confidence, rules, and duplicate assessment. |
-| `finance_rules` | Manual and learned matching rules. |
-| `finance_rule_suggestions` | Retained legacy suggestion history; activation is retired. |
+| `finance_rules` | Manual matching rules and disabled historical learned rules. |
 | `finance_learning_runs` | Privacy-safe business outcomes for scheduled learning refreshes. |
 | `finance_learning_run_user_summaries` | User-scoped learning counts used by Finance settings. |
 | `finance_parser_templates` | Versioned bounded OCR parser-template definitions for later phases. |
 | `finance_template_evidence` | Tenant-safe evidence relationships without duplicated OCR or correction values. |
-| `finance_field_learning_rules` | Retained, disabled legacy reference transforms. |
 | `finance_corrections` | Original and corrected field values tied to review or transaction lineage. |
 | `finance_processing_events` | Safe processing and state-transition audit events. |
+
+The empty legacy `finance_rule_suggestions` and `finance_field_learning_rules` tables were removed in the October 8, 2026 forward cleanup migration. Their acceptance RPC and obsolete phase-one, phase-two and legacy refresh helpers were dropped, with no replacement stubs. Source/category deletion, the learning summary and the remaining manual-rule guard no longer query either table. The summary keeps `active_reference_rules: 0` for existing clients; historical learning-run counts, correction payloads and parser baselines remain intact.
+
+Verify cleanup upgrades with `supabase/tests/finance_legacy_cleanup_upgrade.test.sql` on an isolated schema after retirement but before cleanup. Run the current parser suites after applying cleanup. The original retirement upgrade fixture still runs on its original predecessor.
+
+Cleanup validation (October 8, 2026): the original retirement upgrade, cleanup upgrade, nonempty-table refusal/rollback and nine parser/receipt SQL suites passed. Application validation passed lint, TypeScript, production build, service-worker checks, 742 unit tests and the Inventory database suite. OCR validation passed TypeScript, production build and 402 tests (171 optional cases skipped). Live checks found both tables and all four obsolete functions absent, zero function/view/cron callers, unchanged permissions for retained functions and no new advisor findings. Full/production audits retain existing Next.js and Sharp high-severity findings. The additional local guarded-receipt suite fails its Unicode-length assertion on both the original predecessor and cleanup fixtures; cleanup does not alter that helper.
 
 ### Private transient tables
 
@@ -877,7 +881,6 @@ All Finance API handlers are dynamic and return JSON.
 | `/api/finance/categories` | GET, POST, PUT or PATCH, DELETE | Category library management. |
 | `/api/finance/notification-patterns` | GET, PATCH | Owner-scoped notification patterns for an active source; inspect structural definitions and toggle with revision checks. |
 | `/api/finance/rules` | GET, POST, PUT, DELETE | Rule library management. GET also returns an empty suggestions array and the safe learning summary so Settings needs one read. |
-| `/api/finance/rule-suggestions` | PATCH, POST | Retired endpoint; authorized mutations return HTTP 410. |
 | `/api/finance/share-batches/prepare` | POST | Reserve a batch and return signed upload details. |
 | `/api/finance/share-batches/commit` | POST | Verify uploads, queue them, and return 202. |
 | `/api/finance/share-batches/active` | GET | Return the verified user's current active transient batch. |
@@ -1123,7 +1126,7 @@ See [`ARCHITECTURE_CLEAN_CODE_REVIEW.md`](./ARCHITECTURE_CLEAN_CODE_REVIEW.md) f
 - Source detection: [`lib/finance/ocr/sourceDetection.ts`](../lib/finance/ocr/sourceDetection.ts)
 - Transaction reference extraction: [`lib/finance/ocr/reference.ts`](../lib/finance/ocr/reference.ts)
 - Recipient-reference handling: [`lib/finance/ocr/recipientReference.ts`](../lib/finance/ocr/recipientReference.ts)
-- Legacy reference transforms: retired; historical rows remain in `finance_field_learning_rules`.
+- Legacy reference transforms: removed with their empty table; historical correction payloads and learning-run counts remain available.
 - Duplicate policy: [`lib/finance/transactions/duplicates.ts`](../lib/finance/transactions/duplicates.ts)
 - Payee form classification: [`lib/finance/transactions/payeeClassification.ts`](../lib/finance/transactions/payeeClassification.ts)
 - Dashboard aggregation: [`lib/finance/dashboard.ts`](../lib/finance/dashboard.ts)
@@ -1133,3 +1136,7 @@ See [`ARCHITECTURE_CLEAN_CODE_REVIEW.md`](./ARCHITECTURE_CLEAN_CODE_REVIEW.md) f
 - Share queue consumer: [`services/finance-ocr/src/queueConsumer.ts`](../services/finance-ocr/src/queueConsumer.ts)
 - OCR operations: [`services/finance-ocr/README.md`](../services/finance-ocr/README.md)
 - Current recipient-reference and mutation migration: [`supabase/migrations/20260813034905_merge_recipient_reference_into_notes.sql`](../supabase/migrations/20260813034905_merge_recipient_reference_into_notes.sql)
+
+## Notification pattern storage, October 8, 2026
+
+Manual notification confirmation saves reusable definitions directly into `finance_notification_patterns` in the same transaction as confirmation and raw-text deletion. The separate `finance_notification_learning_reviews` audit table and its writer were removed. Existing patterns, supporting transactions, disabled overrides, source/package ownership and evidence invalidation remain. The existing confirmation RPC signature is preserved for deployed clients.

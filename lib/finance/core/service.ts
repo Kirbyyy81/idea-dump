@@ -322,7 +322,6 @@ export async function getFinanceRuleSettings(userId: string) {
         rules: (rulesResult.data || []).map((rule) => (
             toFinanceRuleView(rule as unknown as FinanceRule)
         )),
-        suggestions: [],
         learning: learningResult,
         shadow_rules: shadowRules,
     };

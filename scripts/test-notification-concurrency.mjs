@@ -49,8 +49,8 @@ try {
  if(results.some(r=>r.code!==0)) throw new Error('Concurrent confirmation failed: '+results.map(r=>r.error).join(' '));
  const ids=results.map(r=>JSON.parse(r.output.trim().split('\n').at(-1)).transaction.id);
  if(ids[0]!==ids[1]) throw new Error('Replay created a second ledger row');
- const counts=await checked("select (select count(*) from public.finance_transactions where user_id="+literal(owner)+")||','||(select count(*) from public.finance_notification_learning_reviews where user_id="+literal(owner)+");");
- if(counts!=='1,1') throw new Error('Expected exactly one transaction and one learning event');
+ const counts=await checked("select (select count(*) from public.finance_transactions where user_id="+literal(owner)+")||','||(select count(*) from public.finance_notification_patterns where user_id="+literal(owner)+");");
+ if(counts!=='1,1') throw new Error('Expected exactly one transaction and one saved pattern');
  const autoDate=await checked("select (now() at time zone 'Asia/Kuala_Lumpur')::date;");
  const autoParsed={status:'review',date_provenance:'posted_at',duplicate_outcome:'none',payload:{source_id:source,amount:777.77,direction:'expense',merchant:'Synthetic concurrent cafe',currency:'MYR',transaction_date:autoDate,
   notification_extraction:{version:1,fields:{amount:{pattern_id:'52000000-0000-4000-8000-000000000008',revision:1,learned:false}},conflicts:[],date_provenance:'posted_at'}}};
@@ -59,8 +59,8 @@ try {
  if(automatic.map(r=>r.status).sort().join(',')!=='completed,review') throw new Error('Concurrent duplicate auto-add was not stopped');
  const replayed=JSON.parse(await checked(uploads[0]));
  if(!replayed.replayed||replayed.status!==automatic[0].status) throw new Error('Automatic upload replay changed the result');
- const autoCounts=await checked("select (select count(*) from public.finance_transactions where user_id="+literal(owner)+")||','||(select count(*) from public.finance_notification_learning_reviews where user_id="+literal(owner)+");");
- if(autoCounts!=='2,1') throw new Error('Automatic intake added duplicate transactions or training evidence');
+ const autoCounts=await checked("select (select count(*) from public.finance_transactions where user_id="+literal(owner)+")||','||(select count(*) from public.finance_notification_patterns where user_id="+literal(owner)+");");
+ if(autoCounts!=='2,1') throw new Error('Automatic intake added duplicate transactions or saved patterns');
  process.stdout.write('Notification locks, concurrent manual/automatic confirmation, duplicate prevention and replay checks passed.\n');
 } finally {
  if(created) await checked('delete from auth.users where id='+literal(owner)+';');

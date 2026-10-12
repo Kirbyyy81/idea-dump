@@ -22,11 +22,11 @@ describe('shadow rule API authorization', () => {
     it('passes the session owner and returns safe shadow details with existing fields', async () => {
         mocks.authorizeFinance.mockResolvedValue({ user: { id: 'verified-user' } });
         const shadow = { availability: 'available', total: 0, rules: [] };
-        mocks.getFinanceRuleSettings.mockResolvedValue({ rules: [], suggestions: [],
+        mocks.getFinanceRuleSettings.mockResolvedValue({ rules: [],
             learning: { availability: 'unavailable' }, shadow_rules: shadow });
         const response = await GET();
         expect(mocks.getFinanceRuleSettings).toHaveBeenCalledWith('verified-user');
-        expect(await response.json()).toEqual({ data: [], suggestions: [],
+        expect(await response.json()).toEqual({ data: [],
             learning: { availability: 'unavailable' }, shadow_rules: shadow });
     });
 });

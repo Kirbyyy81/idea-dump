@@ -21,18 +21,13 @@ export const inventoryFixture: InventoryData = {
         { id: id.tissuePack, product_id: id.tissues, label: 'Five boxes', size: 1, pack_quantity: 5, sheets_per_item: 100 },
     ],
     purchases: [
-        { id: id.purchase, kind: 'purchase', revision: 1, purchased_on: '2026-10-01', currency: 'MYR', finance_transaction_id: null, created_at: created },
-        { id: id.oldPurchase, kind: 'purchase', revision: 1, purchased_on: '2026-08-01', currency: 'MYR', finance_transaction_id: null, created_at: '2026-08-01T00:00:00Z' },
-    ],
-    batches: [
-        { id: id.largeBatch, product_id: id.shampoo, variant_id: id.large, purchase_id: id.purchase, purchased_quantity: 3, original_units: 3, unopened_units: 2, total_paid: 54, snapshot: shampooSnapshot, created_at: created },
-        { id: id.smallBatch, product_id: id.shampoo, variant_id: id.small, purchase_id: id.purchase, purchased_quantity: 1, original_units: 1, unopened_units: 1, total_paid: 10, snapshot: { ...shampooSnapshot, variant_label: '250 ml bottle', size: 250 }, created_at: created },
-        { id: id.tissueBatch, product_id: id.tissues, variant_id: id.tissuePack, purchase_id: id.purchase, purchased_quantity: 2, original_units: 10, unopened_units: 10, total_paid: 30, snapshot: { product_name: 'Tissues', variant_label: 'Five boxes', unit: 'count', item_label: 'boxes', size: 1, pack_quantity: 5, sheets_per_item: 100 }, created_at: created },
-        { id: id.oldBatch, product_id: id.shampoo, variant_id: id.large, purchase_id: id.oldPurchase, purchased_quantity: 1, original_units: 1, unopened_units: 0, total_paid: 15, snapshot: shampooSnapshot, created_at: '2026-08-01T00:00:00Z' },
+        { id: id.largeBatch, product_id: id.shampoo, variant_id: id.large, receipt_id: id.purchase, kind: 'purchase', revision: 1, purchased_on: '2026-10-01', currency: 'MYR', finance_transaction_id: null, receipt_created_at: created, purchased_quantity: 3, original_units: 3, unopened_units: 2, total_paid: 54, snapshot: shampooSnapshot, created_at: created },
+        { id: id.smallBatch, product_id: id.shampoo, variant_id: id.small, receipt_id: id.purchase, kind: 'purchase', revision: 1, purchased_on: '2026-10-01', currency: 'MYR', finance_transaction_id: null, receipt_created_at: created, purchased_quantity: 1, original_units: 1, unopened_units: 1, total_paid: 10, snapshot: { ...shampooSnapshot, variant_label: '250 ml bottle', size: 250 }, created_at: created },
+        { id: id.tissueBatch, product_id: id.tissues, variant_id: id.tissuePack, receipt_id: id.purchase, kind: 'purchase', revision: 1, purchased_on: '2026-10-01', currency: 'MYR', finance_transaction_id: null, receipt_created_at: created, purchased_quantity: 2, original_units: 10, unopened_units: 10, total_paid: 30, snapshot: { product_name: 'Tissues', variant_label: 'Five boxes', unit: 'count', item_label: 'boxes', size: 1, pack_quantity: 5, sheets_per_item: 100 }, created_at: created },
+        { id: id.oldBatch, product_id: id.shampoo, variant_id: id.large, receipt_id: id.oldPurchase, kind: 'purchase', revision: 1, purchased_on: '2026-08-01', currency: 'MYR', finance_transaction_id: null, receipt_created_at: '2026-08-01T00:00:00Z', purchased_quantity: 1, original_units: 1, unopened_units: 0, total_paid: 15, snapshot: shampooSnapshot, created_at: '2026-08-01T00:00:00Z' },
     ],
     usages: [
-        { id: id.active, batch_id: id.largeBatch, status: 'in_use', started_on: '2026-10-01', finished_on: null, revision: 1, created_at: created },
-        { id: id.finished, batch_id: id.oldBatch, status: 'finished', started_on: '2026-08-01', finished_on: '2026-09-10', revision: 2, created_at: '2026-08-01T00:00:00Z' },
+        { id: id.active, purchase_id: id.largeBatch, status: 'in_use', started_on: '2026-10-01', finished_on: null, revision: 1, created_at: created },
+        { id: id.finished, purchase_id: id.oldBatch, status: 'finished', started_on: '2026-08-01', finished_on: '2026-09-10', revision: 2, created_at: '2026-08-01T00:00:00Z' },
     ],
-    adjustments: [],
 };

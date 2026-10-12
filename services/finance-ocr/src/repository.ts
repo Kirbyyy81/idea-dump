@@ -62,6 +62,24 @@ function nullableUuid(value: unknown) {
 const UUID_PATTERN =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+const INTAKE_STATE_SELECT = [
+    'id, user_id, source, status, image_hash, original_filename, detected_source_id, source_detection_signals',
+    'ocr_text, ocr_raw_text, ocr_normalized_text, ocr_confidence, ocr_text_hash, normalizer_version',
+    'receipt_format, receipt_format_eligible, receipt_detector_version, receipt_processing',
+    'processing_attempt_id, processing_started_at, processing_lease_expires_at, processing_attempt_count, processing_version',
+    'failure_code, failure_stage, received_at, processed_at, error_message, created_at, updated_at',
+].join(', ');
+const INTAKE_CANDIDATE_SELECT = [
+    'id, user_id, intake_item_id, payload, confidence, matched_rule_id, confirmed_transaction_id',
+    'duplicate_outcome, duplicate_score, duplicate_signals, duplicate_explanation, duplicate_checked_at',
+    'status, created_at, updated_at',
+].join(', ');
+const INTAKE_TRANSACTION_SELECT = [
+    'id, user_id, source_id, category_id, intake_item_id, manual_idempotency_key',
+    'direction, amount, currency, merchant, payee_id, reference_number, transaction_date, notes',
+    'source, status, created_at, updated_at',
+].join(', ');
+
 function decodeCleanup(value: unknown): ShareBatchCleanupPlan | null {
     const cleanup = rpcObject(value);
     const batchId = nullableUuid(cleanup.batch_id);
@@ -472,6 +490,32 @@ export class SupabaseFinanceRepository implements FinanceRepository, ShareQueueR
             p_error_message: input.errorMessage,
         });
         if (error) throw new RepositoryError('fail_intake', error);
+    }
+
+    async readIntakeState(userId: string, intakeId: string) {
+        const [intake, candidate] = await Promise.all([
+            this.secretClient.from('finance_intake_items').select(INTAKE_STATE_SELECT)
+                .eq('user_id', userId).eq('id', intakeId).maybeSingle<FinanceIntakeItem>(),
+            this.secretClient.from('finance_candidate_transactions').select(INTAKE_CANDIDATE_SELECT)
+                .eq('user_id', userId).eq('intake_item_id', intakeId).maybeSingle<FinanceCandidateTransaction>(),
+        ]);
+        if (intake.error || candidate.error) {
+            throw new RepositoryError('read_intake_state', intake.error ?? candidate.error);
+        }
+        if (!intake.data) return null;
+        let transaction: FinanceTransaction | null = null;
+        if (candidate.data?.confirmed_transaction_id) {
+            const result = await this.secretClient.from('finance_transactions').select(INTAKE_TRANSACTION_SELECT)
+                .eq('user_id', userId).eq('intake_item_id', intakeId)
+                .eq('id', candidate.data.confirmed_transaction_id).maybeSingle<FinanceTransaction>();
+            if (result.error) throw new RepositoryError('read_intake_transaction', result.error);
+            transaction = result.data;
+        }
+        return {
+            intake: intake.data,
+            candidate: candidate.data,
+            transaction,
+        };
     }
 
     async claimShareQueueItem(input: {

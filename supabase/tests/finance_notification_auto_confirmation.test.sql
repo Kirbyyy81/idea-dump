@@ -49,7 +49,7 @@ begin
  perform pg_temp.check_auto((select status='accepted' from public.finance_candidate_transactions where id=c),'candidate accepted');
  perform pg_temp.check_auto((select body is null and title is null and subtext is null and raw_deleted_at is not null from public.finance_notification_events where intake_item_id=i),'automatic raw deletion');
  perform pg_temp.check_auto(exists(select 1 from public.finance_processing_events where intake_item_id=i and event_type='notification_auto_confirmed' and detail->>'mode'='automatic'),'automatic provenance');
- perform pg_temp.check_auto(not exists(select 1 from public.finance_notification_learning_reviews where transaction_id=t),'automatic is not training');
+ perform pg_temp.check_auto(not exists(select 1 from public.finance_notification_patterns where evidence_transaction_id=t),'automatic confirmation does not create a pattern');
  perform pg_temp.check_auto(not exists(select 1 from public.finance_corrections where transaction_id=t),'automatic values are not corrections');
  r:=pg_temp.auto_accept(101,pg_temp.auto_payload());
  perform pg_temp.check_auto(r->>'status'='completed' and r->>'replayed'='true','completed upload replay');

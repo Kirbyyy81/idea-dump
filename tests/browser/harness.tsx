@@ -25,6 +25,8 @@ createRoot(document.getElementById('root')!).render(<FinanceReferenceDataProvide
     {window.location.pathname === '/finance'
         ? <FinanceDashboardClient month={dashboardMonth} today={budgetMonthsEnabled ? '2026-10-02' : '2026-09-22'} selectedDate={dashboardDate}
             summary={budgetMonthsEnabled ? { ...dashboardSummary, budget_cycles: dashboardBudgetMonths[dashboardMonth] ?? [] } : dashboardSummary} />
+        : window.location.pathname === '/finance/settings/notifications'
+        ? <NotificationPatternsPanel />
         : window.location.pathname === '/finance/review'
         ? <AlertProvider><AlertDialog /><FinanceReviewClient initialCandidates={(window as unknown as { reviewInitial?: FinanceReviewCandidate[] }).reviewInitial || reviewCandidates} initialFailedIntakes={[]} initialSelectedId="candidate-1" today="2026-09-22" /></AlertProvider>
         : window.location.pathname === '/finance/add'

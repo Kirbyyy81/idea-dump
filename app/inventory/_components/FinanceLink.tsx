@@ -3,12 +3,12 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
 import { FormDialog } from '@/components/molecules/FormDialog';
-import type { InventoryExpense, InventoryPurchase } from '@/lib/types';
+import type { InventoryExpense, InventoryReceipt } from '@/lib/types';
 import { inventoryRequest, useInventoryAction, type InventorySave } from '@/lib/inventory/core/client';
 import { money } from '@/lib/inventory/core/values';
 import { InventoryErrorNotice } from './fields';
 
-export function FinanceLink({ purchase, save, onClose, onSelect }: { purchase: InventoryPurchase; save: InventorySave; onClose: () => void; onSelect: (expense: InventoryExpense) => void }) {
+export function FinanceLink({ purchase, save, onClose, onSelect }: { purchase: InventoryReceipt; save: InventorySave; onClose: () => void; onSelect: (expense: InventoryExpense) => void }) {
     const [input, setInput] = useState(''); const [query, setQuery] = useState(''); const [page, setPage] = useState(1);
     const [expenses, setExpenses] = useState<InventoryExpense[]>([]); const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(true); const [loadError, setLoadError] = useState(''); const [attempt, setAttempt] = useState(0);
@@ -21,7 +21,7 @@ export function FinanceLink({ purchase, save, onClose, onSelect }: { purchase: I
             .finally(() => { if (!cancelled) setLoading(false); });
         return () => { cancelled = true; };
     }, [query, page, attempt]);
-    const link = (id: string | null) => void run({ action: 'link_finance', payload: { purchase_id: purchase.id, finance_transaction_id: id } }, onClose);
+    const link = (id: string | null) => void run({ action: 'link_finance', payload: { receipt_id: purchase.id, finance_transaction_id: id } }, onClose);
     return <FormDialog title="Link Finance expense" onClose={onClose} busy={busy}><div className="space-y-4">
         <InventoryErrorNotice error={error || loadError} />
         <form className="flex items-end gap-2" onSubmit={(event) => { event.preventDefault(); setPage(1); setQuery(input); }}><Input label="Search merchant" value={input} maxLength={120} onValueChange={setInput} containerClassName="flex-1" /><Button type="submit" disabled={busy}>Search</Button></form>

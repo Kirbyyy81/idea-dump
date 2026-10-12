@@ -18,23 +18,27 @@ async function setup(page: Page, initial: InventoryData = structuredClone(invent
             data.products = [...data.products.filter((item) => item.id !== product.id), { ...product, revision: product.revision + 1, created_at: '2026-10-05T00:00:00Z' }];
             data.variants = [...data.variants.filter((item) => item.product_id !== product.id), ...variants.map((variant) => ({ ...variant, product_id: product.id }))];
         } else if (command.action === 'start') {
-            const batch = data.batches.find((item) => item.id === command.payload.batch_id)!;
+            const batch = data.purchases.find((item) => item.id === command.payload.purchase_id)!;
             batch.unopened_units -= 1;
-            data.usages.unshift({ id: resultId, batch_id: batch.id, status: 'in_use', started_on: command.payload.started_on, finished_on: null, revision: 1, created_at: '2026-10-05T00:00:00Z' });
+            data.usages.unshift({ id: resultId, purchase_id: batch.id, status: 'in_use', started_on: command.payload.started_on, finished_on: null, revision: 1, created_at: '2026-10-05T00:00:00Z' });
         } else if (command.action === 'finish' || command.action === 'edit_usage') {
             const usage = data.usages.find((item) => item.id === command.payload.usage_id)!;
             Object.assign(usage, command.payload, { status: command.action === 'finish' ? 'finished' : usage.status, revision: usage.revision + 1 });
         } else if (command.action === 'edit_purchase') {
-            const purchase = data.purchases.find((item) => item.id === command.payload.purchase_id)!;
-            Object.assign(purchase, { kind: command.payload.kind, purchased_on: command.payload.purchased_on, revision: purchase.revision + 1 });
-            if (command.payload.finance_transaction_id !== undefined) purchase.finance_transaction_id = command.payload.finance_transaction_id;
+            const items = data.purchases.filter((item) => item.receipt_id === command.payload.receipt_id);
+            for (const item of items) {
+                Object.assign(item, { kind: command.payload.kind, purchased_on: command.payload.purchased_on, revision: item.revision + 1 });
+                if (command.payload.finance_transaction_id !== undefined) item.finance_transaction_id = command.payload.finance_transaction_id;
+            }
             for (const line of command.payload.lines) {
-                const batch = data.batches.find((item) => item.id === line.batch_id)!;
-                const units = line.quantity * batch.snapshot.pack_quantity;
-                Object.assign(batch, { purchased_quantity: line.quantity, original_units: units, unopened_units: batch.unopened_units + units - batch.original_units, total_paid: line.total_paid });
+                const item = items.find((item) => item.id === line.purchase_id)!;
+                const units = line.quantity * item.snapshot.pack_quantity;
+                Object.assign(item, { purchased_quantity: line.quantity, original_units: units, unopened_units: item.unopened_units + units - item.original_units, total_paid: line.total_paid });
             }
         } else if (command.action === 'link_finance') {
-            data.purchases.find((purchase) => purchase.id === command.payload.purchase_id)!.finance_transaction_id = command.payload.finance_transaction_id;
+            data.purchases.filter((item) => item.receipt_id === command.payload.receipt_id).forEach((item) => {
+                item.finance_transaction_id = command.payload.finance_transaction_id; item.revision += 1;
+            });
         }
         return route.fulfill({ json: { data: { id: resultId } } });
     });
@@ -64,7 +68,7 @@ test('shelf totals, breakdown, estimate, and read-only price comparison', async 
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.screenshot({ path: info.outputPath('inventory-shelf.png'), fullPage: true });
 });
-test('receives a multi-item cart and retries with the same identity', async ({ page }) => {
+test('receives a multi-item cart and allows retry after a reported failure', async ({ page }) => {
     const state = await setup(page);
     await page.getByRole('button', { name: 'Add stock', exact: true }).first().click();
     await choose(page, 'Product', 'Tissues');
@@ -95,6 +99,7 @@ test('receives a multi-item cart and retries with the same identity', async ({ p
     await expect(page.getByRole('dialog')).not.toBeVisible();
     expect(state.commands).toHaveLength(2);
     expect(state.commands[0]).toEqual(state.commands[1]);
+    expect(state.commands[0]).not.toHaveProperty('request_id');
     expect(state.commands[0]).toMatchObject({ action: 'receive', payload: { kind: 'purchase', lines: [{ quantity: 2, price: 15 }, { quantity: 1, price: 18 }] } });
 });
 test('creates a product from the receiving cart and adds existing opened stock', async ({ page }) => {
@@ -165,15 +170,17 @@ test('edits size variants while retaining historical quantities', async ({ page 
     expect(commands[0]).toMatchObject({ action: 'save_product', payload: { revision: 1, variants: [{ size: 450 }, { size: 250 }] } });
 });
 
-test('records stock corrections separately from usage', async ({ page }) => {
+test('offers purchases and normal usage without adjustment controls', async ({ page }) => {
     const { commands } = await setup(page);
     await page.getByRole('button', { name: 'Tissues', exact: true }).click();
-    await page.getByRole('button', { name: 'Adjust stock', exact: true }).click();
-    await choose(page, 'Reason', 'Given away');
-    await page.getByLabel('Change in individual items').fill('-2');
-    await page.getByRole('dialog').getByRole('button', { name: 'Adjust stock', exact: true }).click();
-    await expect(page.getByRole('dialog')).not.toBeVisible();
-    expect(commands[0]).toMatchObject({ action: 'adjust', payload: { batch_id: id.tissueBatch, usage_id: null, quantity: -2, reason: 'given_away' } });
+    await expect(page.getByRole('button', { name: 'Adjust stock', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Stock adjustments', exact: true })).toHaveCount(0);
+    await page.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click();
+    await page.getByRole('link', { name: 'Usage history', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Remove', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Finished', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Edit dates', exact: true })).toHaveCount(2);
+    expect(commands).toEqual([]);
 });
 
 
@@ -259,7 +266,7 @@ test('edits a complete purchase from product history and preserves usage and Fin
     await dialog.getByRole('button', { name: 'Save purchase', exact: true }).click();
     await expect(dialog).not.toBeVisible();
     expect(commands[0]).toEqual(commands[1]);
-    expect(commands[1]).toMatchObject({ action: 'edit_purchase', payload: { purchase_id: id.purchase, revision: 1, lines: [{ batch_id: id.largeBatch, quantity: 4, total_paid: 68 }, { batch_id: id.smallBatch }, { batch_id: id.tissueBatch }] } });
+    expect(commands[1]).toMatchObject({ action: 'edit_purchase', payload: { receipt_id: id.purchase, revision: 1, lines: [{ purchase_id: id.largeBatch, quantity: 4, total_paid: 68 }, { purchase_id: id.smallBatch }, { purchase_id: id.tissueBatch }] } });
     await expect(page.getByRole('row', { name: 'Dove Shampoo' }).getByText('1,750 ml', { exact: true })).toBeVisible();
     await expect(page.getByRole('row', { name: 'Dove Shampoo' }).getByText('1 in use', { exact: true })).toBeVisible();
     await page.getByRole('link', { name: 'Purchases', exact: true }).click();
@@ -273,8 +280,8 @@ test('edits a complete purchase from product history and preserves usage and Fin
 
 test('edits existing stock with unknown price and date', async ({ page }) => {
     const fixture = structuredClone(inventoryFixture);
-    fixture.purchases[0].kind = 'existing'; fixture.purchases[0].purchased_on = null;
-    fixture.batches[0].total_paid = null;
+    fixture.purchases.filter((item) => item.receipt_id === id.purchase).forEach((item) => { item.kind = 'existing'; item.purchased_on = null; });
+    fixture.purchases[0].total_paid = null;
     const { commands } = await setup(page, fixture);
     await page.getByRole('link', { name: 'Purchases', exact: true }).click();
     await page.getByRole('button', { name: 'Purchase actions', exact: true }).first().click();
@@ -318,7 +325,7 @@ test('a failed refresh after saving shows only an error toast', async ({ page })
 
 test('Finance suggestion can be cancelled or adjusted before a single atomic save', async ({ page }) => {
     const fixture = structuredClone(inventoryFixture);
-    fixture.batches = fixture.batches.filter((batch) => batch.id === id.largeBatch);
+    fixture.purchases = fixture.purchases.filter((batch) => batch.id === id.largeBatch);
     fixture.purchases = [fixture.purchases[0]];
     const { commands, failNext } = await setup(page, fixture);
     await page.getByRole('link', { name: 'Purchases', exact: true }).click();

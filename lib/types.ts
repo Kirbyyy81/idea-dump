@@ -896,27 +896,6 @@ export interface FinanceRuleView extends Pick<
     category?: Pick<FinanceReferenceOption, 'name'> | null;
 }
 
-export type FinanceLearnedFieldName = 'reference_number';
-
-export type FinanceLearnedTransformType =
-    | 'strip_prefix'
-    | 'strip_suffix'
-    | 'digits_only'
-    | 'alphanumeric_only';
-
-export interface FinanceFieldLearningRule {
-    id: string;
-    user_id: string;
-    source_id: string;
-    field_name: FinanceLearnedFieldName;
-    transform_type: FinanceLearnedTransformType;
-    transform_value: string | null;
-    evidence_count: number;
-    is_active: boolean;
-    created_at: string;
-    updated_at: string;
-}
-
 export type FinanceParserTemplateField =
     | 'source_id'
     | 'reference_number'
@@ -1224,40 +1203,6 @@ export interface FinanceParserTemplateEvaluation {
     value_hash?: string;
 }
 
-export interface FinanceRuleSuggestion {
-    id: string;
-    user_id: string;
-    name: string;
-    pattern: string;
-    match_type: FinanceRule['match_type'];
-    category_id: string;
-    source_id: string | null;
-    direction: 'expense' | 'income';
-    priority: number;
-    evidence_count: number;
-    status: 'pending' | 'accepted' | 'rejected';
-    created_at: string;
-    updated_at: string;
-    category?: FinanceCategory | null;
-    finance_source?: FinanceSource | null;
-}
-
-export interface FinanceRuleSuggestionView extends Pick<
-    FinanceRuleSuggestion,
-    | 'id'
-    | 'name'
-    | 'pattern'
-    | 'match_type'
-    | 'category_id'
-    | 'source_id'
-    | 'direction'
-    | 'priority'
-    | 'evidence_count'
-> {
-    category?: Pick<FinanceReferenceOption, 'name'> | null;
-    finance_source?: Pick<FinanceReferenceOption, 'name'> | null;
-}
-
 export type FinanceOcrSource = Pick<
     FinanceSource,
     'id' | 'name' | 'filename_aliases' | 'ocr_aliases' | 'is_archived'
@@ -1276,18 +1221,6 @@ export type FinanceOcrRule = Pick<
     | 'is_active'
     | 'source'
     | 'auto_created_at'
-    | 'created_at'
->;
-
-export type FinanceOcrFieldLearningRule = Pick<
-    FinanceFieldLearningRule,
-    | 'id'
-    | 'source_id'
-    | 'field_name'
-    | 'transform_type'
-    | 'transform_value'
-    | 'evidence_count'
-    | 'is_active'
     | 'created_at'
 >;
 
@@ -1537,50 +1470,45 @@ export interface InventorySnapshot {
 }
 export interface InventoryPurchase {
     id: string;
+    receipt_id: string;
+    product_id: string;
+    variant_id: string;
     revision: number;
     kind: 'purchase' | 'existing';
     purchased_on: string | null;
     currency: 'MYR';
     finance_transaction_id: string | null;
-    created_at: string;
-}
-export interface InventoryBatch {
-    id: string;
-    purchase_id: string;
-    product_id: string;
-    variant_id: string;
     purchased_quantity: number;
     original_units: number;
     unopened_units: number;
     total_paid: number | null;
     snapshot: InventorySnapshot;
     created_at: string;
+    receipt_created_at: string;
+}
+export interface InventoryReceipt {
+    id: string;
+    revision: number;
+    kind: InventoryPurchase['kind'];
+    purchased_on: string | null;
+    currency: 'MYR';
+    finance_transaction_id: string | null;
+    created_at: string;
 }
 export interface InventoryUsage {
     id: string;
-    batch_id: string;
-    status: 'in_use' | 'finished' | 'removed';
+    purchase_id: string;
+    status: 'in_use' | 'finished';
     started_on: string | null;
     finished_on: string | null;
     revision: number;
-    created_at: string;
-}
-export interface InventoryAdjustment {
-    id: string;
-    batch_id: string;
-    usage_id: string | null;
-    quantity: number;
-    reason: 'correction' | 'discarded' | 'lost' | 'given_away';
-    adjusted_on: string;
     created_at: string;
 }
 export interface InventoryData {
     products: InventoryProduct[];
     variants: InventoryVariant[];
     purchases: InventoryPurchase[];
-    batches: InventoryBatch[];
     usages: InventoryUsage[];
-    adjustments: InventoryAdjustment[];
 }
 export interface InventoryReceiptLine {
     variant_id: string;
@@ -1596,14 +1524,13 @@ export interface InventoryReceiptInput {
     purchased_on: string | null;
     lines: InventoryReceiptLine[];
 }
-export type InventoryMutation = { request_id: string } & (
+export type InventoryMutation = (
     | { action: 'save_product'; payload: InventoryProductInput }
     | { action: 'receive'; payload: InventoryReceiptInput }
-    | { action: 'edit_purchase'; payload: { finance_transaction_id?: string; purchase_id: string; revision: number; kind: InventoryPurchase['kind']; purchased_on: string | null; lines: { batch_id: string; quantity: number; total_paid: number | null }[] } }
-    | { action: 'start'; payload: { batch_id: string; started_on: string } }
+    | { action: 'edit_purchase'; payload: { finance_transaction_id?: string; receipt_id: string; revision: number; kind: InventoryPurchase['kind']; purchased_on: string | null; lines: { purchase_id: string; quantity: number; total_paid: number | null }[] } }
+    | { action: 'start'; payload: { purchase_id: string; started_on: string } }
     | { action: 'finish' | 'edit_usage'; payload: { usage_id: string; revision: number; started_on: string | null; finished_on: string | null } }
-    | { action: 'adjust'; payload: { batch_id: string; usage_id: string | null; quantity: number; reason: InventoryAdjustment['reason']; adjusted_on: string } }
-    | { action: 'link_finance'; payload: { purchase_id: string; finance_transaction_id: string | null } }
+    | { action: 'link_finance'; payload: { receipt_id: string; finance_transaction_id: string | null } }
 );
 export interface InventoryExpense {
     id: string;

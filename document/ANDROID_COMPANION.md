@@ -95,7 +95,7 @@ Patterns are scoped to user, Finance source, bank package, and format. A persona
 
 The server-only `finance_confirm_notification_v1` wraps existing confirmation. It captures raw-text context before deletion and commits the transaction, pattern, and review provenance atomically. Replays, unsuccessful confirmations, rejection, and duplicate linking do not train. A changed review source is recorded without learning into the original source. Confirmation remains successful when a correction cannot be inferred safely.
 
-`finance_notification_patterns` stores shared starters and owner-specific definitions, revisions, activation state, and the latest supporting transaction. `finance_notification_learning_reviews` records successful confirmation identifiers and the learning outcome. Neither stores complete notification text or copies it into OCR evidence. Changes to the supporting transaction's extraction fields invalidate its pattern; category/notes-only edits do not. Deletion also invalidates the pattern. A fresh confirmed notification can provide new support, but does not re-enable a disabled pattern. Deleted raw text is never reconstructed for learning or historical backfill.
+`finance_notification_patterns` stores shared starters and owner-specific definitions, revisions, activation state, and the latest supporting transaction. Manual confirmation saves the reusable pattern directly. The separate confirmation-outcome audit table was removed on October 8, 2026; saved patterns and their supporting transactions are retained. Patterns never store complete notification text or copy it into OCR evidence. Changes to the supporting transaction's extraction fields invalidate its pattern; category/notes-only edits do not. Deletion also invalidates the pattern. A fresh confirmed notification can provide new support, but does not re-enable a disabled pattern. Deleted raw text is never reconstructed for learning or historical backfill.
 
 Deploy these canonical migrations before the compatible web release:
 
@@ -202,3 +202,9 @@ These are server changes for new intake and explicit Retry. Existing pending rec
 - Production APK signing and distribution remain separate from this sideload implementation.
 
 For rollback, pause capture on the phone and revoke affected credentials in Finance settings. Keep additive database tables and lineage intact. Local events stay encrypted until accepted or explicitly discarded.
+
+## Notification audit removal, October 8, 2026
+
+The live forward migration `20261008032651_remove_notification_learning_reviews.sql` deletes the 11 outcome audit rows and their table, after replacing the confirmation writer. All 20 stored patterns remain unchanged. The standalone upgrade fixture `supabase/tests/finance_notification_review_cleanup_upgrade.test.sql` runs against the predecessor that still contains the table and rolls back its synthetic data and DDL. The current companion runner targets the cleaned schema.
+
+The upgrade fixture, five companion SQL suites and concurrent confirmation checks passed. Browser verification passed on desktop and mobile after repairing the isolated harness route for the existing pattern panel. Pattern limits, source changes, disabled state, supporting evidence invalidation, raw-text deletion and replay protection are preserved.

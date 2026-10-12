@@ -36,7 +36,7 @@ describe('shadow rule failure isolation', () => {
         if (kind === 'returned') mocks.listFinanceShadowRules.mockResolvedValue({ error: new Error('private') });
         else mocks.listFinanceShadowRules.mockRejectedValue(new Error('private'));
         const result = await getFinanceRuleSettings('verified-user');
-        expect(result).toEqual({ rules: [], suggestions: [], learning: { availability: 'never_run' },
+        expect(result).toEqual({ rules: [], learning: { availability: 'never_run' },
             shadow_rules: { availability: 'unavailable' } });
     });
 

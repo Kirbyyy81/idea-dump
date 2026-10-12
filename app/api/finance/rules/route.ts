@@ -18,7 +18,6 @@ export async function GET() {
         const settings = await getFinanceRuleSettings(session.user.id);
         return NextResponse.json({
             data: settings.rules,
-            suggestions: settings.suggestions,
             learning: settings.learning,
             shadow_rules: settings.shadow_rules,
         });

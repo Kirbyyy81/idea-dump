@@ -93,6 +93,9 @@ export interface FinanceRepository {
         referenceNumber: string | null;
     }): Promise<DuplicateAssessment>;
     finalize(input: FinalizeInput): Promise<OcrSuccessData>;
+    readIntakeState(userId: string, intakeId: string): Promise<
+        Pick<BeginIntakeResult, 'intake' | 'candidate' | 'transaction'> | null
+    >;
     fail(input: {
         userId: string;
         intakeId: string;

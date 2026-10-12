@@ -46,19 +46,14 @@ create temporary table history_before as
  union all select 'candidates',to_jsonb(c) from public.finance_candidate_transactions c
  union all select 'intakes',to_jsonb(i) from public.finance_intake_items i
  union all select 'corrections',to_jsonb(c) from public.finance_corrections c
- union all select 'legacy_rules',to_jsonb(r) from public.finance_rules r
- union all select 'legacy_fields',to_jsonb(r) from public.finance_field_learning_rules r;
+ union all select 'legacy_rules',to_jsonb(r) from public.finance_rules r;
 select pg_temp.check_cutoff(public.finance_set_parser_learning_cutoff('c1000000-0000-4000-8000-000000000001','2026-09-06 00:00:00 Asia/Kuala_Lumpur'),'cutoff changes');
 select pg_temp.check_cutoff((select status='disabled' and status_reason='learning_cutoff_changed' from public.finance_parser_templates where id=(select id from original_template)),'old active template retired');
 select pg_temp.check_cutoff((select status='rejected' from public.finance_parser_templates where user_id='c1000000-0000-4000-8000-000000000001' and configuration->>'label'='invoice number'),'old shadow template retired');
 select pg_temp.check_cutoff(not public.finance_set_parser_learning_cutoff('c1000000-0000-4000-8000-000000000001','2026-09-05T16:00:00Z'),'same cutoff is idempotent');
--- The wrapper must never invoke retired legacy learning. Stub only the test transaction.
-create temporary table legacy_calls(n integer);
-create or replace function public.finance_refresh_rule_suggestions_legacy_v1() returns integer language plpgsql as $f$
-begin insert into pg_temp.legacy_calls values(1); return 0; end;
-$f$;
+-- The current wrapper must work after the obsolete learner is removed.
+select pg_temp.check_cutoff(to_regprocedure('public.finance_refresh_rule_suggestions_legacy_v1()') is null,'legacy learner removed');
 select public.finance_refresh_rule_suggestions('c1000000-0000-4000-8000-000000000009');
-select pg_temp.check_cutoff((select count(*)=0 from legacy_calls),'legacy learner is no longer called');
 select pg_temp.check_cutoff((select status='succeeded' and candidates_evaluated=6 from public.finance_learning_runs where invocation_id='c1000000-0000-4000-8000-000000000009'),'run counts current-period evidence plus unaffected user');
 create temporary table fresh_template as select id from public.finance_parser_templates
  where user_id='c1000000-0000-4000-8000-000000000001' and algorithm_version=2 and learning_cutoff_at='2026-09-05T16:00:00Z';
@@ -75,8 +70,7 @@ select pg_temp.check_cutoff(not exists(select * from history_before except (
  union all select 'candidates',to_jsonb(c) from public.finance_candidate_transactions c
  union all select 'intakes',to_jsonb(i) from public.finance_intake_items i
  union all select 'corrections',to_jsonb(c) from public.finance_corrections c
- union all select 'legacy_rules',to_jsonb(r) from public.finance_rules r
- union all select 'legacy_fields',to_jsonb(r) from public.finance_field_learning_rules r)),'reset preserves finance history and legacy rules');
+ union all select 'legacy_rules',to_jsonb(r) from public.finance_rules r)),'reset preserves finance history and legacy rules');
 select pg_temp.cutoff_fixture(n,'2026-09-06T00:00:00Z',false,'Order ID',(select id from fresh_template)) from generate_series(7,9) n;
 select pg_temp.check_cutoff(public.finance_promote_parser_template_v2((select id from fresh_template)),'fresh reviewed shadow cases can activate');
 do $guards$
