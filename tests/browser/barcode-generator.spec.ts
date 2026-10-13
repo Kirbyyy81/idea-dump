@@ -36,7 +36,9 @@ test('generates automatically, preserves digits, and recalls seven values withou
     await page.screenshot({ path: testInfo.outputPath('barcode-generator.png'), fullPage: true });
     if (testInfo.project.name === 'mobile') await page.getByRole('button', { name: 'Open navigation' }).click();
     await expect(page.getByRole('link', { name: 'Barcode Generator', exact: true })).toHaveAttribute('aria-current', 'page');
-    await expect(page.getByRole('link', { name: 'View logs', exact: true })).toHaveAttribute('href', '/log-viewer');
+    await expect(page.getByRole('link', { name: 'Log Viewer', exact: true })).toHaveAttribute('href', '/log-viewer');
+    await expect(page.getByRole('link', { name: 'View logs', exact: true })).toHaveCount(0);
+    await expect(page.locator('#sidebar-log_viewer-submenu').getByRole('link')).toHaveCount(1);
     if (testInfo.project.name === 'mobile') {
         await page.keyboard.press('Escape');
         await expect(page.getByRole('dialog', { name: 'Mobile navigation' })).toHaveCount(0);

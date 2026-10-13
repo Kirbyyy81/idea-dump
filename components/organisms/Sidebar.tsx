@@ -408,12 +408,6 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
                             label: getModuleLabel(item.slug, item.label),
                             children: <div>
                                 {renderSubItem({
-                                    href: itemPath,
-                                    icon: <FileSearch size={14} />,
-                                    isActive: isExactPath(pathname, itemPath),
-                                    label: 'View logs',
-                                })}
-                                {renderSubItem({
                                     href: '/log-viewer/barcode-generator',
                                     icon: <Barcode size={14} />,
                                     isActive: isExactPath(pathname, '/log-viewer/barcode-generator'),

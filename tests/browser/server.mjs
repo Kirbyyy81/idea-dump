@@ -19,6 +19,9 @@ await build({ entryPoints: [path.join(root, 'tests/browser/documentation-harness
     alias: { '@': root, '@/components/organisms/AppShell': path.join(root, 'tests/browser/shell.tsx'), 'next/link': path.join(root, 'tests/browser/link.tsx'), 'next/image': path.join(root, 'tests/browser/image.tsx') } });
 await build({ entryPoints: [path.join(root, 'tests/browser/log-viewer-harness.tsx')], outfile: path.join(output, 'log-viewer-app.js'), bundle: true, jsx: 'automatic',
     define: { 'process.env.NODE_ENV': '"development"' }, alias: { '@': root } });
+await build({ entryPoints: [path.join(root, 'tests/browser/barcode-harness.tsx')], outfile: path.join(output, 'barcode-app.js'), bundle: true, jsx: 'automatic',
+    define: { 'process.env.NODE_ENV': '"development"' },
+    alias: { '@': root, '@/lib/supabase/client': path.join(root, 'tests/browser/barcode-auth.ts'), 'next/link': path.join(root, 'tests/browser/link.tsx'), 'next/image': path.join(root, 'tests/browser/image.tsx'), 'next/navigation': path.join(root, 'tests/browser/navigation.ts') } });
 await build({ entryPoints: [path.join(root, 'tests/browser/inventory-harness.tsx')], outfile: path.join(output, 'inventory-app.js'), bundle: true, jsx: 'automatic',
     define: { 'process.env.NODE_ENV': '"development"' }, alias: { '@': root, '@/components/organisms/AppShell': path.join(root, 'tests/browser/shell.tsx'), 'next/link': path.join(root, 'tests/browser/link.tsx'), 'next/image': path.join(root, 'tests/browser/image.tsx'), 'next/navigation': path.join(root, 'tests/browser/navigation.ts') } });
 await build({ entryPoints: [path.join(root, 'tests/browser/film-harness.tsx')], outfile: path.join(output, 'film-app.js'), bundle: true, jsx: 'automatic',

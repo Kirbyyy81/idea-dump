@@ -70,7 +70,7 @@ Also run the audits, lint, TypeScript, full tests, and production build required
 
 ## Barcode Generator
 
-The Log Viewer navigation includes **Barcode Generator** at `/log-viewer/barcode-generator`, using the same `log_viewer` access rules.
+The **Log Viewer** parent navigation item opens `/log-viewer`. Its only submenu item is **Barcode Generator** at `/log-viewer/barcode-generator`, using the same `log_viewer` access rules.
 
 - Enter or paste one numeric identifier. Code 128 generates automatically after a 400 ms pause.
 - Scan the black-on-white barcode directly from the screen. Input changes immediately remove the previous preview.
