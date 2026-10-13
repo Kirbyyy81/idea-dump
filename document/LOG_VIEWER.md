@@ -6,6 +6,8 @@ The floating **Back to log input** button in the bottom-right corner immediately
 
 ## Payload display
 
+String values containing a valid JSON object or array offer **Show JSON**, including configuration strings in Yes Shop `GetMaterConfig` responses. Activate it to read and fold the decoded content; **Show string** restores the original escaped value. Further JSON strings inside decoded content can be opened separately. Ordinary strings, JSON primitives, and malformed JSON remain text. Decoding changes only the display: copying the complete payload and showing the raw line preserve the original string values. Expand all does not automatically decode strings.
+
 Open a request, response, or content-data panel to read indented, syntax-coloured JSON. Objects and arrays start expanded and can be folded individually using their arrow buttons, or together using **Expand all** and **Collapse all**. Folded values retain their braces or brackets and show an ellipsis. All controls support the keyboard. Long lines scroll within the panel.
 
 The header's copy icon copies the complete payload with two-space indentation, including values hidden by folding, even when the panel is closed. It has an accessible Copy JSON label and shows a checkmark after copying. Clipboard success or failure is announced without changing the panel, raw visibility, or folding. Copy is available only for valid JSON, including primitive values.

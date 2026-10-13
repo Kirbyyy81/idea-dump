@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { Button } from '@/components/atoms/Button';
 import { NextDoodleIcon } from '@/components/atoms/DoodleIcons';
 
@@ -9,6 +9,17 @@ function JsonNode({ value, name, path, depth, comma, defaultExpanded, toggled, o
   defaultExpanded: boolean; toggled: Set<string>; onToggle: (path: string) => void;
 }) {
   const childrenId = useId();
+  const [showDecoded, setShowDecoded] = useState(false);
+  const decoded = useMemo(() => {
+    if (typeof value !== 'string') return null;
+    const text = value.trim();
+    if (!((text.startsWith('{') && text.endsWith('}')) || (text.startsWith('[') && text.endsWith(']')))) return null;
+    try {
+      return JSON.parse(text) as Record<string, unknown> | unknown[];
+    } catch {
+      return null;
+    }
+  }, [value]);
   const entries = value !== null && typeof value === 'object' ? Object.entries(value) : null;
   const array = Array.isArray(value);
   const opening = array ? '[' : '{';
@@ -17,6 +28,22 @@ function JsonNode({ value, name, path, depth, comma, defaultExpanded, toggled, o
   const indent = '  '.repeat(depth);
   const prefix = <>{indent}{name !== undefined && <span className="text-text-primary">{JSON.stringify(name) + ': '}</span>}</>;
   const suffix = comma ? ',' : '';
+
+  if (decoded !== null) {
+    return <>
+      {prefix}<Button
+        variant="ghost" type="button" className="min-h-11 text-xs"
+        aria-label={(showDecoded ? 'Show string at ' : 'Show JSON at ') + path}
+        aria-expanded={showDecoded} aria-controls={childrenId}
+        onClick={() => setShowDecoded(!showDecoded)}
+      >{showDecoded ? 'Show string' : 'Show JSON'}</Button>
+      <span id={childrenId}>{showDecoded
+        ? <>{'\n'}<JsonNode value={decoded} path={path + ' (JSON)'} depth={depth + 1}
+            comma={comma} defaultExpanded={defaultExpanded} toggled={toggled} onToggle={onToggle} /></>
+        : <> <span className="text-success">{JSON.stringify(value)}</span>{suffix}</>}
+      </span>
+    </>;
+  }
 
   if (!entries?.length) {
     const color = typeof value === 'string' ? 'text-success'
