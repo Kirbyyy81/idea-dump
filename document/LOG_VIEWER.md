@@ -78,11 +78,11 @@ The **Log Viewer** parent navigation item opens `/log-viewer`. Its only submenu 
 - Scan the black-on-white barcode directly from the screen. Input changes immediately remove the previous preview.
 - Letter case, leading zeros, and long identifiers remain exact strings. Surrounding whitespace is trimmed; internal whitespace, multiline identifiers, punctuation, and non-ASCII characters are rejected.
 - The 256-character input cap bounds rendering work; it is not a claim that every length fits or scans on every device.
-- Recent barcodes keeps the last seven distinct successful values. Selecting one immediately restores its barcode and moves it to the top.
+- Recent barcodes keeps the last seven distinct successful values. Selecting one immediately restores its barcode and moves it to the top. Each row has a separate delete button that removes that exact case-sensitive value from history and session storage without confirmation. Deleting the displayed barcode or a value awaiting generation also cancels generation and clears the input and preview. Other values keep their order. Focus moves to the next delete button, then the previous one, or the input when empty; removal is announced to screen readers.
 - History stays in user-scoped `sessionStorage`, survives same-tab navigation and refresh, and normally ends when the tab closes. Browser session restoration or tab duplication can restore or copy it.
 - The persistent barcode session provider clears feature history on sign-out or account changes, including sign-out from Settings. When storage is unavailable, bounded in-memory history remains usable during client-side navigation.
 - Barcodes render locally using pinned JsBarcode. Identifiers never go into URLs, API calls, application logs, or database records.
-- Wide barcodes scroll without compression; the page prompts for a wider display before scanning. No print, download, manual Generate, or cleanup controls are provided.
+- Wide barcodes scroll without compression; the page prompts for a wider display before scanning. No print, download, manual Generate, or clear-all controls are provided.
 
 Feature components live under `app/log-viewer/barcode-generator/_components/`. Pure validation and history helpers live under `lib/log-viewer/barcode/`. The persistent shell mounts the lightweight session provider; the renderer is owned by the barcode page.
 

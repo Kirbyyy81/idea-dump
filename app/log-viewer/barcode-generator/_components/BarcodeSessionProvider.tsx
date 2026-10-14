@@ -10,6 +10,7 @@ interface BarcodeSession {
     values: string[];
     storageAvailable: boolean;
     remember: (value: string) => void;
+    remove: (value: string) => void;
 }
 
 const BarcodeSessionContext = createContext<BarcodeSession | null>(null);
@@ -61,9 +62,8 @@ export function BarcodeSessionProvider({ children }: { children: ReactNode }) {
         return () => subscription.unsubscribe();
     }, [userId]);
 
-    const remember = useCallback((value: string) => {
-        if (!userId || ownerRef.current !== userId || !value || barcodeInputError(value)) return;
-        const next = recentBarcodes([value, ...valuesRef.current]);
+    const saveValues = useCallback((next: string[]) => {
+        if (!userId || ownerRef.current !== userId) return;
         valuesRef.current = next;
         setValues(next);
         try {
@@ -74,12 +74,22 @@ export function BarcodeSessionProvider({ children }: { children: ReactNode }) {
         }
     }, [userId]);
 
+    const remember = useCallback((value: string) => {
+        if (!value || barcodeInputError(value)) return;
+        saveValues(recentBarcodes([value, ...valuesRef.current]));
+    }, [saveValues]);
+
+    const remove = useCallback((value: string) => {
+        saveValues(valuesRef.current.filter(item => item !== value));
+    }, [saveValues]);
+
     const context = useMemo<BarcodeSession>(() => ({
         userId: owner === userId ? owner : null,
         values: owner === userId ? values : [],
         storageAvailable,
         remember,
-    }), [owner, userId, values, storageAvailable, remember]);
+        remove,
+    }), [owner, userId, values, storageAvailable, remember, remove]);
 
     return <BarcodeSessionContext.Provider value={context}>{children}</BarcodeSessionContext.Provider>;
 }

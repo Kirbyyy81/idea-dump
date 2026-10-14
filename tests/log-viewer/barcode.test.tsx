@@ -32,7 +32,7 @@ function enter(value: string) {
     fireEvent.change(screen.getByRole('textbox', { name: 'Value' }), { target: { value } });
 }
 function settle() { act(() => vi.advanceTimersByTime(400)); }
-function historyButtons() { return within(screen.getByRole('complementary', { name: 'Recent barcodes' })).queryAllByRole('button'); }
+function historyButtons() { return within(screen.getByRole('complementary', { name: 'Recent barcodes' })).queryAllByRole('button').filter(button => button.hasAttribute('aria-pressed')); }
 
 beforeEach(() => {
     vi.useFakeTimers();
@@ -87,6 +87,71 @@ describe('barcode generation and session history', () => {
         expect(screen.queryByRole('img')).toBeNull();
         expect(screen.getByRole('textbox').getAttribute('aria-invalid')).toBe('true');
         expect(historyButtons()).toHaveLength(0);
+    });
+
+    it.each([
+        ['First', ['Middle', 'Last'], 'Middle'],
+        ['Middle', ['First', 'Last'], 'Last'],
+        ['Last', ['First', 'Middle'], 'Middle'],
+    ] as const)('deletes %s without reordering history and restores focus', (value, remaining, focus) => {
+        sessionStorage.setItem(key, serializeBarcodeHistory(['First', 'Middle', 'Last']));
+        const { unmount } = render(<Workspace />);
+        fireEvent.click(screen.getByRole('button', { name: `Delete ${value}` }));
+        expect(historyButtons().map(button => button.textContent)).toEqual([...remaining]);
+        expect(parseBarcodeHistory(sessionStorage.getItem(key))).toEqual([...remaining]);
+        expect(document.activeElement).toBe(screen.getByRole('button', { name: `Delete ${focus}` }));
+        expect(screen.getByText(`Deleted ${value} from recent barcodes.`).getAttribute('role')).toBe('status');
+        unmount();
+        render(<Workspace />);
+        expect(historyButtons().map(button => button.textContent)).toEqual([...remaining]);
+    });
+
+    it('clears the selected barcode and focuses the input after deleting the last item', () => {
+        render(<Workspace />);
+        enter('GalFlip512BB25185');
+        settle();
+        fireEvent.click(screen.getByRole('button', { name: 'Delete GalFlip512BB25185' }));
+        expect(screen.queryByRole('img')).toBeNull();
+        expect(document.querySelector('svg[role="img"]')?.childElementCount).toBe(0);
+        expect((screen.getByRole('textbox') as HTMLInputElement).value).toBe('');
+        expect(document.activeElement).toBe(screen.getByRole('textbox'));
+        expect(screen.getByText('No recent barcodes.')).toBeDefined();
+        expect(screen.getByText('0/7')).toBeDefined();
+        settle();
+        expect(parseBarcodeHistory(sessionStorage.getItem(key))).toEqual([]);
+    });
+
+    it('cancels generation of a deleted value but preserves unrelated pending generation', () => {
+        sessionStorage.setItem(key, serializeBarcodeHistory(['Ab12', 'ab12']));
+        render(<Workspace />);
+        enter(' Ab12 ');
+        fireEvent.click(screen.getByRole('button', { name: 'Delete Ab12' }));
+        settle();
+        expect(screen.queryByRole('img')).toBeNull();
+        expect((screen.getByRole('textbox') as HTMLInputElement).value).toBe('');
+        expect(historyButtons().map(button => button.textContent)).toEqual(['ab12']);
+        enter('Other');
+        fireEvent.click(screen.getByRole('button', { name: 'Delete ab12' }));
+        settle();
+        expect(screen.getByRole('img').getAttribute('aria-label')).toBe('Barcode for Other');
+        expect(historyButtons().map(button => button.textContent)).toEqual(['Other']);
+    });
+
+    it('preserves the active preview when deleting another value even if storage fails', () => {
+        const { rerender } = render(<Workspace />);
+        enter('Older'); settle();
+        enter('Active'); settle();
+        vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('blocked'); });
+        fireEvent.click(screen.getByRole('button', { name: 'Delete Older' }));
+        expect(screen.getByRole('img').getAttribute('aria-label')).toBe('Barcode for Active');
+        expect((screen.getByRole('textbox') as HTMLInputElement).value).toBe('Active');
+        expect(screen.getByText(/Temporary storage is unavailable/)).toBeDefined();
+        rerender(<Workspace visible={false} />);
+        rerender(<Workspace />);
+        expect(historyButtons().map(button => button.textContent)).toEqual(['Active']);
+        rerender(<Workspace user="user-b" />);
+        expect(historyButtons()).toHaveLength(0);
+        expect(sessionStorage.getItem(key)).toBeNull();
     });
 
     it('keeps seven distinct values and recall supersedes pending generation', () => {

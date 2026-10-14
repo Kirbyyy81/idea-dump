@@ -3,6 +3,52 @@ import { expect, test } from '@playwright/test';
 const route = '/log-viewer/barcode-generator';
 const storageKey = 'idea-dump:barcode-generator:v1:browser-user';
 
+test('deletes individual history entries with keyboard focus and cancels pending generation', async ({ page }, testInfo) => {
+    await page.addInitScript(key => sessionStorage.setItem(key, JSON.stringify({ version: 1, values: ['First', 'Middle', 'Last'] })), storageKey);
+    await page.goto(route);
+    await page.clock.install();
+    const recent = page.getByRole('complementary', { name: 'Recent barcodes' });
+    const removeMiddle = recent.getByRole('button', { name: 'Delete Middle', exact: true });
+    const box = (await removeMiddle.boundingBox())!;
+    expect(box.width).toBeGreaterThanOrEqual(44);
+    expect(box.height).toBeGreaterThanOrEqual(44);
+    await removeMiddle.focus();
+    await page.keyboard.press('Enter');
+    await expect(recent.getByRole('button', { name: 'Delete Last', exact: true })).toBeFocused();
+    await expect(recent.getByRole('status')).toHaveText('Deleted Middle from recent barcodes.');
+    await expect(recent.locator('button[aria-pressed]')).toHaveText(['First', 'Last']);
+    await recent.getByRole('button', { name: 'First', exact: true }).click();
+    await recent.getByRole('button', { name: 'Delete Last', exact: true }).focus();
+    await page.keyboard.press('Space');
+    await expect(recent.getByRole('button', { name: 'Delete First', exact: true })).toBeFocused();
+    await expect(page.getByRole('img', { name: 'Barcode for First' })).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath('delete-recent-barcode.png'), fullPage: true });
+    const input = page.getByRole('textbox', { name: 'Value' });
+    await input.fill(' First ');
+    await recent.getByRole('button', { name: 'Delete First', exact: true }).click();
+    await expect(input).toBeFocused();
+    await expect(input).toHaveValue('');
+    await expect(recent.getByText('No recent barcodes.')).toBeVisible();
+    await expect(recent.getByText('0/7')).toBeVisible();
+    await page.clock.runFor(500);
+    await expect(page.getByRole('img', { name: /^Barcode for/ })).toHaveCount(0);
+    expect(JSON.parse((await page.evaluate(key => sessionStorage.getItem(key), storageKey))!).values).toEqual([]);
+});
+
+test('deleting the displayed barcode clears it and persists across reload', async ({ page }) => {
+    await page.goto(route);
+    const input = page.getByRole('textbox', { name: 'Value' });
+    await input.fill('GalFlip512BB25185');
+    await expect(page.getByRole('img', { name: 'Barcode for GalFlip512BB25185' })).toBeVisible();
+    await page.getByRole('button', { name: 'Delete GalFlip512BB25185', exact: true }).click();
+    await expect(input).toHaveValue('');
+    await expect(input).toBeFocused();
+    await expect(page.getByRole('img', { name: /^Barcode for/ })).toHaveCount(0);
+    await page.reload();
+    await expect(page.getByText('No recent barcodes.')).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Delete / })).toHaveCount(0);
+});
+
 test('generates and recalls mixed-case alphanumeric identifiers', async ({ page }, testInfo) => {
     await page.goto(route);
     const input = page.getByRole('textbox', { name: 'Value' });
@@ -19,7 +65,7 @@ test('generates and recalls mixed-case alphanumeric identifiers', async ({ page 
     await page.getByRole('button', { name: 'GalFlip512BB25185', exact: true }).click();
     await expect(input).toHaveValue('GalFlip512BB25185');
     await expect(barcode).toBeVisible();
-    await expect(page.getByRole('complementary', { name: 'Recent barcodes' }).getByRole('button')).toHaveCount(2);
+    await expect(page.getByRole('complementary', { name: 'Recent barcodes' }).locator('button[aria-pressed]')).toHaveCount(2);
     await page.screenshot({ path: testInfo.outputPath('alphanumeric-barcode.png'), fullPage: true });
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width);
 });
@@ -35,8 +81,8 @@ test('generates automatically, preserves digits, and recalls seven values withou
         await input.fill('000' + i);
         await page.clock.runFor(400);
     }
-    await expect(recent.getByRole('button')).toHaveCount(7);
-    await expect(recent.getByRole('button').first()).toHaveText('0008');
+    await expect(recent.locator('button[aria-pressed]')).toHaveCount(7);
+    await expect(recent.locator('button[aria-pressed]').first()).toHaveText('0008');
     await expect(recent.getByRole('button', { name: '0001', exact: true })).toHaveCount(0);
     await input.fill('999');
     await expect(page.getByRole('img', { name: /^Barcode for/ })).toHaveCount(0);
@@ -45,7 +91,7 @@ test('generates automatically, preserves digits, and recalls seven values withou
     await page.clock.runFor(500);
     await expect(input).toHaveValue('0003');
     await expect(page.getByRole('img', { name: 'Barcode for 0003' })).toBeVisible();
-    await expect(recent.getByRole('button').first()).toHaveText('0003');
+    await expect(recent.locator('button[aria-pressed]').first()).toHaveText('0003');
     await input.fill('0001234567890123456');
     await page.clock.runFor(400);
     const barcode = page.getByRole('img', { name: 'Barcode for 0001234567890123456' });
