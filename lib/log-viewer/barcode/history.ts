@@ -4,8 +4,8 @@ export const BARCODE_STORAGE_PREFIX = 'idea-dump:barcode-generator:v1:';
 
 export function barcodeInputError(value: string): string | undefined {
     if (!value) return undefined;
-    if (/[^0-9]/.test(value)) return 'Use numbers only, without spaces or punctuation.';
-    if (value.length > BARCODE_INPUT_LIMIT) return `Use ${BARCODE_INPUT_LIMIT} digits or fewer.`;
+    if (/[^A-Za-z0-9]/.test(value)) return 'Use letters A-Z, a-z and numbers 0-9, without spaces or punctuation.';
+    if (value.length > BARCODE_INPUT_LIMIT) return `Use ${BARCODE_INPUT_LIMIT} characters or fewer.`;
     return undefined;
 }
 

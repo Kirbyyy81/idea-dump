@@ -29,10 +29,10 @@ function Workspace({ user = 'user-a', allowed = true, visible = true }: { user?:
 }
 const key = BARCODE_STORAGE_PREFIX + 'user-a';
 function enter(value: string) {
-    fireEvent.change(screen.getByRole('textbox', { name: 'Number' }), { target: { value } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Value' }), { target: { value } });
 }
 function settle() { act(() => vi.advanceTimersByTime(400)); }
-function historyButtons() { return within(screen.getByRole('complementary', { name: 'Recent numbers' })).queryAllByRole('button'); }
+function historyButtons() { return within(screen.getByRole('complementary', { name: 'Recent barcodes' })).queryAllByRole('button'); }
 
 beforeEach(() => {
     vi.useFakeTimers();
@@ -56,7 +56,7 @@ describe('barcode generation and session history', () => {
         act(() => vi.advanceTimersByTime(1));
         expect(screen.getByRole('img').getAttribute('aria-label')).toBe('Barcode for 0001234567890123456789');
         expect(historyButtons().map(button => button.textContent)).toEqual(['0001234567890123456789']);
-        enter('123x');
+        enter('123!');
         expect(screen.queryByRole('img')).toBeNull();
         expect(screen.getByRole('textbox').getAttribute('aria-invalid')).toBe('true');
         settle();
@@ -64,6 +64,29 @@ describe('barcode generation and session history', () => {
         enter(' ');
         settle();
         expect(screen.getByRole('textbox').getAttribute('aria-invalid')).toBeNull();
+    });
+
+    it('preserves case-sensitive alphanumeric history across reload and recall', () => {
+        const { unmount } = render(<Workspace />);
+        enter(' GalFlip512BB25185 ');
+        settle();
+        enter('galflip512bb25185');
+        settle();
+        expect(parseBarcodeHistory(sessionStorage.getItem(key))).toEqual(['galflip512bb25185', 'GalFlip512BB25185']);
+        unmount();
+        render(<Workspace />);
+        fireEvent.click(screen.getByRole('button', { name: 'GalFlip512BB25185' }));
+        expect((screen.getByRole('textbox') as HTMLInputElement).value).toBe('GalFlip512BB25185');
+        expect(screen.getByRole('img').getAttribute('aria-label')).toBe('Barcode for GalFlip512BB25185');
+    });
+
+    it.each(['AB CD', 'AB-12', 'é12', '１２３', 'AB\t12', 'AB\n12'])('rejects unsupported identifier %s without storing it', value => {
+        render(<Workspace />);
+        fireEvent.paste(screen.getByRole('textbox'), { clipboardData: { getData: () => value } });
+        settle();
+        expect(screen.queryByRole('img')).toBeNull();
+        expect(screen.getByRole('textbox').getAttribute('aria-invalid')).toBe('true');
+        expect(historyButtons()).toHaveLength(0);
     });
 
     it('keeps seven distinct values and recall supersedes pending generation', () => {
@@ -92,7 +115,7 @@ describe('barcode generation and session history', () => {
     });
 
     it('restores validated history without automatically displaying an old barcode', () => {
-        sessionStorage.setItem(key, JSON.stringify({ version: 1, values: ['0001', '0001', null, 'bad', '<svg>', '2'] }));
+        sessionStorage.setItem(key, JSON.stringify({ version: 1, values: ['0001', '0001', null, 'bad!', '<svg>', '2'] }));
         const { unmount } = render(<Workspace />);
         expect(historyButtons().map(button => button.textContent)).toEqual(['0001', '2']);
         expect(screen.queryByRole('img')).toBeNull();
@@ -185,11 +208,11 @@ describe('barcode generation and session history', () => {
         enter('1'.repeat(257));
         settle();
         expect(screen.queryByRole('img')).toBeNull();
-        expect(screen.getByText('Use 256 digits or fewer.')).toBeTruthy();
+        expect(screen.getByText('Use 256 characters or fewer.')).toBeTruthy();
         expect(parseBarcodeHistory(serializeBarcodeHistory(['0001', '1'.repeat(257)]))).toEqual(['0001']);
     });
 
-    it.each(['0', '0001234', '12345678', '000123456789012345678901234567890'])('independently decodes the actual SVG bars for %s', value => {
+    it.each(['0', '0001234', '12345678', '000123456789012345678901234567890', 'GalFlip512BB25185', 'galflip512bb25185', 'ABCxyz', '00Ab12'])('independently decodes the actual SVG bars for %s', value => {
         render(<Workspace />);
         enter(value);
         settle();

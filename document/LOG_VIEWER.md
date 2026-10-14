@@ -74,11 +74,11 @@ Also run the audits, lint, TypeScript, full tests, and production build required
 
 The **Log Viewer** parent navigation item opens `/log-viewer`. Its only submenu item is **Barcode Generator** at `/log-viewer/barcode-generator`, using the same `log_viewer` access rules.
 
-- Enter or paste one numeric identifier. Code 128 generates automatically after a 400 ms pause.
+- Enter or paste one identifier containing ASCII letters (`A-Z`, `a-z`) and numbers (`0-9`). Code 128 generates automatically after a 400 ms pause.
 - Scan the black-on-white barcode directly from the screen. Input changes immediately remove the previous preview.
-- Leading zeros and long identifiers remain exact strings. Surrounding whitespace is trimmed; internal whitespace, multiline identifiers, and non-ASCII digits are rejected.
-- The 256-digit input cap bounds rendering work; it is not a claim that every length fits or scans on every device.
-- Recent numbers keeps the last seven distinct successful values. Selecting one immediately restores its barcode and moves it to the top.
+- Letter case, leading zeros, and long identifiers remain exact strings. Surrounding whitespace is trimmed; internal whitespace, multiline identifiers, punctuation, and non-ASCII characters are rejected.
+- The 256-character input cap bounds rendering work; it is not a claim that every length fits or scans on every device.
+- Recent barcodes keeps the last seven distinct successful values. Selecting one immediately restores its barcode and moves it to the top.
 - History stays in user-scoped `sessionStorage`, survives same-tab navigation and refresh, and normally ends when the tab closes. Browser session restoration or tab duplication can restore or copy it.
 - The persistent barcode session provider clears feature history on sign-out or account changes, including sign-out from Settings. When storage is unavailable, bounded in-memory history remains usable during client-side navigation.
 - Barcodes render locally using pinned JsBarcode. Identifiers never go into URLs, API calls, application logs, or database records.
