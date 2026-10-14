@@ -72,7 +72,7 @@ function BarcodeWorkspace() {
         } catch {
             svgRef.current.replaceChildren();
             setGenerated('');
-            setError('Unable to generate this barcode. Edit the number to try again.');
+            setError('Unable to generate this barcode. Edit the value to try again.');
         }
     }
 
@@ -98,9 +98,11 @@ function BarcodeWorkspace() {
         <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_260px]">
             <Card className="min-w-0 space-y-6 p-5 md:p-6">
                 <Input
-                    label="Number"
+                    label="Value"
                     type="text"
-                    inputMode="numeric"
+                    inputMode="text"
+                    autoCapitalize="off"
+                    autoCorrect="off"
                     autoComplete="off"
                     spellCheck={false}
                     value={input}
@@ -128,7 +130,7 @@ function BarcodeWorkspace() {
                                 className={cn('max-w-none shrink-0', !generated && 'hidden')} />
                             {!generated && <div className="flex flex-col items-center gap-3 px-4 py-8 text-center text-sm text-text-secondary">
                                 <Barcode size={32} aria-hidden="true" />
-                                <p role="status">{error ? 'Check the number above.' : input.trim() ? 'Generating barcode...' : 'Enter a number to generate its barcode.'}</p>
+                                <p role="status">{error ? 'Check the value above.' : input.trim() ? 'Generating barcode...' : 'Enter letters or numbers to generate a barcode.'}</p>
                             </div>}
                         </div>
                     </div>
@@ -136,9 +138,9 @@ function BarcodeWorkspace() {
                 </section>
             </Card>
             <Card className="min-w-0 self-start p-5">
-                <aside aria-label="Recent numbers" className="space-y-4">
+                <aside aria-label="Recent barcodes" className="space-y-4">
                     <div className="flex items-center justify-between gap-2">
-                        <h2 className="text-sm font-semibold">Recent numbers</h2>
+                        <h2 className="text-sm font-semibold">Recent barcodes</h2>
                         <span className="text-xs text-text-muted">{session.values.length}/7</span>
                     </div>
                     {session.values.length ? <ol className="space-y-2">
@@ -150,7 +152,7 @@ function BarcodeWorkspace() {
                                 {generated === value && <Check size={16} className="mt-0.5 shrink-0" aria-hidden="true" />}
                             </button>
                         </li>)}
-                    </ol> : <p className="text-sm text-text-muted">No recent numbers.</p>}
+                    </ol> : <p className="text-sm text-text-muted">No recent barcodes.</p>}
                     {!session.storageAvailable && <p role="status" className="text-xs text-text-secondary">Temporary storage is unavailable. History will be lost when this page reloads.</p>}
                 </aside>
             </Card>

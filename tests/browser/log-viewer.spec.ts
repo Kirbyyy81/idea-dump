@@ -186,6 +186,37 @@ test('copies complete request and response JSON while folding with the keyboard'
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width + 2);
 });
 
+test('opens embedded configuration JSON with the keyboard while preserving the response', async ({ page, context }, testInfo) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  const config = { plans: [{ name: 'Example plan', enabled: true }], extra: '[{"limit":3}]' };
+  const payload = { configValue: JSON.stringify(config), responseCode: 0 };
+  const endpoint = 'https://example.test/yesshop/mobile/ws/v1/json/GetMaterConfig';
+  const raw = '2026-10-13 10:00:00.100 RESPONSE ' + endpoint + ' ' + JSON.stringify(payload);
+  await page.goto('/log-viewer');
+  await page.getByRole('textbox', { name: 'Paste raw log text' }).fill(
+    '2026-10-13 10:00:00.000 REQUEST ' + endpoint + ' {}\n' + raw);
+  const response = page.getByRole('region', { name: 'Response body' });
+  await response.getByRole('button', { name: 'Response body', exact: true }).click();
+  const show = response.getByRole('button', { name: 'Show JSON at $["configValue"]', exact: true });
+  await show.focus();
+  await page.keyboard.press('Enter');
+  await expect(response.locator('code')).toContainText('"enabled": true');
+  await response.getByRole('button', { name: 'Collapse $["configValue"] (JSON)["plans"]', exact: true }).focus();
+  await page.keyboard.press('Space');
+  await expect(response.locator('code')).toContainText('"plans": […]');
+  await response.getByRole('button', { name: 'Show JSON at $["configValue"] (JSON)["extra"]', exact: true }).click();
+  await expect(response.locator('code')).toContainText('"limit": 3');
+  await response.getByRole('button', { name: 'Copy response JSON' }).click();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(JSON.stringify(payload, null, 2));
+  await response.getByRole('button', { name: 'Raw response line' }).click();
+  await expect(response.getByRole('textbox', { name: 'Raw response line' })).toHaveValue(raw);
+  await page.screenshot({ path: testInfo.outputPath('embedded-json.png'), fullPage: true });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width + 2);
+  await response.getByRole('button', { name: 'Show string at $["configValue"]', exact: true }).click();
+  await expect(show).toHaveAttribute('aria-expanded', 'false');
+  await expect(response.locator('code')).toContainText(JSON.stringify(payload.configValue));
+});
+
 for (const source of ['yes-shop', 'ussp']) {
   test(`imports ${source} and preserves grouped missing-request content`, async ({ page }) => {
     await page.goto('/log-viewer');

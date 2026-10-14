@@ -92,6 +92,51 @@ describe('Log Viewer payload panels', () => {
     expect(container.querySelector('code')?.textContent).toBe(JSON.stringify(value, null, 2));
   });
 
+  it('opens JSON strings on demand, folds decoded children, and preserves copied and raw payloads', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
+    const config = { plans: [{ name: '<script>example</script>', enabled: true }], extra: '[{"limit":3}]' };
+    const body = { configValue: JSON.stringify(config), other: '{"untouched":true}' };
+    const rawLine = 'RESPONSE GetMaterConfig ' + JSON.stringify(body);
+    const { container } = render(<JsonOrText title="Response body" event={{ ...event, lineType: 'response', bodyJson: body, rawLine }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Response body' }));
+    expect(screen.queryByRole('button', { name: 'Collapse $["configValue"] (JSON)' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Expand all' }));
+    expect(screen.getByRole('button', { name: 'Show JSON at $["configValue"]' }).getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(screen.getByRole('button', { name: 'Show JSON at $["configValue"]' }));
+    expect(screen.getByRole('button', { name: 'Show string at $["configValue"]' }).getAttribute('aria-expanded')).toBe('true');
+    expect(container.querySelector('code')?.textContent).toContain('"enabled": true');
+    expect(container.querySelectorAll('script')).toHaveLength(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse $["configValue"] (JSON)["plans"]' }));
+    expect(container.querySelector('code')?.textContent).toContain('"plans": […]');
+    fireEvent.click(screen.getByRole('button', { name: 'Show JSON at $["configValue"] (JSON)["extra"]' }));
+    expect(container.querySelector('code')?.textContent).toContain('"limit": 3');
+    expect(screen.getByRole('button', { name: 'Show JSON at $["other"]' }).getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(screen.getByRole('button', { name: 'Copy response JSON' }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(JSON.stringify(body, null, 2)));
+    fireEvent.click(screen.getByRole('button', { name: 'Raw response line' }));
+    expect((screen.getByRole('textbox') as HTMLTextAreaElement).value).toBe(rawLine);
+    fireEvent.click(screen.getByRole('button', { name: 'Show string at $["configValue"]' }));
+    expect(container.querySelector('code')?.textContent).toContain(JSON.stringify(body.configValue));
+    expect(body.configValue).toBe(JSON.stringify(config));
+  });
+
+  it.each(['{}', '[]', ' \n {"ok":true} \t', '[{"ok":true}]'])('decodes a root string containing %s', value => {
+    const { container } = render(<JsonOrText title="Payload" event={{ ...event, bodyJson: value }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Payload' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Show JSON at $' }));
+    expect(container.querySelector('code')?.textContent).toContain(JSON.stringify(JSON.parse(value), null, 2).split('\n').map(line => '  ' + line).join('\n'));
+    fireEvent.click(screen.getByRole('button', { name: 'Show string at $' }));
+    expect(container.querySelector('code')?.textContent).toContain(JSON.stringify(value));
+  });
+
+  it.each(['plain text', '123', 'true', 'null', '"quoted"', '{broken}', '[1,]', '{"missing":', '<script>alert(1)</script>'])('leaves non-container or malformed string %s unchanged', value => {
+    const { container } = render(<JsonOrText title="Payload" event={{ ...event, bodyJson: value }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Payload' }));
+    expect(screen.queryByRole('button', { name: /Show JSON/ })).toBeNull();
+    expect(container.querySelector('code')?.textContent).toBe(JSON.stringify(value));
+  });
+
   it('copies complete JSON from a closed panel and from folded content', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal('navigator', { clipboard: { writeText } });
