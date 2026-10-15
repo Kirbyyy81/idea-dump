@@ -8,7 +8,10 @@ export function parseGenericRecord(rest: string, lineType: LogLineType, url?: st
       bodyText: named?.[2] ?? rest.replace(/^JSON\s+DATA\s+STRING\s*-\s*/i, ''),
     };
   }
-  if (lineType !== 'request' && lineType !== 'response') return { bodyText: rest };
+  if (lineType !== 'request' && lineType !== 'response') {
+    const marker = rest.match(/^[^>]+>{2,}\s*([\s\S]*)$/);
+    return { bodyText: marker ? marker[1] : rest };
+  }
 
   if (url) {
     const afterUrl = rest.slice(rest.indexOf(url) + url.length)
@@ -19,8 +22,14 @@ export function parseGenericRecord(rest: string, lineType: LogLineType, url?: st
   }
   // Split only the header. Delimiters and URLs inside the payload are data.
   const jsonStart = rest.search(/[\[{]/);
-  if (jsonStart >= 0) return { bodyText: rest.slice(jsonStart) };
-  const parts = rest.split(/\s+>{2,}\s*/).map((part) => part.trim()).filter(Boolean);
+  if (jsonStart >= 0) {
+    const header = rest.slice(0, jsonStart);
+    const delimiters = [...header.matchAll(/>{2,}\s*/g)];
+    const last = delimiters.at(-1);
+    const start = last ? last.index! + last[0].length : jsonStart;
+    return { bodyText: /^RESULT\s*$/i.test(rest.slice(start, jsonStart)) ? rest.slice(jsonStart) : rest.slice(start) };
+  }
+  const parts = rest.split(/>{2,}\s*/).map((part) => part.trim()).filter(Boolean);
   const tail = parts.at(-1) ?? '';
   if (tail === '(No Body)') return { bodyText: tail };
   if (parts.length > 1 && tail !== url && !/^(?:https?:\/\/|\(\d{3}\)|\d+\s*ms\b)/i.test(tail)) {

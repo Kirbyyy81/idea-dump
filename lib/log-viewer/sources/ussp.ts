@@ -6,6 +6,7 @@ export function parseUsspRecord(rest: string, lineType: LogLineType, url?: strin
   if (lineType === 'response' && envelope?.index != null) {
     return {
       httpStatus: Number(envelope[1]),
+      bodyPrefix: envelope[0],
       bodyText: rest.slice(envelope.index + envelope[0].length).trim(),
     };
   }

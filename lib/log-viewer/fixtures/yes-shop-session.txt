@@ -1,0 +1,23 @@
+unrecognized startup line
+unrecognized startup continuation
+2026-10-15 10:00:00.000 REQUEST >>>>>>> https://openapi.example.test/yesshop/mobile/ws/v1/json/GetAppVersion >>>>>> {"request_id":"version-1"}
+2026-10-15 10:00:00.050 RESPONSE ERROR1 >>>>>>> https://openapi.example.test/yesshop/mobile/ws/v1/json/GetAppVersion >>>>>> Error Code - 401 {"response_id":"version-1","message":"Expired"} retry pending
+2026-10-15 10:00:00.100 New Auth Token Requested>>>
+2026-10-15 10:00:00.110 AUTH_REQUEST >>>>>>> POST >>>>>> https://identity.example.test/api/v2/openid-connect/token
+2026-10-15 10:00:00.120 AUTH_RESPONSE_SUCCESS >>>>>>> (200) >>>>>> https://identity.example.test/api/v2/openid-connect/token >>> 10 ms
+2026-10-15 10:00:00.130 New Refresh Token Generated>>> synthetic.header.signature
+2026-10-15 10:00:00.140 REQUEST >>>>>>> https://openapi.example.test/yesshop/mobile/ws/v1/json/Login >>>>>> {"request_id":"login-1"}
+2026-10-15 10:00:00.150 RESPONSE SUCCESS1 >>>>>>> https://openapi.example.test/yesshop/mobile/ws/v1/json/Login >>>>>> {"response_id":"login-1","responseCode":0}
+2026-10-15 10:00:00.160 REQUEST >>>>>>> https://openapi.example.test/yesshop/mobile/ws/v1/json/GetAppVersion >>>>>> {"request_id":"version-2"}
+2026-10-15 10:00:00.170 RESPONSE SUCCESS1 >>>>>>> https://openapi.example.test/yesshop/mobile/ws/v1/json/GetAppVersion >>>>>> {"response_id":"version-2","responseCode":0}
+2026-10-15 10:00:00.180 CONTENT DATA >> verifyCtosReport >> {"requestId":"ctos-1","customer":"sample"}
+2026-10-15 10:00:00.190 REQUEST >>>>>>> VerifyCTOSCredit >>>>>> {"contentData":"synthetic-ctos"}
+2026-10-15 10:00:00.200 RESPONSE SUCCESS1 >>>>>>> VerifyCTOSCredit >>>>>> {"responseId":"ctos-1","responseCode":0}
+2026-10-15 10:00:00.210 CONTENT DATA >> getPrepaidDeviceListPartNumber >> {"requestId":"device-1","deviceType":"sample"}
+2026-10-15 10:00:00.220 REQUEST >>>>>>> getDevicePartNos >>>>>> {"contentData":"synthetic-device"}
+2026-10-15 10:00:00.230 RESPONSE SUCCESS1 >>>>>>> getDevicePartNos >>>>>> {"responseId":"device-1","responseCode":0}
+2026-10-15 10:00:00.240 Postpaid Registration >>>>>>>>>> {"requestId":"postpaid-1","plan":"sample"}
+2026-10-15 10:00:00.250 REQUEST >>>>>>> https://iot-openapi.example.test/yesshop/mobile/ws/v1/json/ProcessPostpaidAccountConversion >>>>>> {"contentData":"synthetic-postpaid"}
+2026-10-15 10:00:00.260 RESPONSE SUCCESS1 >>>>>>> https://iot-openapi.example.test/yesshop/mobile/ws/v1/json/ProcessPostpaidAccountConversion >>>>>> {"responseId":"postpaid-1","responseCode":0}
+2026-10-15 10:00:00.270 RESPONSE ERROR1 >>>>>>> https://iot-openapi.example.test/yesshop/mobile/ws/v1/json/VerifyDevicesAndReserveMsisdn >>>>>> "retrofit2.HttpException: HTTP 400 "
+2026-10-15 10:00:00.280 CONTENT DATA >> UnknownDiagnostic >> {"searchOnly":"standalone-needle"}

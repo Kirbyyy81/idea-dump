@@ -36,7 +36,7 @@ function hasFailurePayload(value: unknown, isResponseStatus = false): boolean {
   return Object.entries(record).some(([key, item]) => hasFailurePayload(item, key === 'responseStatus'));
 }
 
-function eventHasError(event: LogEvent): boolean {
+export function eventHasError(event: LogEvent): boolean {
   if (event.lineType === 'crash' || event.lineType === 'error') return true;
   const t = event.eventType.toUpperCase();
   if (t.includes('ERROR')) return true;
@@ -89,7 +89,8 @@ export function buildTransactions(events: LogEvent[], options: BuildTransactions
     closeTimedOut(event.timestampMs);
     if (event.lineType === 'content_data') continue;
     if (event.lineType === 'other') {
-      unparsedLines.push({ rawLine: event.rawLine, lineNumber: event.lineNumber, reason: 'Unrecognized line type' });
+      unparsedLines.push({ rawLine: event.rawLine, lineNumber: event.lineNumber, endLineNumber: event.endLineNumber,
+        lineType: event.lineType, source: event.source, sourceSegment: event.sourceSegment, reason: 'Unrecognized line type' });
       continue;
     }
     if (['crash', 'error', 'info'].includes(event.lineType)) {
@@ -99,7 +100,8 @@ export function buildTransactions(events: LogEvent[], options: BuildTransactions
     const key = keys.get(event);
     if (event.lineType === 'request') {
       if (!key && !eventIds(event).length) {
-        unparsedLines.push({ rawLine: event.rawLine, lineNumber: event.lineNumber,
+        unparsedLines.push({ rawLine: event.rawLine, lineNumber: event.lineNumber, endLineNumber: event.endLineNumber,
+          lineType: event.lineType, source: event.source, sourceSegment: event.sourceSegment,
           reason: 'Missing URL, endpoint name, or correlation id' });
         continue;
       }

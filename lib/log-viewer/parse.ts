@@ -12,10 +12,10 @@ const HTTP_METHODS = new Set([
   'OPTIONS',
 ]);
 
-const TIMESTAMP_PATTERN = /^(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\.\d{3})\s+([\s\S]+)$/;
+const TIMESTAMP_PATTERN = /^[ \t]*(\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}[.,]\d{3})[ \t]+([\s\S]+)$/;
 
 function tryParseTimestampMs(timestamp: string): number | undefined {
-  const isoish = timestamp.replace(' ', 'T');
+  const isoish = timestamp.replace(' ', 'T').replace(',', '.');
   const parsed = Date.parse(isoish);
   return Number.isFinite(parsed) ? parsed : undefined;
 }
@@ -33,7 +33,7 @@ function markerText(text: string): string {
 }
 
 function classifyLine(rest: string, hasTimestamp: boolean): LogLineType {
-  const marker = markerText(rest).split(/\s+>{2,}/)[0]
+  const marker = markerText(rest).split(/>{2,}/)[0]
     .replace(/\s+(?:URL:\s*)?https?:\/\/[\s\S]*$/i, '').trim().toUpperCase();
 
   if (/^CONTENT\s+DATA\b/.test(marker)) return 'content_data';
@@ -48,7 +48,7 @@ function classifyLine(rest: string, hasTimestamp: boolean): LogLineType {
     return 'request';
   }
   if (/\bCRASH\b/.test(marker)) return 'crash';
-  if (/^ERROR\b/.test(marker) || /\bEXCEPTION\b/.test(marker)) return 'error';
+  if (/^(?:ERROR\b|AUTH_FAILURE\b)/.test(marker) || /\bEXCEPTION\b/.test(marker)) return 'error';
   return hasTimestamp ? 'info' : 'other';
 }
 
@@ -104,6 +104,8 @@ function parseBody(bodyText: string | undefined): {
   raw?: string;
   json?: unknown;
   parseError?: boolean;
+  prefix?: string;
+  suffix?: string;
 } {
   if (!bodyText) return { kind: 'none' };
   const trimmed = bodyText.trim();
@@ -114,15 +116,18 @@ function parseBody(bodyText: string | undefined): {
   } catch { /* Some loggers append metadata after the JSON body. */ }
   const jsonCandidate = extractJsonCandidate(trimmed);
   if (!jsonCandidate) {
-    if (/^[\[{]/.test(trimmed)) return { kind: 'text', raw: trimmed, parseError: true };
+    if (firstJsonIndex(trimmed) >= 0) return { kind: 'text', raw: trimmed, parseError: true };
     return { kind: 'text', raw: trimmed };
   }
 
   try {
     const parsed = JSON.parse(jsonCandidate) as unknown;
-    return { kind: 'json', raw: jsonCandidate, json: parsed };
+    const start = trimmed.indexOf(jsonCandidate);
+    return { kind: 'json', raw: jsonCandidate, json: parsed,
+      prefix: trimmed.slice(0, start).trim() || undefined,
+      suffix: trimmed.slice(start + jsonCandidate.length).trim() || undefined };
   } catch {
-    return { kind: 'text', raw: jsonCandidate, parseError: true };
+    return { kind: 'text', raw: trimmed, parseError: true };
   }
 }
 
@@ -166,9 +171,10 @@ function extractCrashContext(rest: string): string | undefined {
 function extractInfoEventType(rest: string): string {
   if (/^NEW\s+AUTH\s+TOKEN\s+REQUESTED/i.test(rest)) return 'Auth Token Requested';
   if (/^NEW\s+AUTH\s+TOKEN\s+GENERATED/i.test(rest)) return 'Auth Token Generated';
+  if (/^NEW\s+REFRESH\s+TOKEN\s+GENERATED/i.test(rest)) return 'Refresh Token Generated';
   if (/^APP\s+VERSION\s+CODE:/i.test(rest)) return 'App Version';
   if (/^EKYC_CAPTURE\b/i.test(rest)) return 'EKYC Capture';
-  return markerText(rest).split(/\s+>{2,}|\s+-\s+/)[0]?.trim() || 'Info';
+  return markerText(rest).split(/>{2,}|\s+-\s+/)[0]?.trim() || 'Info';
 }
 
 function extractMethod(rest: string, parts: string[], eventType: string): string | undefined {
@@ -185,6 +191,8 @@ function extractMethod(rest: string, parts: string[], eventType: string): string
 }
 
 function extractHttpStatus(rest: string, parts: string[]): number | undefined {
+  const errorCode = rest.match(/\bError Code\s*-\s*([1-5]\d{2})\b/i);
+  if (errorCode) return Number(errorCode[1]);
   for (const part of parts) {
     const statusMatch = part.match(/\((\d{3})\)/);
     if (statusMatch) return Number(statusMatch[1]);
@@ -238,10 +246,11 @@ export function parseLogLine(
   const rest = tsMatch?.[2] ?? line;
   const timestampMs = timestamp ? tryParseTimestampMs(timestamp) : undefined;
   const tableDump = parseTableDump(rest);
-  const lineType = tableDump ? 'info' : classifyLine(rest, Boolean(timestamp));
+  const lineType = tableDump ? 'info' : inheritedSource === 'yes-shop' && /^Postpaid Registration\s*>{2,}/i.test(rest)
+    ? 'content_data' : classifyLine(rest, Boolean(timestamp));
 
   const parts = rest
-    .split(/\s+>{5,}\s+|\s+>>>\s+/)
+    .split(/\s*>{3,}\s*/)
     .map((p) => p.trim())
     .filter(Boolean);
 
@@ -259,12 +268,15 @@ export function parseLogLine(
   const record = sourceParsers[source](rest, lineType, url);
   const endpointName = urlParts.path?.split('/').filter(Boolean).at(-1) ?? record.endpointName;
   const method = extractMethod(rest, parts, eventType);
-  const body = tableDump ? { kind: 'text' as const, raw: rest, json: undefined, parseError: undefined }
+  const body = tableDump ? { kind: 'text' as const, raw: rest, json: undefined, parseError: undefined, prefix: undefined, suffix: undefined }
     : parseBody(record.bodyText);
   const header = record.bodyText ? rest.slice(0, rest.lastIndexOf(record.bodyText)) : rest;
-  const requestId = findStringField(body.json, 'requestId');
-  const responseId = findStringField(body.json, 'responseId');
-  const clientRequestId = findStringField(body.json, 'clientRequestId');
+  const requestId = findStringField(body.json, 'requestId') ?? findStringField(body.json, 'request_id');
+  const responseId = findStringField(body.json, 'responseId') ?? findStringField(body.json, 'response_id');
+  const clientRequestId = findStringField(body.json, 'clientRequestId') ?? findStringField(body.json, 'client_request_id');
+  const exceptionText = typeof body.json === 'string' ? body.json : body.kind === 'text' ? body.raw : undefined;
+  const exception = lineType === 'response' ? exceptionText?.match(/^retrofit2\.HttpException:\s*HTTP\s+([1-5]\d{2})\b/) : undefined;
+  const prefixStatus = (body.prefix ?? body.raw)?.match(/^Error Code\s*-\s*([1-5]\d{2})\b/i);
   const functionName = lineType === 'content_data'
     ? record.functionName
     : lineType === 'crash'
@@ -293,16 +305,19 @@ export function parseLogLine(
           : urlParts.endpointKey ?? endpointName,
     host: urlParts.host,
     path: urlParts.path,
-    httpStatus: record.httpStatus ?? extractHttpStatus(header, header.split(/\s+>{2,}\s*/)),
+    httpStatus: record.httpStatus ?? extractHttpStatus(header, header.split(/>{2,}\s*/))
+      ?? (prefixStatus ? Number(prefixStatus[1]) : undefined) ?? (exception ? Number(exception[1]) : undefined),
     functionName,
     requestId,
     responseId,
     clientRequestId,
-    durationMs: extractDurationMs(rest),
+    durationMs: extractDurationMs(header),
     bodyKind: body.kind,
     bodyRaw: body.raw,
     bodyJson: body.json,
     bodyParseError: body.parseError,
+    bodyPrefix: [record.bodyPrefix, body.prefix].filter(Boolean).join('\n') || undefined,
+    bodySuffix: body.suffix,
     tableDump,
   };
 }

@@ -1282,6 +1282,7 @@ export type LogViewerSource = 'yes-shop' | 'ussp' | 'unknown';
 
 export type LogViewerRecord = {
   bodyText?: string;
+  bodyPrefix?: string;
   endpointName?: string;
   functionName?: string;
   httpStatus?: number;
@@ -1327,6 +1328,8 @@ export type LogEvent = {
   bodyRaw?: string;
   bodyJson?: unknown;
   bodyParseError?: boolean;
+  bodyPrefix?: string;
+  bodySuffix?: string;
   tableDump?: LogTableDump;
 };
 
@@ -1358,6 +1361,10 @@ export type Transaction = {
 export type UnparsedLogLine = {
   rawLine: string;
   lineNumber: number;
+  endLineNumber?: number;
+  lineType?: LogLineType;
+  source?: LogViewerSource;
+  sourceSegment?: number;
   reason?: string;
 };
 

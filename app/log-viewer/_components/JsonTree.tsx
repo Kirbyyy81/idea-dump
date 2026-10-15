@@ -69,6 +69,10 @@ export function JsonOrText({ title, event }: { title: string; event: LogEvent })
       <div id={bodyId} hidden={!open} className="min-w-0">
         {open && (
           <>
+            {(event.bodyPrefix || event.bodySuffix) && <div className="space-y-1 px-3 pb-2 text-xs text-text-secondary" aria-label="Surrounding payload text">
+              {event.bodyPrefix && <pre className="whitespace-pre-wrap break-all font-mono">{event.bodyPrefix}</pre>}
+              {event.bodySuffix && <pre className="whitespace-pre-wrap break-all font-mono">{event.bodySuffix}</pre>}
+            </div>}
             {event.bodyKind === 'json' ? <FormattedJson value={event.bodyJson} /> : (
               <div className="custom-scrollbar min-w-0 space-y-2 overflow-x-auto px-3 pb-3">
                 {event.bodyParseError && (
