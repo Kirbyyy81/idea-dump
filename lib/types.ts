@@ -1368,6 +1368,18 @@ export type UnparsedLogLine = {
   reason?: string;
 };
 
+export type LogViewerFilters = {
+  query: string;
+  errorsOnly: boolean;
+  endpoint: string;
+  lineType: string;
+  status: string;
+  source: string;
+  section: 'all' | 'unmatched' | 'unparsed';
+};
+
+export type LogTimelineRow = { kind: 'transaction' | 'auth'; transactions: Transaction[] };
+
 export type BuildTransactionsOptions = {
   inactivityTimeoutMs: number;
   nowMs?: number;

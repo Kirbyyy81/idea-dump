@@ -200,6 +200,33 @@ describe('Log Viewer payload panels', () => {
     if ('bodyParseError' in body) expect(screen.getByText('JSON parse failed; showing extracted raw payload.')).toBeDefined();
   });
 
+  it('shows surrounding payload text without modifying the JSON copy or original record', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
+    const value = { ok: false };
+    const response = { ...event, lineType: 'response' as const, bodyJson: value, bodyPrefix: 'Error Code - 401', bodySuffix: 'retry pending' };
+    render(<JsonOrText title="Response body" event={response} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Response body' }));
+    expect(screen.getByLabelText('Surrounding payload text').textContent).toContain('Error Code - 401');
+    expect(screen.getByLabelText('Surrounding payload text').textContent).toContain('retry pending');
+    fireEvent.click(screen.getByRole('button', { name: 'Copy response JSON' }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(JSON.stringify(value, null, 2)));
+    fireEvent.click(screen.getByRole('button', { name: 'Raw response line' }));
+    expect((screen.getByRole('textbox') as HTMLTextAreaElement).value).toBe(event.rawLine);
+  });
+
+  it('prominently displays multiple associated responses and parse warnings without deduplicating them', () => {
+    const responses = [400, 400, 500].map((httpStatus, index) => ({ ...event, id: 'res-' + index,
+      lineType: 'response' as const, lineNumber: index + 2, httpStatus, bodyParseError: index === 2 }));
+    const { container } = render(<TransactionRow tx={{ id: 'multi', request: event, responses, lineRefs: [1, 2, 3, 4],
+      orphanKind: null, confidence: 'high', hadConcurrency: false }} expanded onToggle={() => {}} />);
+    expect(screen.getAllByText('3 responses').length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('region', { name: 'Response body' })).toHaveLength(3);
+    expect(container.textContent).toContain('JSON parse warning');
+    expect(container.textContent).toContain('400');
+    expect(container.textContent).toContain('500');
+  });
+
   it('shows content and response together with an honest missing-request status', () => {
     const parsed = parseLogText([
       '2026-09-24 10:00:00.000 CONTENT DATA >> getEkycUploadVideoContentData >> {}',

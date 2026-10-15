@@ -1,6 +1,9 @@
 'use client';
 
 import { LogEvent } from '@/lib/log-viewer/types';
+import { RawLineLink } from './RawLineLink';
+import { sourceLabels } from '@/lib/log-viewer/presentation';
+import { Badge } from '@/components/atoms/Badge';
 
 export function EventHeader({ event }: { event: LogEvent }) {
   return (
@@ -12,6 +15,8 @@ export function EventHeader({ event }: { event: LogEvent }) {
       <span className="px-2 py-0.5 rounded border border-border-subtle bg-bg-base text-text-secondary">
         {event.lineType}
       </span>
+      <Badge variant="default">{sourceLabels[event.source ?? 'unknown']}</Badge>
+      {event.bodyParseError && <Badge variant="default" className="border-warning text-warning">JSON parse warning</Badge>}
       {event.httpStatus != null && (
         <span className="font-mono text-text-secondary">({event.httpStatus})</span>
       )}
@@ -37,9 +42,7 @@ export function EventHeader({ event }: { event: LogEvent }) {
         <span className="min-w-0 max-w-full break-all sm:max-w-[520px]">{event.url}</span>
       )}
       <span className="ml-auto shrink-0 font-mono">
-        L{event.endLineNumber && event.endLineNumber !== event.lineNumber
-          ? `${event.lineNumber}-${event.endLineNumber}`
-          : event.lineNumber}
+        <RawLineLink start={event.lineNumber} end={event.endLineNumber} />
       </span>
     </div>
   );
