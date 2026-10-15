@@ -2,6 +2,10 @@
 
 The 2026-10-06 dependency fix retains both full and production-only npm audits in CI. No vulnerability is ignored and no severity threshold is relaxed.
 
+The 2026-10-15 security update pins Next.js and `eslint-config-next` to 15.5.27 for GHSA-4jqv-mc3x-m676 and GHSA-mcj8-r9mp-w47p. Both the Web Next.js override and Finance OCR dependency pin Sharp to 0.35.5 for GHSA-wq5f-xc86-pv6w. Each application's lockfile records its patched dependencies. These patch updates retain Next.js 15 and Node.js 22.22.0; both dependency audits remain required in CI.
+
+Validation on 2026-10-15: clean installs and full/production-only audits passed with zero findings in both applications. Web lint, types, 800 tests, the Inventory database suite, 34 desktop/mobile Log Viewer and barcode checks, and the production build passed. Finance OCR types, 402 tests, and its production build passed; 171 optional parity tests were skipped.
+
 | Dependency | Override | Scope |
 | --- | --- | --- |
 | source-map-js | 1.2.2 | Web and Finance OCR |
