@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.18.2](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.18.1...idea-dump-v0.18.2) (2026-10-15)
+
+
+### Bug Fixes
+
+* delete individual recent barcodes ([fbbba85](https://github.com/Kirbyyy81/idea-dump/commit/fbbba859cf5afb86e18659c40a1b80fc15e87766))
+* improve log inspection controls ([8c920ad](https://github.com/Kirbyyy81/idea-dump/commit/8c920ada2de23b8d7a5a11def92c5e4ad8aa098b))
+* patch vulnerable dependencies ([8ee5da9](https://github.com/Kirbyyy81/idea-dump/commit/8ee5da96b18e5f61b5534bcec51d853c08fe79cc))
+* preserve log payload details ([405a309](https://github.com/Kirbyyy81/idea-dump/commit/405a30988a00cd7021162e25cbdce92e6ff9daf4))
+
 ## [0.18.1](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.18.0...idea-dump-v0.18.1) (2026-10-14)
 
 
