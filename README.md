@@ -1,6 +1,6 @@
 # IdeaDump
 
-IdeaDump is a Next.js app for keeping projects, writing weekly work logs, managing API keys, and handling lightweight role-based access in one place. It is built around a private workspace feel: sign in, open the modules you have access to, and manage work from a single dashboard.
+IdeaDump is a private workspace for projects, weekly work logs, tickets, personal finance, inventory, film photography, and developer tools. It runs on Next.js 15 and React 19, with Supabase authentication and role-based module access. Sign in to open the modules available to your account from one dashboard.
 
 ## What The Project Includes
 
@@ -11,9 +11,13 @@ IdeaDump is a Next.js app for keeping projects, writing weekly work logs, managi
 - Small article-creation helper tools for content support tasks
 - Ticketing system for tracking project-related tasks and issues
 - Film journal for analog photography tracking (cameras, rolls, canister themes)
-- Finance tracking with screenshot OCR, review, rules, sources, categories, and transactions
+- Finance tracking with budgets, screenshot OCR, review, rules, sources, categories, and transactions
+- Personal inventory with receiving, consumption history, and purchase-price comparisons
 - Android PWA share target for background Finance screenshot processing
-- Interactive log viewer for system and productivity logs
+- Browser-local Yes Shop and USSP log parsing, request/response pairing, and JSON inspection
+- Code 128 barcode generation for case-sensitive alphanumeric identifiers
+- Read-only access to the private Notion Document Hub
+- Native Android companion for Finance notification capture and Android Auto lyrics
 - Supabase authentication with login, signup, callback, and password reset
 - In-app API reference under Settings
 
@@ -46,13 +50,13 @@ The current app is organized around these modules:
   Analog film photography tracker to manage cameras, log rolls, and visualize film canisters with custom themes.
 
 - `Finance`
-  Transaction tracking with manual entry, screenshot OCR, review, duplicate detection, automatic rules, categories, sources, and background share batches.
+  MYR transaction tracking with manual entry, screenshot OCR, review, duplicate detection, automatic rules, categories, sources, recurring budgets, and background share batches. See [Finance behavior and rollout](document/FINANCE_MODULE.md).
 
 - `Inventory`
   Personal essentials catalogue, receiving cart, unopened shelf quantities, consumption history, price comparisons, and optional Finance expense links. See [Inventory setup and calculations](document/INVENTORY_MODULE.md).
 
 - `Log Viewer`  
-  Interactive viewer for logs and productivity entries.
+  Parse Yes Shop, USSP, and generic logs locally, inspect correlated requests and responses, and explore structured payloads. The parent navigation item opens the viewer; Barcode Generator is its only submenu. See [Log Viewer](#log-viewer).
 
 - `Documentation`: Read and search the current private Notion Document Hub. Notion projects are optional read-only labels and are independent of app projects. See [Notion viewer setup](document/NOTION_VIEWER_SETUP.md).
 
@@ -63,8 +67,12 @@ The current app is organized around these modules:
 
 ### 1. Install dependencies
 
+Use Node.js **22.22.0**, pinned in `.nvmrc`, for both the web app and Finance OCR service. With `nvm` installed:
+
 ```bash
-npm install
+nvm install
+nvm use
+npm ci
 ```
 
 ### 2. Create local environment variables
@@ -143,6 +151,47 @@ If `npm` is easier to run through Git Bash on your machine, the repo includes a 
 
 Changes spanning multiple components run each affected job. Unaffected jobs remain visible as skipped and do not produce build artifacts. Manual `workflow_dispatch` runs skip change detection and validate all three projects. If change detection fails, all three validation jobs run conservatively. The job names and their existing audit, test, build, and APK upload steps stay the same. The workflow uses a commit-pinned [paths-filter action](https://github.com/dorny/paths-filter) to handle pull requests, new branches, deletions, and renames.
 
+## Local validation
+
+Run the web application checks from the repository root:
+
+```bash
+npm audit
+npm audit --omit=dev
+npm run lint
+npx tsc --noEmit
+npm test
+npm run build
+```
+
+`npm test` checks the generated service worker, runs the application unit and component tests, and runs the isolated Inventory database suite through PGlite. The production build also regenerates the service worker.
+
+For Log Viewer and Barcode Generator changes, run the focused tests and desktop/mobile browser suites:
+
+```bash
+npm run test:log-viewer
+npx playwright install chromium
+npx playwright test tests/browser/log-viewer.spec.ts tests/browser/log-viewer-diagnostics.spec.ts tests/browser/barcode-generator.spec.ts
+```
+
+The browser tests use a local fixture server with synthetic data. They are separate from the GitHub Actions web job. Feature-specific validation and setup are documented in [Log Viewer](document/LOG_VIEWER.md), [Finance](document/FINANCE_MODULE.md), and [Inventory](document/INVENTORY_MODULE.md).
+
+Validate OCR service changes from `services/finance-ocr/` with `npm ci`, both dependency audits, `npm run typecheck`, `npm test`, and `npm run build`. Android build and device checks are documented in [android/README.md](android/README.md).
+
+## Log Viewer
+
+Open `/log-viewer` to paste or upload logs. Parsing happens in the browser; log contents and parsing dictionaries are not uploaded or stored on a server.
+
+- Detect Yes Shop and USSP records, retain unknown records, and pair requests, responses, and content using IDs and source-specific rules. Ambiguous content stays available for inspection.
+- Inspect formatted, foldable JSON and open embedded JSON strings with **Show JSON**. Copy complete payloads or reveal the original raw records, including text surrounding extracted JSON.
+- Search the timeline and standalone records, filter by source, endpoint, line type, and status, or use the error, orphan, unmatched, and unparsed summary filters.
+- Review HTTP codes, timestamps, hosts, parse warnings, multiple associated responses, and grouped table dumps. Optional auth grouping and recorded session context help inspect authentication sequences.
+- Jump from a line reference to its exact range in the original input. Uploads above 10 MiB are rejected; pastes and uploads above 250,000 characters require **Parse log**.
+
+The only submenu, `/log-viewer/barcode-generator`, generates Code 128 barcodes locally after a short typing pause. It accepts ASCII letters and numbers, preserving case and leading zeros. Recent barcodes retains seven distinct successful values in user-scoped session storage, with separate recall and delete buttons. Deleting the displayed or pending value also clears its input and preview. Wide barcodes scroll without compression.
+
+See [Log Viewer behavior, source rules, and validation](document/LOG_VIEWER.md) for pairing limits, session history behavior, and scanner acceptance requirements.
+
 ## Finance Share Target
 
 The share target is supported by the installed Android PWA. On iPhone and iPad, use the Finance screenshot upload because the current project does not include a native iOS Share Extension.
@@ -195,10 +244,16 @@ The application build regenerates the worker before Next.js compilation. The roo
 - `/finance`
 - `/finance/add`
 - `/finance/transactions`
+- `/finance/transactions/edit`
 - `/finance/review`
-- `/finance/sources`
-- `/finance/categories`
-- `/finance/rules`
+- `/finance/budgets`
+- `/finance/settings` manages sources, categories, rules, and companion devices
+- `/inventory`
+- `/inventory/purchases`
+- `/inventory/usage`
+- `/documentation`
+- `/documentation/[pageId]`
+- `/companion/pair`
 - `/settings`
 - `/settings/access`
 - `/settings/docs`
@@ -222,6 +277,9 @@ The application build regenerates the worker before Next.js compilation. The roo
 - `/api/tickets`
 - `/api/film/*`
 - `/api/finance/*`
+- `/api/inventory/*` and `/api/inventory`
+- `/api/documentation/*` and `/api/documentation`
+- `/api/companion/*`
 
 ## Project Structure
 
@@ -232,7 +290,13 @@ The application build regenerates the worker before Next.js compilation. The roo
   Reusable UI pieces organized into atoms, molecules, and organisms.
 
 - `lib/`  
-  Shared types, auth helpers, RBAC logic, Supabase clients, logging helpers, utility functions, and article-creation utilities.
+  Shared types, auth helpers, RBAC logic, Supabase clients, and domain logic for Finance, Inventory, Log Viewer, and other modules.
+
+- `tests/`
+  Unit and component tests, browser fixtures, and isolated database test support.
+
+- `shared/`
+  Utilities shared across application and service code.
 
 - `document/`
   Product docs and design notes. Start new product requirements with [`document/prd/PRD_TEMPLATE.md`](document/prd/PRD_TEMPLATE.md).
@@ -246,16 +310,26 @@ The application build regenerates the worker before Next.js compilation. The roo
 - `services/finance-ocr/`
   Render service for direct Finance OCR and durable share-batch processing.
 
+- `service-worker/`
+  Typed PWA worker source used to generate `public/sw.js`.
+
+- `android/`
+  Native Finance notification and Android Auto lyrics companion.
+
 - `supabase/`
   Supabase configuration, adopted schema baseline, supporting snapshot, and canonical forward migrations.
 
 ## Stack
 
-- Next.js 14
-- React 18
-- TypeScript
-- Tailwind CSS
+- Next.js 15 App Router
+- React 19
+- TypeScript with strict checking
+- Tailwind CSS 3
 - Supabase Auth and database
+- Fastify, Tesseract.js, and Sharp for the Finance OCR service on Render
+- JsBarcode for browser-local Code 128 generation
+- Vitest, Testing Library, Playwright, and PGlite for validation
+- Kotlin, Jetpack Compose, Room, WorkManager, and Media3 for the Android companion
 - React Markdown
 - Swagger UI loaded in Settings API Docs
 
