@@ -7,6 +7,8 @@ import { transactionHasError } from '@/lib/log-viewer/transactions';
 import { EventHeader } from './EventHeader';
 import { JsonOrText } from './JsonTree';
 import { TableDumpRow } from './TableDumpRow';
+import { sourceLabels, transactionEvents } from '@/lib/log-viewer/presentation';
+import { RawLineLink } from './RawLineLink';
 import { AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react';
 
 function formatMsDuration(ms: number): string {
@@ -37,7 +39,10 @@ export function TransactionRow({
   if (tx.tableBatch) return <TableDumpRow tx={tx} expanded={expanded} onToggle={onToggle} />;
   const lastResponse = tx.responses[tx.responses.length - 1];
   const standaloneEvent = getStandaloneTimelineEvent(tx);
-  const status = lastResponse?.httpStatus;
+  const events = transactionEvents(tx);
+  const anchor = tx.request ?? tx.responses[0];
+  const statuses = [...new Set(tx.responses.map(event => event.httpStatus).filter((status): status is number => status != null))];
+  const status = statuses.find(status => status >= 400) ?? lastResponse?.httpStatus;
   const isError = transactionHasError(tx);
   const statusText =
     tx.orphanKind === 'request'
@@ -89,10 +94,17 @@ export function TransactionRow({
           )}
         </div>
         <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-text-muted">
+          {statuses.filter(code => statusText !== String(code)).map(code => <Badge key={code} variant="default"
+            className={cn(code >= 400 && 'border-error text-error')}>{code}</Badge>)}
+          {tx.responses.length > 1 && <Badge variant="default">{tx.responses.length} responses</Badge>}
+          <span className="font-mono">{anchor?.timestamp}</span>
+          <Badge variant="default">{sourceLabels[anchor?.source ?? 'unknown']}</Badge>
+          {tx.host && <span className="break-all">{tx.host}</span>}
+          {events.some(event => event.bodyParseError) && <Badge variant="default" className="border-warning text-warning">JSON parse warning</Badge>}
           <span>
             {standaloneEvent
               ? `${standaloneEvent.lineType} event`
-              : `${tx.responses.length} resp`}
+              : `${tx.responses.length} response${tx.responses.length === 1 ? '' : 's'}`}
           </span>
           {lastResponse?.durationMs != null && <span>- {formatMsDuration(lastResponse.durationMs)}</span>}
           {durationMs != null && <span>- {formatMsDuration(durationMs)}</span>}
@@ -109,6 +121,8 @@ export function TransactionRow({
           )}
         </div>
       </button>
+
+      <div className="px-2"><RawLineLink start={tx.lineRefs[0]} end={tx.lineRefs.at(-1)} /></div>
 
       {expanded && <TransactionDetails tx={tx} />}
     </div>

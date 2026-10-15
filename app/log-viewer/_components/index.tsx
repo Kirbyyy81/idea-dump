@@ -5,148 +5,93 @@ import { flushSync } from 'react-dom';
 import { Button } from '@/components/atoms/Button';
 import { NextDoodleIcon } from '@/components/atoms/DoodleIcons';
 import { Card } from '@/components/atoms/Card';
-import { Input } from '@/components/atoms/Input';
-import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
-import { Toggle } from '@/components/atoms/Toggle';
 import { parseLogText } from '@/lib/log-viewer/parse';
-import { buildTransactions, transactionHasError } from '@/lib/log-viewer/transactions';
-import { LogEvent, LogLineType, Transaction, UnparsedLogLine } from '@/lib/log-viewer/types';
-import { FileText, ChevronDown, ChevronRight, Search, Upload, X } from 'lucide-react';
-import { TransactionRow } from './TransactionDisplay';
+import { buildTransactions, eventHasError, transactionHasError } from '@/lib/log-viewer/transactions';
+import { eventMatches, groupUnparsedLines, timelineRows, transactionMatches, unparsedMatches } from '@/lib/log-viewer/presentation';
+import type { LogEvent, LogViewerFilters, Transaction, UnparsedLogLine } from '@/lib/types';
+import { FileText, ChevronDown, ChevronRight, Upload } from 'lucide-react';
 import { StandaloneLines } from './StandaloneLines';
+import { LogFilters } from './LogFilters';
+import { LogTimeline } from './LogTimeline';
+import { RawLineProvider } from './RawLineLink';
+import { cn } from '@/lib/utils';
 
-const LARGE_PASTE_PARSE_THRESHOLD = 250000;
-
-function transactionIncludesLineType(tx: Transaction, lineType: LogLineType): boolean {
-  if (tx.request?.lineType === lineType) return true;
-  if (tx.contentData?.lineType === lineType) return true;
-  return tx.responses.some((event) => event.lineType === lineType);
-}
+const AUTO_PARSE_THRESHOLD = 250000;
+const MAX_FILE_BYTES = 10 * 1024 * 1024;
+const INITIAL_FILTERS: LogViewerFilters = { query: '', errorsOnly: false, endpoint: '', lineType: '', status: '', source: '', section: 'all' };
 
 export function LogViewer() {
   const rawInputRef = useRef<HTMLTextAreaElement>(null);
-  const [fileName, setFileName] = useState<string>('');
-  const [rawText, setRawText] = useState<string>('');
-  const [lastParsedRawText, setLastParsedRawText] = useState<string>('');
+  const fileReadId = useRef(0);
+  const [fileName, setFileName] = useState('');
+  const [rawText, setRawText] = useState('');
+  const [lastParsedRawText, setLastParsedRawText] = useState('');
   const [events, setEvents] = useState<LogEvent[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [unparsedLines, setUnparsedLines] = useState<UnparsedLogLine[]>([]);
   const [unmatchedContentData, setUnmatchedContentData] = useState<LogEvent[]>([]);
   const [selectedTxId, setSelectedTxId] = useState<string | null>(null);
-  const [isImportOpen, setIsImportOpen] = useState<boolean>(true);
+  const [isImportOpen, setIsImportOpen] = useState(true);
   const [isAutoParsing, setIsAutoParsing] = useState(false);
-  const [autoParseSource, setAutoParseSource] = useState<string>('Pasted log');
+  const [importError, setImportError] = useState('');
+  const [lineAnnouncement, setLineAnnouncement] = useState('');
+  const [filters, setFilters] = useState(INITIAL_FILTERS);
+  const [groupAuth, setGroupAuth] = useState(false);
 
-  const [query, setQuery] = useState<string>('');
-  const [errorsOnly, setErrorsOnly] = useState<boolean>(false);
-  const [endpointFilter, setEndpointFilter] = useState<string>('');
-  const [lineTypeFilter, setLineTypeFilter] = useState<string>('');
-  const [statusFilter, setStatusFilter] = useState<string>('');
+  const filteredTransactions = useMemo(() => transactions.filter(tx => transactionMatches(tx, filters)), [transactions, filters]);
+  const filteredContent = useMemo(() => filters.section === 'unparsed' ? []
+    : unmatchedContentData.filter(event => eventMatches(event, filters)), [unmatchedContentData, filters]);
+  const filteredUnparsed = useMemo(() => groupUnparsedLines(unparsedLines).filter(line => unparsedMatches(line, filters)), [unparsedLines, filters]);
+  const rows = useMemo(() => timelineRows(transactions, new Set(filteredTransactions.map(tx => tx.id)), groupAuth, events), [transactions, filteredTransactions, groupAuth, events]);
+  const endpointOptions = useMemo(() => [...new Set([
+    ...transactions.map(tx => tx.endpointKey ?? tx.url),
+    ...unmatchedContentData.map(event => event.endpointKey ?? event.functionName ?? event.url),
+  ].filter((value): value is string => Boolean(value)))].sort((a, b) => a.localeCompare(b)), [transactions, unmatchedContentData]);
 
-  const indexed = useMemo(() => {
-    return transactions.map((tx) => {
-      const searchParts: string[] = [];
-      if (tx.endpointKey) searchParts.push(tx.endpointKey);
-      if (tx.url) searchParts.push(tx.url);
-      if (tx.contentData?.bodyRaw) searchParts.push(tx.contentData.bodyRaw);
-      if (tx.contentData?.rawLine) searchParts.push(tx.contentData.rawLine);
-      if (tx.request?.bodyRaw) searchParts.push(tx.request.bodyRaw);
-      if (tx.request?.rawLine) searchParts.push(tx.request.rawLine);
-      for (const response of tx.responses) {
-        if (response.bodyRaw) searchParts.push(response.bodyRaw);
-        if (response.rawLine) searchParts.push(response.rawLine);
-      }
-      return { tx, searchText: searchParts.join('\n').toLowerCase() };
-    });
-  }, [transactions]);
+  const hasParsedOutput = transactions.length > 0 || unparsedLines.length > 0 || unmatchedContentData.length > 0;
+  const isLargeLog = rawText.length > AUTO_PARSE_THRESHOLD;
+  const isManualParsePending = isLargeLog && rawText !== lastParsedRawText;
+  const summary = [
+    { label: 'Events', value: events.length },
+    { label: 'Transactions', value: transactions.length },
+    { label: 'Errors', value: transactions.filter(transactionHasError).length + unmatchedContentData.filter(eventHasError).length, status: 'errors' },
+    { label: 'Orphans', value: transactions.filter(tx => tx.orphanKind).length, status: 'orphans' },
+    { label: 'Unmatched content', value: unmatchedContentData.length, section: 'unmatched' as const },
+    { label: 'Unparsed', value: unparsedLines.reduce((count, line) => count + (line.endLineNumber ?? line.lineNumber) - line.lineNumber + 1, 0), section: 'unparsed' as const },
+  ];
 
-  const filteredTransactions = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return indexed
-      .filter(({ tx, searchText }) => {
-        if (errorsOnly && !transactionHasError(tx)) return false;
-        if (lineTypeFilter && !transactionIncludesLineType(tx, lineTypeFilter as LogLineType)) return false;
-        if (statusFilter === 'errors' && !transactionHasError(tx)) return false;
-        if (statusFilter === 'ok' && transactionHasError(tx)) return false;
-        if (statusFilter === 'orphans' && !tx.orphanKind) return false;
-        if (statusFilter === 'missing-response' && tx.orphanKind !== 'request') return false;
-        if (statusFilter === 'orphan-response' && tx.orphanKind !== 'response') return false;
-        if (endpointFilter && (tx.endpointKey ?? tx.url ?? '') !== endpointFilter) return false;
-        if (!q) return true;
-        return searchText.includes(q);
-      })
-      .map(({ tx }) => tx);
-  }, [indexed, query, errorsOnly, endpointFilter, lineTypeFilter, statusFilter]);
-
-  const endpointOptions = useMemo(() => {
-    return Array.from(
-      new Set(
-        transactions
-          .map((tx) => tx.endpointKey ?? tx.url)
-          .filter((value): value is string => Boolean(value)),
-      ),
-    ).sort((a, b) => a.localeCompare(b));
-  }, [transactions]);
-
-  const hasParsedOutput =
-    transactions.length > 0 || unparsedLines.length > 0 || unmatchedContentData.length > 0;
-  const isLargePastedLog = rawText.length > LARGE_PASTE_PARSE_THRESHOLD && !fileName;
-  const isManualParsePending = isLargePastedLog && rawText !== lastParsedRawText;
-  const summary = useMemo(() => {
-    const errorCount = transactions.filter((tx) => transactionHasError(tx)).length;
-    const orphanCount = transactions.filter((tx) => tx.orphanKind).length;
-
-    return [
-      { label: 'Events', value: events.length },
-      { label: 'Transactions', value: transactions.length },
-      { label: 'Errors', value: errorCount },
-      { label: 'Orphans', value: orphanCount },
-      { label: 'Unmatched content', value: unmatchedContentData.length },
-      { label: 'Unparsed', value: unparsedLines.length },
-    ];
-  }, [events.length, transactions, unmatchedContentData.length, unparsedLines.length]);
-
-  const processText = useCallback((text: string, sourceName: string, syncRawText = true) => {
-    if (syncRawText) setRawText(text);
+  const processText = useCallback((text: string) => {
     setLastParsedRawText(text);
-    const parsedEvents = parseLogText(text);
-    setEvents(parsedEvents);
-    const {
-      transactions: txs,
-      unparsedLines: nextUnparsedLines,
-      unmatchedContentData: nextUnmatchedContentData,
-    } = buildTransactions(parsedEvents, {
-      inactivityTimeoutMs: 0,
-    });
-    setTransactions(txs);
-    setUnparsedLines(nextUnparsedLines);
-    setUnmatchedContentData(nextUnmatchedContentData);
-    setSelectedTxId(txs[0]?.id ?? null);
-    setIsImportOpen(txs.length === 0 && nextUnparsedLines.length === 0 && nextUnmatchedContentData.length === 0);
-    setEndpointFilter('');
-    setLineTypeFilter('');
-    setStatusFilter('');
+    const parsed = parseLogText(text);
+    const result = buildTransactions(parsed, { inactivityTimeoutMs: 0 });
+    setEvents(parsed);
+    setTransactions(result.transactions);
+    setUnparsedLines(result.unparsedLines);
+    setUnmatchedContentData(result.unmatchedContentData);
+    setSelectedTxId(result.transactions[0]?.id ?? null);
+    setIsImportOpen(!parsed.length);
+    setFilters(current => ({ ...INITIAL_FILTERS, query: current.query, errorsOnly: current.errorsOnly }));
+    setIsAutoParsing(false);
   }, []);
 
   const clearParsedState = useCallback(() => {
-    setLastParsedRawText('');
-    setEvents([]);
-    setTransactions([]);
-    setUnparsedLines([]);
-    setUnmatchedContentData([]);
-    setSelectedTxId(null);
-    setIsImportOpen(true);
-    setEndpointFilter('');
-    setLineTypeFilter('');
-    setStatusFilter('');
+    setLastParsedRawText(''); setEvents([]); setTransactions([]); setUnparsedLines([]);
+    setUnmatchedContentData([]); setSelectedTxId(null); setIsImportOpen(true); setIsAutoParsing(false);
   }, []);
 
   const handleFile = async (file: File) => {
-    const text = await file.text();
-    setFileName(file.name);
-    setAutoParseSource(file.name);
-    processText(text, file.name);
+    const readId = ++fileReadId.current;
+    setImportError('');
+    if (file.size > MAX_FILE_BYTES) { setImportError('Choose a log file of 10 MB or smaller.'); return; }
+    try {
+      const text = await file.text();
+      if (readId !== fileReadId.current) return;
+      clearParsedState(); setRawText(text); setFileName(file.name);
+      if (text.length <= AUTO_PARSE_THRESHOLD) processText(text);
+    } catch {
+      if (readId === fileReadId.current) setImportError('Could not read this log file. Try again.');
+    }
   };
 
   const returnToImport = () => {
@@ -155,305 +100,126 @@ export function LogViewer() {
     window.scrollTo({ top: 0, behavior: 'instant' });
   };
 
+  const jumpToLine = (start: number, end = start) => {
+    returnToImport();
+    const input = rawInputRef.current;
+    if (!input) return;
+    let offset = 0;
+    for (let line = 1; line < start; line++) {
+      const next = rawText.indexOf('\n', offset);
+      if (next < 0) break;
+      offset = next + 1;
+    }
+    let finish = offset;
+    for (let line = start; line <= end; line++) {
+      const next = rawText.indexOf('\n', finish);
+      if (next < 0) { finish = rawText.length; break; }
+      finish = line === end ? next : next + 1;
+    }
+    input.setSelectionRange(offset, finish);
+    input.scrollTop = Math.max(0, (start - 2) * (parseFloat(getComputedStyle(input).lineHeight) || 18));
+    setLineAnnouncement('Selected raw ' + (start === end ? 'line ' + start : 'lines ' + start + '-' + end) + '.');
+  };
+
+  const navigateToTransaction = (id: string) => {
+    flushSync(() => { setFilters(INITIAL_FILTERS); setGroupAuth(false); setSelectedTxId(id); });
+    const target = document.getElementById('log-' + id);
+    target?.scrollIntoView({ block: 'center' });
+    target?.querySelector('button')?.focus({ preventScroll: true });
+  };
+
   useEffect(() => {
-    const trimmed = rawText.trim();
-
-    if (!trimmed) {
-      clearParsedState();
-      setIsAutoParsing(false);
-      return;
-    }
-
-    if (rawText === lastParsedRawText || isLargePastedLog) {
-      setIsAutoParsing(false);
-      return;
-    }
-
+    if (!rawText.trim()) { clearParsedState(); return; }
+    if (rawText === lastParsedRawText || isLargeLog) { setIsAutoParsing(false); return; }
     setIsAutoParsing(true);
-    const timer = window.setTimeout(() => {
-      processText(rawText, autoParseSource, false);
-      setFileName(autoParseSource);
-      setIsAutoParsing(false);
-    }, 250);
-
+    const timer = window.setTimeout(() => processText(rawText), 250);
     return () => window.clearTimeout(timer);
-  }, [rawText, autoParseSource, clearParsedState, isLargePastedLog, lastParsedRawText, processText]);
+  }, [rawText, lastParsedRawText, isLargeLog, processText, clearParsedState]);
 
-  return (
+  const noMatches = !filteredTransactions.length && !filteredContent.length && !filteredUnparsed.length;
+  return <RawLineProvider onJump={jumpToLine}>
     <div className="w-full min-w-0 max-w-full space-y-6 overflow-x-hidden pb-20">
       <Card className="min-w-0 max-w-full p-0">
-        <button
-          type="button"
-          onClick={() => setIsImportOpen((current) => !current)}
-          className="flex w-full min-w-0 items-center justify-between gap-4 px-6 py-4 text-left"
-          aria-expanded={isImportOpen}
-        >
+        <button type="button" onClick={() => setIsImportOpen(current => !current)}
+          className="flex w-full min-w-0 items-center justify-between gap-4 px-6 py-4 text-left" aria-expanded={isImportOpen}>
           <div className="flex min-w-0 items-center gap-2">
             <FileText size={20} className="shrink-0 text-accent-rose" />
-            <div className="min-w-0">
-              <h2 className="text-lg font-bold font-body text-text-primary">
-                Import Logs
-              </h2>
-              {!isImportOpen && (
-                <p className="truncate text-xs text-text-muted">
-                  {fileName || autoParseSource}
-                  {rawText ? ` - ${rawText.length.toLocaleString()} characters` : ''}
-                </p>
-              )}
+            <div className="min-w-0"><h2 className="text-lg font-bold font-body text-text-primary">Import Logs</h2>
+              {!isImportOpen && <p className="truncate text-xs text-text-muted">{fileName || 'Pasted log'} - {rawText.length.toLocaleString()} characters</p>}
             </div>
           </div>
-          {isImportOpen ? (
-            <ChevronDown size={18} className="shrink-0 text-text-muted" aria-hidden="true" />
-          ) : (
-            <ChevronRight size={18} className="shrink-0 text-text-muted" aria-hidden="true" />
-          )}
+          {isImportOpen ? <ChevronDown size={18} className="shrink-0 text-text-muted" /> : <ChevronRight size={18} className="shrink-0 text-text-muted" />}
         </button>
-
-        {isImportOpen && (
-          <div className="min-w-0 border-t border-border-subtle px-6 pb-6 pt-4">
-            <div className="mb-2 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <label className="text-sm font-medium text-text-primary" htmlFor="log-viewer-raw-input">
-                Paste raw log text
-              </label>
-              <div className="flex min-w-0 flex-wrap items-center gap-2">
-                {fileName && fileName !== 'Pasted log' && (
-                  <span className="max-w-[220px] truncate text-xs text-text-muted">
-                    {fileName}
-                  </span>
-                )}
-                <label
-                  htmlFor="log-viewer-file-input"
-                  className="btn-secondary inline-flex cursor-pointer items-center"
-                >
-                  <Upload size={16} className="mr-2" />
-                  Upload .txt/.log
-                </label>
-                <input
-                  id="log-viewer-file-input"
-                  type="file"
-                  accept=".txt,.log,text/plain"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) void handleFile(file);
-                  }}
-                  className="sr-only"
-                />
-              </div>
+        {isImportOpen && <div className="min-w-0 border-t border-border-subtle px-6 pb-6 pt-4">
+          <div className="mb-2 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <label className="text-sm font-medium text-text-primary" htmlFor="log-viewer-raw-input">Paste raw log text</label>
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              {fileName && <span className="max-w-[220px] truncate text-xs text-text-muted">{fileName}</span>}
+              <label htmlFor="log-viewer-file-input" className="btn-secondary inline-flex cursor-pointer items-center"><Upload size={16} className="mr-2" />Upload .txt/.log</label>
+              <input id="log-viewer-file-input" type="file" accept=".txt,.log,text/plain" className="sr-only" onChange={event => {
+                const file = event.target.files?.[0]; event.target.value = '';
+                if (file) void handleFile(file);
+              }} />
             </div>
-            <Textarea
-              ref={rawInputRef}
-              id="log-viewer-raw-input"
-              className="min-h-[180px] w-full min-w-0 text-xs font-mono"
-              value={rawText}
-              onChange={(e) => {
-                const nextText = e.target.value;
-                setRawText(nextText);
-                if (fileName && fileName !== 'Pasted log') setFileName('');
-                setAutoParseSource('Pasted log');
-              }}
-              placeholder="Paste raw API logs here..."
-            />
-            {isAutoParsing && (
-              <div className="mt-3 text-right text-xs text-text-muted">Parsing...</div>
-            )}
-            {isManualParsePending && (
-              <div className="mt-3 flex flex-col gap-2 rounded-md border border-border-subtle bg-bg-base p-3 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm text-text-muted">
-                  Large pasted log detected. Parse when you are ready.
-                </p>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => processText(rawText, 'Pasted log', false)}
-                >
-                  Parse log
-                </Button>
-              </div>
-            )}
           </div>
-        )}
+          <Textarea ref={rawInputRef} id="log-viewer-raw-input" wrap="off" className="min-h-[180px] w-full min-w-0 text-xs font-mono"
+            aria-label="Paste raw log text" value={rawText} placeholder="Paste raw API logs here..." onChange={event => {
+              ++fileReadId.current; setImportError(''); setLineAnnouncement(''); setFileName('');
+              const text = event.target.value;
+              if (text.length > AUTO_PARSE_THRESHOLD) clearParsedState();
+              setRawText(text);
+            }} />
+          <p role="status" className="sr-only">{lineAnnouncement}</p>
+          {importError && <p role="alert" className="mt-2 text-sm text-error">{importError}</p>}
+          {isAutoParsing && <div className="mt-3 text-right text-xs text-text-muted">Parsing...</div>}
+          {isManualParsePending && <div className="mt-3 flex flex-col gap-2 rounded-md border border-border-subtle bg-bg-base p-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-text-muted">Large log detected. Parse when you are ready.</p>
+            <Button type="button" variant="secondary" onClick={() => processText(rawText)}>Parse log</Button>
+          </div>}
+        </div>}
       </Card>
 
-      {hasParsedOutput && (
+      {hasParsedOutput && <>
+        <Card className="min-w-0 max-w-full p-4"><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+          {summary.map(item => {
+            const content = <><span className="block text-xs text-text-muted">{item.label}</span><span className="mt-1 block font-mono text-lg font-bold text-text-primary">{item.value.toLocaleString()}</span></>;
+            const active = item.status ? filters.status === item.status : item.section ? filters.section === item.section : false;
+            return item.status || item.section ? <Button key={item.label} type="button" variant="ghost" aria-label={'Filter ' + item.label.toLowerCase()}
+              aria-pressed={active} className={cn('block rounded-md border border-border-subtle bg-bg-base px-3 py-2 text-left', active && 'border-accent-rose bg-accent-rose/10')}
+              onClick={() => setFilters(current => ({ ...current, section: active ? 'all' : item.section ?? 'all',
+                status: active ? '' : item.status ?? '', errorsOnly: false, lineType: '', endpoint: '' }))}>{content}</Button>
+              : <div key={item.label} className="rounded-md border border-border-subtle bg-bg-base px-3 py-2">{content}</div>;
+          })}
+        </div></Card>
         <Card className="min-w-0 max-w-full p-4">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
-            {summary.map((item) => (
-              <div key={item.label} className="rounded-md border border-border-subtle bg-bg-base px-3 py-2">
-                <p className="text-xs text-text-muted">{item.label}</p>
-                <p className="mt-1 font-mono text-lg font-bold text-text-primary">
-                  {item.value.toLocaleString()}
-                </p>
-              </div>
-            ))}
-          </div>
+          <LogFilters filters={filters} onChange={setFilters} endpoints={endpointOptions} groupAuth={groupAuth} onGroupAuth={setGroupAuth} onClear={() => {
+            ++fileReadId.current; setFileName(''); setRawText(''); clearParsedState(); setFilters(INITIAL_FILTERS); setImportError(''); setLineAnnouncement('');
+          }} />
         </Card>
-      )}
+      </>}
 
-      {hasParsedOutput && (
-        <Card className="min-w-0 max-w-full p-4">
-          <div className="flex min-w-0 flex-col gap-3 md:flex-row md:flex-wrap md:items-end">
-            <div className="min-w-0 flex-1 md:min-w-[220px]">
-              <label className="mb-1 block text-xs text-text-muted">Search</label>
-              <div className="relative">
-                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
-                <Input
-                  type="text"
-                  placeholder="Search endpoint / payload..."
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  className="pl-7 text-sm"
-                />
-              </div>
+      {!hasParsedOutput ? <Card className="min-w-0 max-w-full p-12 text-center"><p className="text-text-muted">
+        {isManualParsePending ? 'Select Parse log to view this log.' : 'Upload a log file or paste raw log text to begin.'}
+      </p></Card> : <Card className="min-w-0 max-w-full p-6">
+        <div className="mb-4 flex min-w-0 items-center justify-between gap-3"><h2 className="text-lg font-bold font-body text-text-primary">Logs</h2>
+          <span className="text-xs text-text-muted">{filteredTransactions.length} / {transactions.length}</span>
+        </div>
+        <div className="min-w-0 space-y-3">
+          <LogTimeline rows={rows} transactions={transactions} selected={selectedTxId}
+            onSelect={id => setSelectedTxId(current => current === id ? null : id)} onNavigate={navigateToTransaction} />
+          {noMatches && <p className="rounded-lg border border-border-subtle bg-bg-base p-4 text-sm text-text-muted">No logs match the current filters.</p>}
+          <StandaloneLines unparsedLines={filteredUnparsed} unmatchedContentData={filteredContent}
+            open={Boolean(filters.query.trim() || filters.section !== 'all')} />
+          <details className="min-w-0 rounded-lg border border-border-subtle bg-bg-base">
+            <summary className="cursor-pointer select-none px-3 py-2 text-sm text-text-secondary">Raw input preview</summary>
+            <div className="min-w-0 px-3 pb-3"><Textarea className="min-h-[180px] w-full min-w-0 text-xs font-mono" value={rawText.slice(0, 50000)} readOnly />
+              {rawText.length > 50000 && <p className="mt-2 text-xs text-text-muted">Showing first 50,000 characters. Use a line link to select a record in the full input.</p>}
             </div>
-
-            <div className="min-w-0 md:min-w-[220px]">
-              <label className="mb-1 block text-xs text-text-muted">Endpoint</label>
-              <Select
-                value={endpointFilter}
-                onChange={setEndpointFilter}
-                className="min-w-0"
-                buttonClassName="py-2 text-sm"
-                ariaLabel="Filter by endpoint"
-                options={[
-                  { value: '', label: 'All endpoints' },
-                  ...endpointOptions.map((endpoint) => ({ value: endpoint, label: endpoint })),
-                ]}
-              />
-            </div>
-
-            <div className="min-w-0 md:min-w-[180px]">
-              <label className="mb-1 block text-xs text-text-muted">Line type</label>
-              <Select
-                value={lineTypeFilter}
-                onChange={setLineTypeFilter}
-                className="min-w-0"
-                buttonClassName="py-2 text-sm"
-                ariaLabel="Filter by line type"
-                options={[
-                  { value: '', label: 'All line types' },
-                  { value: 'request', label: 'Requests' },
-                  { value: 'response', label: 'Responses' },
-                  { value: 'content_data', label: 'Content data' },
-                  { value: 'error', label: 'Errors' },
-                  { value: 'crash', label: 'Crashes' },
-                  { value: 'info', label: 'Info' },
-                ]}
-              />
-            </div>
-
-            <div className="min-w-0 md:min-w-[180px]">
-              <label className="mb-1 block text-xs text-text-muted">Status</label>
-              <Select
-                value={statusFilter}
-                onChange={setStatusFilter}
-                className="min-w-0"
-                buttonClassName="py-2 text-sm"
-                ariaLabel="Filter by status"
-                options={[
-                  { value: '', label: 'All statuses' },
-                  { value: 'ok', label: 'No detected error' },
-                  { value: 'errors', label: 'Errors' },
-                  { value: 'orphans', label: 'All orphans' },
-                  { value: 'missing-response', label: 'Missing response' },
-                  { value: 'orphan-response', label: 'Orphan response' },
-                ]}
-              />
-            </div>
-
-            <Toggle
-              checked={errorsOnly}
-              onChange={setErrorsOnly}
-              toggleLabel="Errors only"
-              className="self-end"
-            />
-
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setFileName('');
-                setRawText('');
-                clearParsedState();
-                setQuery('');
-                setErrorsOnly(false);
-                setLineTypeFilter('');
-                setStatusFilter('');
-              }}
-              icon={<X size={16} />}
-              title="Clear"
-            >
-              Clear
-            </Button>
-          </div>
-        </Card>
-      )}
-
-      {!hasParsedOutput ? (
-        <Card className="min-w-0 max-w-full p-12 text-center">
-          <p className="text-text-muted">Upload a log file or paste raw log text to begin.</p>
-        </Card>
-      ) : (
-        <Card className="min-w-0 max-w-full p-6">
-          <div className="mb-4 flex min-w-0 items-center justify-between gap-3">
-            <h2 className="text-lg font-bold font-body text-text-primary">Logs</h2>
-            <span className="text-xs text-text-muted">
-              {filteredTransactions.length} / {transactions.length}
-            </span>
-          </div>
-
-          <div className="min-w-0 space-y-3">
-            {filteredTransactions.map((tx) => (
-              <TransactionRow
-                key={tx.id}
-                tx={tx}
-                expanded={tx.id === selectedTxId}
-                onToggle={() =>
-                  setSelectedTxId((current) => (current === tx.id ? null : tx.id))
-                }
-              />
-            ))}
-
-            {filteredTransactions.length === 0 && (
-              <p className="rounded-lg border border-border-subtle bg-bg-base p-4 text-sm text-text-muted">
-                No logs match the current filters.
-              </p>
-            )}
-
-            <StandaloneLines
-              unparsedLines={unparsedLines}
-              unmatchedContentData={unmatchedContentData}
-            />
-
-            {rawText && (
-              <details className="min-w-0 rounded-lg border border-border-subtle bg-bg-base">
-                <summary className="cursor-pointer select-none px-3 py-2 text-sm text-text-secondary">
-                  Raw input preview
-                </summary>
-                <div className="min-w-0 px-3 pb-3">
-                  <Textarea
-                    className="min-h-[180px] w-full min-w-0 text-xs font-mono"
-                    value={rawText.slice(0, 50000)}
-                    readOnly
-                  />
-                  {rawText.length > 50000 && (
-                    <p className="text-xs text-text-muted mt-2">
-                      Showing first 50,000 characters.
-                    </p>
-                  )}
-                </div>
-              </details>
-            )}
-          </div>
-        </Card>
-      )}
-      <Button
-        type="button"
-        className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-[calc(1rem+env(safe-area-inset-right))] z-20 h-12 w-12 rounded-full p-0"
-        aria-label="Back to log input"
-        title="Back to log input"
-        onClick={returnToImport}
-      >
-        <NextDoodleIcon className="-rotate-90" />
-      </Button>
+          </details>
+        </div>
+      </Card>}
+      <Button type="button" className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-[calc(1rem+env(safe-area-inset-right))] z-20 h-12 w-12 rounded-full p-0"
+        aria-label="Back to log input" title="Back to log input" onClick={returnToImport}><NextDoodleIcon className="-rotate-90" /></Button>
     </div>
-  );
+  </RawLineProvider>;
 }

@@ -6,6 +6,8 @@ import { NextDoodleIcon } from '@/components/atoms/DoodleIcons';
 import { Textarea } from '@/components/atoms/Textarea';
 import type { Transaction } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { RawLineLink } from './RawLineLink';
+import { sourceLabels } from '@/lib/log-viewer/presentation';
 
 export function TableDumpRow({ tx, expanded, onToggle }: {
   tx: Transaction; expanded: boolean; onToggle: () => void;
@@ -26,7 +28,7 @@ export function TableDumpRow({ tx, expanded, onToggle }: {
           <span className="min-w-0">
             <span className="block text-sm font-bold">Table dump</span>
             <span className="block break-words text-xs font-normal text-text-muted">
-              {tx.tableBatch?.length} tables · {timestamp} · lines {tx.lineRefs[0]}-{tx.lineRefs.at(-1)}
+              {tx.tableBatch?.length} tables · {timestamp} · {sourceLabels[tx.responses[0].source ?? 'unknown']} · lines {tx.lineRefs[0]}-{tx.lineRefs.at(-1)}
             </span>
           </span>
         </Button>
@@ -38,6 +40,7 @@ export function TableDumpRow({ tx, expanded, onToggle }: {
           Raw table dump
         </Button>
       </div>
+      <div className="px-2"><RawLineLink start={tx.lineRefs[0]} end={tx.lineRefs.at(-1)} /></div>
       <div id={id + '-tables'} hidden={!expanded} className="min-w-0">
         {expanded && <div className="min-w-0 space-y-4 border-t border-border-subtle p-4">
           {tx.tableBatch?.map((table, index) => (

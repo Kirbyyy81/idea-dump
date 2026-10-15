@@ -18,6 +18,8 @@ Text and empty bodies remain readable. Malformed JSON displays the extracted tex
 
 ## Source detection
 
+The Source filter and row badges distinguish Yes Shop, USSP, and Unknown records. Search, endpoint, line-type, source, and status filters apply to both the timeline and standalone content. Consecutive unparsed records are displayed as a block with their original line range; gaps and source boundaries remain separate. Searching opens matching standalone blocks, and a match only in standalone content does not show a misleading empty-result message. Errors, Orphans, Unmatched content, and Unparsed summary cards toggle quick filters. They retain the current search and source selection and reset incompatible endpoint/line-type filters.
+
 - Yes Shop: URL paths beginning with `/yesshop/`, `/yesshop-admin/`, `/yesshop-report/`, `/yesshop-wallet/`, or `/cots/api/yes-shop/`.
 - USSP: URL paths beginning with `/ussp/`.
 - Shared authentication, eKYC, and content records inherit the single detected source. Filenames and hostnames do not determine the source.
@@ -43,11 +45,29 @@ Later content for the same endpoint begins a new dictionary matching window. Amb
 
 The named Yes Shop aliases and USSP payload signatures live in `lib/log-viewer/dictionary.ts`. Extend these with sample-backed rules and regression fixtures. Normalise names for lookup while preserving original spelling for display. Do not add broad substring or nearest-line rules that override known mappings.
 
+Additional source-verified aliases match `verifyCtosReport` to `VerifyCTOSCredit`, `getPrepaidDeviceListPartNumber` to `getDevicePartNos`, and the payload-bearing `Postpaid Registration >>>>>>>>>>` marker to `ProcessPostpaidAccountConversion`. The last marker becomes content data only in a Yes Shop source segment. Named aliases retain the same uniqueness, distance and correlation rules as other content records.
+
+The enterprise CTOS flow also uses `verifyCtosReport` as the actual endpoint, so the alias accepts both source-verified destinations. Competing eligible CTOS requests remain ambiguous and do not receive a guessed content association.
+
 Additional Yes Shop aliases cover daily/monthly sales totals, wallet payment types and top-ups, CVP history and transfer details, and dealer store lists. A `responseStatus` object with `status: SUCCESSFUL` and `errorCode: "00"` treats its `errorMessage` as informational. HTTP errors, error markers, explicit failure codes, and other failure evidence still take precedence.
 
 Content can attach to a response even when its request was not logged. The transaction shows `Request not logged`, retains its orphan status, and remains searchable by content and response text. It never fabricates a request.
 
 USSP transport errors can contain `Response{protocol=..., code=...}` before a multiline JSON payload. The adapter extracts the HTTP status and parses the actual payload following the envelope. Invalid content containing unescaped nested JSON strings remains text.
+
+## Session diagnostics and import safeguards
+
+Refresh-token messages accept markers without a preceding space, including `New Refresh Token Generated>>>`. Their event title is **Refresh Token Generated** and the token remains in the closed payload panel, never in a row title or endpoint option. Original records remain accessible. `Error Code - 401` before a response payload and the exact Retrofit `retrofit2.HttpException: HTTP 400` exception format supply HTTP status badges. Text outside an extracted JSON object or array remains visible above its formatted payload. Malformed payloads retain all text and show a JSON parse warning. Durations are read only from the logger header, never arbitrary payload strings; correlation supports camelCase and snake_case request/response/client IDs. Timestamps accept a space or `T` and a decimal point or comma before milliseconds.
+
+Collapsed rows show timestamps, hosts, source badges, known HTTP codes, parse warnings and response counts. Multiple responses already associated by the pairing rules get a prominent count; no response is deduplicated or newly associated by proximity.
+
+**Group auth events** is off initially. When enabled, consecutive auth/token/app-version timeline entries in the same source segment, at most 30 seconds apart by starting timestamp, share an expandable row. Original event counts, payloads, errors, raw lines and matching are preserved. Business, unmatched, unparsed and source-transition records break groups. Grouping happens before filtering so hiding a business row cannot join separate bursts.
+
+401 rows offer **Session context** when nearby matching-endpoint retries, Login records or auth/token records exist. This shows only recorded events in the same source segment, within 60 seconds and twelve timeline entries on either side. It does not infer a successful recovery or causal connection. Selecting a context entry clears filters, unfolds auth grouping and opens the actual record.
+
+Line links open the full import input, focus it, select the exact original line range and scroll within the input. This works beyond the 50,000-character raw-preview limit. Uploads and pastes above 250,000 characters both require **Parse log**. Uploaded files above 10 MiB are rejected before reading, preserving existing input/results. Failed reads show a retryable error; a stale asynchronous file read cannot replace a newer selection or paste.
+
+`yes-shop-session.txt` is a synthetic regression fixture based on logger and endpoint formats verified read-only in the Yes Shop app (`MposLogger`, `HomeAuthTokenAuthenticator`, `RegistrationRepository` and `PostpaidViewModel`). It contains no real tokens or customer data. The original Yes Shop and USSP fixtures continue to cover each source's correlation and payload rules.
 
 ## Table dumps
 
@@ -63,7 +83,7 @@ Use Node 22.22.0. Sanitised fixtures in `lib/log-viewer/fixtures/` preserve repr
 
 ```powershell
 npm run test:log-viewer
-npx playwright test tests/browser/log-viewer.spec.ts
+npx playwright test tests/browser/log-viewer.spec.ts tests/browser/log-viewer-diagnostics.spec.ts
 ```
 
 The first command runs parser, dictionary, correlation, table-batch, and component tests. The browser suite checks desktop and mobile uploads, deep JSON rendering, keyboard-operated folding, copying complete JSON from folded or closed panels, independent raw controls, table-batch rendering/search/filtering, missing requests, and the explicit parse action for large pastes. Browser harnesses live under `tests/browser/` and do not ship in application routes.
@@ -78,11 +98,11 @@ The **Log Viewer** parent navigation item opens `/log-viewer`. Its only submenu 
 - Scan the black-on-white barcode directly from the screen. Input changes immediately remove the previous preview.
 - Letter case, leading zeros, and long identifiers remain exact strings. Surrounding whitespace is trimmed; internal whitespace, multiline identifiers, punctuation, and non-ASCII characters are rejected.
 - The 256-character input cap bounds rendering work; it is not a claim that every length fits or scans on every device.
-- Recent barcodes keeps the last seven distinct successful values. Selecting one immediately restores its barcode and moves it to the top.
+- Recent barcodes keeps the last seven distinct successful values. Selecting one immediately restores its barcode and moves it to the top. Each row has a separate delete button that removes that exact case-sensitive value from history and session storage without confirmation. Deleting the displayed barcode or a value awaiting generation also cancels generation and clears the input and preview. Other values keep their order. Focus moves to the next delete button, then the previous one, or the input when empty; removal is announced to screen readers.
 - History stays in user-scoped `sessionStorage`, survives same-tab navigation and refresh, and normally ends when the tab closes. Browser session restoration or tab duplication can restore or copy it.
 - The persistent barcode session provider clears feature history on sign-out or account changes, including sign-out from Settings. When storage is unavailable, bounded in-memory history remains usable during client-side navigation.
 - Barcodes render locally using pinned JsBarcode. Identifiers never go into URLs, API calls, application logs, or database records.
-- Wide barcodes scroll without compression; the page prompts for a wider display before scanning. No print, download, manual Generate, or cleanup controls are provided.
+- Wide barcodes scroll without compression; the page prompts for a wider display before scanning. No print, download, manual Generate, or clear-all controls are provided.
 
 Feature components live under `app/log-viewer/barcode-generator/_components/`. Pure validation and history helpers live under `lib/log-viewer/barcode/`. The persistent shell mounts the lightweight session provider; the renderer is owned by the barcode page.
 
@@ -90,7 +110,7 @@ Validation:
 
 ```powershell
 npm run test:log-viewer
-npx playwright test tests/browser/barcode-generator.spec.ts tests/browser/log-viewer.spec.ts
+npx playwright test tests/browser/barcode-generator.spec.ts tests/browser/log-viewer.spec.ts tests/browser/log-viewer-diagnostics.spec.ts
 ```
 
 The barcode unit suite independently decodes SVG bars with ZXing, and browser fixtures exercise desktop/mobile layout, navigation, history, auth changes, and network-free generation. Physical acceptance with Ashley's usual scanner and target display remains required. See [PRD 014](prd/PRD_014.md).
