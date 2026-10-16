@@ -46,10 +46,10 @@ Finance contract and final access enforcement. Use one traffic-drained cutover:
 8. Re-run Supabase security/performance advisors and the verification queries in `document/SUPABASE_AUDIT_20260712.md`.
 9. Resume traffic only after all checks pass.
 
-Deploy these versioned files with the Supabase CLI, not the MCP
-`apply_migration` operation. MCP assigns a new execution-time version, whereas
-`supabase db push` records each filename timestamp and skips the three historical
-versions that are already present remotely:
+Prefer deploying versioned files with the Supabase CLI. `supabase db push`
+records each filename timestamp and skips the three historical versions that
+are already present remotely. The connected-tool fallback below is available
+when CLI sign-in is unavailable:
 
 ```powershell
 supabase link --project-ref xcaxukhjkqqnmzziqrkc
@@ -62,6 +62,26 @@ supabase migration list
 Review the dry run and confirm that only the intended pending versions appear.
 Do not use `migration repair` merely to make a mismatched list look clean; it
 changes migration history without applying SQL.
+
+### Connected-tool fallback
+
+An authenticated Supabase connector can apply a reviewed forward migration when
+CLI credentials are unavailable. It assigns an execution-time version instead
+of retaining the local filename timestamp. Before applying, verify that the
+original local version has never been applied remotely and check the deployed
+predecessor functions. After success, read the recorded remote version, rename
+only that unapplied local version to the recorded filename, preserve its SQL
+body, and update repository references. Never rename a version already present
+in the remote ledger, replay historical migrations, or repair existing history
+to accommodate the fallback. If the original version is already applied, stop
+and inspect the discrepancy before another write.
+
+Verify the new ledger entry, active schema/permissions and rollback-only
+functional checks, then rerun the isolated migration chain with the aligned
+files. Any follow-up DDL, such as an advisor-identified index, belongs in a
+separate forward migration with the same version-alignment checks. The Finance
+category-memory rollout on 16 October 2026 used this procedure. Unrelated local
+pending migrations are not included in the connected-tool deployment.
 
 The Finance migration changes RPC contracts and the enforcement migration
 revokes browser access to application tables. The old application is not a safe
