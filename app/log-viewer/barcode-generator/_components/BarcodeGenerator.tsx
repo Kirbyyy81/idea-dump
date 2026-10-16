@@ -161,15 +161,15 @@ function BarcodeWorkspace() {
                         <span className="text-xs text-text-muted">{session.values.length}/7</span>
                     </div>
                     {session.values.length ? <ol className="space-y-2">
-                        {session.values.map((value) => <li key={value} className="flex items-start gap-1">
+                        {session.values.map((value) => <li key={value} className="group relative">
                             <Button variant="ghost" type="button" onClick={() => updateInput(value, true)} aria-pressed={generated === value}
-                                className={cn('flex min-h-11 min-w-0 flex-1 items-start gap-2 rounded-sm border px-3 py-2 text-left text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong',
+                                className={cn('flex min-h-11 min-w-0 w-full items-start gap-2 rounded-sm border px-3 py-2 pr-12 text-left text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong',
                                     generated === value ? 'border-border-strong bg-bg-selected' : 'border-border-default hover:bg-bg-hover')}>
                                 <span className="min-w-0 flex-1 break-all font-mono">{value}</span>
                                 {generated === value && <Check size={16} className="mt-0.5 shrink-0" aria-hidden="true" />}
                             </Button>
                             <Button variant="ghost" type="button" aria-label={`Delete ${value}`}
-                                className="h-11 w-11 shrink-0 p-0 text-text-secondary hover:text-error"
+                                className="absolute right-1 top-1 h-10 w-10 p-0 text-text-secondary opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100 hover:text-error"
                                 ref={element => {
                                     if (element) deleteRefs.current.set(value, element);
                                     else deleteRefs.current.delete(value);

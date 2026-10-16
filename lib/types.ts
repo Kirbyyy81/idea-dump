@@ -757,6 +757,13 @@ export interface FinanceIntakeItem {
 }
 
 export interface FinanceCandidatePayload {
+    category_assignment?: {
+        origin: 'manual' | 'learned' | 'payee_default';
+        status?: 'applied' | 'disabled' | 'conflict' | 'category_unavailable';
+        rule_id?: string;
+        memory_id?: string;
+        revision?: number;
+    };
     notification_extraction?: FinanceNotificationExtractionTrace;
     amount: number | null;
     currency: FinanceCurrency;
@@ -778,6 +785,19 @@ export interface FinanceCandidatePayload {
     parser_template_baseline?: FinanceParserTemplateBaseline;
     receipt_processing?: FinanceReceiptProcessing;
     duplicate_transaction_id: string | null;
+}
+
+export interface FinanceCategoryMemory {
+    id: string;
+    party_kind: 'merchant' | 'payee';
+    party_name: string;
+    direction: FinanceTransactionDirection;
+    is_active: boolean;
+    override_category_id: string | null;
+    category_id: string | null;
+    revision: number;
+    evidence_count: number;
+    has_conflict: boolean;
 }
 
 export interface FinanceCandidateTransaction {

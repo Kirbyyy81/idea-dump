@@ -491,7 +491,7 @@ sequenceDiagram
     DB-->>UI: Review candidate or recovered terminal result
 ```
 
-A newly processed direct upload always creates a review candidate. It does not auto-confirm. If the same image already has a terminal result, the service may recover that result without running OCR again.
+A newly processed direct upload creates a candidate and immediately attempts confirmation when it has a category and complete valid transaction fields. Incomplete, uncategorised, conflicting or duplicate results stay in Review. If the same image already has a terminal result, the service may recover that result without running OCR again.
 
 ### OCR service endpoints
 
@@ -694,9 +694,31 @@ Rules settings includes source-scoped notification pattern inspection and enable
 
 The daily learning job continues to refresh algorithm 2 and 3 parser templates. Templates retain the existing source/receipt-format scopes, upload cutoff, shadow evidence, contradiction handling, and explicit promotion requirements. Algorithm 3 transforms consume recorded parser baselines; new baselines are captured after standard parsing and manual rules.
 
-Legacy category/direction rules and reference transforms were retired by the forward migration `20260915172224_retire_legacy_finance_learning.sql`. Historical learned rows in `finance_rules` stay disabled, with database guards against new learned rules, reactivation and conversion into manual rules. The later October 8 cleanup removes the empty suggestion/reference tables and obsolete learner functions. No replacement category learner is included.
+Legacy category/direction rules and reference transforms were retired by the forward migration `20260915172224_retire_legacy_finance_learning.sql`. Historical learned rows in `finance_rules` stay disabled, with database guards against new learned rules, reactivation and conversion into manual rules. The later October 8 cleanup removes the empty suggestion/reference tables and obsolete learner functions. The shared category memory below is a separate capability and does not reactivate this retired learner.
 
 Rules settings shows legacy category rules as read-only retired entries. Manual rules remain editable. The suggestion endpoint, suggestion response field, payload mapper and unused suggestion/reference-rule types have been removed. Historical candidates, traces, baselines, corrections and confirmed transactions are retained. The existing 90-day learning-run retention still applies; new runs report zero legacy activity.
+
+### Shared category memory
+
+The forward migration `20261016072348_finance_category_memory.sql` introduces category classification separately from extraction templates and the retired learner. `finance_category_memories` stores a user's merchant/payee identity, expense/income direction, activation state, revision and optional explicit category override. `finance_category_evidence` stores one deliberate category choice per supporting transaction. Confirmation and ledger-edit RPCs teach only when the human changes the category. Automatic confirmation, accepting an unchanged suggestion, unrelated edits and replay never add teaching evidence. Changing a supporting transaction's identity/direction/category removes its old support; deletion cascades to its evidence.
+
+One correction can categorize an exact future identity across sources and intake types. Merchant matching uses NFKC, lowercasing and collapsed whitespace while preserving punctuation and word boundaries. Saved payees use their owned ID, so renaming a saved payee preserves its memory. Merchants and payees never share the same identity namespace. Different confirmed categories suspend automatic assignment until the owner selects an explicit category override or removes the conflicting support. Disabled memories remain disabled after new corrections. Archived categories cannot be applied.
+
+The candidate classification trigger runs after notification/screenshot extraction and manual rules. Precedence is an existing manual category, an active unambiguous category memory, then Food for expense payee notifications only. Food is created on first use if absent; archived Food is not restored automatically. Conflicted or disabled memories prevent the fallback from concealing the owner's learning choice. Missing evidence permits the normal fallback again. Existing saved transactions are never recategorized in bulk; pending items apply current memory through explicit Retry.
+
+Finance Settings, Rules includes Learned categories with override, pause/resume and confirmed forget controls through the server-only `/api/finance/category-memories` endpoint. Review shows learned/default assignment provenance. All new tables enable RLS and revoke browser-role access, with ownership enforced through the existing server/RPC boundary.
+
+Run `npm run test:finance-categories:db` for the disposable PostgreSQL migration/integration suite. It is also part of `npm test` and requires no project credentials. It verifies cross-intake learning, conflict handling, saved-payee rename, manual precedence, edit/delete invalidation, default Food, automatic confirmation, stale/archived categories, tenant isolation and the existing notification/duplicate-link SQL regressions. Run `npx playwright test tests/browser/finance-category-memories.spec.ts tests/browser/finance-screenshot.spec.ts tests/browser/finance-notification-patterns.spec.ts tests/browser/finance-duplicate-link.spec.ts` for desktop/mobile interaction coverage. Hosted Cron/queue execution is represented by test metadata, and separate native PostgreSQL connections are required for concurrency acceptance.
+
+Rollout requires the new forward migration plus compatible Next.js and Finance OCR releases. Verify the deployed predecessor functions match the guarded patch points, apply the version-aligned reviewed migration set using the [migration runbook](../supabase/README.md), then deploy both runtimes. No historical category backfill or transaction rewrite is performed. The screenshot confirmation behavior changes as soon as the migration is applied, including requests from compatible older OCR clients. Before rollback, account for the newer screenshot policy and category provenance; do not reinstate retired learned rows.
+
+Implementation validation on 16 October 2026 passed 835 application tests, 402 OCR tests, 20 desktop/mobile browser checks, the disposable migration/category integration suite and five native PostgreSQL companion suites. Independent native PostgreSQL connections verified notification locking/replay and simultaneous screenshot confirmation with exactly one saved transaction and no automatic teaching evidence. Application lint, both type checks/builds and all four dependency audits passed. These checks used synthetic local data before the hosted rollout below.
+
+Hosted schema rollout on 16 October 2026 applied `20261016072348_finance_category_memory.sql` and `20261016072458_index_finance_category_evidence_transaction.sql` to the connected IdeaDump project. The authenticated Supabase connector was used because the CLI had no saved sign-in. The original local category migration version had never been applied; its filename was aligned with the connector's recorded version without changing the SQL body or repairing any existing migration history. The separate forward index migration covers the evidence transaction/user foreign key identified by the live advisor. Both versions are recorded in the remote ledger, and the disposable migration suite passes with the aligned files.
+
+Live rollback-only checks passed manual correction learning across intake types, categorized screenshot automatic confirmation at low parser confidence, duplicate rejection, expense-only payee Food defaults, notification automatic saving/raw-text cleanup and invalidation after deleting teaching evidence. Verification retained no synthetic rows. All 244 existing transactions and 283 candidates have identical before/after row digests; counts remain 288 intakes, 12 categories and three manual rules. The new tables have RLS, browser grants are revoked, and server-only invoker functions have empty search paths. No historical teaching evidence was backfilled.
+
+The advisor's new missing-index finding is resolved. The two pre-existing security warnings remain: [pg_net in public](https://supabase.com/docs/guides/database/database-linter?lint=0014_extension_in_public) and [leaked-password protection disabled](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection). RLS-without-policies information for the two new tables is expected under the application's server-only access model; newly unused indexes remain normal before application traffic exercises them. Application and OCR deployment completion must be verified separately from this schema rollout and Git push.
 
 See [the retirement rollout instructions](FINANCE_PARSER_LEARNING_ROLLOUT.md#legacy-learning-retirement) for migration order and validation.
 
@@ -704,16 +726,13 @@ See [the retirement rollout instructions](FINANCE_PARSER_LEARNING_ROLLOUT.md#leg
 
 New notifications and explicit notification Retry add a transaction automatically when amount, direction, merchant or payee, and date are valid and no database duplicate is found. Category and reference are optional. Missing/conflicting values, stale patterns and possible duplicates stay in Review. Automatic entries are excluded from notification learning; manual confirmation provides learning evidence. See [notification automatic transactions](ANDROID_COMPANION.md#automatic-notification-transactions).
 
-Direct screenshot uploads never auto-confirm newly processed candidates.
-
-A queued Android share item may auto-confirm only when all of the following are true:
+Direct screenshot uploads, queued Android shares and explicit screenshot Retry may auto-confirm when all of the following are true:
 
 - Candidate status is pending.
-- Candidate confidence is at least 0.90.
-- A matched rule exists.
 - Duplicate outcome is none.
-- Source, category, direction, amount, and transaction date are present.
-- The confirmation RPC verifies that the matched rule is active, user-owned, consistent with the candidate's selected category and direction, and a strong `exact_phrase` or `merchant_alias` rule.
+- Active owned source/category, valid expense/income direction, positive exact amount, merchant or payee, and a valid non-future transaction date are present.
+- The category is current. Learned memory revisions and manual rule provenance are rechecked under the ledger lock. A category learned from either intake type can authorize confirmation; confidence and strong-rule checks are not required.
+- Receipt field conflicts are absent.
 - The database's final duplicate recheck still returns none.
 
 If any gate fails, the result goes to Finance Review.

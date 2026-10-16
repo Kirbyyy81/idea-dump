@@ -1,5 +1,7 @@
 'use client';
 
+import { CategoryMemoriesPanel } from './CategoryMemoriesPanel';
+
 import { NotificationPatternsPanel } from './NotificationPatternsPanel';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/atoms/Button';
@@ -175,6 +177,7 @@ export function RulesSettingsPanel() {
                 <LearningSummaryPanel isLoading={isLoading} summary={learning} shadowRules={shadowRules} onRefresh={() => void loadData()} />
 
                 <NotificationPatternsPanel />
+                <CategoryMemoriesPanel />
 
                 <FinanceSettingsColumns>
                     <form onSubmit={addRule}>
