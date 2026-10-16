@@ -8,6 +8,7 @@ import {
     isManualTransactionReplay,
 } from '@/lib/finance/transactions/idempotency';
 import {
+    autoConfirmFinanceScreenshot,
     createFinanceCategory,
     createFinanceShareUploadUrl,
     createFinanceRule,
@@ -804,7 +805,12 @@ export async function resolveFinanceReviewCandidateForUser(
             updated_at: new Date().toISOString(),
         });
         if (error) throw error;
-        const [withDuplicate] = await attachDuplicateTransactions(userId, [data as unknown as FinanceCandidateTransaction]);
+        const automatic = await autoConfirmFinanceScreenshot(userId, candidateId);
+        if (automatic.error) reviewRpcError(automatic.error);
+        const result = automatic.data as FinanceNotificationRetryResult;
+        if (result?.confirmed) return { kind: 'success' as const };
+        const refreshed = result?.candidate ?? data as unknown as FinanceCandidateTransaction;
+        const [withDuplicate] = await attachDuplicateTransactions(userId, [refreshed]);
         return { kind: 'candidate' as const, data: toFinanceReviewCandidate(withDuplicate) };
     }
 

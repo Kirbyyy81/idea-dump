@@ -61,7 +61,25 @@ try {
  if(!replayed.replayed||replayed.status!==automatic[0].status) throw new Error('Automatic upload replay changed the result');
  const autoCounts=await checked("select (select count(*) from public.finance_transactions where user_id="+literal(owner)+")||','||(select count(*) from public.finance_notification_patterns where user_id="+literal(owner)+");");
  if(autoCounts!=='2,1') throw new Error('Automatic intake added duplicate transactions or saved patterns');
- process.stdout.write('Notification locks, concurrent manual/automatic confirmation, duplicate prevention and replay checks passed.\n');
+ const category=randomUUID();
+ await checked('insert into public.dim_finance_categories(id,user_id,name) values('+literal(category)+','+literal(owner)+",'Concurrency category');");
+ const screenshotPayload={source_id:source,category_id:category,amount:888.88,direction:'expense',merchant:'Synthetic concurrent screenshot',
+  currency:'MYR',transaction_date:autoDate,payee_name:null,notes:null,reference_number:null};
+ async function screenshotCandidate(payload) {
+  return checked("with intake as (insert into public.finance_intake_items(user_id,source,status) values("+literal(owner)+",'screenshot','review') returning id) "+
+   "insert into public.finance_candidate_transactions(user_id,intake_item_id,payload,confidence) select "+literal(owner)+",id,"+literal(JSON.stringify(payload))+"::jsonb,0.1 from intake returning id;");
+ }
+ const screenshots=await Promise.all([screenshotCandidate(screenshotPayload),screenshotCandidate(screenshotPayload)]);
+ const screenshotResults=await Promise.all(screenshots.map(id=>checked('set role service_role; select public.finance_auto_confirm_screenshot('+literal(owner)+','+literal(id)+');').then(JSON.parse)));
+ if(screenshotResults.filter(r=>r.confirmed).length!==1) throw new Error('Concurrent screenshots bypassed the locked duplicate check');
+ const teachingCandidate=await screenshotCandidate({...screenshotPayload,category_id:null,amount:999.99,merchant:'Synthetic teaching cafe'});
+ const teachingConfirm='set role service_role; select public.finance_confirm_candidate_v3('+[owner,teachingCandidate,source,category,'expense'].map(literal).join(',')+
+  ",999.99,'Synthetic teaching cafe',null,"+literal(autoDate)+",null,'MYR',null,false,null,'manual');";
+ const teaching=await Promise.all([checked(teachingConfirm).then(JSON.parse),checked(teachingConfirm).then(JSON.parse)]);
+ if(teaching[0].transaction.id!==teaching[1].transaction.id) throw new Error('Concurrent teaching confirmation created duplicate ledger entries');
+ const categoryCounts=await checked("select (select count(*) from public.finance_transactions where user_id="+literal(owner)+")||','||(select count(*) from public.finance_category_evidence where user_id="+literal(owner)+");");
+ if(categoryCounts!=='4,1') throw new Error('Expected four ledger entries with exactly one deliberate category teaching example');
+ process.stdout.write('Notification/screenshot locks, concurrent confirmation, category teaching, duplicate prevention and replay checks passed.\n');
 } finally {
  if(created) await checked('delete from auth.users where id='+literal(owner)+';');
 }

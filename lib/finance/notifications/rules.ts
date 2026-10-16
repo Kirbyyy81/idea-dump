@@ -24,7 +24,11 @@ export function applyNotificationRules(payload: FinanceCandidatePayload, text: s
         if (rule.auto_created_at && payload.direction && rule.direction && rule.direction !== payload.direction) continue;
         matchedRuleId ??= rule.id;
         result.matched_rule_names.push(rule.name);
-        if (rule.category_id && !categoryAssigned) { result.category_id = rule.category_id; categoryAssigned = true; }
+        if (rule.category_id && !categoryAssigned) {
+            result.category_id = rule.category_id;
+            result.category_assignment = { origin: 'manual', rule_id: rule.id };
+            categoryAssigned = true;
+        }
         if (rule.direction && !directionAssigned) { result.direction = rule.direction; manualField('direction'); directionAssigned = true; }
         if (rule.match_type === 'merchant_alias' && !merchantAssigned) { result.merchant = rule.name; manualField('merchant'); merchantAssigned = true; }
     }

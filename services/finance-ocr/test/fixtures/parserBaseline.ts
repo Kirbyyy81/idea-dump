@@ -62,6 +62,7 @@ export interface FinanceParserBaselineFixture {
             transaction_date: string | null;
             source_id: string | null;
             category_id: string | null;
+            category_assignment?: { origin: 'manual'; rule_id: string };
             reference_number: string | null;
             notes: string | null;
             matched_rule_names: string[];
@@ -362,6 +363,7 @@ export const financeParserBaselineFixtures: FinanceParserBaselineFixture[] = [
                 transaction_date: '2026-08-18',
                 source_id: auroraSource.id,
                 category_id: coffeeRule.category_id,
+                category_assignment: { origin: 'manual', rule_id: coffeeRule.id },
                 reference_number: null,
                 notes: null,
                 matched_rule_names: [coffeeRule.name],
