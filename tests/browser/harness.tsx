@@ -1,4 +1,5 @@
 import { NotificationPatternsPanel } from '@/app/finance/settings/_components/NotificationPatternsPanel';
+import { CategoryMemoriesPanel } from '@/app/finance/settings/_components/CategoryMemoriesPanel';
 import { AlertDialog } from '@/components/molecules/AlertDialog';
 import { createRoot } from 'react-dom/client';
 import { FinanceBudgetsClient } from '@/app/finance/budgets/_components/FinanceBudgetsClient';
@@ -27,6 +28,8 @@ createRoot(document.getElementById('root')!).render(<FinanceReferenceDataProvide
             summary={budgetMonthsEnabled ? { ...dashboardSummary, budget_cycles: dashboardBudgetMonths[dashboardMonth] ?? [] } : dashboardSummary} />
         : window.location.pathname === '/finance/settings/notifications'
         ? <NotificationPatternsPanel />
+        : window.location.pathname === '/finance/settings/category-memories'
+        ? <CategoryMemoriesPanel />
         : window.location.pathname === '/finance/review'
         ? <AlertProvider><AlertDialog /><FinanceReviewClient initialCandidates={(window as unknown as { reviewInitial?: FinanceReviewCandidate[] }).reviewInitial || reviewCandidates} initialFailedIntakes={[]} initialSelectedId="candidate-1" today="2026-09-22" /></AlertProvider>
         : window.location.pathname === '/finance/add'

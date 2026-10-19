@@ -4,6 +4,7 @@ const repo = vi.hoisted(() => ({
     listActiveFinanceSources: vi.fn(), listRuntimeFinanceSourceTemplates: vi.fn().mockResolvedValue({ data: [] }),
     listRuntimeFinanceFieldTemplates: vi.fn().mockResolvedValue({ data: [] }), listActiveFinanceRules: vi.fn().mockResolvedValue({ data: [] }),
     listActiveFinancePayees: vi.fn().mockResolvedValue({ data: [] }),
+    autoConfirmFinanceScreenshot: vi.fn().mockResolvedValue({ data: { confirmed: false }, error: null }),
 }));
 vi.mock('@/lib/finance/core/repository', () => repo);
 vi.mock('@/lib/finance/transactions/duplicates', () => ({
@@ -31,4 +32,14 @@ describe('review retry preserves receipt classification', () => {
         expect(payload.receipt_processing).toEqual(processing);
         expect(payload.payee_name).toBe('SYNTHETIC CORNER SHOP');
     });
+});
+
+it('returns success when screenshot Retry finds a category and complete details', async () => {
+    repo.findFinanceReviewCandidate.mockResolvedValue({ data: {
+        id: 'candidate', intake_item_id: 'intake', status: 'pending', payload: {},
+        intake: { ocr_normalized_text: 'RM 17.25\n9 Sep 2026\nSYNTHETIC CORNER SHOP' },
+    } });
+    repo.autoConfirmFinanceScreenshot.mockResolvedValueOnce({ data: { confirmed: true }, error: null });
+    expect(await resolveFinanceReviewCandidateForUser('user', 'candidate', 'retry', {}, '2026-09-09')).toEqual({ kind: 'success' });
+    expect(repo.autoConfirmFinanceScreenshot).toHaveBeenCalledWith('user', 'candidate');
 });

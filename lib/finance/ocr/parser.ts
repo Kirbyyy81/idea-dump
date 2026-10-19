@@ -224,6 +224,7 @@ export function parseFinanceText(
         payload.matched_rule_names.push(rule.name);
         if (rule.category_id && !categoryAssigned) {
             payload.category_id = rule.category_id;
+            payload.category_assignment = { origin: 'manual', rule_id: rule.id };
             categoryAssigned = true;
             categoryMatchedRuleId = rule.id;
         }

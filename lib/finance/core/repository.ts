@@ -434,6 +434,21 @@ export async function updateFinanceTransaction(
     });
 }
 
+export function autoConfirmFinanceScreenshot(userId: string, candidateId: string) {
+    return createAdminClient().rpc('finance_auto_confirm_screenshot', {
+        p_user_id: userId, p_candidate_id: candidateId,
+    });
+}
+
+export function financeCategoryMemorySettings(userId: string, input: {
+    action: 'list' | 'set' | 'forget'; id?: string; categoryId?: string | null; active?: boolean;
+}) {
+    return createAdminClient().rpc('finance_category_memory_settings', {
+        p_user_id: userId, p_action: input.action, p_id: input.id ?? null,
+        p_category_id: input.categoryId ?? null, p_active: input.active ?? null,
+    });
+}
+
 export async function deleteFinanceTransaction(userId: string, transactionId: string) {
     return createAdminClient().rpc('finance_delete_transaction', {
         p_user_id: userId,
