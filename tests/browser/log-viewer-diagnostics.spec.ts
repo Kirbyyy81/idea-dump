@@ -87,14 +87,12 @@ test('uses summary cards to filter errors and orphans without hiding their statu
   await expect(page.getByRole('button').filter({ hasText: 'Request not logged' }).filter({ hasText: '400' })).toHaveCount(1);
 });
 
-test('requires explicit parsing for large uploads and rejects files over 10 MB before replacing the input', async ({ page }) => {
+test('automatically parses large uploads and rejects files over 10 MB before replacing the input', async ({ page }) => {
   await page.goto('/log-viewer');
   const text = '2026-10-15 10:00:00.000 RESPONSE https://example.test/yesshop/v1/Large ' + JSON.stringify({ sample: 'a'.repeat(260000) });
   await page.locator('#log-viewer-file-input').setInputFiles({ name: 'large.log', mimeType: 'text/plain', buffer: Buffer.from(text) });
-  await expect(page.getByRole('button', { name: 'Parse log', exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Logs', exact: true })).toHaveCount(0);
-  await page.getByRole('button', { name: 'Parse log', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Logs', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Parse log', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Back to log input', exact: true }).click();
   await page.locator('#log-viewer-file-input').setInputFiles({ name: 'oversized.log', mimeType: 'text/plain', buffer: Buffer.alloc(10 * 1024 * 1024 + 1, 97) });
   await expect(page.getByRole('alert')).toHaveText('Choose a log file of 10 MB or smaller.');

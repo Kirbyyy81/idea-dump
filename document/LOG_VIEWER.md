@@ -65,7 +65,7 @@ Collapsed rows show timestamps, hosts, source badges, known HTTP codes, parse wa
 
 401 rows offer **Session context** when nearby matching-endpoint retries, Login records or auth/token records exist. This shows only recorded events in the same source segment, within 60 seconds and twelve timeline entries on either side. It does not infer a successful recovery or causal connection. Selecting a context entry clears filters, unfolds auth grouping and opens the actual record.
 
-Line links open the full import input, focus it, select the exact original line range and scroll within the input. This works beyond the 50,000-character raw-preview limit. Uploads and pastes above 250,000 characters both require **Parse log**. Uploaded files above 10 MiB are rejected before reading, preserving existing input/results. Failed reads show a retryable error; a stale asynchronous file read cannot replace a newer selection or paste.
+Line links open the full import input, focus it, select the exact original line range and scroll within the input. This works beyond the 50,000-character raw-preview limit. Pasted logs parse automatically after a 250 ms pause, including pastes above 250,000 characters. Supported uploads parse automatically after reading, without a separate Parse log step. Uploaded files above 10 MiB are rejected before reading, preserving existing input/results. Failed reads show a retryable error; a stale asynchronous file read cannot replace a newer selection or paste.
 
 `yes-shop-session.txt` is a synthetic regression fixture based on logger and endpoint formats verified read-only in the Yes Shop app (`MposLogger`, `HomeAuthTokenAuthenticator`, `RegistrationRepository` and `PostpaidViewModel`). It contains no real tokens or customer data. The original Yes Shop and USSP fixtures continue to cover each source's correlation and payload rules.
 
@@ -86,7 +86,7 @@ npm run test:log-viewer
 npx playwright test tests/browser/log-viewer.spec.ts tests/browser/log-viewer-diagnostics.spec.ts
 ```
 
-The first command runs parser, dictionary, correlation, table-batch, and component tests. The browser suite checks desktop and mobile uploads, deep JSON rendering, keyboard-operated folding, copying complete JSON from folded or closed panels, independent raw controls, table-batch rendering/search/filtering, missing requests, and the explicit parse action for large pastes. Browser harnesses live under `tests/browser/` and do not ship in application routes.
+The first command runs parser, dictionary, correlation, table-batch, and component tests. The browser suite checks desktop and mobile uploads, deep JSON rendering, keyboard-operated folding, copying complete JSON from folded or closed panels, independent raw controls, table-batch rendering/search/filtering, missing requests, and automatic parsing of large clipboard pastes and uploads. Browser harnesses live under `tests/browser/` and do not ship in application routes.
 
 Also run the audits, lint, TypeScript, full tests, and production build required by the repository guide.
 

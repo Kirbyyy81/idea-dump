@@ -17,7 +17,6 @@ import { LogTimeline } from './LogTimeline';
 import { RawLineProvider } from './RawLineLink';
 import { cn } from '@/lib/utils';
 
-const AUTO_PARSE_THRESHOLD = 250000;
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const INITIAL_FILTERS: LogViewerFilters = { query: '', errorsOnly: false, endpoint: '', lineType: '', status: '', source: '', section: 'all' };
 
@@ -50,8 +49,6 @@ export function LogViewer() {
   ].filter((value): value is string => Boolean(value)))].sort((a, b) => a.localeCompare(b)), [transactions, unmatchedContentData]);
 
   const hasParsedOutput = transactions.length > 0 || unparsedLines.length > 0 || unmatchedContentData.length > 0;
-  const isLargeLog = rawText.length > AUTO_PARSE_THRESHOLD;
-  const isManualParsePending = isLargeLog && rawText !== lastParsedRawText;
   const summary = [
     { label: 'Events', value: events.length },
     { label: 'Transactions', value: transactions.length },
@@ -88,7 +85,7 @@ export function LogViewer() {
       const text = await file.text();
       if (readId !== fileReadId.current) return;
       clearParsedState(); setRawText(text); setFileName(file.name);
-      if (text.length <= AUTO_PARSE_THRESHOLD) processText(text);
+      processText(text);
     } catch {
       if (readId === fileReadId.current) setImportError('Could not read this log file. Try again.');
     }
@@ -130,11 +127,11 @@ export function LogViewer() {
 
   useEffect(() => {
     if (!rawText.trim()) { clearParsedState(); return; }
-    if (rawText === lastParsedRawText || isLargeLog) { setIsAutoParsing(false); return; }
+    if (rawText === lastParsedRawText) { setIsAutoParsing(false); return; }
     setIsAutoParsing(true);
     const timer = window.setTimeout(() => processText(rawText), 250);
     return () => window.clearTimeout(timer);
-  }, [rawText, lastParsedRawText, isLargeLog, processText, clearParsedState]);
+  }, [rawText, lastParsedRawText, processText, clearParsedState]);
 
   const noMatches = !filteredTransactions.length && !filteredContent.length && !filteredUnparsed.length;
   return <RawLineProvider onJump={jumpToLine}>
@@ -166,16 +163,11 @@ export function LogViewer() {
             aria-label="Paste raw log text" value={rawText} placeholder="Paste raw API logs here..." onChange={event => {
               ++fileReadId.current; setImportError(''); setLineAnnouncement(''); setFileName('');
               const text = event.target.value;
-              if (text.length > AUTO_PARSE_THRESHOLD) clearParsedState();
               setRawText(text);
             }} />
           <p role="status" className="sr-only">{lineAnnouncement}</p>
           {importError && <p role="alert" className="mt-2 text-sm text-error">{importError}</p>}
           {isAutoParsing && <div className="mt-3 text-right text-xs text-text-muted">Parsing...</div>}
-          {isManualParsePending && <div className="mt-3 flex flex-col gap-2 rounded-md border border-border-subtle bg-bg-base p-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-text-muted">Large log detected. Parse when you are ready.</p>
-            <Button type="button" variant="secondary" onClick={() => processText(rawText)}>Parse log</Button>
-          </div>}
         </div>}
       </Card>
 
@@ -199,7 +191,7 @@ export function LogViewer() {
       </>}
 
       {!hasParsedOutput ? <Card className="min-w-0 max-w-full p-12 text-center"><p className="text-text-muted">
-        {isManualParsePending ? 'Select Parse log to view this log.' : 'Upload a log file or paste raw log text to begin.'}
+        Upload a log file or paste raw log text to begin.
       </p></Card> : <Card className="min-w-0 max-w-full p-6">
         <div className="mb-4 flex min-w-0 items-center justify-between gap-3"><h2 className="text-lg font-bold font-body text-text-primary">Logs</h2>
           <span className="text-xs text-text-muted">{filteredTransactions.length} / {transactions.length}</span>
