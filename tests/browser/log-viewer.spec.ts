@@ -233,16 +233,18 @@ for (const source of ['yes-shop', 'ussp']) {
   });
 }
 
-test('requires explicit parsing for a large paste and keeps the viewer responsive', async ({ page }) => {
+test('automatically parses a large clipboard paste and keeps the viewer responsive', async ({ page, context }) => {
   const fixture = readFileSync('lib/log-viewer/fixtures/yes-shop.txt', 'utf8');
   // Keep the event count representative while making each payload larger.
   const padding = JSON.stringify({ sample: 'a'.repeat(540_000) });
   const large = fixture + '\n2026-09-24 10:44:00.000 RESPONSE https://example.test/yesshop/mobile/ws/v1/json/Large ' + padding;
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.goto('/log-viewer');
-  await page.getByRole('textbox', { name: 'Paste raw log text' }).fill(large);
-  await expect(page.getByRole('button', { name: 'Parse log', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Parse log', exact: true }).click();
+  await page.evaluate(text => navigator.clipboard.writeText(text), large);
+  await page.getByRole('textbox', { name: 'Paste raw log text' }).focus();
+  await page.keyboard.press(process.platform === 'darwin' ? 'Meta+V' : 'Control+V');
   await expect(page.getByRole('heading', { name: 'Logs', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Parse log', exact: true })).toHaveCount(0);
   await page.getByPlaceholder('Search endpoint / payload...').fill('getPlanPriceInfo');
   await page.getByRole('button').filter({ hasText: /^ok/ }).filter({ hasText: 'getPlanPriceInfo' }).click();
   await page.getByRole('button', { name: 'Response body', exact: true }).click();
