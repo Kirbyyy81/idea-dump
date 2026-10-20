@@ -885,6 +885,7 @@ The `finance_private` schema owns share upload reservations, reservation items, 
 - Month changes update the URL and request a fresh server-rendered payload. The selected month defaults to the current month in `Asia/Kuala_Lumpur`.
 - Transaction filter changes request a fresh server-rendered payload. Mutation endpoints remain client-called so edits, deletes, confirmations, retries, and rejections stay interactive.
 - Recharts and dashboard navigation remain client-side for responsive sizing, keyboard interaction, and filtered transaction links.
+- Clicking a category in the dashboard chart or list opens the transaction ledger with that category (or Uncategorised) and inclusive first/last-day filters for the displayed month. A selected dashboard day does not narrow category navigation to that day; historical months and leap-year boundaries use their own full calendar month.
 - Finance page data is tenant-scoped and dynamically rendered. It is not persisted in a cross-request cache.
 
 ## Next.js API surface

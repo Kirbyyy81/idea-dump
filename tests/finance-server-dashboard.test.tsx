@@ -140,6 +140,22 @@ describe('server-rendered Finance dashboard', () => {
         expect(routerPush).toHaveBeenLastCalledWith('/finance?month=2026-06');
     });
 
+    it.each([['2024-02', '29'], ['2025-02', '28'], ['2026-04', '30'], ['2026-12', '31']])('keeps category links inside the selected month %s, even when a day is selected', (month, lastDay) => {
+        render(<FinanceDashboardClient month={month} today="2026-12-31" selectedDate={`${month}-12`} summary={{ ...summary,
+            net_by_category: [...summary.net_by_category, { category_id: null, label: 'Uncategorised', amount: 1 }],
+        }} />);
+        const list = within(screen.getByRole('list', { name: 'Spending categories' }));
+        const food = new URL(list.getByRole('link', { name: /Food/ }).getAttribute('href')!, 'https://example.test');
+        expect(Object.fromEntries(food.searchParams)).toEqual({
+            category_id: summary.net_by_category[0].category_id,
+            date_from: `${month}-01`, date_to: `${month}-${lastDay}`,
+        });
+        const uncategorised = new URL(list.getByRole('link', { name: /Uncategorised/ }).getAttribute('href')!, 'https://example.test');
+        expect(Object.fromEntries(uncategorised.searchParams)).toEqual({
+            uncategorised: 'true', date_from: `${month}-01`, date_to: `${month}-${lastDay}`,
+        });
+    });
+
     it('displays signed category totals including fully offset and income-only categories', () => {
         render(<FinanceDashboardClient month="2026-05" today="2026-05-21" summary={{ ...summary, net_by_category: [
             { category_id: 'food', label: 'Food', amount: 15 },

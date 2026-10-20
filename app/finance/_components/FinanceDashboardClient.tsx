@@ -16,6 +16,7 @@ import {
 } from '@/components/atoms/DoodleIcons';
 import { FinanceDashboardSummary } from '@/lib/types';
 import { shiftFinanceMonth } from '@/lib/finance/core/values';
+import { daysInMonth } from '@/shared/date';
 import { formatCurrencyMYR } from '@/lib/utils';
 import { financeTransactionsHref } from '@/lib/finance/transactions/filters';
 import { BudgetCycleProgress } from '@/app/finance/budgets/_components/BudgetProgress';
@@ -39,6 +40,12 @@ export function FinanceDashboardClient({ month, today, selectedDate = null, summ
         color: CHART_COLORS[index % CHART_COLORS.length],
     }));
     const positiveCategoryTotals = categoryTotals.filter((item) => item.amount > 0);
+    const [year, monthNumber] = month.split('-').map(Number);
+    const categoryTransactionsHref = (categoryId: string | null) => financeTransactionsHref({
+        ...(categoryId ? { categoryId } : { uncategorised: true }),
+        dateFrom: `${month}-01`,
+        dateTo: `${month}-${daysInMonth(year, monthNumber)}`,
+    });
 
     const openTransactions = (href: string) => router.push(href);
     const openMonth = (nextMonth: string) => {
@@ -109,7 +116,7 @@ export function FinanceDashboardClient({ month, today, selectedDate = null, summ
                                     <PieChart>
                                         <Pie data={positiveCategoryTotals} dataKey="amount" nameKey="label" innerRadius="55%" outerRadius="82%" paddingAngle={2}>
                                             {positiveCategoryTotals.map((item) => {
-                                                const href = financeTransactionsHref(item.category_id ? { categoryId: item.category_id } : { uncategorised: true });
+                                                const href = categoryTransactionsHref(item.category_id);
                                                 return <Cell key={item.category_id || 'uncategorised'} fill={item.color} stroke="#4d463b" strokeWidth={1} role="link" tabIndex={0} aria-label={`View ${item.label} transactions`} className="cursor-pointer outline-none focus-visible:stroke-text-primary focus-visible:stroke-[3px]" onClick={() => openTransactions(href)} onKeyDown={(event) => activateTransactionsLink(event, href)} />;
                                             })}
                                         </Pie>
@@ -118,7 +125,7 @@ export function FinanceDashboardClient({ month, today, selectedDate = null, summ
                                 </ResponsiveContainer>
                             </div>
                         ) : <p className="my-3 text-sm text-text-muted">No positive net spending this month.</p>}
-                        <ul id="dashboard-category-list" aria-label="Spending categories" tabIndex={showAllCategories ? 0 : undefined} className="max-h-60 space-y-1 overflow-y-auto">{(showAllCategories ? categoryTotals : categoryTotals.slice(0, 5)).map((item) => { const href = financeTransactionsHref(item.category_id ? { categoryId: item.category_id } : { uncategorised: true }); return <li key={item.category_id || 'uncategorised'}><Link href={href} className="flex min-h-10 flex-wrap items-start justify-between gap-x-3 gap-y-1 rounded-md px-1 py-2 text-sm hover:bg-bg-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-dark"><span className="flex min-w-0 items-center gap-2"><span aria-hidden="true" className="mt-1 size-2.5 shrink-0" style={{ backgroundColor: item.color }} /><span className="break-words">{item.label}</span></span><span className="ml-auto break-all text-right">{formatCurrencyMYR(item.amount)}</span></Link></li>; })}</ul>
+                        <ul id="dashboard-category-list" aria-label="Spending categories" tabIndex={showAllCategories ? 0 : undefined} className="max-h-60 space-y-1 overflow-y-auto">{(showAllCategories ? categoryTotals : categoryTotals.slice(0, 5)).map((item) => { const href = categoryTransactionsHref(item.category_id); return <li key={item.category_id || 'uncategorised'}><Link href={href} className="flex min-h-10 flex-wrap items-start justify-between gap-x-3 gap-y-1 rounded-md px-1 py-2 text-sm hover:bg-bg-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-dark"><span className="flex min-w-0 items-center gap-2"><span aria-hidden="true" className="mt-1 size-2.5 shrink-0" style={{ backgroundColor: item.color }} /><span className="break-words">{item.label}</span></span><span className="ml-auto break-all text-right">{formatCurrencyMYR(item.amount)}</span></Link></li>; })}</ul>
                         {categoryTotals.length > 5 && <Button type="button" variant="ghost" className="mt-2 self-start" aria-expanded={showAllCategories} aria-controls="dashboard-category-list" onClick={() => setExpandedCategoryMonth(showAllCategories ? null : month)}>{showAllCategories ? 'Show fewer' : `View all ${categoryTotals.length} categories`}</Button>}
                     </section>
                 </div>
