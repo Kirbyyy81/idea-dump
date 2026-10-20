@@ -1,5 +1,41 @@
 # Changelog
 
+## [0.18.2](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.18.1...idea-dump-v0.18.2) (2026-10-15)
+
+
+### Bug Fixes
+
+* delete individual recent barcodes ([fbbba85](https://github.com/Kirbyyy81/idea-dump/commit/fbbba859cf5afb86e18659c40a1b80fc15e87766))
+* improve log inspection controls ([8c920ad](https://github.com/Kirbyyy81/idea-dump/commit/8c920ada2de23b8d7a5a11def92c5e4ad8aa098b))
+* patch vulnerable dependencies ([8ee5da9](https://github.com/Kirbyyy81/idea-dump/commit/8ee5da96b18e5f61b5534bcec51d853c08fe79cc))
+* preserve log payload details ([405a309](https://github.com/Kirbyyy81/idea-dump/commit/405a30988a00cd7021162e25cbdce92e6ff9daf4))
+
+## [0.18.1](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.18.0...idea-dump-v0.18.1) (2026-10-14)
+
+
+### Bug Fixes
+
+* accept alphanumeric barcode values ([dae0c4e](https://github.com/Kirbyyy81/idea-dump/commit/dae0c4ecd15e823bdb9fb28c8f8a80b3178b88e6))
+* combine film and camera cupboards ([b2599e2](https://github.com/Kirbyyy81/idea-dump/commit/b2599e2c4d01b141c48a79995f9afa48f6cff359))
+* compact film shelf until roll details expand ([f28120a](https://github.com/Kirbyyy81/idea-dump/commit/f28120a3f442fe99fb3e16896c531f68fd8fb9e3))
+* consolidate inventory purchases ([47f8f54](https://github.com/Kirbyyy81/idea-dump/commit/47f8f54e719186388613eaf9ea53ea3cc202105d))
+* expand embedded JSON strings ([ab4eed7](https://github.com/Kirbyyy81/idea-dump/commit/ab4eed7a548e032b1c9530bac818b1a9ce82452c))
+* keep film cupboard rows stable during expansion ([08c0d76](https://github.com/Kirbyyy81/idea-dump/commit/08c0d76e0f8c9df64a9133d1b90cfd6502a8bdfd))
+* move add roll action onto film shelf ([354b952](https://github.com/Kirbyyy81/idea-dump/commit/354b95292af3d63bf797fbd03feae7b8b9b2a0e3))
+* populate film frames from Drive sync ([33c7aa3](https://github.com/Kirbyyy81/idea-dump/commit/33c7aa3a42321542bc2e4993f840f840270c54c3))
+* remove cameras from film submenu ([6fae5cc](https://github.com/Kirbyyy81/idea-dump/commit/6fae5cc336e4eea3c645fbab5a3c3d2b2f57e65d))
+* remove contact sheet heading ([b1be82c](https://github.com/Kirbyyy81/idea-dump/commit/b1be82c3dd032cdd8c7538e4ad8d825a7f93de66))
+* remove inventory adjustments ([a594289](https://github.com/Kirbyyy81/idea-dump/commit/a5942898550bcfa2fd505acc98c4b0b0480bf262))
+* remove inventory request history ([5e1324d](https://github.com/Kirbyyy81/idea-dump/commit/5e1324de6d42d6b08a0025b5255b6203db968142))
+* remove legacy finance tables ([8c5a11b](https://github.com/Kirbyyy81/idea-dump/commit/8c5a11b46b745dc9f5d0b11397ed0d9d435986ea))
+* remove notification review history ([ca89767](https://github.com/Kirbyyy81/idea-dump/commit/ca89767421c7b5b9a704168eb1bedb566bf04206))
+* remove redundant contact sheet drive link ([7afb48c](https://github.com/Kirbyyy81/idea-dump/commit/7afb48c6182b280124a8378d619f5d2c875311d0))
+* simplify log viewer navigation ([3cc3aa7](https://github.com/Kirbyyy81/idea-dump/commit/3cc3aa7ce1dd692b1f62b1aaf7603466aba382c1))
+* slim film responses and load private thumbnails ([c3dbe98](https://github.com/Kirbyyy81/idea-dump/commit/c3dbe983dc4f84a55fe7e651787b8bcb5a48a82b))
+* soften expanded film strip shadow ([78083f0](https://github.com/Kirbyyy81/idea-dump/commit/78083f0a21cc9582b3e4e35d7a2766cb588a0dba))
+* stop OCR conflict retries ([231c7cc](https://github.com/Kirbyyy81/idea-dump/commit/231c7ccd6d1a5d4e15c3687336f238c1515ae221))
+* update film favorites without reloading the roll ([8101623](https://github.com/Kirbyyy81/idea-dump/commit/81016233a66afc90cfab653ea71ac6e9a0edbaa3))
+
 ## [0.18.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.17.0...idea-dump-v0.18.0) (2026-10-06)
 
 
