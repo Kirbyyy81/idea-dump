@@ -2,6 +2,55 @@ import { expect, test } from '@playwright/test';
 
 const fixture = 'lib/log-viewer/fixtures/yes-shop-session.txt';
 
+test('automatically shows reader diagnostics in one expandable block with compact entries', async ({ page }, testInfo) => {
+  await page.goto('/log-viewer');
+  await page.locator('#log-viewer-file-input').setInputFiles('lib/log-viewer/fixtures/ussp-reader.txt');
+  const summary = page.locator('summary').filter({ hasText: 'SECURE_METRIC_READER' });
+  const group = page.locator('details').filter({ has: summary });
+  await expect(summary).toHaveCount(1);
+  await expect(summary).toContainText('6 events');
+  await expect(summary).toContainText('1 error');
+  await expect(summary).toContainText('USSP');
+  await expect(summary).toContainText('lines 3-8');
+  await expect(group).not.toHaveAttribute('open');
+  await expect(page.getByRole('button').filter({ hasText: 'SECURE_METRIC_READER' })).toHaveCount(0);
+  await summary.focus();
+  await page.keyboard.press('Enter');
+  await expect(group).toHaveAttribute('open');
+  await expect(group.getByRole('button', { name: 'Reader details', exact: true })).toHaveCount(6);
+  const payload = group.getByRole('region', { name: 'Reader details' }).nth(2);
+  await payload.getByRole('button', { name: 'Reader details', exact: true }).click();
+  await expect(payload.locator('code')).toContainText('"sample": "001"');
+  await payload.getByRole('button', { name: /^Show JSON at / }).click();
+  await expect(payload).toContainText('"ready"');
+  await payload.getByRole('button', { name: 'Raw info line', exact: true }).click();
+  await expect(payload.getByRole('textbox')).toHaveValue(/SECURE_METRIC_READER_DATA.*session=test.*sample/);
+  await group.getByRole('button', { name: 'Go to raw lines 3-8', exact: true }).click();
+  const input = page.getByRole('textbox', { name: 'Paste raw log text' });
+  await expect(input).toBeFocused();
+  expect(await input.evaluate(element => {
+    const field = element as HTMLTextAreaElement;
+    return field.value.slice(field.selectionStart, field.selectionEnd).split('\n').length;
+  })).toBe(6);
+  await page.getByRole('button', { name: 'Filter errors', exact: true }).click();
+  await expect(summary).toContainText('1 event');
+  await expect(summary).toContainText('1 error');
+  await page.getByRole('button', { name: 'Filter errors', exact: true }).click();
+  await page.getByPlaceholder('Search endpoint / payload...').fill('state=READY');
+  await expect(summary).toContainText('1 event');
+  await page.getByPlaceholder('Search endpoint / payload...').fill('');
+  await summary.click();
+  await expect(group).toHaveAttribute('open');
+  await page.screenshot({ path: testInfo.outputPath('reader-group.png'), fullPage: true });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width + 2);
+  await summary.focus();
+  await page.keyboard.press('Space');
+  await expect(group).not.toHaveAttribute('open');
+  await expect(group.getByRole('button', { name: 'Reader details', exact: true })).toHaveCount(0);
+  await summary.click();
+  await expect(group.getByRole('button', { name: 'Reader details', exact: true })).toHaveCount(6);
+});
+
 test('shows response status, surrounding text, host, source and recorded session context', async ({ page }, testInfo) => {
   await page.goto('/log-viewer');
   await page.locator('#log-viewer-file-input').setInputFiles(fixture);

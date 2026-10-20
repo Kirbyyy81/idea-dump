@@ -1398,7 +1398,7 @@ export type LogViewerFilters = {
   section: 'all' | 'unmatched' | 'unparsed';
 };
 
-export type LogTimelineRow = { kind: 'transaction' | 'auth'; transactions: Transaction[] };
+export type LogTimelineRow = { kind: 'transaction' | 'auth' | 'reader'; transactions: Transaction[] };
 
 export type BuildTransactionsOptions = {
   inactivityTimeoutMs: number;

@@ -11,6 +11,46 @@ const make = (...lines: string[]) => {
 };
 
 describe('Log Viewer presentation and filtering', () => {
+  it('automatically groups consecutive reader diagnostics and payloads regardless of elapsed time', () => {
+    const result = make('REQUEST https://a.test/ussp/v1/Begin {}',
+      'SECURE_METRIC_READER >>>>>>> synthetic-flow >>>>>> session=test event=STATE state=READY',
+      'SECURE_METRIC_READER_DATA >>>>>>> synthetic-flow >>>>>> session=test event=RESULT payload={"value":"001"}',
+      'SECURE_METRIC_READER >>>>>>> synthetic-flow >>>>>> session=test event=FINISHED');
+    result.transactions.at(-1)!.startedAtMs! += 120000;
+    const before = JSON.stringify(result);
+    const rows = timelineRows(result.transactions, new Set(result.transactions.map(tx => tx.id)), false, result.events);
+    expect(rows.map(row => [row.kind, row.transactions.length])).toEqual([['transaction', 1], ['reader', 3]]);
+    expect(rows.flatMap(row => row.transactions)).toEqual(result.transactions);
+    expect(JSON.stringify(result)).toBe(before);
+  });
+
+  it('keeps reader block boundaries across hidden business, unmatched, unparsed and source-transition records', () => {
+    const reader = 'SECURE_METRIC_READER >>>>>>> synthetic-flow >>>>>> session=test event=STATE';
+    const result = make('REQUEST https://a.test/ussp/v1/Begin {}', reader, reader,
+      'REQUEST https://a.test/ussp/v1/Other {}', reader,
+      'CONTENT DATA >> Unknown >> {}', reader,
+      'REQUEST >>> (No Body)', reader,
+      'REQUEST https://b.test/yesshop/v1/Other {}', reader);
+    const visible = new Set(result.transactions.filter(tx => tx.responses[0]?.eventType === 'SECURE_METRIC_READER').map(tx => tx.id));
+    for (const groupAuth of [true, false]) {
+      const rows = timelineRows(result.transactions, visible, groupAuth, result.events);
+      expect(rows.map(row => row.transactions.length)).toEqual([2, 1, 1, 1, 1]);
+      expect(rows.every(row => row.kind === 'reader')).toBe(true);
+    }
+  });
+
+  it('filters reader events individually while preserving the remaining block and rejecting lookalike titles', () => {
+    const result = make('SECURE_METRIC_READER >>>>>>> flow >>>>>> event=READY',
+      'SECURE_METRIC_READER_DATA >>>>>>> flow >>>>>> payload={"errorCode":9}',
+      'SECURE_METRIC_READER_EXTRA >>>>>>> unrelated');
+    const visible = new Set(result.transactions.filter(tx => transactionMatches(tx, { ...filters, status: 'errors' })).map(tx => tx.id));
+    const rows = timelineRows(result.transactions, visible, false, result.events);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].kind).toBe('reader');
+    expect(rows[0].transactions).toEqual([result.transactions[1]]);
+    expect(timelineRows(result.transactions, new Set(result.transactions.map(tx => tx.id)), false, result.events).at(-1)?.kind).toBe('transaction');
+  });
+
   it('searches and filters standalone content using the same criteria as the timeline', () => {
     const { unmatchedContentData } = make('CONTENT DATA >> Unknown >> {"needle":"match"}', 'REQUEST https://a.test/yesshop/v1/Other {}');
     const event = unmatchedContentData[0];

@@ -5,6 +5,7 @@ import type { LogTimelineRow, Transaction } from '@/lib/types';
 import { sessionContext, sourceLabels, transactionEvents } from '@/lib/log-viewer/presentation';
 import { transactionHasError } from '@/lib/log-viewer/transactions';
 import { TransactionRow } from './TransactionDisplay';
+import { ReaderEventGroup } from './ReaderEventGroup';
 
 export function LogTimeline({ rows, transactions, selected, onSelect, onNavigate }: {
   rows: LogTimelineRow[]; transactions: Transaction[]; selected: string | null;
@@ -30,7 +31,9 @@ export function LogTimeline({ rows, transactions, selected, onSelect, onNavigate
       </details>}
     </div>;
   };
-  return <>{rows.map(row => row.kind === 'auth' && row.transactions.length > 1 ? (
+  return <>{rows.map(row => row.kind === 'reader'
+    ? <ReaderEventGroup key={row.transactions[0].id} transactions={row.transactions} />
+    : row.kind === 'auth' && row.transactions.length > 1 ? (
     <details key={row.transactions[0].id} className="min-w-0 rounded-lg border border-border-subtle bg-bg-base">
       <summary className="min-h-11 cursor-pointer px-4 py-3 text-sm">
         Auth and token events ({row.transactions.reduce((count, tx) => count + transactionEvents(tx).length, 0)})

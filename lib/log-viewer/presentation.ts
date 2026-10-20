@@ -62,14 +62,20 @@ export function isAuthTransaction(tx: Transaction): boolean {
   return events.length > 0 && events.every(isAuthEvent);
 }
 
+function isReaderEvent(event: LogEvent): boolean {
+  return /^SECURE_METRIC_READER(?:_DATA)?$/i.test(event.eventType);
+}
+
 // Group before filtering so hidden business records remain group boundaries.
 export function timelineRows(transactions: Transaction[], visible: Set<string>, groupAuth: boolean, events: LogEvent[] = []): LogTimelineRow[] {
-  if (!groupAuth) return transactions.filter(tx => visible.has(tx.id)).map(tx => ({ kind: 'transaction', transactions: [tx] }));
   const barriers = new Map<number, number>();
-  let barrier = 0;
+  const readerBarriers = new Map<number, number>();
+  let barrier = 0, readerBarrier = 0;
   for (const event of events) {
     if (!isAuthEvent(event)) barrier++;
+    if (!isReaderEvent(event)) readerBarrier++;
     barriers.set(event.lineNumber, barrier);
+    readerBarriers.set(event.lineNumber, readerBarrier);
   }
   const groups: LogTimelineRow[] = [];
   for (const tx of transactions) {
@@ -79,8 +85,11 @@ export function timelineRows(transactions: Transaction[], visible: Set<string>, 
     const gap = last?.startedAtMs != null && tx.startedAtMs != null ? tx.startedAtMs - last.startedAtMs : undefined;
     const consecutive = last && barriers.get(last.lineRefs[0]) === barriers.get(tx.lineRefs[0]);
     const auth = groupAuth && isAuthTransaction(tx);
-    if (auth && previous?.kind === 'auth' && sameScope && consecutive && gap != null && gap >= 0 && gap <= 30000) previous.transactions.push(tx);
-    else groups.push({ kind: auth ? 'auth' : 'transaction', transactions: [tx] });
+    const reader = !tx.request && !tx.contentData && tx.responses.length === 1 && isReaderEvent(tx.responses[0]);
+    const consecutiveReader = last && readerBarriers.get(last.lineRefs[0]) === readerBarriers.get(tx.lineRefs[0]);
+    if (reader && previous?.kind === 'reader' && sameScope && consecutiveReader) previous.transactions.push(tx);
+    else if (auth && previous?.kind === 'auth' && sameScope && consecutive && gap != null && gap >= 0 && gap <= 30000) previous.transactions.push(tx);
+    else groups.push({ kind: reader ? 'reader' : auth ? 'auth' : 'transaction', transactions: [tx] });
   }
   return groups.map(group => ({ ...group, transactions: group.transactions.filter(tx => visible.has(tx.id)) }))
     .filter(group => group.transactions.length > 0);

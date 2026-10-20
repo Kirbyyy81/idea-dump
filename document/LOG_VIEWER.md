@@ -69,6 +69,12 @@ Line links open the full import input, focus it, select the exact original line 
 
 `yes-shop-session.txt` is a synthetic regression fixture based on logger and endpoint formats verified read-only in the Yes Shop app (`MposLogger`, `HomeAuthTokenAuthenticator`, `RegistrationRepository` and `PostpaidViewModel`). It contains no real tokens or customer data. The original Yes Shop and USSP fixtures continue to cover each source's correlation and payload rules.
 
+## Reader diagnostics
+
+Consecutive `SECURE_METRIC_READER` and `SECURE_METRIC_READER_DATA` records automatically appear in one collapsed block, independently of **Group auth events**. Expanding it shows compact entries with their original timestamps, payloads, JSON controls and raw-line links. The summary shows the visible event count, source, timestamp range, line range, error count and any JSON parse warning. Records are preserved individually for search, filtering and error counts.
+
+Reader blocks have no time-gap cutoff. A non-reader record or source-segment change ends a block, even when that record is hidden by a filter. Filtering operates on the original entries inside each block; it cannot join separate reader runs. `ussp-reader.txt` is a synthetic fixture based on the USSP logger format, with no actual reader or customer data.
+
 ## Table dumps
 
 Consecutive `=== Table: <name> ... Row: ...` and `Table <name> is empty` records appear as one **Table dump** timeline row. A non-table event, source-segment change, repeated table name, backwards timestamp, or gap exceeding one second starts a new batch. Records without comparable timestamps remain separate. Grouping runs after API correlation and keeps the original event count and matching distances intact; each batch counts as one displayed transaction row.

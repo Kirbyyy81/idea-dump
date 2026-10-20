@@ -1,0 +1,10 @@
+2026-10-20 10:49:40.000 REQUEST https://example.test/ussp/v1/Begin {}
+2026-10-20 10:49:40.100 RESPONSE https://example.test/ussp/v1/Begin {"status":"ok"}
+2026-10-20 10:49:41.714 SECURE_METRIC_READER >>>>>>> synthetic-flow >>>>>> session=test elapsedMs=0 event=ACTIVITY_CREATED device=synthetic
+2026-10-20 10:49:56.869 SECURE_METRIC_READER >>>>>>> synthetic-flow >>>>>> session=test elapsedMs=15155 event=STATE state=READY
+2026-10-20 10:49:56.872 SECURE_METRIC_READER_DATA >>>>>>> synthetic-flow >>>>>> session=test elapsedMs=15158 event=RESULT payload={"sample":"001","nested":"{\"ready\":true}"}
+2026-10-20 10:49:56.875 SECURE_METRIC_READER >>>>>>> synthetic-flow >>>>>> session=test elapsedMs=15161 event=STATE state=READING
+2026-10-20 10:49:56.877 SECURE_METRIC_READER_DATA >>>>>>> synthetic-flow >>>>>> session=test elapsedMs=15163 event=RESULT payload={"errorCode":9,"message":"synthetic failure"}
+2026-10-20 10:51:00.000 SECURE_METRIC_READER >>>>>>> synthetic-flow >>>>>> session=test elapsedMs=78286 event=FINISHED
+2026-10-20 10:51:01.000 REQUEST https://example.test/ussp/v1/Finish {}
+2026-10-20 10:51:01.100 RESPONSE https://example.test/ussp/v1/Finish {"status":"ok"}
