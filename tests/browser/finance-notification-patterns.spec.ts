@@ -19,8 +19,13 @@ test('inspects a learned format and disables it with keyboard controls',async({p
  await expect(page.getByRole('columnheader')).toHaveText(['Pattern','Matching format and fields','Direction','Status']);
  await expect(page.getByText('[amount] paid at [merchant] using your Main Account',{exact:true})).toBeVisible();
  const toggle=page.getByRole('switch',{name:'Enable Reviewed card payment'});
+ await expect(toggle.getByText('Enabled',{exact:true})).toHaveClass('sr-only');
+ const bounds=await toggle.boundingBox();
+ expect(bounds?.width).toBeGreaterThanOrEqual(44);
+ expect(bounds?.height).toBeGreaterThanOrEqual(44);
  await toggle.focus();await page.keyboard.press('Space');
  await expect(toggle).toHaveAttribute('aria-checked','false');
+ await expect(toggle.getByText('Disabled',{exact:true})).toHaveClass('sr-only');
  expect(mutation).toEqual({id:pattern.id,source_id:source,revision:2,is_active:false});
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1)).toBe(true);
  await page.screenshot({path:info.outputPath('notification-patterns.png'),fullPage:true});

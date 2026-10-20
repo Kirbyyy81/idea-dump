@@ -58,7 +58,7 @@ export function NotificationPatternsPanel() {
                         <th scope="col" className="w-1/4 px-3 py-3 font-semibold">Pattern</th>
                         <th scope="col" className="px-3 py-3 font-semibold">Matching format and fields</th>
                         <th scope="col" className="w-24 px-3 py-3 font-semibold">Direction</th>
-                        <th scope="col" className="w-36 px-3 py-3 font-semibold">Status</th>
+                        <th scope="col" className="w-20 px-3 py-3 font-semibold">Status</th>
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-border-default">
@@ -71,7 +71,7 @@ export function NotificationPatternsPanel() {
                         <td className="whitespace-pre-wrap px-3 py-3 font-mono text-xs leading-relaxed text-text-secondary [overflow-wrap:anywhere]">{pattern.definition.parts.map(p=>typeof p==='string'?p:'['+slotLabel(p)+']').join('')}</td>
                         <td className="px-3 py-3 text-text-secondary">{pattern.definition.direction ? <span className="capitalize">{pattern.definition.direction}</span> : 'Not specified'}</td>
                         <td className="px-3 py-3">
-                            <Toggle ariaLabel={'Enable '+pattern.name} toggleLabel={pattern.is_active ? 'Enabled' : 'Disabled'}
+                            <Toggle hideLabel ariaLabel={'Enable '+pattern.name} toggleLabel={pattern.is_active ? 'Enabled' : 'Disabled'}
                                 className="min-h-11" checked={pattern.is_active} disabled={!!pending || loading} onChange={active=>void toggle(pattern,active)}/>
                         </td>
                     </tr>)}

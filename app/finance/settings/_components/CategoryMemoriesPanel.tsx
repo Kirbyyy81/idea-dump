@@ -62,7 +62,7 @@ export function CategoryMemoriesPanel() {
                         <h3 className="text-sm font-semibold">{memory.party_name}</h3>
                         <p className="text-xs text-text-muted">{memory.party_kind === 'payee' ? 'Payee' : 'Merchant'} · {memory.direction} · {memory.evidence_count} corrected {memory.evidence_count === 1 ? 'transaction' : 'transactions'}</p>
                     </div>
-                    <Toggle ariaLabel={`Enable category learning for ${memory.party_name}`} toggleLabel={memory.is_active ? 'Enabled' : 'Disabled'}
+                    <Toggle hideLabel ariaLabel={`Enable category learning for ${memory.party_name}`} toggleLabel={memory.is_active ? 'Enabled' : 'Disabled'}
                         checked={memory.is_active} disabled={pending !== null || loading} onChange={is_active => void update(memory, { is_active })} />
                 </div>
                 {memory.has_conflict ? <p className="text-sm text-warning">Different categories were chosen. Choose a category below to use it for future matches.</p> : null}
