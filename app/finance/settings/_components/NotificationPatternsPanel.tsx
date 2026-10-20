@@ -51,21 +51,32 @@ export function NotificationPatternsPanel() {
         {loading ? <p role="status" className="mt-3 text-sm text-text-muted">Loading patterns...</p> : null}
         {error ? <p role="alert" className="mt-3 text-sm text-error">{error}</p> : null}
         {!loading && !error && !patterns.length ? <p className="mt-3 text-sm text-text-muted">{sourceId ? 'No notification patterns yet.' : 'Add a Finance source to manage notification patterns.'}</p> : null}
-        <ul className="mt-4 divide-y divide-border-default">
-            {patterns.map(pattern=><li key={pattern.id} className="min-w-0 py-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div><h3 className="text-sm font-semibold">{pattern.name}</h3>
-                        <p className="text-xs text-text-muted">{pattern.origin==='learned' ? 'Learned from your review' : 'Starter pattern'}
-                            {!pattern.evidence_valid ? '. Supporting transaction changed. Confirm a new example to relearn.' : ''}</p></div>
-                    <Toggle ariaLabel={'Enable '+pattern.name} toggleLabel={pattern.is_active ? 'Enabled' : 'Disabled'}
-                        checked={pattern.is_active} disabled={!!pending || loading} onChange={active=>void toggle(pattern,active)}/>
-                </div>
-                <details className="mt-2 text-xs text-text-secondary">
-                    <summary className="cursor-pointer">Matching format and fields</summary>
-                    <p className="mt-2 whitespace-pre-wrap break-words">{pattern.definition.parts.map(p=>typeof p==='string'?p:'['+slotLabel(p)+']').join('')}</p>
-                    {pattern.definition.direction ? <p className="mt-1">Direction: {pattern.definition.direction}</p> : null}
-                </details>
-            </li>)}
-        </ul>
+        {patterns.length ? <div className="mt-4 overflow-x-auto rounded-lg border border-border-default" role="region" aria-label="Notification pattern table" tabIndex={0}>
+            <table className="w-full min-w-[640px] table-fixed text-left text-sm" aria-label="Notification patterns">
+                <thead className="border-b border-border-default bg-bg-subtle text-xs text-text-secondary">
+                    <tr>
+                        <th scope="col" className="w-1/4 px-3 py-3 font-semibold">Pattern</th>
+                        <th scope="col" className="px-3 py-3 font-semibold">Matching format and fields</th>
+                        <th scope="col" className="w-24 px-3 py-3 font-semibold">Direction</th>
+                        <th scope="col" className="w-36 px-3 py-3 font-semibold">Status</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-border-default">
+                    {patterns.map(pattern=><tr key={pattern.id} className="align-top">
+                        <th scope="row" className="px-3 py-3 font-normal [overflow-wrap:anywhere]">
+                            <span className="font-semibold">{pattern.name}</span>
+                            <p className="mt-1 text-xs text-text-secondary">{pattern.origin==='learned' ? 'Learned from your review' : 'Starter pattern'}</p>
+                            {!pattern.evidence_valid ? <p className="mt-1 text-xs text-warning">Supporting transaction changed. Confirm a new example to relearn.</p> : null}
+                        </th>
+                        <td className="whitespace-pre-wrap px-3 py-3 font-mono text-xs leading-relaxed text-text-secondary [overflow-wrap:anywhere]">{pattern.definition.parts.map(p=>typeof p==='string'?p:'['+slotLabel(p)+']').join('')}</td>
+                        <td className="px-3 py-3 text-text-secondary">{pattern.definition.direction ? <span className="capitalize">{pattern.definition.direction}</span> : 'Not specified'}</td>
+                        <td className="px-3 py-3">
+                            <Toggle ariaLabel={'Enable '+pattern.name} toggleLabel={pattern.is_active ? 'Enabled' : 'Disabled'}
+                                className="min-h-11" checked={pattern.is_active} disabled={!!pending || loading} onChange={active=>void toggle(pattern,active)}/>
+                        </td>
+                    </tr>)}
+                </tbody>
+            </table>
+        </div> : null}
     </Card>;
 }

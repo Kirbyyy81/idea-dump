@@ -15,7 +15,8 @@ test('inspects a learned format and disables it with keyboard controls',async({p
  });
  await page.goto('/finance/settings/notifications');
  await expect(page.getByText('Learned from your review',{exact:true})).toBeVisible();
- await page.getByText('Matching format and fields').click();
+ await expect(page.getByRole('table',{name:'Notification patterns'})).toBeVisible();
+ await expect(page.getByRole('columnheader')).toHaveText(['Pattern','Matching format and fields','Direction','Status']);
  await expect(page.getByText('[amount] paid at [merchant] using your Main Account',{exact:true})).toBeVisible();
  const toggle=page.getByRole('switch',{name:'Enable Reviewed card payment'});
  await toggle.focus();await page.keyboard.press('Space');
@@ -23,6 +24,31 @@ test('inspects a learned format and disables it with keyboard controls',async({p
  expect(mutation).toEqual({id:pattern.id,source_id:source,revision:2,is_active:false});
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1)).toBe(true);
  await page.screenshot({path:info.outputPath('notification-patterns.png'),fullPage:true});
+});
+test('compares formats, directions and evidence without opening rows',async({page},info)=>{
+ const starter={...pattern,id:'starter',name:'Transaction amount',origin:'starter',is_active:false,definition:{version:1,parts:['amount: ',{kind:'amount',field:'amount'}]}};
+ const stale={...pattern,id:'stale',name:'Incoming transfer',evidence_valid:false,definition:{...pattern.definition,parts:['Received ',{kind:'amount',field:'amount'},' from ',{kind:'text',field:'payee_name'}],direction:'income'}};
+ await page.route('**/api/finance/notification-patterns**',route=>route.fulfill({json:{data:[pattern,starter,stale]}}));
+ await page.goto('/finance/settings/notifications');
+ const table=page.getByRole('table',{name:'Notification patterns'});
+ await expect(table.getByRole('row')).toHaveCount(4);
+ await expect(table.locator('details, summary')).toHaveCount(0);
+ const starterRow=table.getByRole('row').filter({has:page.getByRole('rowheader',{name:'Transaction amount Starter pattern',exact:true})});
+ await expect(starterRow.getByRole('cell',{name:'amount: [amount]',exact:true})).toBeVisible();
+ await expect(starterRow.getByRole('cell',{name:'Not specified',exact:true})).toBeVisible();
+ await expect(starterRow.getByRole('switch')).toHaveAttribute('aria-checked','false');
+ const incomeRow=table.getByRole('row').filter({has:page.getByRole('rowheader',{name:/Incoming transfer/})});
+ await expect(incomeRow.getByText('Received [amount] from [payee name]',{exact:true})).toBeVisible();
+ await expect(incomeRow.getByRole('cell',{name:'income',exact:true})).toBeVisible();
+ await expect(incomeRow.getByText('Supporting transaction changed. Confirm a new example to relearn.',{exact:true})).toBeVisible();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1)).toBe(true);
+ await page.screenshot({path:info.outputPath('notification-patterns-table.png'),fullPage:true});
+ const region=page.getByRole('region',{name:'Notification pattern table'});
+ await region.focus();
+ if(info.project.name==='mobile') {
+  await page.keyboard.press('ArrowRight');
+  await expect.poll(()=>region.evaluate(el=>el.scrollLeft)).toBeGreaterThan(0);
+ }
 });
 test('failed status changes preserve the displayed state and show recovery',async({page})=>{
  await page.route('**/api/finance/notification-patterns**',async route=>{

@@ -688,7 +688,7 @@ Transaction edits also record payee-name changes. Corrections store the text pay
 
 Notification intake and Retry load stored starter and owner-specific extraction patterns before payee matching, manual rules, and duplicate checks. A single successful manual confirmation can learn bounded selectors for amount, direction, merchant/payee, explicit date, and reference. Categories and notes are excluded. This workflow is separate from screenshot parser learning and its scheduled promotion requirements.
 
-Rules settings includes source-scoped notification pattern inspection and enable/disable controls. Review identifies learned fields and conflicts. The server-only confirmation wrapper commits learning atomically, preserves raw-text deletion, and excludes replay, failure, rejection, and duplicate linking. Editing or deleting the supporting transaction invalidates the affected pattern. See [notification learning and rollout](ANDROID_COMPANION.md#notification-extraction-learning).
+Rules settings includes source-scoped notification patterns in a table with matching formats, extracted field placeholders, direction, evidence status, and enable/disable controls visible without expanding rows. The table scrolls horizontally on narrow screens. Review identifies learned fields and conflicts. The server-only confirmation wrapper commits learning atomically, preserves raw-text deletion, and excludes replay, failure, rejection, and duplicate linking. Editing or deleting the supporting transaction invalidates the affected pattern. See [notification learning and rollout](ANDROID_COMPANION.md#notification-extraction-learning).
 
 ### Parser learning and retired legacy rules
 
