@@ -696,7 +696,7 @@ The daily learning job continues to refresh algorithm 2 and 3 parser templates. 
 
 Legacy category/direction rules and reference transforms were retired by the forward migration `20260915172224_retire_legacy_finance_learning.sql`. Historical learned rows in `finance_rules` stay disabled, with database guards against new learned rules, reactivation and conversion into manual rules. The later October 8 cleanup removes the empty suggestion/reference tables and obsolete learner functions. The shared category memory below is a separate capability and does not reactivate this retired learner.
 
-Rules settings shows legacy category rules as read-only retired entries. Manual rules remain editable. The suggestion endpoint, suggestion response field, payload mapper and unused suggestion/reference-rule types have been removed. Historical candidates, traces, baselines, corrections and confirmed transactions are retained. The existing 90-day learning-run retention still applies; new runs report zero legacy activity.
+Rules settings omits the Rule library, including its retired legacy entries. Learning status, notification patterns, learned categories, and the New rule form remain available. Existing stored rules and their processing are unchanged. The suggestion endpoint, suggestion response field, payload mapper and unused suggestion/reference-rule types have been removed. Historical candidates, traces, baselines, corrections and confirmed transactions are retained. The existing 90-day learning-run retention still applies; new runs report zero legacy activity.
 
 ### Shared category memory
 
