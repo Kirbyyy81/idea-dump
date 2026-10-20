@@ -66,7 +66,7 @@ export function LogViewer() {
     setTransactions(result.transactions);
     setUnparsedLines(result.unparsedLines);
     setUnmatchedContentData(result.unmatchedContentData);
-    setSelectedTxId(result.transactions[0]?.id ?? null);
+    setSelectedTxId(result.transactions.at(-1)?.id ?? null);
     setIsImportOpen(!parsed.length);
     setFilters(current => ({ ...INITIAL_FILTERS, query: current.query, errorsOnly: current.errorsOnly }));
     setIsAutoParsing(false);
@@ -194,7 +194,7 @@ export function LogViewer() {
         Upload a log file or paste raw log text to begin.
       </p></Card> : <Card className="min-w-0 max-w-full p-6">
         <div className="mb-4 flex min-w-0 items-center justify-between gap-3"><h2 className="text-lg font-bold font-body text-text-primary">Logs</h2>
-          <span className="text-xs text-text-muted">{filteredTransactions.length} / {transactions.length}</span>
+          <span className="text-xs text-text-muted">Newest first · {filteredTransactions.length} / {transactions.length}</span>
         </div>
         <div className="min-w-0 space-y-3">
           <LogTimeline rows={rows} transactions={transactions} selected={selectedTxId}

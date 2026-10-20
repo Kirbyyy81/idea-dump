@@ -2,6 +2,8 @@
 
 The `/log-viewer` tool parses pasted or uploaded logs in the browser. Log contents and dictionaries are not uploaded or stored on a server.
 
+The timeline displays the last recorded block first, following the original file's line order in reverse. Reader entries, grouped auth entries, session context, multiple responses, and standalone blocks also display newest first. The latest transaction is selected after import. Grouping and request/response correlation still run in the original order; raw input, raw blocks, JSON field order, table contents, and line references remain unchanged. Timestamps do not reorder records with equal, missing, or inconsistent times.
+
 The floating **Back to log input** button in the bottom-right corner immediately returns to the top, opens **Import Logs**, and focuses the paste field. Existing input, filters, and parsed results are preserved.
 
 ## Payload display

@@ -6,9 +6,12 @@ test('groups table dumps with readable fields, search, keyboard controls and ind
   await page.locator('#log-viewer-file-input').setInputFiles('lib/log-viewer/fixtures/yes-shop-tables.txt');
   const batches = page.getByRole('region', { name: /^Table dump / });
   await expect(batches).toHaveCount(4);
-  await expect(page.getByRole('table')).toHaveCount(0);
+  await expect(batches.first()).toHaveAttribute('aria-label', 'Table dump 2026-10-02 10:03:00.010');
+  await expect(page.getByRole('table')).toHaveCount(5);
   const first = batches.first();
   await first.getByRole('button', { name: 'Table dump', exact: true }).focus();
+  await page.keyboard.press('Enter');
+  await expect(first.getByRole('table')).toHaveCount(0);
   await page.keyboard.press('Enter');
   await expect(first.getByRole('table')).toHaveCount(5);
   await expect(first.getByText('Empty table', { exact: true })).toHaveCount(3);
@@ -223,7 +226,8 @@ for (const source of ['yes-shop', 'ussp']) {
     await page.locator('#log-viewer-file-input').setInputFiles(`lib/log-viewer/fixtures/${source}.txt`);
     const endpoint = source === 'yes-shop' ? 'verifyImageWithVideo' : 'paymentProcessForQueue';
     await page.getByPlaceholder('Search endpoint / payload...').fill(endpoint);
-    await page.getByRole('button').filter({ hasText: 'Request not logged' }).click();
+    const transaction = page.getByRole('button').filter({ hasText: 'Request not logged' });
+    if (await transaction.getAttribute('aria-expanded') === 'false') await transaction.click();
     await expect(page.getByText('Request not logged.', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Content data payload', exact: true }).click();
     await expect(page.getByRole('region', { name: 'Content data payload' }).locator('pre')).toBeVisible();

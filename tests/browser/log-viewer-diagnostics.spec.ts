@@ -2,6 +2,37 @@ import { expect, test } from '@playwright/test';
 
 const fixture = 'lib/log-viewer/fixtures/yes-shop-session.txt';
 
+test('shows the last recorded log first after import and filtering, preserving raw line jumps', async ({ page }) => {
+  const lines = [
+    '2026-10-20 10:00:20.000 REQUEST https://example.test/ussp/v1/First {}',
+    '2026-10-20 10:00:21.000 RESPONSE https://example.test/ussp/v1/First {}',
+    '2026-10-20 10:00:10.000 EARLIER_MARKER >>> earlier',
+    '2026-10-20 10:00:10.000 LATEST_MARKER >>> latest',
+  ];
+  await page.goto('/log-viewer');
+  await page.getByRole('textbox', { name: 'Paste raw log text' }).fill(lines.join('\n'));
+  const rows = page.getByRole('button').filter({ hasText: /LATEST_MARKER|EARLIER_MARKER|\/ussp\/v1\/First/ });
+  await expect(rows).toHaveText([/LATEST_MARKER/, /EARLIER_MARKER/, /\/ussp\/v1\/First/]);
+  await expect(rows.first()).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.getByText('Newest first', { exact: false })).toBeVisible();
+  await page.getByRole('button', { name: 'Info details', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Info details' }).locator('pre')).toHaveText('latest');
+  const search = page.getByPlaceholder('Search endpoint / payload...');
+  await search.fill('MARKER');
+  await expect(rows).toHaveText([/LATEST_MARKER/, /EARLIER_MARKER/]);
+  await page.getByRole('button', { name: 'Go to raw line 4', exact: true }).first().click();
+  const input = page.getByRole('textbox', { name: 'Paste raw log text' });
+  await expect(input).toHaveValue(lines.join('\n'));
+  expect(await input.evaluate(element => {
+    const field = element as HTMLTextAreaElement;
+    return field.value.slice(field.selectionStart, field.selectionEnd);
+  })).toBe(lines[3]);
+  await search.fill('');
+  await page.getByRole('combobox', { name: 'Filter by line type' }).click();
+  await page.getByRole('option', { name: 'Info', exact: true }).click();
+  await expect(rows).toHaveText([/LATEST_MARKER/, /EARLIER_MARKER/]);
+});
+
 test('automatically shows reader diagnostics in one expandable block with compact entries', async ({ page }, testInfo) => {
   await page.goto('/log-viewer');
   await page.locator('#log-viewer-file-input').setInputFiles('lib/log-viewer/fixtures/ussp-reader.txt');
@@ -18,7 +49,8 @@ test('automatically shows reader diagnostics in one expandable block with compac
   await page.keyboard.press('Enter');
   await expect(group).toHaveAttribute('open');
   await expect(group.getByRole('button', { name: 'Reader details', exact: true })).toHaveCount(6);
-  const payload = group.getByRole('region', { name: 'Reader details' }).nth(2);
+  await expect(group.getByRole('button', { name: /^Go to raw line \d+$/ })).toHaveText(['L8', 'L7', 'L6', 'L5', 'L4', 'L3']);
+  const payload = group.getByRole('region', { name: 'Reader details' }).nth(3);
   await payload.getByRole('button', { name: 'Reader details', exact: true }).click();
   await expect(payload.locator('code')).toContainText('"sample": "001"');
   await payload.getByRole('button', { name: /^Show JSON at / }).click();
@@ -58,6 +90,7 @@ test('shows response status, surrounding text, host, source and recorded session
   await expect(failed).toContainText('openapi.example.test');
   await expect(failed).toContainText('10:00:00.000');
   await expect(failed).toContainText('Yes Shop');
+  await failed.click();
   const response = page.getByRole('region', { name: 'Response body' });
   await response.getByRole('button', { name: 'Response body', exact: true }).click();
   await expect(response.getByLabel('Surrounding payload text')).toContainText('Error Code - 401');
@@ -83,6 +116,9 @@ test('groups auth events optionally and keeps tokens out of endpoint choices', a
   await expect(group).toContainText('1 error');
   await group.focus();
   await page.keyboard.press('Enter');
+  await expect(group.locator('..').locator(':scope > div > div[id^="log-tx_"]')).toHaveText([
+    /Refresh Token Generated/, /openid-connect\/token/, /Auth Token Requested/, /GetAppVersion/,
+  ]);
   await page.getByRole('button').filter({ hasText: 'Refresh Token Generated' }).first().click();
   await expect(page.getByRole('button', { name: 'Info details', exact: true })).toHaveCount(1);
   await page.getByRole('combobox', { name: 'Filter by endpoint' }).click();
@@ -160,7 +196,7 @@ test('selects raw lines beyond the truncated preview', async ({ page }) => {
   const target = '2026-10-15 10:00:01.000 RESPONSE https://example.test/yesshop/v1/Target {}';
   await page.goto('/log-viewer');
   await page.getByRole('textbox', { name: 'Paste raw log text' }).fill('2026-10-15 10:00:00.000 INFO >>> ' + 'a'.repeat(60000) + '\n' + target);
-  await page.getByRole('button', { name: 'Go to raw line 2', exact: true }).click();
+  await page.getByRole('button', { name: 'Go to raw line 2', exact: true }).first().click();
   const input = page.getByRole('textbox', { name: 'Paste raw log text' });
   await expect(input).toBeFocused();
   const selection = await input.evaluate(element => {

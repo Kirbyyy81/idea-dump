@@ -31,7 +31,7 @@ export function ReaderEventGroup({ transactions }: { transactions: Transaction[]
     </summary>
     <div className="px-2"><RawLineLink start={first.lineNumber} end={last.endLineNumber ?? last.lineNumber} /></div>
     {open && <div className="min-w-0 divide-y divide-border-subtle border-t border-border-subtle px-3">
-      {transactions.map(tx => {
+      {[...transactions].reverse().map(tx => {
         const event = transactionEvents(tx)[0];
         return <div key={tx.id} id={'log-' + tx.id} className="min-w-0 space-y-2 py-3">
           <EventHeader event={event} />
