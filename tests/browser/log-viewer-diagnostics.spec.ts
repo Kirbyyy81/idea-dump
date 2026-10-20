@@ -49,9 +49,12 @@ test('automatically shows reader diagnostics in one expandable block with compac
   await page.keyboard.press('Enter');
   await expect(group).toHaveAttribute('open');
   await expect(group.getByRole('button', { name: 'Reader details', exact: true })).toHaveCount(6);
+  for (const button of await group.getByRole('button', { name: 'Reader details', exact: true }).all()) {
+    await expect(button).toHaveAttribute('aria-expanded', 'true');
+  }
   await expect(group.getByRole('button', { name: /^Go to raw line \d+$/ })).toHaveText(['L8', 'L7', 'L6', 'L5', 'L4', 'L3']);
+  await expect(group.getByRole('region', { name: 'Reader details' }).first().locator('pre')).toContainText('event=FINISHED');
   const payload = group.getByRole('region', { name: 'Reader details' }).nth(3);
-  await payload.getByRole('button', { name: 'Reader details', exact: true }).click();
   await expect(payload.locator('code')).toContainText('"sample": "001"');
   await payload.getByRole('button', { name: /^Show JSON at / }).click();
   await expect(payload).toContainText('"ready"');
@@ -81,6 +84,7 @@ test('automatically shows reader diagnostics in one expandable block with compac
   await expect(group.getByRole('button', { name: 'Reader details', exact: true })).toHaveCount(0);
   await summary.click();
   await expect(group.getByRole('button', { name: 'Reader details', exact: true })).toHaveCount(6);
+  await expect(group.getByRole('region', { name: 'Reader details' }).first().locator('pre')).toContainText('event=FINISHED');
 });
 
 test('shows response status, surrounding text, host, source and recorded session context', async ({ page }, testInfo) => {

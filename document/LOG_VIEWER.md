@@ -73,7 +73,7 @@ Line links open the full import input, focus it, select the exact original line 
 
 ## Reader diagnostics
 
-Consecutive `SECURE_METRIC_READER` and `SECURE_METRIC_READER_DATA` records automatically appear in one collapsed block, independently of **Group auth events**. Expanding it shows compact entries with their original timestamps, payloads, JSON controls and raw-line links. The summary shows the visible event count, source, timestamp range, line range, error count and any JSON parse warning. Records are preserved individually for search, filtering and error counts.
+Consecutive `SECURE_METRIC_READER` and `SECURE_METRIC_READER_DATA` records automatically appear in one collapsed block, independently of **Group auth events**. Expanding it immediately shows each entry's info and formatted payload, with their original timestamps, JSON controls and raw-line links. Individual payload panels can still be folded, and raw records remain hidden until requested. Closing the outer block unmounts its contents; reopening it shows all entry info again. The summary shows the visible event count, source, timestamp range, line range, error count and any JSON parse warning. Records are preserved individually for search, filtering and error counts.
 
 Reader blocks have no time-gap cutoff. A non-reader record or source-segment change ends a block, even when that record is hidden by a filter. Filtering operates on the original entries inside each block; it cannot join separate reader runs. `ussp-reader.txt` is a synthetic fixture based on the USSP logger format, with no actual reader or customer data.
 

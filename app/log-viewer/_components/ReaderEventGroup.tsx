@@ -36,7 +36,7 @@ export function ReaderEventGroup({ transactions }: { transactions: Transaction[]
         return <div key={tx.id} id={'log-' + tx.id} className="min-w-0 space-y-2 py-3">
           <EventHeader event={event} />
           {transactionHasError(tx) && <span className="text-xs text-error">error</span>}
-          <JsonOrText title="Reader details" event={event} />
+          <JsonOrText title="Reader details" event={event} defaultOpen />
         </div>;
       })}
     </div>}
