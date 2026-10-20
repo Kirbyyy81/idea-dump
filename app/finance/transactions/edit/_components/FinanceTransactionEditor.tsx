@@ -55,7 +55,7 @@ export function FinanceTransactionEditor({
     loadError,
 }: FinanceTransactionEditorProps) {
     const router = useRouter();
-    const { showError, showSuccess } = useAlert();
+    const { showError, showSuccessToast } = useAlert();
     const {
         categories,
         error: referenceError,
@@ -152,7 +152,7 @@ export function FinanceTransactionEditor({
                     id: initialTransaction.id,
                 }),
             }, { fallbackMessage: 'Could not save transaction' });
-            showSuccess('Transaction updated');
+            showSuccessToast('Transaction updated');
             router.push('/finance/transactions');
             router.refresh();
         } catch (error) {
