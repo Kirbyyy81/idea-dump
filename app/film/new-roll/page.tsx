@@ -23,7 +23,11 @@ import {
     filmTypes,
 } from '@/lib/types';
 import { createFilmRoll, listFilmCameras, uploadFilmCover } from '@/lib/film/core/client';
+import { FilmCatalogEntry, filmCatalogBrands, filmCatalogByBrand, getFilmLabelImageUrl } from '@/lib/film/catalog';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
+
+const CUSTOM_OPTION = '__custom__';
 
 const initialForm = {
     film_name: '',
@@ -70,6 +74,9 @@ export default function NewFilmRollPage() {
     const { showSuccess } = useAlert();
     const [cameras, setCameras] = useState<FilmCamera[]>([]);
     const [form, setForm] = useState(initialForm);
+    const [selectedBrand, setSelectedBrand] = useState('');
+    const [selectedFilm, setSelectedFilm] = useState('');
+    const [selectedEntry, setSelectedEntry] = useState<FilmCatalogEntry | null>(null);
     const [coverFile, setCoverFile] = useState<File | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -79,6 +86,32 @@ export default function NewFilmRollPage() {
             .then(setCameras)
             .catch(() => setCameras([]));
     }, []);
+
+    function handleBrandChange(nextBrand: string) {
+        setSelectedBrand(nextBrand);
+        setSelectedFilm('');
+        setSelectedEntry(null);
+    }
+
+    function handleFilmChange(nextFilm: string) {
+        setSelectedFilm(nextFilm);
+        if (nextFilm === CUSTOM_OPTION || nextFilm === '') {
+            setSelectedEntry(null);
+            return;
+        }
+        const entry = filmCatalogByBrand(selectedBrand).find((candidate) => candidate.slug === nextFilm) ?? null;
+        setSelectedEntry(entry);
+        if (entry) {
+            setForm((current) => ({
+                ...current,
+                film_name: entry.name,
+                brand: entry.brand,
+                iso: String(entry.iso),
+                process_type: entry.process,
+                film_type: entry.process === 'BW' ? 'BW_NEGATIVE' : entry.process === 'E6' ? 'REVERSAL' : 'NEGATIVE',
+            }));
+        }
+    }
 
     async function uploadCover(rollId: string) {
         if (!coverFile) return;
@@ -133,12 +166,57 @@ export default function NewFilmRollPage() {
                             </div>
                         </div>
                         <div className="grid grid-cols-1 gap-x-6 gap-y-4 p-6 md:grid-cols-2">
-                            <FieldRow label="Film name *">
-                                <Input required value={form.film_name} onChange={(event) => setForm({ ...form, film_name: event.target.value })} />
-                            </FieldRow>
                             <FieldRow label="Brand *">
-                                <Input required value={form.brand} onChange={(event) => setForm({ ...form, brand: event.target.value })} />
+                                <Select
+                                    required
+                                    value={selectedBrand}
+                                    onChange={handleBrandChange}
+                                    ariaLabel="Film brand"
+                                    options={[
+                                        { value: '', label: 'Select a brand', disabled: true },
+                                        ...filmCatalogBrands().map((brand) => ({ value: brand, label: brand })),
+                                        { value: CUSTOM_OPTION, label: 'Other brand' },
+                                    ]}
+                                />
                             </FieldRow>
+                            {selectedBrand === CUSTOM_OPTION ? (
+                                <>
+                                    <FieldRow label="Brand name *">
+                                        <Input required value={form.brand} onChange={(event) => setForm({ ...form, brand: event.target.value })} />
+                                    </FieldRow>
+                                    <FieldRow label="Film name *">
+                                        <Input required value={form.film_name} onChange={(event) => setForm({ ...form, film_name: event.target.value })} />
+                                    </FieldRow>
+                                </>
+                            ) : selectedFilm === CUSTOM_OPTION ? (
+                                <FieldRow label="Film name *">
+                                    <Input required value={form.film_name} onChange={(event) => setForm({ ...form, film_name: event.target.value })} />
+                                </FieldRow>
+                            ) : (
+                                <FieldRow label="Film name *">
+                                    <Select
+                                        required
+                                        value={selectedFilm}
+                                        onChange={handleFilmChange}
+                                        ariaLabel="Film name"
+                                        disabled={!selectedBrand}
+                                        options={[
+                                            { value: '', label: selectedBrand ? 'Select a film' : 'Select a brand first', disabled: true },
+                                            ...filmCatalogByBrand(selectedBrand).map((entry) => ({ value: entry.slug, label: entry.name })),
+                                            { value: CUSTOM_OPTION, label: 'Other film' },
+                                        ]}
+                                    />
+                                </FieldRow>
+                            )}
+                            {selectedEntry ? (
+                                <FieldRow label="Label">
+                                    <div className="flex items-center gap-3">
+                                        <div className="relative h-20 w-20 overflow-hidden rounded-md border border-border-default bg-bg-subtle">
+                                            <Image src={getFilmLabelImageUrl(selectedEntry.slug)} alt={`${selectedEntry.brand} ${selectedEntry.name} label`} fill sizes="80px" unoptimized className="object-contain" />
+                                        </div>
+                                    </div>
+                                </FieldRow>
+                            ) : null}
                             <FieldRow label="Format *">
                                 <Select value={form.format} onChange={(nextValue) => setForm({ ...form, format: nextValue as FilmFormat })} options={filmFormats.map((format) => ({ value: format, label: format }))} />
                             </FieldRow>
