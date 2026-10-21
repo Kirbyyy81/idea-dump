@@ -77,6 +77,11 @@ export default function NewFilmRollPage() {
     const [selectedBrand, setSelectedBrand] = useState('');
     const [selectedFilm, setSelectedFilm] = useState('');
     const [selectedEntry, setSelectedEntry] = useState<FilmCatalogEntry | null>(null);
+    const [touchedFields, setTouchedFields] = useState<Record<'iso' | 'process_type' | 'film_type', boolean>>({
+        iso: false,
+        process_type: false,
+        film_type: false,
+    });
     const [coverFile, setCoverFile] = useState<File | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -93,6 +98,10 @@ export default function NewFilmRollPage() {
         setSelectedEntry(null);
     }
 
+    function handleFieldTouch(field: 'iso' | 'process_type' | 'film_type') {
+        setTouchedFields((current) => ({ ...current, [field]: true }));
+    }
+
     function handleFilmChange(nextFilm: string) {
         setSelectedFilm(nextFilm);
         if (nextFilm === CUSTOM_OPTION || nextFilm === '') {
@@ -106,9 +115,15 @@ export default function NewFilmRollPage() {
                 ...current,
                 film_name: entry.name,
                 brand: entry.brand,
-                iso: String(entry.iso),
-                process_type: entry.process,
-                film_type: entry.process === 'BW' ? 'BW_NEGATIVE' : entry.process === 'E6' ? 'REVERSAL' : 'NEGATIVE',
+                iso: touchedFields.iso ? current.iso : String(entry.iso),
+                process_type: touchedFields.process_type ? current.process_type : entry.process,
+                film_type: touchedFields.film_type
+                    ? current.film_type
+                    : entry.process === 'BW'
+                        ? 'BW_NEGATIVE'
+                        : entry.process === 'E6'
+                            ? 'REVERSAL'
+                            : 'NEGATIVE',
             }));
         }
     }
@@ -221,13 +236,13 @@ export default function NewFilmRollPage() {
                                 <Select value={form.format} onChange={(nextValue) => setForm({ ...form, format: nextValue as FilmFormat })} options={filmFormats.map((format) => ({ value: format, label: format }))} />
                             </FieldRow>
                             <FieldRow label="Film type *">
-                                <Select value={form.film_type} onChange={(nextValue) => setForm({ ...form, film_type: nextValue as FilmType })} options={filmTypes.map((type) => ({ value: type, label: filmTypeConfig[type].label }))} />
+                                <Select value={form.film_type} onChange={(nextValue) => { handleFieldTouch('film_type'); setForm({ ...form, film_type: nextValue as FilmType }); }} options={filmTypes.map((type) => ({ value: type, label: filmTypeConfig[type].label }))} />
                             </FieldRow>
                             <FieldRow label="Process type">
-                                <Select value={form.process_type} onChange={(nextValue) => setForm({ ...form, process_type: nextValue as FilmProcessType | '' })} options={[{ value: '', label: 'Processing only' }, ...filmProcessTypes.map((type) => ({ value: type, label: filmProcessTypeConfig[type].label }))]} />
+                                <Select value={form.process_type} onChange={(nextValue) => { handleFieldTouch('process_type'); setForm({ ...form, process_type: nextValue as FilmProcessType | '' }); }} options={[{ value: '', label: 'Processing only' }, ...filmProcessTypes.map((type) => ({ value: type, label: filmProcessTypeConfig[type].label }))]} />
                             </FieldRow>
                             <FieldRow label="ISO *">
-                                <Input required type="number" min="1" value={form.iso} onChange={(event) => setForm({ ...form, iso: event.target.value })} />
+                                <Input required type="number" min="1" value={form.iso} onChange={(event) => { handleFieldTouch('iso'); setForm({ ...form, iso: event.target.value }); }} />
                             </FieldRow>
                             <FieldRow label="Frames taken">
                                 <Input type="number" min="0" value={form.frames_taken} onChange={(event) => setForm({ ...form, frames_taken: event.target.value })} />
