@@ -148,11 +148,42 @@ export function findFilmCatalogEntry(brand: string, name: string): FilmCatalogEn
     );
 }
 
+// Loose tokens that appear in hand-typed roll names but never identify a film.
+const NAME_NOISE_TOKENS = new Set(['film', 'roll', 'color', 'colour', 'plus', 'ii', '2']);
+
+// Collapses a film name into comparable tokens: lowercase, alphanumeric only,
+// noise words and trailing format/variant markers removed.
+function filmNameTokens(name: string): string[] {
+    return name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, ' ')
+        .split(' ')
+        .filter(Boolean)
+        .filter((token) => !NAME_NOISE_TOKENS.has(token))
+        .filter((token) => !/^(120|135|4x5|super8|35mm)$/.test(token));
+}
+
+export function findFilmCatalogEntryLoose(brand: string, name: string): FilmCatalogEntry | undefined {
+    if (findFilmCatalogEntry(brand, name)) return findFilmCatalogEntry(brand, name);
+    const tokens = filmNameTokens(name);
+    if (!tokens.length) return undefined;
+    const brandCandidates = brand.trim()
+        ? FILM_CATALOG.filter((entry) => entry.brand.toLowerCase() === brand.trim().toLowerCase())
+        : FILM_CATALOG;
+    return brandCandidates.find((entry) => {
+        const entryTokens = filmNameTokens(entry.name);
+        return tokens.length > 0
+            && entryTokens.length > 0
+            && (tokens.every((token) => entryTokens.includes(token))
+                || entryTokens.every((token) => tokens.includes(token)));
+    });
+}
+
 export function getFilmLabelImageUrl(slug: string): string {
     return `/film-labels/${slug}.webp`;
 }
 
 export function getFilmLabelImageForRoll(brand: string, filmName: string): string | null {
-    const entry = findFilmCatalogEntry(brand, filmName);
+    const entry = findFilmCatalogEntryLoose(brand, filmName);
     return entry ? getFilmLabelImageUrl(entry.slug) : null;
 }
