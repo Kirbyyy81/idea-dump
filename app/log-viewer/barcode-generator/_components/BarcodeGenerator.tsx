@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import JsBarcode from 'jsbarcode';
-import { Barcode, Check, Trash2 } from 'lucide-react';
+import { Barcode, Trash2 } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
@@ -166,7 +166,6 @@ function BarcodeWorkspace() {
                                 className={cn('flex min-h-11 min-w-0 w-full items-start gap-2 rounded-sm border px-3 py-2 pr-12 text-left text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong',
                                     generated === value ? 'border-border-strong bg-bg-selected' : 'border-border-default hover:bg-bg-hover')}>
                                 <span className="min-w-0 flex-1 break-all font-mono">{value}</span>
-                                {generated === value && <Check size={16} className="mt-0.5 shrink-0" aria-hidden="true" />}
                             </Button>
                             <Button variant="ghost" type="button" aria-label={`Delete ${value}`}
                                 className="absolute right-1 top-1 h-10 w-10 p-0 text-text-secondary opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100 hover:text-error"

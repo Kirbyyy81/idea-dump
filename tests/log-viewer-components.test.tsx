@@ -16,6 +16,22 @@ const event: LogEvent = {
 describe('Log Viewer payload panels', () => {
   afterEach(() => vi.unstubAllGlobals());
 
+  it('shows reader info immediately when requested while keeping other payload panels collapsed', () => {
+    render(<><JsonOrText title="Reader details" defaultOpen event={{ ...event, lineType: 'info', bodyKind: 'text', bodyRaw: 'event=STATE state=READY' }} />
+      <JsonOrText title="Request body" event={event} /></>);
+    const reader = within(screen.getByRole('region', { name: 'Reader details' }));
+    const request = within(screen.getByRole('region', { name: 'Request body' }));
+    expect(reader.getByText('event=STATE state=READY')).toBeDefined();
+    expect(reader.getByRole('button', { name: 'Reader details' }).getAttribute('aria-expanded')).toBe('true');
+    expect(reader.queryByRole('textbox')).toBeNull();
+    expect(request.getByRole('button', { name: 'Request body' }).getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(reader.getByRole('button', { name: 'Reader details' }));
+    expect(reader.queryByText('event=STATE state=READY')).toBeNull();
+    fireEvent.click(reader.getByRole('button', { name: 'Raw info line' }));
+    expect(reader.getByText('event=STATE state=READY')).toBeDefined();
+    expect((reader.getByRole('textbox') as HTMLTextAreaElement).value).toBe(event.rawLine);
+  });
+
   it('lazily renders fully expanded, escaped JSON with exact indentation', () => {
     const { container } = render(<JsonOrText title="Request body" event={event} />);
     expect(container.querySelector('pre')).toBeNull();

@@ -1,6 +1,7 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useRef, ReactNode } from 'react';
+import { Toast } from '@/components/molecules/Toast';
 
 interface AlertState {
     isOpen: boolean;
@@ -14,6 +15,7 @@ interface AlertContextType {
     showAlert: (message: string, title?: string, type?: AlertState['type']) => void;
     showError: (message: string, title?: string) => void;
     showSuccess: (message: string, title?: string) => void;
+    showSuccessToast: (message: string) => void;
     hideAlert: () => void;
 }
 
@@ -28,6 +30,8 @@ const AlertContext = createContext<AlertContextType | undefined>(undefined);
 
 export function AlertProvider({ children }: { children: ReactNode }) {
     const [alert, setAlert] = useState<AlertState>(defaultState);
+    const [toast, setToast] = useState<{ id: number; message: string } | null>(null);
+    const toastId = useRef(0);
 
     const showAlert = useCallback((message: string, title = 'Alert', type: AlertState['type'] = 'info') => {
         setAlert({ isOpen: true, title, message, type });
@@ -41,13 +45,18 @@ export function AlertProvider({ children }: { children: ReactNode }) {
         setAlert({ isOpen: true, title, message, type: 'success' });
     }, []);
 
+    const showSuccessToast = useCallback((message: string) => {
+        setToast({ id: ++toastId.current, message });
+    }, []);
+
     const hideAlert = useCallback(() => {
         setAlert(defaultState);
     }, []);
 
     return (
-        <AlertContext.Provider value={{ alert, showAlert, showError, showSuccess, hideAlert }}>
+        <AlertContext.Provider value={{ alert, showAlert, showError, showSuccess, showSuccessToast, hideAlert }}>
             {children}
+            {toast && <Toast key={toast.id} message={toast.message} onDismiss={() => setToast(null)} />}
         </AlertContext.Provider>
     );
 }

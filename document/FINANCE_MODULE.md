@@ -688,7 +688,7 @@ Transaction edits also record payee-name changes. Corrections store the text pay
 
 Notification intake and Retry load stored starter and owner-specific extraction patterns before payee matching, manual rules, and duplicate checks. A single successful manual confirmation can learn bounded selectors for amount, direction, merchant/payee, explicit date, and reference. Categories and notes are excluded. This workflow is separate from screenshot parser learning and its scheduled promotion requirements.
 
-Rules settings includes source-scoped notification pattern inspection and enable/disable controls. Review identifies learned fields and conflicts. The server-only confirmation wrapper commits learning atomically, preserves raw-text deletion, and excludes replay, failure, rejection, and duplicate linking. Editing or deleting the supporting transaction invalidates the affected pattern. See [notification learning and rollout](ANDROID_COMPANION.md#notification-extraction-learning).
+Rules settings includes source-scoped notification patterns in a table with matching formats, extracted field placeholders, direction, evidence status, and enable/disable controls visible without expanding rows. The table scrolls horizontally on narrow screens. Review identifies learned fields and conflicts. The server-only confirmation wrapper commits learning atomically, preserves raw-text deletion, and excludes replay, failure, rejection, and duplicate linking. Editing or deleting the supporting transaction invalidates the affected pattern. See [notification learning and rollout](ANDROID_COMPANION.md#notification-extraction-learning).
 
 ### Parser learning and retired legacy rules
 
@@ -696,7 +696,7 @@ The daily learning job continues to refresh algorithm 2 and 3 parser templates. 
 
 Legacy category/direction rules and reference transforms were retired by the forward migration `20260915172224_retire_legacy_finance_learning.sql`. Historical learned rows in `finance_rules` stay disabled, with database guards against new learned rules, reactivation and conversion into manual rules. The later October 8 cleanup removes the empty suggestion/reference tables and obsolete learner functions. The shared category memory below is a separate capability and does not reactivate this retired learner.
 
-Rules settings shows legacy category rules as read-only retired entries. Manual rules remain editable. The suggestion endpoint, suggestion response field, payload mapper and unused suggestion/reference-rule types have been removed. Historical candidates, traces, baselines, corrections and confirmed transactions are retained. The existing 90-day learning-run retention still applies; new runs report zero legacy activity.
+Rules settings omits the Rule library, including its retired legacy entries. Learning status, notification patterns, learned categories, and the New rule form remain available. Existing stored rules and their processing are unchanged. The suggestion endpoint, suggestion response field, payload mapper and unused suggestion/reference-rule types have been removed. Historical candidates, traces, baselines, corrections and confirmed transactions are retained. The existing 90-day learning-run retention still applies; new runs report zero legacy activity.
 
 ### Shared category memory
 
@@ -885,6 +885,7 @@ The `finance_private` schema owns share upload reservations, reservation items, 
 - Month changes update the URL and request a fresh server-rendered payload. The selected month defaults to the current month in `Asia/Kuala_Lumpur`.
 - Transaction filter changes request a fresh server-rendered payload. Mutation endpoints remain client-called so edits, deletes, confirmations, retries, and rejections stay interactive.
 - Recharts and dashboard navigation remain client-side for responsive sizing, keyboard interaction, and filtered transaction links.
+- Clicking a category in the dashboard chart or list opens the transaction ledger with that category (or Uncategorised) and inclusive first/last-day filters for the displayed month. A selected dashboard day does not narrow category navigation to that day; historical months and leap-year boundaries use their own full calendar month.
 - Finance page data is tenant-scoped and dynamically rendered. It is not persisted in a cross-request cache.
 
 ## Next.js API surface

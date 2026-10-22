@@ -67,3 +67,29 @@ test('category expansion is scrollable and does not stretch the dashboard row', 
     await page.getByRole('button', { name: 'Show fewer' }).click();
     await expect(list.getByRole('link')).toHaveCount(5);
 });
+
+test('category list and chart links carry the selected month through pointer and keyboard navigation', async ({ page }) => {
+    // The harness checks dashboard navigation; ledger filtering is covered by its route and component suites.
+    await page.route('**/finance/transactions?*', route => route.fulfill({ contentType: 'text/html', body: '<main>Transactions test destination</main>' }));
+    const foodId = '20000000-0000-4000-8000-000000000002';
+    const expectMonth = (month: string, lastDay: string) => {
+        const url = new URL(page.url());
+        expect(url.pathname).toBe('/finance/transactions');
+        expect(Object.fromEntries(url.searchParams)).toEqual({ category_id: foodId, date_from: `${month}-01`, date_to: `${month}-${lastDay}` });
+    };
+    await page.goto('/finance?month=2026-09&date=2026-09-17');
+    await page.getByRole('list', { name: 'Spending categories' }).getByRole('link', { name: /Food/ }).click();
+    await expect(page).toHaveURL(/\/finance\/transactions\?/);
+    expectMonth('2026-09', '30');
+
+    await page.goto('/finance?month=2024-02');
+    const slice = page.getByRole('link', { name: 'View Food transactions', exact: true });
+    await slice.press('Enter');
+    await expect(page).toHaveURL(/\/finance\/transactions\?/);
+    expectMonth('2024-02', '29');
+
+    await page.goto('/finance?month=2026-12');
+    await page.getByRole('link', { name: 'View Food transactions', exact: true }).click();
+    await expect(page).toHaveURL(/\/finance\/transactions\?/);
+    expectMonth('2026-12', '31');
+});

@@ -8,6 +8,7 @@ export interface ToggleProps {
   checked: boolean;
   onChange: (checked: boolean) => void;
   toggleLabel: string;
+  hideLabel?: boolean;
   label?: ReactNode;
   description?: ReactNode;
   errorMessage?: string;
@@ -29,6 +30,7 @@ export function Toggle({
   checked,
   onChange,
   toggleLabel,
+  hideLabel = false,
   label,
   description,
   errorMessage,
@@ -69,13 +71,14 @@ export function Toggle({
       className={cn(
         'inline-flex h-10 items-center gap-2 rounded-md border border-border-default bg-bg-elevated px-3 text-sm text-text-secondary transition-colors hover:bg-bg-hover disabled:cursor-not-allowed disabled:opacity-60',
         checked && 'border-accent-rose bg-accent-rose/10 text-text-primary',
+        hideLabel && 'relative min-h-11 min-w-11 justify-center gap-0 border-transparent bg-transparent px-1',
         (error || hasFieldError) && 'border-error text-error',
         className,
       )}
     >
       <span
         className={cn(
-          'relative h-5 w-9 rounded-full bg-bg-hover transition-colors',
+          'relative h-5 w-9 shrink-0 rounded-full bg-bg-hover transition-colors',
           checked && 'bg-accent-rose',
         )}
         aria-hidden="true"
@@ -87,7 +90,7 @@ export function Toggle({
           )}
         />
       </span>
-      <span className="whitespace-nowrap">{toggleLabel}</span>
+      <span className={hideLabel ? 'sr-only' : 'whitespace-nowrap'}>{toggleLabel}</span>
     </button>
   );
 

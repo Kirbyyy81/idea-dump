@@ -38,8 +38,8 @@ function CopyJsonButton({ value, label }: { value: unknown; label: string }) {
   </>;
 }
 
-export function JsonOrText({ title, event }: { title: string; event: LogEvent }) {
-  const [open, setOpen] = useState(false);
+export function JsonOrText({ title, event, defaultOpen = false }: { title: string; event: LogEvent; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
   const [showRaw, setShowRaw] = useState(false);
   const id = useId();
   const bodyId = id + '-body';

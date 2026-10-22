@@ -104,7 +104,7 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
         moduleRow.slug !== 'finance' &&
         moduleRow.slug !== 'inventory' &&
         canAccessModule(moduleRow.slug)
-    );
+    ).sort((left, right) => Number(left.slug === 'access_control') - Number(right.slug === 'access_control'));
 
     const renderSubItem = ({ href, icon, isActive, label }: SidebarSubItem) => (
         <Link

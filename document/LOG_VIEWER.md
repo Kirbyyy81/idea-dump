@@ -2,6 +2,8 @@
 
 The `/log-viewer` tool parses pasted or uploaded logs in the browser. Log contents and dictionaries are not uploaded or stored on a server.
 
+The timeline displays the last recorded block first, following the original file's line order in reverse. Reader entries, grouped auth entries, session context, multiple responses, and standalone blocks also display newest first. The latest transaction is selected after import. Grouping and request/response correlation still run in the original order; raw input, raw blocks, JSON field order, table contents, and line references remain unchanged. Timestamps do not reorder records with equal, missing, or inconsistent times.
+
 The floating **Back to log input** button in the bottom-right corner immediately returns to the top, opens **Import Logs**, and focuses the paste field. Existing input, filters, and parsed results are preserved.
 
 ## Payload display
@@ -68,6 +70,12 @@ Collapsed rows show timestamps, hosts, source badges, known HTTP codes, parse wa
 Line links open the full import input, focus it, select the exact original line range and scroll within the input. This works beyond the 50,000-character raw-preview limit. Pasted logs parse automatically after a 250 ms pause, including pastes above 250,000 characters. Supported uploads parse automatically after reading, without a separate Parse log step. Uploaded files above 10 MiB are rejected before reading, preserving existing input/results. Failed reads show a retryable error; a stale asynchronous file read cannot replace a newer selection or paste.
 
 `yes-shop-session.txt` is a synthetic regression fixture based on logger and endpoint formats verified read-only in the Yes Shop app (`MposLogger`, `HomeAuthTokenAuthenticator`, `RegistrationRepository` and `PostpaidViewModel`). It contains no real tokens or customer data. The original Yes Shop and USSP fixtures continue to cover each source's correlation and payload rules.
+
+## Reader diagnostics
+
+Consecutive `SECURE_METRIC_READER` and `SECURE_METRIC_READER_DATA` records automatically appear in one collapsed block, independently of **Group auth events**. Expanding it immediately shows each entry's info and formatted payload, with their original timestamps, JSON controls and raw-line links. Individual payload panels can still be folded, and raw records remain hidden until requested. Closing the outer block unmounts its contents; reopening it shows all entry info again. The summary shows the visible event count, source, timestamp range, line range, error count and any JSON parse warning. Records are preserved individually for search, filtering and error counts.
+
+Reader blocks have no time-gap cutoff. A non-reader record or source-segment change ends a block, even when that record is hidden by a filter. Filtering operates on the original entries inside each block; it cannot join separate reader runs. `ussp-reader.txt` is a synthetic fixture based on the USSP logger format, with no actual reader or customer data.
 
 ## Table dumps
 

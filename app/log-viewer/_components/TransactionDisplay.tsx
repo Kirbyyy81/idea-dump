@@ -70,6 +70,7 @@ export function TransactionRow({
     >
       <button
         type="button"
+        aria-expanded={expanded}
         onClick={onToggle}
         className="w-full min-w-0 p-4 text-left"
       >
@@ -183,7 +184,7 @@ function TransactionDetails({ tx }: { tx: Transaction }) {
           <p className="text-sm text-text-muted">No responses paired.</p>
         ) : (
           <div className="space-y-3">
-            {tx.responses.map((response) => (
+            {[...tx.responses].reverse().map((response) => (
               <div key={`${response.lineNumber}-${response.timestamp}`} className="space-y-2">
                 <EventHeader event={response} />
                 <JsonOrText title="Response body" event={response} />
