@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.18.3](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.18.2...idea-dump-v0.18.3) (2026-10-19)
+
+
+### Bug Fixes
+
+* align finance migration history ([35954e4](https://github.com/Kirbyyy81/idea-dump/commit/35954e46715fcda70424819f7d7609587dfc0a96))
+* learn finance categories ([a0e4d39](https://github.com/Kirbyyy81/idea-dump/commit/a0e4d3940d4fc398130e4d10cdd2fbf60b0f8998))
+* refresh repository readme ([e39a165](https://github.com/Kirbyyy81/idea-dump/commit/e39a16502cf5cc6c7986b4602e5c478779778e27))
+* restore automatic log parsing ([cc167c8](https://github.com/Kirbyyy81/idea-dump/commit/cc167c8c06e06d1946d5adbf067e2e04ce424704))
+* widen recent barcode rows and reveal delete on hover ([23e10b7](https://github.com/Kirbyyy81/idea-dump/commit/23e10b7bb22c8b5d38c2392d2b5c52339f518bcc))
+
 ## [0.18.2](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.18.1...idea-dump-v0.18.2) (2026-10-15)
 
 
