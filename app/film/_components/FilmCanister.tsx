@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { getFilmPhotoThumbnailUrl } from '@/lib/film/core/client';
+import { getFilmLabelImageForRoll } from '@/lib/film/catalog';
 import Image from 'next/image';
 import type { FilmRollSummary as FilmRoll } from '@/lib/types';
 import { formatCurrencyMYR } from '@/lib/utils';
@@ -68,6 +69,21 @@ function FilmCoverFallback({
     roll: FilmRoll;
     accentColor: string;
 }) {
+    const labelImage = getFilmLabelImageForRoll(roll.brand, roll.film_name);
+    if (labelImage) {
+        return (
+            <div className="relative h-full w-full bg-bg-subtle">
+                <Image
+                    src={labelImage}
+                    alt={`${roll.brand} ${roll.film_name} label`}
+                    fill
+                    sizes="92px"
+                    unoptimized
+                    className="object-contain"
+                />
+            </div>
+        );
+    }
     return (
         <div className="flex h-full flex-col justify-between bg-bg-subtle p-3 text-text-primary">
             <div>
