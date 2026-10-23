@@ -35,7 +35,7 @@ it('product quantity supplies total volume and manual bundles override it until 
     expect((total as HTMLInputElement).value).toBe('1500');
 });
 it('works with no saved products and reports invalid volume with zero-price samples', () => {
-    render(<PriceCheck data={{ products: [], variants: [], purchases: [], usages: [] }} />);
+    render(<PriceCheck data={{ products: [], variants: [], purchases: [], usages: [], categories: [], subcategories: [] }} />);
     fireEvent.change(screen.getByLabelText(/Total volume/), { target: { value: '3' } });
     fireEvent.change(screen.getByLabelText(/Total price/), { target: { value: '0' } });
     expect(screen.getByText('Checking').nextElementSibling?.textContent).toMatch(/0\.00/);

@@ -117,7 +117,7 @@ Inventory notification policy: success confirmations, save failures, expense-loa
 Notification verification: 26 desktop/mobile cases passed, including dismissal, retries, preserved form input and post-save refresh errors. The application run completed 679 tests successfully but encountered one Finance test timeout and one worker startup timeout. Both affected Finance files passed on focused reruns (14 tests); Inventory and Toast checks also passed (60 tests). The isolated Inventory database suite, lint and TypeScript checks passed. Root production audit remains clear; the seven existing development dependency findings are unchanged.
 The production build passed and the local review server was rebuilt with these changes.
 
-Purchase cards keep Edit purchase and Finance linking inside the shared three-dot **Purchase actions** menu, including purchase history in product details. The card does not display Finance link status. Linked purchases expose **Change Finance link** in the menu; access checks and saved links are unchanged.
+Purchase cards keep Edit purchase and Finance linking inside the shared three-dot **Purchase actions** menu, including product-filtered purchase history. The card does not display Finance link status. Linked purchases expose **Change Finance link** in the menu; access checks and saved links are unchanged.
 Purchase menu verification: all 692 application tests, 26 desktop/mobile browser cases, the isolated database suite, lint, TypeScript and production build passed. Production audit is clear; existing development dependency findings remain unchanged.
 
 Receiving-cart prices use one Price (RM) row with the amount beside a pricing-basis selector. The selector offers Per pack for multipacks, Per item for individual items, and Total for the complete line. Changing the basis keeps the entered amount and recalculates the line total. Both controls stay on the same row on mobile.
@@ -172,7 +172,6 @@ Applied `20261008043228_combine_inventory_purchases.sql` to the connected Supaba
 
 Validation passed: 745 application tests including 63 Inventory tests, the populated PostgreSQL consolidation and lifecycle suite, 30 desktop/mobile Inventory cases, lint, explicit TypeScript checking, service-worker consistency and production build. Finance OCR typecheck, build and tests passed (402 passed, 171 skipped). Full and production dependency audits returned zero vulnerabilities. Security advisors added no findings. Performance advisors report the two recreated purchase date and Finance-link indexes as [not used yet](https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index); both cover intended access paths and remain in place. The migration is live; application changes require deployment.
 
-<<<<<<< HEAD
 ## Stock duration cells show numeric days, 26 October 2026
 
 The shelf heading is Stock lasts (approx.). Cells contain only numeric estimates, or No estimate yet when unavailable. The usage calculation and its detailed basis are unchanged; a zero estimate is only the existing calculated result, never a replacement for missing history.
@@ -184,10 +183,11 @@ Applied `20261028063403_inventory_product_deletion.sql` to `xcaxukhjkqqnmzziqrkc
 Hosted verification used newly created synthetic accounts inside a rolled-back transaction. It checked complete product-history deletion, a preserved sibling in a shared receipt with an advanced revision, unchanged linked Finance expense, and rejected foreign-owner/stale deletes. The test accounts did not remain after verification. Supabase advisors reported no new security or performance findings. The RPC retains security-invoker execution, an empty search path and service-only grants; the four Inventory tables retain RLS and revoked browser access. Verification did not use the owner's real data or signed-in browser session. The application UI remains pending the normal push/PR/merge release.
 
 Validation: 65 focused Inventory tests, 870 application tests, the isolated Inventory lifecycle/database suite, all 38 desktop/mobile Inventory browser checks, lint, TypeScript and the production build passed. Browser cases cover confirmation, cancellation, retained shared purchases, history removal, failure/retry, pending submission guards and a failed post-delete refresh. OCR typecheck, build and 402 tests passed, with 171 optional parity tests skipped. Application and OCR full/production dependency audits reported zero vulnerabilities. The disposable database suite checks access and serial operation semantics; it does not simulate independent PostgreSQL sessions.
-=======
-The shelf heading is Stock lasts (approximate days). Cells contain only numeric estimates, or No estimate yet when unavailable. The usage calculation and its detailed basis are unchanged; a zero estimate is only the existing calculated result, never a replacement for missing history.
 
-## Standalone price checker, October 23, 2026
+## Price checker and product navigation, October 23, 2026
 
 Price checker is a distinct Inventory subpage that inherits the existing Inventory access guard. It does not register a new top-level module, write purchases, or require a database migration. Choose a saved product and size/pack, then enter the quantity and total price. Total volume defaults to size × pack quantity × purchased quantity. Editing the total overrides that calculation, so a 70 ml bottle with 9 ml of samples can be checked using 79 ml. Use product size and quantity resets the override. Enter manually works without any saved products and supports ml, g and whole-item totals. Prices normalize per 100 ml, per 100 g or per item. Empty, invalid and nonpositive totals produce no result; a known zero price remains valid.
->>>>>>> 9edabce (fix: add standalone inventory bundle price checker)
+
+Product details link to Purchase history, Usage history and Price checker instead of embedding those workflows. The `product` query parameter filters histories and restores the selected product on refresh or browser Back. Back to product returns to its details; Close or Escape clears the shelf product query. Receipt editing still opens the complete receipt, including other products, preserving its atomic save and Finance linking behavior.
+
+These changes are local application code only. No push, deployment, hosted data mutation or module registration was performed.

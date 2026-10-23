@@ -1,7 +1,7 @@
 'use client';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { LayoutGrid, List, Package, Plus } from 'lucide-react';
 import { AppShell } from '@/components/organisms/AppShell';
 import { Button } from '@/components/atoms/Button';
@@ -69,10 +69,20 @@ function ShelfCard({ product, data, onOpen, onAddStock, onStartUsing, onEdit, on
 export function InventoryClient({ initialData, canLinkFinance, view = 'shelf' }: { initialData: InventoryData; canLinkFinance: boolean; view?: 'shelf' | 'purchases' | 'usage' | 'price-check' }) {
     const [data, setData] = useState(initialData);
     const addProductRef = useRef<HTMLButtonElement>(null);
-    const productId = useSearchParams().get('product') || undefined;
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const productId = searchParams.get('product') || undefined;
+    const selectedProduct = data.products.find((product) => product.id === productId);
     const [search, setSearch] = useState(''); const [category, setCategory] = useState(''); const [subcategory, setSubcategory] = useState('');
-    const [dialog, setDialog] = useState<Dialog | null>(null);
+    const [dialog, setDialog] = useState<Dialog | null>(() => view === 'shelf' && productId ? { type: 'detail', id: productId } : null);
     const [layout, setLayout] = useState<ShelfLayout>(initialLayout);
+    useEffect(() => {
+        if (view === 'shelf') setDialog(productId ? { type: 'detail', id: productId } : null);
+    }, [productId, view]);
+    const openDetail = (id: string) => {
+        setDialog({ type: 'detail', id });
+        router.push(`/inventory?product=${encodeURIComponent(id)}`, { scroll: false });
+    };
     const [notice, setNotice] = useState<{ id: string; message: string; variant: 'success' | 'error' } | null>(null);
     const activeCategories = useMemo(() => data.categories.filter((item) => !item.is_archived), [data.categories]);
     const activeSubcategories = useMemo(() => data.subcategories.filter((item) => !item.is_archived), [data.subcategories]);
@@ -116,7 +126,10 @@ export function InventoryClient({ initialData, canLinkFinance, view = 'shelf' }:
         }
         return result;
     }
-    const close = () => setDialog(null);
+    const close = () => {
+        setDialog(null);
+        if (view === 'shelf' && productId) router.replace('/inventory', { scroll: false });
+    };
     const action = (choice: StockActionChoice) => setDialog({ type: 'stock', choice });
     const link = (purchase: InventoryReceipt) => setDialog({ type: 'finance', purchase });
     return <AppShell pageTitle={view === 'shelf' ? 'Inventory' : view === 'purchases' ? 'Purchases' : view === 'usage' ? 'Usage history' : 'Price checker'} contentClassName="p-4 md:p-6" headerClassName="flex-row items-center justify-between gap-3" headerAction={view !== 'price-check' ? <Button className="whitespace-nowrap" icon={<Plus size={16} />} onClick={() => setDialog({ type: 'cart' })}>Add stock</Button> : undefined}>
@@ -142,9 +155,9 @@ export function InventoryClient({ initialData, canLinkFinance, view = 'shelf' }:
                         <tbody className="divide-y divide-border-default">{products.map((product) => {
                             const stock = productStock(data, product.id);
                             return <tr key={product.id} aria-label={product.name} className="align-top">
-                                <th scope="row" className="px-3 py-4 font-normal"><button type="button" onClick={() => setDialog({ type: 'detail', id: product.id })} className="break-words text-left font-bold underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-border-strong">{product.name}</button><p className="mt-1 text-xs text-text-secondary">{[product.category, product.subcategory].filter(Boolean).join(' · ')}</p></th>
+                                <th scope="row" className="px-3 py-4 font-normal"><button type="button" onClick={() => openDetail(product.id)} className="break-words text-left font-bold underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-border-strong">{product.name}</button><p className="mt-1 text-xs text-text-secondary">{[product.brand, product.category, product.subcategory].filter(Boolean).join(' · ')}</p></th>
                                 <td className="px-3 py-4 text-text-secondary">{product.brand ?? ''}</td>
-                                <td className="px-3 py-4"><StockSummary data={data} product={product} onOpen={() => setDialog({ type: 'detail', id: product.id })} /></td>
+                                <td className="px-3 py-4"><StockSummary data={data} product={product} onOpen={() => openDetail(product.id)} /></td>
                                 <td className="px-3 py-4"><UnitPrice data={data} product={product} /></td>
                                 <td className="px-3 py-4 text-text-secondary">{stock.estimate.days === null ? 'No estimate yet' : stock.estimate.days}</td>
                                 <td className="px-2 py-3"><ActionMenu portal label={`${product.name} actions`} items={[
@@ -158,9 +171,15 @@ export function InventoryClient({ initialData, canLinkFinance, view = 'shelf' }:
                     </table>
                 </div>}
             </>}
+            {(view === 'purchases' || view === 'usage') && <div className="flex flex-wrap items-end gap-3">
+                <Select label="Product" value={productId ?? ''} options={[{ value: '', label: 'All products' }, ...data.products.map((product) => ({ value: product.id, label: product.name }))]}
+                    onChange={(id) => router.replace(`/inventory/${view}${id ? `?product=${encodeURIComponent(id)}` : ''}`, { scroll: false })} className="w-full sm:w-72" />
+                {selectedProduct && <Link className="btn-secondary" href={`/inventory?product=${encodeURIComponent(selectedProduct.id)}`}>Back to product</Link>}
+                {productId && !selectedProduct && <p className="text-sm text-text-secondary">Product unavailable. Choose another product to view its history.</p>}
+            </div>}
             {view === 'price-check' && <PriceCheck key={productId ?? 'manual'} data={data} initialProductId={productId} />}
-            {view === 'purchases' && <PurchaseHistory data={data} canLinkFinance={canLinkFinance} onLink={link} onEdit={(purchase) => setDialog({ type: 'edit_purchase', purchase })} />}
-            {view === 'usage' && <UsageHistory data={data} onAction={action} />}
+            {view === 'purchases' && <PurchaseHistory data={data} productId={productId} canLinkFinance={canLinkFinance} onLink={link} onEdit={(purchase) => setDialog({ type: 'edit_purchase', purchase })} />}
+            {view === 'usage' && <UsageHistory data={data} productId={productId} onAction={action} />}
         </div>
         {dialog?.type === 'product' && <FormDialog title={dialog.id ? 'Edit product' : 'Add product'} onClose={close}><ProductForm key={dialog.id ?? 'new'} productId={dialog.id} data={data} save={save} onSaved={close} /></FormDialog>}
         {dialog?.type === 'delete_product' && <DeleteProduct product={dialog.product} save={save} onClose={close} onDeleted={() => {
@@ -172,13 +191,15 @@ export function InventoryClient({ initialData, canLinkFinance, view = 'shelf' }:
         {dialog?.type === 'finance' && <FinanceLink purchase={dialog.purchase} save={save} onClose={close} onSelect={(expense) => setDialog({ type: 'edit_purchase', purchase: dialog.purchase, expense })} />}
         {detail && <FormDialog title={detail.name} onClose={close}><div className="space-y-6">
             <div className="flex flex-wrap gap-2"><Button variant="secondary" onClick={() => setDialog({ type: 'product', id: detail.id })}>Edit product</Button><Button onClick={() => setDialog({ type: 'cart', productId: detail.id })}>Add stock</Button></div>
+            <div className="flex flex-wrap gap-2">
+                <Link className="btn-secondary" href={`/inventory/purchases?product=${encodeURIComponent(detail.id)}`}>Purchase history</Link>
+                <Link className="btn-secondary" href={`/inventory/usage?product=${encodeURIComponent(detail.id)}`}>Usage history</Link>
+                <Link className="btn-secondary" href={`/inventory/price-check?product=${encodeURIComponent(detail.id)}`}>Price checker</Link>
+            </div>
             <section className="space-y-2"><h3 className="font-bold">Stock breakdown</h3>{data.purchases.filter((item) => item.product_id === detail.id).map((item) => <div key={item.id} className="rounded-md border border-border-default p-3 text-sm"><p className="font-semibold">{item.snapshot.variant_label} · {quantityText(item.snapshot.size, detail.unit === 'count' ? 'item' : item.snapshot.unit)} each</p><p>{item.unopened_units} unopened · {data.usages.filter((usage) => usage.purchase_id === item.id && usage.status === 'in_use').length} in use</p><p className="text-text-secondary">Purchased {item.purchased_on ?? 'on an unknown date'}</p></div>)}
                 {!data.purchases.some((item) => item.product_id === detail.id) && <p className="text-sm text-text-secondary">No stock received yet.</p>}</section>
             <section className="space-y-2"><h3 className="font-bold">Usage estimate</h3><p className="text-sm">{productStock(data, detail.id).estimate.days === null ? 'No usage estimate yet' : `Approximately ${productStock(data, detail.id).estimate.days} days of unopened stock`}</p>
                 {productStock(data, detail.id).estimate.basis.map((basis) => <p key={basis} className="text-xs text-text-secondary">{basis}</p>)}<p className="text-xs text-text-secondary">Uses all comparable completed usage. Overlapping days count once; gaps between recorded usage periods are excluded. In-use quantities are excluded.</p></section>
-            <Link className="btn-secondary" href={`/inventory/price-check?product=${encodeURIComponent(detail.id)}`}>Price checker</Link>
-            <section className="space-y-3"><h3 className="font-bold">Purchase history</h3><PurchaseHistory data={data} productId={detail.id} canLinkFinance={canLinkFinance} onLink={link} onEdit={(purchase) => setDialog({ type: 'edit_purchase', purchase })} /></section>
-            <section className="space-y-3"><h3 className="font-bold">Usage history</h3><UsageHistory data={data} productId={detail.id} onAction={action} /></section>
         </div></FormDialog>}
         {notice && <Toast key={notice.id} message={notice.message} variant={notice.variant} onDismiss={() => setNotice(null)} />}
     </AppShell>;

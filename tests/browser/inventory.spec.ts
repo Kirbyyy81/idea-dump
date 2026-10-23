@@ -87,23 +87,28 @@ async function choose(page: Page, label: string | RegExp, option: string, inDial
     await scope.getByRole('combobox', { name: label }).first().click();
     await page.getByRole('option', { name: option, exact: true }).click();
 }
-test('shelf totals, breakdown, estimate, and read-only price comparison', async ({ page }, info) => {
+test('shelf totals, compact day estimates and details without embedded histories', async ({ page }, info) => {
     const { commands } = await setup(page);
     await page.getByRole('button', { name: 'Table view', exact: true }).click();
     const shampoo = page.getByRole('row', { name: 'Dove Shampoo' });
     await expect(shampoo.getByText('1,250 ml', { exact: true })).toBeVisible();
     await expect(shampoo.getByText('1 in use', { exact: true })).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Stock lasts (approx.)', exact: true })).toBeVisible();
-    await expect(shampoo.getByRole('cell').nth(4)).toHaveText('100');
-    await expect(page.getByRole('row', { name: 'Tissues' }).getByRole('cell').nth(4)).toHaveText('No estimate yet');
+    await expect(shampoo.getByRole('cell').nth(3)).toHaveText('100');
+    await expect(page.getByRole('row', { name: 'Tissues' }).getByRole('cell').nth(3)).toHaveText('No estimate yet');
     await expect(page.getByRole('row', { name: 'Tissues' }).getByText('10 boxes')).toBeVisible();
     await expect(shampoo.getByText('Dove', { exact: true })).toBeVisible();
     await shampoo.getByRole('button', { name: /View breakdown/ }).click();
     const dialog = page.getByRole('dialog', { name: 'Dove Shampoo', exact: true });
     await expect(dialog.getByText('2 unopened · 1 in use')).toBeVisible();
+    await expect(dialog.getByRole('link', { name: 'Purchase history', exact: true })).toHaveAttribute('href', `/inventory/purchases?product=${id.shampoo}`);
+    await expect(dialog.getByRole('link', { name: 'Usage history', exact: true })).toHaveAttribute('href', `/inventory/usage?product=${id.shampoo}`);
+    await expect(dialog.getByRole('button', { name: 'Purchase actions', exact: true })).toHaveCount(0);
+    await expect(dialog.getByRole('button', { name: 'Edit dates', exact: true })).toHaveCount(0);
     await expect(dialog.getByLabel('Total price (RM)')).toHaveCount(0);
     expect(commands).toHaveLength(0);
     await page.keyboard.press('Escape'); await expect(dialog).not.toBeVisible();
+    await expect(page).toHaveURL(/\/inventory$/);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.screenshot({ path: info.outputPath('inventory-shelf.png'), fullPage: true });
 });
@@ -290,6 +295,8 @@ test('edits a complete purchase from product history and preserves usage and Fin
     fixture.purchases[0].finance_transaction_id = id.purchase;
     const { commands, failNext } = await setup(page, fixture);
     await page.getByRole('button', { name: 'Dove Shampoo', exact: true }).click();
+    await page.getByRole('dialog').getByRole('link', { name: 'Purchase history', exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`/inventory/purchases\\?product=${id.shampoo}$`));
     await page.getByRole('button', { name: 'Purchase actions', exact: true }).first().click();
     await page.getByRole('menuitem', { name: 'Edit purchase', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Edit purchase', exact: true });
@@ -307,6 +314,9 @@ test('edits a complete purchase from product history and preserves usage and Fin
     await expect(dialog).not.toBeVisible();
     expect(commands[0]).toEqual(commands[1]);
     expect(commands[1]).toMatchObject({ action: 'edit_purchase', payload: { receipt_id: id.purchase, revision: 1, lines: [{ purchase_id: id.largeBatch, quantity: 4, total_paid: 68 }, { purchase_id: id.smallBatch }, { purchase_id: id.tissueBatch }] } });
+    await page.getByRole('link', { name: 'Back to product', exact: true }).click();
+    await expect(page.getByRole('dialog', { name: 'Dove Shampoo', exact: true })).toBeVisible();
+    await page.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click();
     await expect(page.getByRole('row', { name: 'Dove Shampoo' }).getByText('1,750 ml', { exact: true })).toBeVisible();
     await expect(page.getByRole('row', { name: 'Dove Shampoo' }).getByText('1 in use', { exact: true })).toBeVisible();
     await page.getByRole('link', { name: 'Purchases', exact: true }).click();
@@ -416,6 +426,7 @@ test('table exposes unit prices, pack breakdown and keyboard actions without pag
     await expect(trigger).toBeFocused();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
+
 
 
 test('product More menu requires confirmation, supports cancellation and deletes its Inventory history', async ({ page }, info) => {
@@ -608,4 +619,39 @@ test('manual checker rejects missing and nonpositive totals while keeping free s
     expect(commands).toHaveLength(0);
     await page.reload();
     await expect(page.getByRole('heading', { name: 'Price checker', exact: true })).toBeVisible();
+});
+
+test('product history keeps context on refresh, Back, return and Close', async ({ page }, info) => {
+    const { commands } = await setup(page);
+    await page.getByRole('button', { name: 'Dove Shampoo', exact: true }).click();
+    const detail = page.getByRole('dialog', { name: 'Dove Shampoo', exact: true });
+    await page.screenshot({ path: info.outputPath('inventory-product-details.png'), fullPage: true });
+    await detail.getByRole('link', { name: 'Purchase history', exact: true }).click();
+    await expect(page.getByRole('combobox', { name: 'Product', exact: true })).toHaveText('Dove Shampoo');
+    await expect(page.getByText('Tissues · Five boxes', { exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Purchase actions', exact: true })).toHaveCount(2);
+    await page.reload();
+    await expect(page.getByRole('combobox', { name: 'Product', exact: true })).toHaveText('Dove Shampoo');
+    await page.goBack();
+    await expect(detail).toBeVisible();
+    await detail.getByRole('link', { name: 'Usage history', exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`/inventory/usage\\?product=${id.shampoo}$`));
+    await expect(page.getByRole('button', { name: 'Edit dates', exact: true })).toHaveCount(2);
+    await page.getByRole('button', { name: 'Edit dates', exact: true }).first().click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`/inventory/usage\\?product=${id.shampoo}$`));
+    await page.getByRole('link', { name: 'Back to product', exact: true }).click();
+    await expect(detail).toBeVisible();
+    await detail.getByRole('button', { name: 'Close', exact: true }).click();
+    await expect(page).toHaveURL(/\/inventory$/);
+    await page.reload();
+    await expect(detail).toHaveCount(0);
+    await page.getByRole('link', { name: 'Purchases', exact: true }).click();
+    await choose(page, 'Product', 'Tissues');
+    await expect(page.getByText('Tissues · Five boxes', { exact: true })).toBeVisible();
+    await expect(page.getByText('Dove Shampoo · 500 ml bottle', { exact: true })).toHaveCount(0);
+    await choose(page, 'Product', 'All products');
+    await expect(page).toHaveURL(/\/inventory\/purchases$/);
+    await expect(page.getByText('Dove Shampoo · 500 ml bottle', { exact: true })).toHaveCount(2);
+    expect(commands).toHaveLength(0);
 });
