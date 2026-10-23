@@ -94,7 +94,8 @@ test('shelf totals, breakdown, estimate, and read-only price comparison', async 
     await expect(shampoo.getByText('1,250 ml', { exact: true })).toBeVisible();
     await expect(shampoo.getByText('1 in use', { exact: true })).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Stock lasts (approx.)', exact: true })).toBeVisible();
-    await expect(shampoo.getByText('100 days', { exact: true })).toBeVisible();
+    await expect(shampoo.getByRole('cell').nth(4)).toHaveText('100');
+    await expect(page.getByRole('row', { name: 'Tissues' }).getByRole('cell').nth(4)).toHaveText('No estimate yet');
     await expect(page.getByRole('row', { name: 'Tissues' }).getByText('10 boxes')).toBeVisible();
     await expect(shampoo.getByText('Dove', { exact: true })).toBeVisible();
     await shampoo.getByRole('button', { name: /View breakdown/ }).click();

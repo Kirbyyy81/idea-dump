@@ -134,7 +134,7 @@ Finance price review verification: 58 Inventory tests, 693 application tests, 28
 
 ### Shelf table
 
-The Inventory landing page uses one table row per product with Product, Stock, Unit price, Stock lasts and a three-dot action menu. Stock shows amount followed by unit (for example 2,700 ml or 10 boxes), counting unopened items only. In-use counts appear only above zero. Duration remains based on unopened stock.
+The Inventory landing page uses one table row per product with Product, Stock, Unit price, Stock lasts (approximate days), and a three-dot action menu. Stock shows amount followed by unit (for example 2,700 ml or 10 boxes), counting unopened items only. In-use counts appear only above zero. Duration remains based on unopened stock.
 
 Unit price uses an explicitly selected purchased product/variant line. The selector includes historical size, date and per-item price, preserving free samples and unknown costs. The chosen purchase-item ID is saved per account and product in this browser, survives reload, and is never replaced by a later purchase. A missing saved item displays Reference unavailable until another is chosen. Browser storage failures report that the choice only lasts for the current page. Prices divide line cost by original usable-item count, including boxes inside multipacks. Product and size labels remain visible; activating the price opens the selector and a breakdown including purchase date, pack cost and usual normalized price. This browser preference does not sync to other devices.
 
@@ -171,6 +171,10 @@ The application reads `inventory_read_items`, which returns only products, varia
 Applied `20261008043228_combine_inventory_purchases.sql` to the connected Supabase project. Live verification found four Inventory tables, all 9 purchase items grouped under their 7 original receipt IDs, and both usage records linked to the same item IDs. Checksums confirm unchanged products, variants, item details and normalized usage records. Receipt metadata is consistent within each group. The removed table has no function, view or cron callers; browser access remains revoked and existing RPC owner/grants/security settings are unchanged.
 
 Validation passed: 745 application tests including 63 Inventory tests, the populated PostgreSQL consolidation and lifecycle suite, 30 desktop/mobile Inventory cases, lint, explicit TypeScript checking, service-worker consistency and production build. Finance OCR typecheck, build and tests passed (402 passed, 171 skipped). Full and production dependency audits returned zero vulnerabilities. Security advisors added no findings. Performance advisors report the two recreated purchase date and Finance-link indexes as [not used yet](https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index); both cover intended access paths and remain in place. The migration is live; application changes require deployment.
+
+## Stock duration cells show numeric days, 26 October 2026
+
+The shelf heading is Stock lasts (approx.). Cells contain only numeric estimates, or No estimate yet when unavailable. The usage calculation and its detailed basis are unchanged; a zero estimate is only the existing calculated result, never a replacement for missing history.
 
 ## Product deletion rollout, 28 October 2026
 

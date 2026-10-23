@@ -143,7 +143,7 @@ export function InventoryClient({ initialData, canLinkFinance, view = 'shelf' }:
                                 <td className="px-3 py-4 text-text-secondary">{product.brand ?? ''}</td>
                                 <td className="px-3 py-4"><StockSummary data={data} product={product} onOpen={() => setDialog({ type: 'detail', id: product.id })} /></td>
                                 <td className="px-3 py-4"><UnitPrice data={data} product={product} /></td>
-                                <td className="px-3 py-4 text-text-secondary">{stock.estimate.days === null ? 'No estimate yet' : `${stock.estimate.days} days`}</td>
+                                <td className="px-3 py-4 text-text-secondary">{stock.estimate.days === null ? 'No estimate yet' : stock.estimate.days}</td>
                                 <td className="px-2 py-3"><ActionMenu portal label={`${product.name} actions`} items={[
                                     { label: 'Add stock', onSelect: () => setDialog({ type: 'cart', productId: product.id }) },
                                     { label: 'Start using', disabled: !stock.units, onSelect: () => action({ action: 'start', productId: product.id }) },
