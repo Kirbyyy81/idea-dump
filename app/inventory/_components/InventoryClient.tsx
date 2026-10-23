@@ -1,5 +1,7 @@
 'use client';
 import { useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { LayoutGrid, List, Package, Plus } from 'lucide-react';
 import { AppShell } from '@/components/organisms/AppShell';
 import { Button } from '@/components/atoms/Button';
@@ -53,7 +55,7 @@ function ShelfCard({ product, data, onOpen, onAddStock, onStartUsing, onEdit, on
         {product.brand && <p className="text-xs text-text-secondary">{product.brand}</p>}
         <StockSummary data={data} product={product} onOpen={onOpen} />
         <UnitPrice data={data} product={product} />
-        <p className="text-sm text-text-secondary">{stock.estimate.days === null ? 'No estimate yet' : `${stock.estimate.days} days`}</p>
+        <p className="text-sm text-text-secondary">{stock.estimate.days === null ? 'No estimate yet' : stock.estimate.days}</p>
         <div className="mt-auto flex flex-wrap items-center gap-2 pt-1">
             <Button type="button" variant="secondary" onClick={onAddStock}>Add stock</Button>
             <Button type="button" variant="ghost" disabled={!stock.units} onClick={onStartUsing}>Start using</Button>
@@ -64,9 +66,10 @@ function ShelfCard({ product, data, onOpen, onAddStock, onStartUsing, onEdit, on
         </div>
     </div>;
 }
-export function InventoryClient({ initialData, canLinkFinance, view = 'shelf' }: { initialData: InventoryData; canLinkFinance: boolean; view?: 'shelf' | 'purchases' | 'usage' }) {
+export function InventoryClient({ initialData, canLinkFinance, view = 'shelf' }: { initialData: InventoryData; canLinkFinance: boolean; view?: 'shelf' | 'purchases' | 'usage' | 'price-check' }) {
     const [data, setData] = useState(initialData);
     const addProductRef = useRef<HTMLButtonElement>(null);
+    const productId = useSearchParams().get('product') || undefined;
     const [search, setSearch] = useState(''); const [category, setCategory] = useState(''); const [subcategory, setSubcategory] = useState('');
     const [dialog, setDialog] = useState<Dialog | null>(null);
     const [layout, setLayout] = useState<ShelfLayout>(initialLayout);
@@ -116,7 +119,7 @@ export function InventoryClient({ initialData, canLinkFinance, view = 'shelf' }:
     const close = () => setDialog(null);
     const action = (choice: StockActionChoice) => setDialog({ type: 'stock', choice });
     const link = (purchase: InventoryReceipt) => setDialog({ type: 'finance', purchase });
-    return <AppShell pageTitle={view === 'shelf' ? 'Inventory' : view === 'purchases' ? 'Purchases' : 'Usage history'} contentClassName="p-4 md:p-6" headerClassName="flex-row items-center justify-between gap-3" headerAction={<Button className="whitespace-nowrap" icon={<Plus size={16} />} onClick={() => setDialog({ type: 'cart' })}>Add stock</Button>}>
+    return <AppShell pageTitle={view === 'shelf' ? 'Inventory' : view === 'purchases' ? 'Purchases' : view === 'usage' ? 'Usage history' : 'Price checker'} contentClassName="p-4 md:p-6" headerClassName="flex-row items-center justify-between gap-3" headerAction={view !== 'price-check' ? <Button className="whitespace-nowrap" icon={<Plus size={16} />} onClick={() => setDialog({ type: 'cart' })}>Add stock</Button> : undefined}>
         <div className="space-y-5">
             {view === 'shelf' && <>
                 <div className="flex flex-wrap items-end gap-3"><Input label="Search products" value={search} onValueChange={setSearch} containerClassName="min-w-0 flex-1 basis-52" />
@@ -155,6 +158,7 @@ export function InventoryClient({ initialData, canLinkFinance, view = 'shelf' }:
                     </table>
                 </div>}
             </>}
+            {view === 'price-check' && <PriceCheck key={productId ?? 'manual'} data={data} initialProductId={productId} />}
             {view === 'purchases' && <PurchaseHistory data={data} canLinkFinance={canLinkFinance} onLink={link} onEdit={(purchase) => setDialog({ type: 'edit_purchase', purchase })} />}
             {view === 'usage' && <UsageHistory data={data} onAction={action} />}
         </div>
@@ -172,7 +176,7 @@ export function InventoryClient({ initialData, canLinkFinance, view = 'shelf' }:
                 {!data.purchases.some((item) => item.product_id === detail.id) && <p className="text-sm text-text-secondary">No stock received yet.</p>}</section>
             <section className="space-y-2"><h3 className="font-bold">Usage estimate</h3><p className="text-sm">{productStock(data, detail.id).estimate.days === null ? 'No usage estimate yet' : `Approximately ${productStock(data, detail.id).estimate.days} days of unopened stock`}</p>
                 {productStock(data, detail.id).estimate.basis.map((basis) => <p key={basis} className="text-xs text-text-secondary">{basis}</p>)}<p className="text-xs text-text-secondary">Uses all comparable completed usage. Overlapping days count once; gaps between recorded usage periods are excluded. In-use quantities are excluded.</p></section>
-            <PriceCheck data={data} product={detail} />
+            <Link className="btn-secondary" href={`/inventory/price-check?product=${encodeURIComponent(detail.id)}`}>Price checker</Link>
             <section className="space-y-3"><h3 className="font-bold">Purchase history</h3><PurchaseHistory data={data} productId={detail.id} canLinkFinance={canLinkFinance} onLink={link} onEdit={(purchase) => setDialog({ type: 'edit_purchase', purchase })} /></section>
             <section className="space-y-3"><h3 className="font-bold">Usage history</h3><UsageHistory data={data} productId={detail.id} onAction={action} /></section>
         </div></FormDialog>}

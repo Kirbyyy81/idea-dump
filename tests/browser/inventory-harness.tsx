@@ -7,7 +7,7 @@ import type { InventoryData } from '@/lib/types';
 
 async function render() {
     const data = await inventoryRequest<InventoryData>('/api/inventory');
-    const view = window.location.pathname.endsWith('/purchases') ? 'purchases' : window.location.pathname.endsWith('/usage') ? 'usage' : 'shelf';
+    const view = window.location.pathname.endsWith('/price-check') ? 'price-check' : window.location.pathname.endsWith('/purchases') ? 'purchases' : window.location.pathname.endsWith('/usage') ? 'usage' : 'shelf';
     createRoot(document.getElementById('root')!).render(<AccessProvider access={{
         allowedModules: ['inventory'], canManageAccess: false, overrides: {}, role: 'owner', userId: 'fixture-owner',
         modules: [{ slug: 'inventory', label: 'Inventory', path: '/inventory', icon: 'Package', description: null, enabled: true, isAlwaysAllowed: false, isManaged: true, sortOrder: 86 }],

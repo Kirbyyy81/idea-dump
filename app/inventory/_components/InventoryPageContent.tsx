@@ -3,7 +3,7 @@ import { canAccessModule, getSessionUserAppAccess } from '@/lib/rbac/access';
 import { getInventory } from '@/lib/inventory/core/service';
 import { InventoryClient } from './InventoryClient';
 
-export async function InventoryPageContent({ view = 'shelf' }: { view?: 'shelf' | 'purchases' | 'usage' }) {
+export async function InventoryPageContent({ view = 'shelf' }: { view?: 'shelf' | 'purchases' | 'usage' | 'price-check' }) {
     const session = await getSessionUserAppAccess();
     if (!session) redirect('/login');
     if (!canAccessModule(session.access, 'inventory')) redirect('/dashboard');

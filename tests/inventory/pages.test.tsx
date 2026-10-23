@@ -9,6 +9,7 @@ vi.mock('@/app/inventory/_components/InventoryClient', () => ({ InventoryClient:
 import ShelfPage from '@/app/inventory/page';
 import PurchasesPage from '@/app/inventory/purchases/page';
 import UsagePage from '@/app/inventory/usage/page';
+import PriceCheckPage from '@/app/inventory/price-check/page';
 import { InventoryPageContent } from '@/app/inventory/_components/InventoryPageContent';
 
 beforeEach(() => {
@@ -18,7 +19,7 @@ beforeEach(() => {
     mocks.read.mockResolvedValue(inventoryFixture);
 });
 
-it.each([[ShelfPage, 'shelf'], [PurchasesPage, 'purchases'], [UsagePage, 'usage']] as const)(
+it.each([[ShelfPage, 'shelf'], [PurchasesPage, 'purchases'], [UsagePage, 'usage'], [PriceCheckPage, 'price-check']] as const)(
     'protects each submodule and loads its requested view (%s)', async (Page, view) => {
         const page = Page();
         expect(page.type).toBe(InventoryPageContent);

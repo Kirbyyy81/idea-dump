@@ -101,8 +101,7 @@ test('shelf totals, breakdown, estimate, and read-only price comparison', async 
     await shampoo.getByRole('button', { name: /View breakdown/ }).click();
     const dialog = page.getByRole('dialog', { name: 'Dove Shampoo', exact: true });
     await expect(dialog.getByText('2 unopened · 1 in use')).toBeVisible();
-    await dialog.getByLabel('Price for one pack / item (RM)').fill('22');
-    await expect(dialog.getByText(/more expensive than usual/)).toBeVisible();
+    await expect(dialog.getByLabel('Total price (RM)')).toHaveCount(0);
     expect(commands).toHaveLength(0);
     await page.keyboard.press('Escape'); await expect(dialog).not.toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -547,4 +546,66 @@ test('unavailable reference does not silently choose another purchase', async ({
     await expect(row.getByText(/RM/)).toHaveCount(0);
     await row.getByRole('button', { name: 'Dove Shampoo: unit price details', exact: true }).click();
     await expect(page.getByRole('status')).toHaveText('The selected purchase is unavailable. Choose another reference.');
+});
+
+test('price checker compares products, quantities and manual bundle totals without saving stock', async ({ page }, info) => {
+    const fixture = structuredClone(inventoryFixture);
+    fixture.variants[0] = { ...fixture.variants[0], label: '70 ml bottle', size: 70 };
+    const { commands } = await setup(page, fixture);
+    await page.getByRole('link', { name: 'Price checker', exact: true }).click();
+    await expect(page).toHaveURL(/\/inventory\/price-check$/);
+    const checking = page.getByText('Checking', { exact: true }).locator('..');
+    await expect(page.getByLabel('Total volume (ml)')).toHaveValue('70');
+    await page.getByLabel('Quantity of packs / items').fill('2');
+    await expect(page.getByLabel('Total volume (ml)')).toHaveValue('140');
+    await page.getByLabel('Total price (RM)').fill('70');
+    await expect(checking).toContainText(/RM\s*50\.00/);
+    await page.getByLabel('Quantity of packs / items').fill('1');
+    await page.getByLabel('Total volume (ml)').fill('76');
+    await page.getByLabel('Total price (RM)').fill('38');
+    await expect(checking).toContainText(/RM\s*50\.00/);
+    await page.getByLabel('Quantity of packs / items').fill('3');
+    await expect(page.getByLabel('Total volume (ml)')).toHaveValue('76');
+    await expect(checking).toContainText(/RM\s*50\.00/);
+    await page.screenshot({ path: info.outputPath('inventory-bundle-checker.png'), fullPage: true });
+    await page.getByRole('button', { name: 'Use product size and quantity', exact: true }).click();
+    await expect(page.getByLabel('Total volume (ml)')).toHaveValue('210');
+    await choose(page, 'Compare size or pack', '250 ml bottle (250 ml)');
+    await expect(page.getByLabel('Total volume (ml)')).toHaveValue('750');
+    await choose(page, 'Product', 'Tissues');
+    await expect(page.getByLabel('Total items')).toHaveValue('5');
+    await page.getByLabel('Total price (RM)').fill('15');
+    await expect(checking).toContainText(/RM\s*3\.00/);
+    await expect(page.getByText('Prices per item (100 sheets each)', { exact: true })).toBeVisible();
+    expect(commands).toHaveLength(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
+test('manual checker rejects missing and nonpositive totals while keeping free samples valid', async ({ page }) => {
+    const { commands } = await setup(page);
+    await page.getByRole('link', { name: 'Price checker', exact: true }).click();
+    await choose(page, 'Product', 'Enter manually');
+    const checking = page.getByText('Checking', { exact: true }).locator('..');
+    await page.getByLabel('Total price (RM)').fill('38');
+    await expect(checking).toContainText('Unavailable');
+    await expect(page.getByText('Enter a total greater than zero.', { exact: true })).toBeVisible();
+    for (const total of ['0', '-1', '']) {
+        await page.getByLabel('Total volume (ml)').fill(total);
+        await expect(checking).toContainText('Unavailable');
+    }
+    await page.getByLabel('Total volume (ml)').fill('76');
+    await expect(checking).toContainText(/RM\s*50\.00/);
+    await page.getByLabel('Total price (RM)').fill('0');
+    await expect(checking).toContainText(/RM\s*0\.00/);
+    await page.getByLabel('Total price (RM)').fill('');
+    await expect(checking).toContainText('Unavailable');
+    await page.getByLabel('Total price (RM)').fill('-1');
+    await expect(checking).toContainText('Unavailable');
+    await choose(page, 'Unit', 'Items');
+    await page.getByLabel('Total items').fill('1.5');
+    await page.getByLabel('Total price (RM)').fill('10');
+    await expect(checking).toContainText('Unavailable');
+    expect(commands).toHaveLength(0);
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'Price checker', exact: true })).toBeVisible();
 });
