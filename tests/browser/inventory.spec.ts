@@ -31,6 +31,27 @@ async function setup(page: Page, initial: InventoryData = structuredClone(invent
             data.variants = data.variants.filter(variant => variant.product_id !== resultId);
             data.purchases = data.purchases.filter(item => !removedItems.has(item.id)).map(item => ({ ...item, revision: item.revision + Number(affectedReceipts.has(item.receipt_id)) }));
             data.usages = data.usages.filter(usage => !removedItems.has(usage.purchase_id));
+        } else if (command.action === 'receive') {
+            resultId = `16000000-0000-4000-8000-${String(100 + commands.length).padStart(12, '0')}`;
+            command.payload.lines.forEach((line, index) => {
+                const variant = data.variants.find((item) => item.id === line.variant_id)!;
+                const product = data.products.find((item) => item.id === variant.product_id)!;
+                const purchaseId = `16000000-0000-4000-8000-${String(1000 + commands.length * 100 + index).padStart(12, '0')}`;
+                data.purchases.unshift({
+                    id: purchaseId, product_id: product.id, variant_id: variant.id, receipt_id: resultId,
+                    kind: command.payload.kind, revision: 1, purchased_on: command.payload.purchased_on, currency: 'MYR',
+                    finance_transaction_id: null, receipt_created_at: '2026-10-23T00:00:00Z', created_at: '2026-10-23T00:00:00Z',
+                    purchased_quantity: line.quantity, original_units: line.quantity * variant.pack_quantity,
+                    unopened_units: line.quantity * variant.pack_quantity - line.in_use_quantity,
+                    total_paid: line.price === null ? null : line.price * (line.price_mode === 'unit' ? line.quantity : 1),
+                    snapshot: { product_name: product.name, variant_label: variant.label, unit: product.unit, item_label: product.item_label,
+                        size: variant.size, pack_quantity: variant.pack_quantity, sheets_per_item: variant.sheets_per_item },
+                });
+                for (let unit = 0; unit < line.in_use_quantity; unit += 1) data.usages.unshift({
+                    id: `${purchaseId}-${unit}`, purchase_id: purchaseId, status: 'in_use', started_on: line.started_on,
+                    finished_on: null, revision: 1, created_at: '2026-10-23T00:00:00Z',
+                });
+            });
         } else if (command.action === 'start') {
             const batch = data.purchases.find((item) => item.id === command.payload.purchase_id)!;
             batch.unopened_units -= 1;
@@ -372,17 +393,21 @@ test('Finance suggestion can be cancelled or adjusted before a single atomic sav
     await expect(page.getByRole('menuitem', { name: 'Change Finance link', exact: true })).toBeVisible();
 });
 
-test('table exposes unit prices, pack breakdown and keyboard actions without page overflow', async ({ page }) => {
+test('table exposes unit prices, pack breakdown and keyboard actions without page overflow', async ({ page }, info) => {
     await setup(page);
     await expect(page.getByRole('columnheader', { name: 'Unit price', exact: true })).toBeVisible();
     const row = page.getByRole('row', { name: 'Tissues', exact: true });
-    await expect(row.getByText(/RM\s*3\.00 \/ box/)).toBeVisible();
+    await expect(row.getByText('Choose reference', { exact: true })).toBeVisible();
     await expect(row.getByText('0 in use')).toHaveCount(0);
     await row.getByRole('button', { name: 'Tissues: unit price details', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Tissues: unit price', exact: true });
+    await dialog.getByRole('combobox', { name: 'Reference product / variant', exact: true }).click();
+    await page.getByRole('option', { name: /Tissues.*Five boxes.*2026-10-01/ }).click();
     await expect(dialog.getByText(/RM\s*15\.00 \/ pack of 5 boxes/)).toBeVisible();
     await expect(dialog.getByText(/Usual price:/)).toBeVisible();
+    await page.screenshot({ path: info.outputPath('inventory-reference-price.png'), fullPage: true });
     await page.keyboard.press('Escape');
+    await expect(row.getByText(/RM\s*3\.00 \/ box/)).toBeVisible();
     const trigger = page.getByRole('button', { name: 'Tissues actions', exact: true });
     await trigger.focus();
     await page.keyboard.press('ArrowDown');
@@ -481,4 +506,44 @@ test('product deletion blocks repeated submissions and dismissal while pending',
     await expect(confirmation).toHaveCount(0);
     await expect(page.getByRole('row', { name: 'Dove Shampoo', exact: true })).toHaveCount(0);
     expect(state.commands).toHaveLength(1);
+});
+
+test('chosen reference survives a new free purchase and reload, and remains explicitly changeable', async ({ page }) => {
+    const { commands } = await setup(page);
+    const row = page.getByRole('row', { name: 'Dove Shampoo', exact: true });
+    await row.getByRole('button', { name: 'Dove Shampoo: unit price details', exact: true }).click();
+    await page.getByRole('dialog').getByRole('combobox', { name: 'Reference product / variant', exact: true }).click();
+    await page.getByRole('option', { name: /Dove Shampoo.*500 ml bottle.*2026-08-01/ }).click();
+    await page.keyboard.press('Escape');
+    await expect(row.getByText(/RM\s*15\.00 \/ bottle/)).toBeVisible();
+    await expect(row.getByText(/Dove Shampoo.*500 ml bottle.*500 ml/)).toBeVisible();
+    await page.getByRole('button', { name: 'Add stock', exact: true }).first().click();
+    await choose(page, 'Product', 'Dove Shampoo');
+    await page.getByRole('button', { name: 'Add to cart', exact: true }).click();
+    await page.getByRole('region', { name: 'Cart item 1' }).getByLabel('Price (RM)', { exact: true }).fill('0');
+    await page.getByRole('button', { name: 'Add to shelf', exact: true }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(row.getByText('1,750 ml', { exact: true })).toBeVisible();
+    await expect(row.getByText(/RM\s*15\.00 \/ bottle/)).toBeVisible();
+    expect(commands).toHaveLength(1);
+    await page.reload();
+    await expect(row.getByText(/RM\s*15\.00 \/ bottle/)).toBeVisible();
+    await row.getByRole('button', { name: 'Dove Shampoo: unit price details', exact: true }).click();
+    await page.getByRole('dialog').getByRole('combobox', { name: 'Reference product / variant', exact: true }).click();
+    await page.getByRole('option', { name: /Dove Shampoo.*RM\s*0\.00/ }).click();
+    await page.keyboard.press('Escape');
+    await expect(row.getByText(/RM\s*0\.00 \/ bottle/)).toBeVisible();
+    await page.reload();
+    await expect(row.getByText(/RM\s*0\.00 \/ bottle/)).toBeVisible();
+});
+
+test('unavailable reference does not silently choose another purchase', async ({ page }) => {
+    await setup(page);
+    await page.evaluate(({ owner, product }) => localStorage.setItem(`inventory:unit-price-reference:${owner}:${product}`, 'missing-purchase'), { owner: 'fixture-owner', product: id.shampoo });
+    await page.reload();
+    const row = page.getByRole('row', { name: 'Dove Shampoo', exact: true });
+    await expect(row.getByText('Reference unavailable', { exact: true })).toBeVisible();
+    await expect(row.getByText(/RM/)).toHaveCount(0);
+    await row.getByRole('button', { name: 'Dove Shampoo: unit price details', exact: true }).click();
+    await expect(page.getByRole('status')).toHaveText('The selected purchase is unavailable. Choose another reference.');
 });
