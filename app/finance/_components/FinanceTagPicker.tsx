@@ -29,6 +29,8 @@ export function FinanceTagPicker({ value, onChange, allowCreate = true, includeA
     useEffect(() => {
         if (!open) return;
         searchRef.current?.focus();
+        // Safari can blur search before clicking a button without focusing it.
+        // Close only when a pointer or focus target actually moves outside.
         const outside = (event: PointerEvent | FocusEvent) => {
             if (!root.current?.contains(event.target as Node)) setOpen(false);
         };

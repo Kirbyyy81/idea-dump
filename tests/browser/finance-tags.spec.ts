@@ -143,3 +143,33 @@ for (const flow of [
         await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
     });
 }
+
+test('dashboard pointer selection persists multiple tags, exclusions and clearing across reloads', async ({ page }) => {
+    await page.goto('/finance?month=2026-09&date=2026-09-17');
+    const choose = page.getByRole('button', { name: 'Choose filter tags', exact: true });
+    const selectTag = async (name: string) => {
+        await choose.click();
+        const search = page.getByRole('textbox', { name: 'Search tags', exact: true });
+        await expect(search).toBeFocused();
+        await search.evaluate(input => input.blur());
+        await page.getByRole('button', { name, exact: true }).click();
+        await page.getByRole('button', { name: 'Done', exact: true }).click();
+    };
+    await selectTag('Holiday');
+    await expect(page).toHaveURL(url => url.searchParams.get('tag_ids') === tripTag.id && url.searchParams.get('month') === '2026-09' && url.searchParams.get('date') === '2026-09-17');
+    await selectTag('Hackathon (archived)');
+    const expectedIds = [tripTag.id, archivedTag.id].sort().join(',');
+    await expect(page).toHaveURL(url => url.searchParams.get('tag_ids') === expectedIds && url.searchParams.get('tag_mode') === 'include');
+    await page.reload();
+    await expect(page.getByLabel('Selected tags')).toContainText('Holiday');
+    await expect(page.getByLabel('Selected tags')).toContainText('Hackathon');
+    await page.getByRole('combobox', { name: 'Tag matching', exact: true }).click();
+    await page.getByRole('option', { name: 'Exclude tags', exact: true }).click();
+    await expect(page).toHaveURL(url => url.searchParams.get('tag_ids') === expectedIds && url.searchParams.get('tag_mode') === 'exclude' && url.searchParams.get('date') === '2026-09-17');
+    await page.reload();
+    await expect(page.getByRole('combobox', { name: 'Tag matching', exact: true })).toContainText('Exclude tags');
+    await choose.click();
+    await page.getByRole('button', { name: 'Clear tags', exact: true }).click();
+    await expect(page).toHaveURL(url => !url.searchParams.has('tag_ids') && url.searchParams.get('month') === '2026-09');
+    await expect(page.getByLabel('Selected tags')).toHaveCount(0);
+});

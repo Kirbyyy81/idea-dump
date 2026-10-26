@@ -212,6 +212,17 @@ describe('server-rendered Finance dashboard', () => {
         expect(routerPush).toHaveBeenLastCalledWith('/finance?month=2026-05', { scroll: false });
     });
 
+    it.each(['include', 'exclude'])('passes selected dashboard tags to the owner-scoped query in %s mode', async (tagMode) => {
+        const tagIds = ['10000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000002'];
+        const page = await FinancePage({ searchParams: Promise.resolve({
+            month: '2026-05', date: '2026-05-12', tag_ids: tagIds.join(','), tag_mode: tagMode,
+        }) });
+        expect(dashboardService).toHaveBeenCalledExactlyOnceWith('user-1', '2026-05', '2026-05-12', {
+            tagIds, tagMode,
+        });
+        expect(page.props.summary).toBe(summary);
+    });
+
     it('passes a valid selected date to the authorized server query', async () => {
         const page = await FinancePage({ searchParams: Promise.resolve({ month: '2026-05', date: '2026-05-12' }) });
         expect(dashboardService).toHaveBeenCalledWith('user-1', '2026-05', '2026-05-12', { tagIds: [], tagMode: 'include' });
