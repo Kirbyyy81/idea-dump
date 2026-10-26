@@ -47,6 +47,14 @@ export function CategoryDoodleIcon(props: DoodleIconProps) {
     );
 }
 
+export function ChevronDownDoodleIcon(props: DoodleIconProps) {
+    return (
+        <DoodleIcon {...props}>
+            <path d="M6.2 9.1c1.8 1.7 3.8 3.7 5.8 5.8 2.1-1.9 3.9-3.8 5.8-5.9" />
+        </DoodleIcon>
+    );
+}
+
 export function BackDoodleIcon(props: DoodleIconProps) {
     return (
         <DoodleIcon {...props}>
