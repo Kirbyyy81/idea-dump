@@ -1,3 +1,4 @@
+import { transactionTags } from '@/lib/finance/tagValues';
 import type { FinanceTransaction } from '@/lib/types';
 
 const FINANCE_IDEMPOTENCY_KEY_PATTERN =
@@ -21,6 +22,7 @@ type ManualTransactionReplayRequest = Pick<
     | 'notes'
 > & {
     payee_name: string | null;
+    tag_ids?: string[];
 };
 
 export function isFinanceIdempotencyKey(value: unknown) {
@@ -48,7 +50,8 @@ export function isManualTransactionReplay(
     existing: FinanceTransaction,
     requested: ManualTransactionReplayRequest
 ) {
-    return existing.source_id === requested.source_id
+    return (requested.tag_ids === undefined || JSON.stringify(transactionTags(existing).map(tag => tag.id).sort()) === JSON.stringify([...requested.tag_ids].sort()))
+        && existing.source_id === requested.source_id
         && (existing.category_id || null) === (requested.category_id || null)
         && existing.direction === requested.direction
         && Number(existing.amount) === Number(requested.amount)

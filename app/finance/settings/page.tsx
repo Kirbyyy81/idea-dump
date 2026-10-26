@@ -1,3 +1,4 @@
+import { TagsSettingsPanel } from './_components/TagsSettingsPanel';
 import Link from 'next/link';
 import { CompanionDevicesPanel } from './_components/CompanionDevicesPanel';
 import type { ComponentType } from 'react';
@@ -16,6 +17,7 @@ const SECTION_LABELS: Record<FinanceSettingsSection, string> = {
     devices: 'Companion',
     sources: 'Sources',
     categories: 'Categories',
+    tags: 'Tags',
     rules: 'Rules',
 };
 
@@ -23,6 +25,7 @@ const PANELS: Record<FinanceSettingsSection, ComponentType> = {
     devices: CompanionDevicesPanel,
     sources: SourcesSettingsPanel,
     categories: CategoriesSettingsPanel,
+    tags: TagsSettingsPanel,
     rules: RulesSettingsPanel,
 };
 

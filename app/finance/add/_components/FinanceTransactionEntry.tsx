@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { FinanceTagPicker } from '@/app/finance/_components/FinanceTagPicker';
 import { AppShell } from '@/components/organisms/AppShell';
 import { Button } from '@/components/atoms/Button';
 import { DocumentDoodleIcon, ScanDoodleIcon } from '@/components/atoms/DoodleIcons';
@@ -73,6 +74,7 @@ function financeOcrErrorMessage(error: unknown) {
 
 export function FinanceTransactionEntry({ initialMode }: { initialMode: FinanceEntryMode }) {
     const router = useRouter();
+    const [tagIds, setTagIds] = useState<string[]>([]);
     const { files: sharedFiles } = useFinanceShareTarget();
     const {
         sources,
@@ -170,7 +172,7 @@ export function FinanceTransactionEntry({ initialMode }: { initialMode: FinanceE
                 categoryId = persistedCategory.id;
                 upsertCategory(persistedCategory);
             }
-            const requestBody = { ...form, amount, source_id: sourceId, category_id: categoryId };
+            const requestBody = { ...form, tag_ids: tagIds, amount, source_id: sourceId, category_id: categoryId };
             const requestFingerprint = JSON.stringify(requestBody);
             const attempt = getManualTransactionAttempt(
                 manualAttemptRef.current,
@@ -187,6 +189,7 @@ export function FinanceTransactionEntry({ initialMode }: { initialMode: FinanceE
                 body: JSON.stringify({ ...requestBody, idempotency_key: attempt.key }),
             }, { fallbackMessage: 'Could not add transaction' });
             manualAttemptRef.current = null;
+            setTagIds([]);
             showSuccess('Transaction added');
             setForm({ ...initialForm, transaction_date: getLocalFinanceDate() });
             setNewSource('');
@@ -316,6 +319,7 @@ export function FinanceTransactionEntry({ initialMode }: { initialMode: FinanceE
                     });
                 }} placeholder="e.g. Maybank debit card" />}
             <Select id="manual-category" label="Category" errorMessage={fieldErrors.category_id} data-finance-field="category_id" aria-label="Transaction category" value={form.category_id} onChange={(categoryId) => setManualField('category_id', categoryId)} placeholder="Uncategorised" options={[{ value: '', label: 'Uncategorised' }, ...availableCategories]} />
+            <FinanceTagPicker value={tagIds} onChange={setTagIds} disabled={isSaving} />
             <div className="grid gap-4 sm:grid-cols-2">
                 <Input id="manual-amount" label="Amount" required errorMessage={fieldErrors.amount} data-finance-field="amount" type="number" inputMode="decimal" min="0.01" max={MAX_FINANCE_AMOUNT} step="0.01" value={form.amount} onChange={(event) => setManualField('amount', event.target.value)} placeholder="0.00" />
                 <Input id="manual-currency" label="Currency" value="MYR" readOnly aria-readonly="true" />

@@ -1,5 +1,7 @@
 'use client';
 
+import { writeFinanceTagFilter } from '@/lib/finance/tagValues';
+import { FinanceTagFilter } from '@/app/finance/_components/FinanceTagFilter';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/atoms/Button';
@@ -36,7 +38,7 @@ interface TransactionLedgerFiltersProps {
     transactions: FinanceTransactionView[];
 }
 
-type FilterDimension = 'category' | 'date' | 'direction' | 'source';
+type FilterDimension = 'tag' | 'category' | 'date' | 'direction' | 'source';
 
 const ALL_VALUE = '';
 const UNCATEGORISED_VALUE = '__uncategorised__';
@@ -192,6 +194,7 @@ export function TransactionLedgerFilters({
 
     const clearFilter = (dimension: FilterDimension) => {
         replaceSearchParams((next) => {
+            if (dimension === 'tag') { next.delete('tag_ids'); next.delete('tag_mode'); }
             if (dimension === 'date') deleteDateFilters(next);
             if (dimension === 'source') next.delete(FINANCE_TRANSACTION_FILTER_KEYS.sourceId);
             if (dimension === 'direction') next.delete(FINANCE_TRANSACTION_FILTER_KEYS.direction);
@@ -226,6 +229,7 @@ export function TransactionLedgerFilters({
     const selectedSource = sourceFilterOptions.find((source) => source.id === sourceId);
     const selectedCategory = categoryFilterOptions.find((category) => category.id === categoryId);
     const activeFilters = [
+        searchParams.get('tag_ids') ? { dimension: 'tag' as const, label: `${searchParams.get('tag_mode') === 'exclude' ? 'Exclude' : 'Include'} tags` } : null,
         dateLabel ? { dimension: 'date' as const, label: dateLabel } : null,
         sourceId ? {
             dimension: 'source' as const,
@@ -369,6 +373,7 @@ export function TransactionLedgerFilters({
                             buttonClassName="w-full"
                         />
                     </div>
+                    <div className="md:col-span-2 lg:col-span-6"><FinanceTagFilter onChangeFilter={filter => replaceSearchParams(next => { writeFinanceTagFilter(next, filter); })} /></div>
                     {status !== 'ready' && (
                         <div className="md:col-span-2 lg:col-span-6">
                             <FinanceReferenceDataState status={status} error={error} retry={refresh} />

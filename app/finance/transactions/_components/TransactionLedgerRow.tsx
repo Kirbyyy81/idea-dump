@@ -58,6 +58,7 @@ export function TransactionLedgerRow({
 
     return (
         <FinanceTransactionRow
+            tags={transaction.tags}
             payeeName={transaction.finance_payee?.name}
             merchant={transaction.merchant}
             sourceName={transaction.finance_source?.name}

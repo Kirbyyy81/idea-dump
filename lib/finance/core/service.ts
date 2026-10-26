@@ -1,3 +1,5 @@
+import { listFinanceTags } from '@/lib/finance/tags';
+import type { FinanceTagFilter } from '@/lib/finance/tagValues';
 import type { FinanceNotificationRetryResult } from '@/lib/types';
 import { confirmFinanceNotification, retryFinanceNotification } from '@/lib/finance/notifications/service';
 import { PostgrestError } from '@supabase/supabase-js';
@@ -147,13 +149,15 @@ function toFinanceSourceDetail(value: FinanceSourceDetail): FinanceSourceDetail 
 }
 
 export async function getFinanceReferenceData(userId: string): Promise<FinanceReferenceData> {
-    const [sourcesResult, categoriesResult] = await Promise.all([
+    const [sourcesResult, categoriesResult, tags] = await Promise.all([
         listActiveFinanceSourceReferences(userId),
         listActiveFinanceCategoryReferences(userId),
+        listFinanceTags(userId),
     ]);
     if (sourcesResult.error) throw sourcesResult.error;
     if (categoriesResult.error) throw categoriesResult.error;
     return {
+        tags,
         sources: (sourcesResult.data || []).map(toFinanceReferenceOption),
         categories: (categoriesResult.data || []).map(toFinanceReferenceOption),
     };
@@ -417,7 +421,7 @@ async function validateFinanceTransactionReferences(
 
 export async function getFinanceTransactions(
     userId: string,
-    options: {
+    options: FinanceTagFilter & {
         status: string;
         sourceId: string | null;
         query: string | null;
@@ -471,6 +475,7 @@ export async function createManualFinanceTransactionForUser(
     }
     await validateFinanceTransactionReferences(userId, input);
     const { data, error } = await createManualFinanceTransaction(userId, {
+        ...(input.tag_ids === undefined ? {} : { p_tag_ids: input.tag_ids }),
         p_source_id: input.source_id,
         p_category_id: input.category_id,
         p_direction: input.direction,
@@ -515,6 +520,7 @@ function transactionRpcError(error: { code?: string; message?: string }) {
     if (error.code === '23514' || error.code === '23503') {
         fail('Transaction conflicts with current Finance data', 409);
     }
+    if (error.code === '22023' && /tag/i.test(message)) fail('The selected tags are unavailable. Refresh and try again.', 422);
     if (error.code === '22023' || /invalid|required|compatible/i.test(message)) {
         fail('Check the highlighted fields', 422, { field_errors: financeRpcFieldErrors(message) });
     }
@@ -546,6 +552,7 @@ export async function updateFinanceTransactionForUser(
     const input = parsed.data;
     await validateFinanceTransactionReferences(userId, input, existingTransaction);
     const { error } = await updateFinanceTransaction(userId, transactionId, {
+        ...(input.tag_ids === undefined ? {} : { p_tag_ids: input.tag_ids }),
         p_source_id: input.source_id,
         p_category_id: input.category_id,
         p_direction: input.direction,
@@ -576,15 +583,15 @@ export async function deleteFinanceTransactionForUser(userId: string, transactio
     if (!data) fail('Transaction not found', 404);
 }
 
-export async function getFinanceDashboard(userId: string, requestedMonth: string | null, selectedDate: string | null = null) {
+export async function getFinanceDashboard(userId: string, requestedMonth: string | null, selectedDate: string | null = null, tags: FinanceTagFilter = {}) {
     const monthRange = getFinanceMonthRange(requestedMonth || getLocalFinanceMonth());
     if (!monthRange) fail('Month must use YYYY-MM format');
     if (selectedDate !== null && (normalizeFinanceDate(selectedDate) !== selectedDate || !selectedDate.startsWith(`${monthRange.month}-`))) {
         fail('Date must be a valid day in the selected month');
     }
     const [monthRows, recentResult, budgetCycles] = await Promise.all([
-        listFinanceDashboardMonthTransactions(userId, monthRange.monthStart, monthRange.nextMonthStart, DASHBOARD_PAGE_SIZE),
-        listFinanceDashboardRecentTransactions(userId, monthRange.monthStart, monthRange.nextMonthStart, selectedDate),
+        listFinanceDashboardMonthTransactions(userId, monthRange.monthStart, monthRange.nextMonthStart, DASHBOARD_PAGE_SIZE, tags),
+        listFinanceDashboardRecentTransactions(userId, monthRange.monthStart, monthRange.nextMonthStart, selectedDate, tags),
         getFinanceDashboardBudgets(userId, monthRange.month),
     ]);
     if (recentResult.error) throw recentResult.error;
@@ -594,7 +601,7 @@ export async function getFinanceDashboard(userId: string, requestedMonth: string
         budget_cycles: budgetCycles,
         total_income: aggregate.total_income,
         net_cash_flow: aggregate.net_cash_flow,
-        recent_transactions: (recentResult.data || []).map((transaction) => (
+        recent_transactions: ((recentResult.data || []) as unknown as FinanceTransaction[]).map((transaction) => (
             toFinanceDashboardRecentTransaction(transaction as unknown as FinanceTransaction)
         )),
         net_by_category: aggregate.net_by_category,

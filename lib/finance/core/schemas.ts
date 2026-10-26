@@ -1,3 +1,4 @@
+import { parseFinanceTagIds } from '@/lib/finance/tagValues';
 import { FINANCE_LINK_LABELS } from '@/lib/finance/review';
 import type { FinanceLinkChanges, FinanceLinkField, FinanceReviewDuplicateTransaction } from '@/lib/types';
 import {
@@ -65,6 +66,7 @@ export interface FinanceRuleUpdateInput {
 }
 
 export interface FinanceTransactionInput {
+    tag_ids?: string[];
     source_id: string;
     category_id: string | null;
     direction: FinanceTransactionDirection;
@@ -297,6 +299,9 @@ export function parseFinanceTransaction(
     body: Record<string, unknown>,
     today: string
 ): FinanceValidationResult<FinanceTransactionInput> {
+    let tagIds: string[] | undefined;
+    try { if (body.tag_ids !== undefined) tagIds = parseFinanceTagIds(body.tag_ids); }
+    catch { return { error: 'Choose up to 50 valid tags' }; }
     const sourceId = toRequiredFinanceText(body.source_id);
     const amount = toPositiveFinanceAmount(body.amount);
     const transactionDate = normalizeFinanceDate(body.transaction_date);
@@ -308,6 +313,7 @@ export function parseFinanceTransaction(
     }
     return {
         data: {
+            ...(tagIds === undefined ? {} : { tag_ids: tagIds }),
             source_id: sourceId,
             category_id: categoryId,
             direction,

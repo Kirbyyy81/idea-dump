@@ -479,7 +479,17 @@ export interface FinanceReferenceOption {
     name: string;
 }
 
+export interface FinanceTagFilter {
+    tagIds?: string[];
+    tagMode?: 'include' | 'exclude';
+}
+
+export interface FinanceTag extends FinanceReferenceOption {
+    is_archived: boolean;
+}
+
 export interface FinanceReferenceData {
+    tags?: FinanceTag[];
     sources: FinanceReferenceOption[];
     categories: FinanceReferenceOption[];
 }
@@ -525,6 +535,8 @@ export interface FinancePayee {
 }
 
 export interface FinanceTransaction {
+    tags?: FinanceTag[];
+    tag_links?: Array<{ tag: FinanceTag | null }>;
     id: string;
     user_id: string;
     source_id: string;
@@ -549,6 +561,7 @@ export interface FinanceTransaction {
 }
 
 export interface FinanceTransactionView {
+    tags?: FinanceTag[];
     id: string;
     source_id: string;
     category_id: string | null;
@@ -567,6 +580,7 @@ export interface FinanceTransactionView {
 }
 
 export interface FinanceDashboardRecentTransaction {
+    tags?: FinanceTag[];
     category?: Pick<FinanceReferenceOption, 'name'> | null;
     id: string;
     direction: FinanceTransactionDirection;

@@ -2,7 +2,9 @@
 
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { FinanceTagFilter } from './FinanceTagFilter';
+import { parseFinanceTagFilter, writeFinanceTagFilter } from '@/lib/finance/tagValues';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { Button } from '@/components/atoms/Button';
 import { FinanceTransactionRow } from './FinanceTransactionRow';
@@ -31,6 +33,13 @@ interface FinanceDashboardClientProps {
 }
 export function FinanceDashboardClient({ month, today, selectedDate = null, summary }: FinanceDashboardClientProps) {
     const router = useRouter();
+    const params = useSearchParams();
+    const tagFilter = parseFinanceTagFilter(params);
+    const dashboardHref = (nextMonth: string, date?: string | null) => {
+        const next = writeFinanceTagFilter(new URLSearchParams({ month: nextMonth }), tagFilter);
+        if (date) next.set('date', date);
+        return `/finance?${next.toString()}`;
+    };
     const [isPending, startTransition] = useTransition();
     const [expandedCategoryMonth, setExpandedCategoryMonth] = useState<string | null>(null);
     const showAllCategories = expandedCategoryMonth === month;
@@ -42,6 +51,7 @@ export function FinanceDashboardClient({ month, today, selectedDate = null, summ
     const positiveCategoryTotals = categoryTotals.filter((item) => item.amount > 0);
     const [year, monthNumber] = month.split('-').map(Number);
     const categoryTransactionsHref = (categoryId: string | null) => financeTransactionsHref({
+        ...tagFilter,
         ...(categoryId ? { categoryId } : { uncategorised: true }),
         dateFrom: `${month}-01`,
         dateTo: `${month}-${daysInMonth(year, monthNumber)}`,
@@ -51,12 +61,12 @@ export function FinanceDashboardClient({ month, today, selectedDate = null, summ
     const openMonth = (nextMonth: string) => {
         if (nextMonth === month) return;
         startTransition(() => {
-            router.push(`/finance?month=${encodeURIComponent(nextMonth)}`);
+            router.push(dashboardHref(nextMonth));
         });
     };
     const selectDay = (date: string | null) => {
         startTransition(() => {
-            router.push(`/finance?month=${encodeURIComponent(month)}${date ? `&date=${encodeURIComponent(date)}` : ''}`, { scroll: false });
+            router.push(dashboardHref(month, date), { scroll: false });
         });
     };
     const selectedDayLabel = selectedDate ? new Intl.DateTimeFormat('en-MY', {
@@ -84,6 +94,7 @@ export function FinanceDashboardClient({ month, today, selectedDate = null, summ
                     <MonthPicker value={month} onChange={openMonth} className="max-w-full [&>button]:max-w-full [&>button]:flex-wrap [&>button]:justify-center" />
                     <button type="button" title="Next month" aria-label="Next month" onClick={() => openMonth(shiftFinanceMonth(month, 1) || month)} className="grid size-10 place-items-center text-text-secondary hover:text-text-primary"><NextDoodleIcon size={19} /></button>
                 </div>
+                <div className="mt-4"><FinanceTagFilter /></div>
                 <span className="sr-only" role="status" aria-live="polite">
                     {isPending ? 'Loading finance overview...' : ''}
                 </span>
@@ -99,6 +110,7 @@ export function FinanceDashboardClient({ month, today, selectedDate = null, summ
                     <section aria-labelledby="budget-cycles-heading" className="lg:col-span-2">
                         <div className="mb-3 flex items-center justify-between gap-3"><h2 id="budget-cycles-heading" className="text-base font-bold">{month === today.slice(0, 7) ? 'Active budgets' : 'Budget cycles'}</h2>
                             <Link href="/finance/budgets" className="text-sm font-medium underline underline-offset-4">View budgets</Link></div>
+                        {Boolean(tagFilter.tagIds?.length) && <p className="mb-3 text-xs text-text-muted">Budgets use their own filters. Tag filters apply to the spending overview.</p>}
                         {(summary.budget_cycles?.length ?? 0) > 0 ? <ul className="grid gap-3 md:grid-cols-3">{summary.budget_cycles!.map((budget) => {
                             const content = <><h3 className="mb-3 break-words font-semibold">{budget.name}</h3><BudgetCycleProgress name={budget.name} cycle={budget.cycle} compact /></>;
                             return <li key={budget.cycle.id} className="min-w-0">{budget.cycle.frozen_at
@@ -135,14 +147,14 @@ export function FinanceDashboardClient({ month, today, selectedDate = null, summ
                         <h2 id="recent-transactions-heading" className="text-base font-bold">{selectedDayLabel ? `Transactions for ${selectedDayLabel}` : 'Recent transactions'}</h2>
                         <div className="flex items-center gap-3">
                             {selectedDate && <Button variant="ghost" type="button" disabled={isPending} onClick={() => selectDay(null)}>Clear day filter</Button>}
-                            <Link href={financeTransactionsHref(selectedDate ? { date: selectedDate } : {})} className="text-sm font-semibold text-accent-blue hover:underline">View all</Link>
+                            <Link href={financeTransactionsHref({ ...tagFilter, ...(selectedDate ? { date: selectedDate } : {}) })} className="text-sm font-semibold text-accent-blue hover:underline">View all</Link>
                         </div>
                     </div>
                     {isPending ? <p className="py-6 text-sm text-text-muted" role="status">Loading transactions…</p> : <ul className="mt-3 divide-y divide-border-default border-y border-border-default">{summary.recent_transactions.map((transaction) => <li key={transaction.id}>
                     <FinanceTransactionRow
                         density="summary"
                         categoryName={transaction.category?.name ?? null}
-                        payeeName={transaction.finance_payee?.name}
+                        tags={transaction.tags} payeeName={transaction.finance_payee?.name}
                         merchant={transaction.merchant}
                         sourceName={transaction.finance_source?.name}
                         date={transaction.transaction_date}

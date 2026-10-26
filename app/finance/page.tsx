@@ -1,3 +1,4 @@
+import { parseFinanceTagFilter } from '@/lib/finance/tagValues';
 import { redirect } from 'next/navigation';
 import { FinanceDashboardClient } from '@/app/finance/_components/FinanceDashboardClient';
 import { resolveFinanceDashboardMonth } from '@/lib/finance/dashboard';
@@ -9,6 +10,8 @@ interface FinancePageProps {
     searchParams: Promise<{
         month?: string | string[];
         date?: string | string[];
+        tag_ids?: string;
+        tag_mode?: string;
     }>;
 }
 
@@ -29,7 +32,10 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
     if (rawDate !== undefined && (!selectedDate || !selectedDate.startsWith(`${month}-`) || selectedDate > today)) {
         redirect(`/finance?month=${month}`);
     }
-    const summary = await getFinanceDashboard(session.user.id, month, selectedDate);
+    let tags;
+    try { tags = parseFinanceTagFilter(new URLSearchParams({ ...(params.tag_ids ? { tag_ids: params.tag_ids } : {}), ...(params.tag_mode ? { tag_mode: params.tag_mode } : {}) })); }
+    catch { redirect(`/finance?month=${month}`); }
+    const summary = await getFinanceDashboard(session.user.id, month, selectedDate, tags);
 
     return <FinanceDashboardClient month={month} today={today} selectedDate={selectedDate} summary={summary} />;
 }

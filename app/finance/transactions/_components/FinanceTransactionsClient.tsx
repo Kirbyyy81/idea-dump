@@ -1,7 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { Button } from '@/components/atoms/Button';
+import { FinanceTagPicker } from '@/app/finance/_components/FinanceTagPicker';
 import { AppShell } from '@/components/organisms/AppShell';
 import { AddDoodleIcon } from '@/components/atoms/DoodleIcons';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
@@ -25,6 +28,11 @@ export function FinanceTransactionsClient({
     initialTransactions,
 }: FinanceTransactionsClientProps) {
     const { showError, showSuccess } = useAlert();
+    const router = useRouter();
+    const [bulkOpen, setBulkOpen] = useState(false);
+    const [selected, setSelected] = useState<string[]>([]);
+    const [bulkTags, setBulkTags] = useState<string[]>([]);
+    const [tagSaving, setTagSaving] = useState(false);
     const {
         categories,
         error: referenceError,
@@ -33,6 +41,16 @@ export function FinanceTransactionsClient({
         status: referenceStatus,
     } = useFinanceReferenceData();
     const [transactions, setTransactions] = useState(initialTransactions);
+    useEffect(() => { setTransactions(initialTransactions); setSelected([]); }, [initialTransactions]);
+    const applyTags = async (operation: 'add' | 'remove') => {
+        setTagSaving(true);
+        try {
+            await financeApiRequest('/api/finance/transactions/tags', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ transaction_ids: selected, tag_ids: bulkTags, operation }) });
+            setSelected([]); setBulkTags([]); router.refresh();
+            showSuccess('Transaction tags updated');
+        } catch (error) { showError(error instanceof Error ? error.message : 'Could not update tags'); }
+        finally { setTagSaving(false); }
+    };
     const [query, setQuery] = useState(initialQuery);
     const [deleting, setDeleting] = useState<FinanceTransactionView | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -45,6 +63,7 @@ export function FinanceTransactionsClient({
             transaction.finance_payee?.name,
             transaction.reference_number,
             transaction.notes,
+            ...(transaction.tags || []).map(tag => tag.name),
             transaction.category?.name,
             transaction.finance_source?.name,
         ].filter(Boolean).join(' ').toLowerCase().includes(needle));
@@ -88,7 +107,16 @@ export function FinanceTransactionsClient({
                         status={referenceStatus}
                         transactions={transactions}
                     />
+                    <div className="border-b border-border-default px-5 py-3">
+                        <Button type="button" variant="secondary" disabled={tagSaving} onClick={() => { setBulkOpen(!bulkOpen); setSelected([]); setBulkTags([]); }}>{bulkOpen ? 'Done tagging' : 'Tag transactions'}</Button>
+                        {bulkOpen && <div className="mt-3 space-y-3" aria-label="Bulk transaction tags">
+                            <p className="text-sm">{selected.length} selected (up to 100)</p>
+                            <FinanceTagPicker label="Bulk tags" value={bulkTags} onChange={setBulkTags} includeArchived disabled={tagSaving} />
+                            <div className="flex flex-wrap gap-2"><Button type="button" disabled={tagSaving || !selected.length || !bulkTags.length} onClick={() => void applyTags('add')}>Add tags</Button><Button type="button" variant="secondary" disabled={tagSaving || !selected.length || !bulkTags.length} onClick={() => void applyTags('remove')}>Remove tags</Button></div>
+                        </div>}
+                    </div>
                     <TransactionLedgerGroups
+                        selection={bulkOpen ? { selected, disabled: tagSaving, onToggle: (id: string) => setSelected(current => current.includes(id) ? current.filter(value => value !== id) : current.length < 100 ? [...current, id] : current) } : undefined}
                         isLoading={false}
                         transactions={filteredTransactions}
                         onDelete={setDeleting}

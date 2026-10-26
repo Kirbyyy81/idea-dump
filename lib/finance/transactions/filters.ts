@@ -1,8 +1,11 @@
+import { parseFinanceTagFilter, writeFinanceTagFilter, type FinanceTagFilter } from '@/lib/finance/tagValues';
 import type { FinanceTransactionDirection, FinanceTransactionStatus } from '@/lib/types';
 import { isFinanceTransactionStatus, isFinanceUuid } from '@/lib/finance/core/schemas';
 import { normalizeFinanceDate } from '@/lib/finance/core/values';
 
 export const FINANCE_TRANSACTION_FILTER_KEYS = {
+    tagIds: 'tag_ids',
+    tagMode: 'tag_mode',
     categoryId: 'category_id',
     date: 'date',
     dateFrom: 'date_from',
@@ -12,7 +15,7 @@ export const FINANCE_TRANSACTION_FILTER_KEYS = {
     uncategorised: 'uncategorised',
 } as const;
 
-export interface FinanceTransactionFilters {
+export interface FinanceTransactionFilters extends FinanceTagFilter {
     categoryId: string | null;
     date: string | null;
     dateFrom: string | null;
@@ -35,6 +38,8 @@ type FinanceTransactionFilterResult =
 export function parseFinanceTransactionFilters(
     searchParams: Pick<URLSearchParams, 'get'>
 ): FinanceTransactionFilterResult {
+    let tags: FinanceTagFilter;
+    try { tags = parseFinanceTagFilter(searchParams); } catch { return { error: 'Choose valid tags and a filter mode' }; }
     const categoryId = searchParams.get(FINANCE_TRANSACTION_FILTER_KEYS.categoryId);
     const rawDate = searchParams.get(FINANCE_TRANSACTION_FILTER_KEYS.date);
     const rawDateFrom = searchParams.get(FINANCE_TRANSACTION_FILTER_KEYS.dateFrom);
@@ -79,6 +84,7 @@ export function parseFinanceTransactionFilters(
 
     return {
         data: {
+            ...(tags.tagIds?.length ? tags : {}),
             categoryId,
             date: rawDate === null ? null : normalizeFinanceDate(rawDate),
             dateFrom,
@@ -120,7 +126,7 @@ export function parseFinanceTransactionListFilters(
 export function financeTransactionsHref(
     filters: Partial<FinanceTransactionFilters>
 ) {
-    const searchParams = new URLSearchParams();
+    const searchParams = writeFinanceTagFilter(new URLSearchParams(), filters);
     if (filters.categoryId) {
         searchParams.set(FINANCE_TRANSACTION_FILTER_KEYS.categoryId, filters.categoryId);
     } else if (filters.uncategorised) {
