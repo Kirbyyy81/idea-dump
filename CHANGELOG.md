@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.4](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.18.3...idea-dump-v0.18.4) (2026-10-22)
+
+
+### Bug Fixes
+
+* patch ci audit dependencies ([ea75e61](https://github.com/Kirbyyy81/idea-dump/commit/ea75e6163bfdadad4c422250de9bbdc42396bb0f))
+
 ## [0.18.3](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.18.2...idea-dump-v0.18.3) (2026-10-19)
 
 
