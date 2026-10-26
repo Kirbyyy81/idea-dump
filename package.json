@@ -43,7 +43,7 @@
     "jsbarcode": "3.12.3",
     "lucide-react": "0.475.0",
     "mermaid": "11.17.2",
-    "next": "15.5.27",
+    "next": "15.5.28",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-markdown": "^9.0.1",
@@ -65,7 +65,7 @@
     "braces": "file:vendor/braces",
     "esbuild": "^0.28.2",
     "eslint": "^8.56.0",
-    "eslint-config-next": "15.5.27",
+    "eslint-config-next": "15.5.28",
     "jsdom": "^27.4.0",
     "postcss": "8.5.26",
     "tailwindcss": "^3.4.1",
@@ -81,6 +81,7 @@
     "braces": "$braces",
     "source-map-js": "1.2.2",
     "postcss-selector-parser": "7.1.6",
-    "katex": "0.18.2"
+    "katex": "0.18.2",
+    "dompurify": "3.4.17"
   }
 }
