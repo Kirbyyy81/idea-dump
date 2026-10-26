@@ -1,6 +1,6 @@
 'use client';
 
-import { Button } from '@/components/atoms/Button';
+import { Checkbox } from '@/components/atoms/Checkbox';
 import { useMemo } from 'react';
 import type { FinanceTransactionView } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
@@ -60,11 +60,19 @@ export function TransactionLedgerGroups({
                         <div className="divide-y divide-border-default">
                             {group.transactions.map((transaction) => (
                                 <div key={transaction.id} className="flex min-w-0 items-center">
-                                    {selection && <Button type="button" variant="ghost" className="ml-2 shrink-0" aria-label={`Select transaction ${transaction.finance_payee?.name || transaction.merchant || transaction.id}`} aria-pressed={selection.selected.includes(transaction.id)} disabled={selection.disabled || (!selection.selected.includes(transaction.id) && selection.selected.length >= 100)} onClick={() => selection.onToggle(transaction.id)}>{selection.selected.includes(transaction.id) ? 'Selected' : 'Select'}</Button>}
-                                    <div className="min-w-0 flex-1"><TransactionLedgerRow
-                                    transaction={transaction}
-                                    onDelete={onDelete}
-                                /></div></div>
+                                    {selection && (
+                                        <Checkbox
+                                            className="ml-2 shrink-0"
+                                            ariaLabel={`Select transaction ${transaction.finance_payee?.name || transaction.merchant || transaction.id}`}
+                                            checked={selection.selected.includes(transaction.id)}
+                                            disabled={selection.disabled || (!selection.selected.includes(transaction.id) && selection.selected.length >= 100)}
+                                            onChange={() => selection.onToggle(transaction.id)}
+                                        />
+                                    )}
+                                    <div className="min-w-0 flex-1">
+                                        <TransactionLedgerRow transaction={transaction} onDelete={onDelete} />
+                                    </div>
+                                </div>
                             ))}
                         </div>
                     </section>

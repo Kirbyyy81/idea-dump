@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/atoms/Button';
+import { ActionMenu } from '@/components/molecules/ActionMenu';
 import { FinanceTagPicker } from '@/app/finance/_components/FinanceTagPicker';
 import { AppShell } from '@/components/organisms/AppShell';
 import { AddDoodleIcon } from '@/components/atoms/DoodleIcons';
@@ -29,6 +30,7 @@ export function FinanceTransactionsClient({
 }: FinanceTransactionsClientProps) {
     const { showError, showSuccess } = useAlert();
     const router = useRouter();
+    const headerActionsRef = useRef<HTMLDivElement>(null);
     const [bulkOpen, setBulkOpen] = useState(false);
     const [selected, setSelected] = useState<string[]>([]);
     const [bulkTags, setBulkTags] = useState<string[]>([]);
@@ -42,6 +44,12 @@ export function FinanceTransactionsClient({
     } = useFinanceReferenceData();
     const [transactions, setTransactions] = useState(initialTransactions);
     useEffect(() => { setTransactions(initialTransactions); setSelected([]); }, [initialTransactions]);
+    const toggleBulkTagging = () => {
+        if (bulkOpen) headerActionsRef.current?.querySelector<HTMLButtonElement>('[aria-haspopup="menu"]')?.focus();
+        setBulkOpen(current => !current);
+        setSelected([]);
+        setBulkTags([]);
+    };
     const applyTags = async (operation: 'add' | 'remove') => {
         setTagSaving(true);
         try {
@@ -93,7 +101,14 @@ export function FinanceTransactionsClient({
             contentClassName="p-5 md:p-8"
             pageTitle="Transactions"
             headerClassName="flex-row flex-wrap items-center justify-between gap-2"
-            headerAction={<Link href="/finance/add" className="btn-primary"><AddDoodleIcon size={16} className="mr-2" />Add transaction</Link>}
+            headerAction={
+                <div ref={headerActionsRef} className="flex items-center gap-2">
+                    <Link href="/finance/add" className="btn-primary"><AddDoodleIcon size={16} className="mr-2" />Add transaction</Link>
+                    <ActionMenu label="More transaction actions" disabled={tagSaving} items={[
+                        { label: bulkOpen ? 'Done tagging' : 'Tag transactions', onSelect: toggleBulkTagging },
+                    ]} />
+                </div>
+            }
         >
             <div className="mx-auto max-w-7xl">
                 <section className="border border-border-default bg-bg-surface" aria-label="Transactions list">
@@ -107,14 +122,16 @@ export function FinanceTransactionsClient({
                         status={referenceStatus}
                         transactions={transactions}
                     />
-                    <div className="border-b border-border-default px-5 py-3">
-                        <Button type="button" variant="secondary" disabled={tagSaving} onClick={() => { setBulkOpen(!bulkOpen); setSelected([]); setBulkTags([]); }}>{bulkOpen ? 'Done tagging' : 'Tag transactions'}</Button>
-                        {bulkOpen && <div className="mt-3 space-y-3" aria-label="Bulk transaction tags">
-                            <p className="text-sm">{selected.length} selected (up to 100)</p>
+                    {bulkOpen && (
+                        <div role="region" className="space-y-3 border-b border-border-default px-5 py-3" aria-label="Bulk transaction tags">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                                <p role="status" className="text-sm">{selected.length} selected (up to 100)</p>
+                                <Button type="button" variant="secondary" disabled={tagSaving} onClick={toggleBulkTagging}>Done tagging</Button>
+                            </div>
                             <FinanceTagPicker label="Bulk tags" value={bulkTags} onChange={setBulkTags} includeArchived disabled={tagSaving} />
                             <div className="flex flex-wrap gap-2"><Button type="button" disabled={tagSaving || !selected.length || !bulkTags.length} onClick={() => void applyTags('add')}>Add tags</Button><Button type="button" variant="secondary" disabled={tagSaving || !selected.length || !bulkTags.length} onClick={() => void applyTags('remove')}>Remove tags</Button></div>
-                        </div>}
-                    </div>
+                        </div>
+                    )}
                     <TransactionLedgerGroups
                         selection={bulkOpen ? { selected, disabled: tagSaving, onToggle: (id: string) => setSelected(current => current.includes(id) ? current.filter(value => value !== id) : current.length < 100 ? [...current, id] : current) } : undefined}
                         isLoading={false}

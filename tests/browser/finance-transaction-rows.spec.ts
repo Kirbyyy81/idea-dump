@@ -66,8 +66,9 @@ test('ledger double click opens editing while single click and selection stay on
     const row = page.locator('[data-finance-transaction-row="default"]').filter({ hasText: 'Trip cafe' });
     await row.getByText('Trip cafe', { exact: true }).click();
     await expect(page).toHaveURL(/\/finance\/transactions$/);
-    await page.getByRole('button', { name: 'Tag transactions', exact: true }).click();
-    await page.getByRole('button', { name: 'Select transaction Trip cafe', exact: true }).dblclick();
+    await page.getByRole('button', { name: 'More transaction actions', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Tag transactions', exact: true }).click();
+    await page.getByRole('checkbox', { name: 'Select transaction Trip cafe', exact: true }).dblclick();
     await expect(page).toHaveURL(/\/finance\/transactions$/);
     await row.getByText('Trip cafe', { exact: true }).dblclick();
     await expect(page).toHaveURL(`/finance/transactions/edit?id=${tagTransactions[0].id}`);
