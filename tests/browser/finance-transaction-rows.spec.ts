@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { budgetDetailFixture } from '../fixtures/finance-budgets';
+import { tagTransactions } from './finance-tags-fixture';
 
 test.beforeEach(async ({ page }) => {
     await page.route('**/api/finance/reference-data', (route) => route.fulfill({ json: { data: { sources: [], categories: [] } } }));
@@ -58,4 +59,29 @@ test('review rows keep keyboard selection, duplicate warnings and candidate deta
     await expect(selected).toHaveAttribute('aria-pressed', 'false');
     await expect(page.getByText('Existing transaction', { exact: true })).toHaveCount(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
+});
+
+test('ledger double click opens editing while single click and selection stay on the ledger', async ({ page }) => {
+    await page.goto('/finance/transactions');
+    const row = page.locator('[data-finance-transaction-row="default"]').filter({ hasText: 'Trip cafe' });
+    await row.getByText('Trip cafe', { exact: true }).click();
+    await expect(page).toHaveURL(/\/finance\/transactions$/);
+    await page.getByRole('button', { name: 'Tag transactions', exact: true }).click();
+    await page.getByRole('button', { name: 'Select transaction Trip cafe', exact: true }).dblclick();
+    await expect(page).toHaveURL(/\/finance\/transactions$/);
+    await row.getByText('Trip cafe', { exact: true }).dblclick();
+    await expect(page).toHaveURL(`/finance/transactions/edit?id=${tagTransactions[0].id}`);
+});
+
+test('ledger three-dot menu still offers editing and deletion without double-click navigation', async ({ page }) => {
+    await page.goto('/finance/transactions');
+    const trigger = page.getByRole('button', { name: 'Actions for Trip cafe', exact: true });
+    await trigger.dblclick();
+    await expect(page).toHaveURL(/\/finance\/transactions$/);
+    await trigger.click();
+    const actions = page.getByRole('group', { name: 'Actions for Trip cafe', exact: true });
+    await expect(actions.getByRole('button', { name: 'Delete', exact: true })).toBeVisible();
+    await expect(actions.getByRole('link', { name: 'Edit', exact: true })).toHaveAttribute('href', `/finance/transactions/edit?id=${tagTransactions[0].id}`);
+    await actions.getByRole('link', { name: 'Edit', exact: true }).click();
+    await expect(page).toHaveURL(`/finance/transactions/edit?id=${tagTransactions[0].id}`);
 });

@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { TransactionLedgerGroups } from '@/app/finance/transactions/_components/TransactionLedgerGroups';
 import { FinanceTransaction } from '@/lib/types';
 
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
+
 function transaction(
     id: string,
     date: string,
