@@ -3,6 +3,7 @@
 import { FormEvent, useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { FinanceTagPicker } from '@/app/finance/_components/FinanceTagPicker';
 import { AppShell } from '@/components/organisms/AppShell';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
@@ -55,6 +56,7 @@ export function FinanceTransactionEditor({
     loadError,
 }: FinanceTransactionEditorProps) {
     const router = useRouter();
+    const [tagIds, setTagIds] = useState<string[]>(initialTransaction?.tags?.map(tag => tag.id) || []);
     const { showError, showSuccessToast } = useAlert();
     const {
         categories,
@@ -147,6 +149,7 @@ export function FinanceTransactionEditor({
                 },
                 body: JSON.stringify({
                     ...form,
+                    tag_ids: tagIds,
                     amount,
                     category_id: categoryId,
                     id: initialTransaction.id,
@@ -220,6 +223,7 @@ export function FinanceTransactionEditor({
                                 <Select id="edit-direction" label="Direction" required errorMessage={fieldErrors.direction} data-finance-field="direction" aria-label="Transaction direction" value={form.direction} onChange={(direction) => setTransactionField('direction', direction as FinanceTransactionDirection)} options={[{ value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }]} />
                                 <Select id="edit-source" label="Source" required errorMessage={fieldErrors.source_id} data-finance-field="source_id" aria-label="Transaction source" value={form.source_id} onChange={(sourceId) => setTransactionField('source_id', sourceId)} placeholder="Choose a source" options={sourceOptions} />
                                 <Select id="edit-category" label="Category" errorMessage={fieldErrors.category_id} data-finance-field="category_id" aria-label="Transaction category" value={form.category_id} onChange={(categoryId) => setTransactionField('category_id', categoryId)} placeholder="Uncategorised" options={[{ value: '', label: 'Uncategorised' }, ...categoryOptions]} />
+                                <FinanceTagPicker value={tagIds} onChange={setTagIds} disabled={isSaving} initialTags={initialTransaction.tags} />
                                 <div className="grid gap-4 sm:grid-cols-2">
                                     <Input id="edit-amount" label="Amount" required errorMessage={fieldErrors.amount} data-finance-field="amount" inputMode="decimal" type="number" min="0.01" max={MAX_FINANCE_AMOUNT} step="0.01" value={form.amount} onChange={(event) => setTransactionField('amount', event.target.value)} placeholder="0.00" />
                                     <Input id="edit-currency" label="Currency" value="MYR" readOnly aria-readonly="true" />

@@ -1,3 +1,4 @@
+vi.mock('@/app/finance/_components/FinanceReferenceData', async (original) => ({ ...await original<object>(), useFinanceReferenceData: () => ({ tags: [], status: 'ready' }) }));
 import fs from 'node:fs';
 import path from 'node:path';
 import { ReactNode } from 'react';
@@ -26,7 +27,9 @@ const {
 
 vi.mock('next/navigation', () => ({
     redirect: redirectTo,
-    useRouter: () => ({ push: routerPush }),
+    useRouter: () => ({ push: routerPush, replace: routerPush }),
+    useSearchParams: () => new URLSearchParams(),
+    usePathname: () => '/finance',
 }));
 vi.mock('@/lib/finance/core/pageAccess', () => ({
     requireFinancePageAccess: pageAccess,
@@ -211,7 +214,7 @@ describe('server-rendered Finance dashboard', () => {
 
     it('passes a valid selected date to the authorized server query', async () => {
         const page = await FinancePage({ searchParams: Promise.resolve({ month: '2026-05', date: '2026-05-12' }) });
-        expect(dashboardService).toHaveBeenCalledWith('user-1', '2026-05', '2026-05-12');
+        expect(dashboardService).toHaveBeenCalledWith('user-1', '2026-05', '2026-05-12', { tagIds: [], tagMode: 'include' });
         expect(page.props.selectedDate).toBe('2026-05-12');
     });
 
@@ -226,7 +229,7 @@ describe('server-rendered Finance dashboard', () => {
         });
 
         expect(pageAccess).toHaveBeenCalledOnce();
-        expect(dashboardService).toHaveBeenCalledWith('user-1', '2026-05', null);
+        expect(dashboardService).toHaveBeenCalledWith('user-1', '2026-05', null, { tagIds: [], tagMode: 'include' });
         expect(page.type).toBe(FinanceDashboardClient);
         expect(page.props).toEqual({ month: '2026-05', today: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), selectedDate: null, summary });
     });
@@ -265,7 +268,7 @@ describe('server-rendered Finance dashboard', () => {
         const accessSource = fs.readFileSync(path.join(root, 'lib', 'finance', 'core', 'pageAccess.ts'), 'utf8');
 
         expect(pageSource).not.toMatch(/^['"]use client['"]/);
-        expect(pageSource).toContain('getFinanceDashboard(session.user.id, month, selectedDate)');
+        expect(pageSource).toContain('getFinanceDashboard(session.user.id, month, selectedDate, tags)');
         expect(clientSource).not.toContain('financeApiRequest');
         expect(clientSource).not.toContain('useEffect');
         expect(layoutSource).toContain('requireFinancePageAccess');

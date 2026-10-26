@@ -1160,3 +1160,17 @@ See [`ARCHITECTURE_CLEAN_CODE_REVIEW.md`](./ARCHITECTURE_CLEAN_CODE_REVIEW.md) f
 ## Notification pattern storage, October 8, 2026
 
 Manual notification confirmation saves reusable definitions directly into `finance_notification_patterns` in the same transaction as confirmation and raw-text deletion. The separate `finance_notification_learning_reviews` audit table and its writer were removed. Existing patterns, supporting transactions, disabled overrides, source/package ownership and evidence invalidation remain. The existing confirmation RPC signature is preserved for deployed clients.
+
+## Transaction tags
+
+Transactions retain one category and may have up to 50 optional tags. Use categories for spending types and tags for trips/events. Finance settings includes a Tags library with create, rename, archive and restore actions. Names are trimmed, limited to 120 characters and unique per owner without case sensitivity. Archived tags retain historical assignments and remain filterable; they cannot be newly assigned until restored.
+
+Manual entry and ledger editing provide a searchable multi-tag picker with inline creation. Ledger rows show tag chips, and Tag transactions supports adding/removing tags on up to 100 selected transactions atomically. Screenshots and notifications start untagged and can be tagged after confirmation. Tag edits do not teach category memory.
+
+`GET/POST/PUT /api/finance/tags` lists, creates and updates owned tags. `POST /api/finance/transactions/tags` accepts `transaction_ids`, `tag_ids` and `operation` (`add` or `remove`). These session-only routes use the existing Finance mutation guards. Transaction POST/PUT accepts optional `tag_ids`: omitted preserves existing tags on updates, while `[]` clears them. Creation replay compares canonical tag selections, and financial/tag writes share one database transaction.
+
+Ledger and dashboard URLs support comma-separated `tag_ids` UUIDs plus `tag_mode=include|exclude`. Inclusion matches any selected tag; exclusion removes any match and keeps untagged transactions. Tags combine with other filters. Dashboard month/day navigation and category/recent drill-down links retain tag filters. Summary amounts, calendar, category totals and recent transactions share filtering before pagination/limits. A transaction with several matching tags counts once. Budgets continue to use their own saved filters and frozen totals.
+
+The additive tag migration introduces server-only, RLS-enabled `dim_finance_tags` and `finance_transaction_tags`, owner-matched foreign keys, version-compatible save wrappers and indexed EXISTS-based filtering. Apply only the reviewed migration using the Supabase runbook, deploy the compatible app, then run any separately reviewed account data cleanup. Do not publish personal cleanup rows in migrations or automatically reclassify new uncategorised records.
+
+Validation: `npm run test:finance-tags:db`, `npx vitest run tests/finance-tags.test.tsx`, and `npx playwright test tests/browser/finance-tags.spec.ts tests/browser/finance-calendar.spec.ts tests/browser/finance-dashboard-budgets.spec.ts tests/browser/finance-transaction-rows.spec.ts`, followed by repository-required checks.

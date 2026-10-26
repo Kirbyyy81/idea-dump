@@ -1,3 +1,4 @@
+import { transactionTags } from '@/lib/finance/tagValues';
 import { NextRequest, NextResponse } from 'next/server';
 import { authorizeSessionModule } from '@/lib/rbac/guards';
 import {
@@ -121,6 +122,7 @@ export function isFinanceTransactionStatus(value: unknown): value is FinanceTran
 export function normalizeFinanceTransaction(transaction: FinanceTransaction) {
     return {
         ...transaction,
+        tags: transactionTags(transaction),
         amount: Number(transaction.amount),
         currency: transaction.currency || FINANCE_V1_CURRENCY,
         payee_id: transaction.payee_id || null,

@@ -44,6 +44,7 @@ describe('Finance browser payloads', () => {
     it('maps ledger transactions without persistence-only fields', () => {
         const result = toFinanceTransactionView(transaction);
         expect(result).toEqual({
+            tags: [],
             id: 'transaction-1',
             source_id: 'source-1',
             category_id: 'category-1',
@@ -68,6 +69,7 @@ describe('Finance browser payloads', () => {
 
     it('maps the dashboard recent list to display-only fields', () => {
         expect(toFinanceDashboardRecentTransaction(transaction)).toEqual({
+            tags: [],
             id: 'transaction-1',
             direction: 'expense',
             amount: 12.5,

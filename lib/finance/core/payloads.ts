@@ -1,3 +1,4 @@
+import { transactionTags } from '@/lib/finance/tagValues';
 import { FINANCE_V1_CURRENCY } from '@/lib/finance/core/constants';
 import type {
     FinanceCandidateTransaction,
@@ -181,6 +182,7 @@ function namedReference(value: { name: string } | null | undefined) {
 
 export function toFinanceTransactionView(transaction: FinanceTransaction): FinanceTransactionView {
     return {
+        tags: transactionTags(transaction),
         id: transaction.id,
         source_id: transaction.source_id,
         category_id: transaction.category_id || null,
@@ -207,6 +209,7 @@ export function toFinanceDashboardRecentTransaction(
     transaction: FinanceTransaction
 ): FinanceDashboardRecentTransaction {
     return {
+        tags: transactionTags(transaction),
         id: transaction.id,
         direction: transaction.direction,
         amount: Number(transaction.amount),

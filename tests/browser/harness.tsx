@@ -1,3 +1,7 @@
+import { FinanceTransactionsClient } from '@/app/finance/transactions/_components/FinanceTransactionsClient';
+import { FinanceTransactionEditor } from '@/app/finance/transactions/edit/_components/FinanceTransactionEditor';
+import { TagsSettingsPanel } from '@/app/finance/settings/_components/TagsSettingsPanel';
+import { tagTransactions } from './finance-tags-fixture';
 import { NotificationPatternsPanel } from '@/app/finance/settings/_components/NotificationPatternsPanel';
 import { CategoryMemoriesPanel } from '@/app/finance/settings/_components/CategoryMemoriesPanel';
 import { AlertDialog } from '@/components/molecules/AlertDialog';
@@ -26,6 +30,12 @@ createRoot(document.getElementById('root')!).render(<FinanceReferenceDataProvide
     {window.location.pathname === '/finance'
         ? <FinanceDashboardClient month={dashboardMonth} today={budgetMonthsEnabled ? '2026-10-02' : '2026-09-22'} selectedDate={dashboardDate}
             summary={budgetMonthsEnabled ? { ...dashboardSummary, budget_cycles: dashboardBudgetMonths[dashboardMonth] ?? [] } : dashboardSummary} />
+        : window.location.pathname === '/finance/transactions'
+        ? <AlertProvider><AlertDialog /><FinanceTransactionsClient initialTransactions={tagTransactions} initialQuery="" /></AlertProvider>
+        : window.location.pathname === '/finance/transactions/edit'
+        ? <AlertProvider><AlertDialog /><FinanceTransactionEditor canRetry={false} loadError={null} initialTransaction={{ ...tagTransactions[0], finance_source: undefined, finance_payee: undefined, category: undefined, user_id: 'test-user', source: 'manual', status: 'confirmed', intake_item_id: null, manual_idempotency_key: null, updated_at: tagTransactions[0].created_at }} /></AlertProvider>
+        : window.location.pathname === '/finance/settings' && dashboardParams.get('section') === 'tags'
+        ? <AlertProvider><AlertDialog /><TagsSettingsPanel /></AlertProvider>
         : window.location.pathname === '/finance/settings/notifications'
         ? <NotificationPatternsPanel />
         : window.location.pathname === '/finance/settings/category-memories'

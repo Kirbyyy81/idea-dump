@@ -1,3 +1,4 @@
+vi.mock('@/app/finance/_components/FinanceReferenceData', async (original) => ({ ...await original<object>(), useFinanceReferenceData: () => ({ tags: [], status: 'ready' }) }));
 import { fireEvent, render, screen } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';

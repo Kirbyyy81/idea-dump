@@ -1,3 +1,4 @@
+import type { FinanceTagFilter } from '@/lib/finance/tagValues';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { FinanceCategory, FinanceLinkChanges, FinanceSource, FinanceTransaction } from '@/lib/types';
 
@@ -5,6 +6,7 @@ export const FINANCE_TRANSACTION_VIEW_SELECT = [
     'id, source_id, category_id, direction, amount, currency, merchant, payee_id',
     'reference_number, transaction_date, notes, created_at',
     'finance_source:dim_finance_sources(id,name)',
+    'tag_links:finance_transaction_tags(tag:dim_finance_tags(id,name,is_archived))',
     'category:dim_finance_categories(id,name,is_archived)',
     'finance_payee:dim_finance_payees(id,name)',
 ].join(', ');
@@ -12,6 +14,7 @@ const FINANCE_TRANSACTION_REPLAY_SELECT = [
     'id, source_id, category_id, direction, amount, currency, merchant, payee_id',
     'reference_number, transaction_date, notes, source, status, created_at',
     'finance_source:dim_finance_sources(id,name)',
+    'tag_links:finance_transaction_tags(tag:dim_finance_tags(id,name,is_archived))',
     'category:dim_finance_categories(id,name,is_archived)',
     'finance_payee:dim_finance_payees(id,name)',
 ].join(', ');
@@ -19,6 +22,7 @@ const FINANCE_TRANSACTION_INTERNAL_SELECT =
     'id, source_id, category_id, direction, amount, currency, merchant, payee_id, reference_number, transaction_date, notes, source, status';
 const FINANCE_DASHBOARD_RECENT_SELECT = [
     'id, direction, amount, merchant, transaction_date',
+    'tag_links:finance_transaction_tags(tag:dim_finance_tags(id,name,is_archived))',
     'category:dim_finance_categories(name)',
     'finance_source:dim_finance_sources(name)',
     'finance_payee:dim_finance_payees(name)',
@@ -332,7 +336,7 @@ export async function deleteFinanceRule(userId: string, ruleId: string) {
 
 export async function listFinanceTransactions(
     userId: string,
-    options: {
+    options: FinanceTagFilter & {
         status: string;
         sourceId: string | null;
         query: string | null;
@@ -359,8 +363,7 @@ export async function listFinanceTransactions(
         matchingPayeeIds = (data || []).map((payee) => payee.id);
     }
     for (let from = 0; ; from += options.pageSize) {
-        let query = admin
-            .from('finance_transactions')
+        let query = (options.tagIds?.length ? admin.rpc('finance_tagged_transactions', { p_user_id: userId, p_tag_ids: options.tagIds, p_mode: options.tagMode || 'include' }) : admin.from('finance_transactions'))
             .select(FINANCE_TRANSACTION_VIEW_SELECT)
             .eq('user_id', userId)
             .eq('status', options.status)
@@ -407,6 +410,7 @@ export async function getManualFinanceTransactionByIdempotencyKey(userId: string
 }
 
 export async function createManualFinanceTransaction(userId: string, input: Record<string, unknown>) {
+    if (input.p_tag_ids !== undefined) return createAdminClient().rpc('finance_save_tagged_transaction', { p_user_id: userId, p_input: input }).single();
     return createAdminClient().rpc('finance_create_manual_transaction_v2', {
         p_user_id: userId,
         ...input,
@@ -427,6 +431,7 @@ export async function updateFinanceTransaction(
     transactionId: string,
     input: Record<string, unknown>
 ) {
+    if (input.p_tag_ids !== undefined) return createAdminClient().rpc('finance_save_tagged_transaction', { p_user_id: userId, p_transaction_id: transactionId, p_input: input });
     return createAdminClient().rpc('finance_update_transaction_v3', {
         p_user_id: userId,
         p_transaction_id: transactionId,
@@ -460,13 +465,13 @@ export async function listFinanceDashboardMonthTransactions(
     userId: string,
     monthStart: string,
     nextMonthStart: string,
-    pageSize: number
+    pageSize: number,
+    tags: FinanceTagFilter = {}
 ) {
     const rows: unknown[] = [];
     const admin = createAdminClient();
     for (let from = 0; ; from += pageSize) {
-        const { data, error } = await admin
-            .from('finance_transactions')
+        const { data, error } = await (tags.tagIds?.length ? admin.rpc('finance_tagged_transactions', { p_user_id: userId, p_tag_ids: tags.tagIds, p_mode: tags.tagMode || 'include' }) : admin.from('finance_transactions'))
             .select('amount, direction, transaction_date, category_id, category:dim_finance_categories(name)')
             .eq('user_id', userId)
             .eq('status', 'confirmed')
@@ -475,7 +480,7 @@ export async function listFinanceDashboardMonthTransactions(
             .order('id', { ascending: true })
             .range(from, from + pageSize - 1);
         if (error) throw error;
-        const page = data || [];
+        const page = (data || []) as unknown as unknown[];
         rows.push(...page);
         if (page.length < pageSize) break;
     }
@@ -486,10 +491,11 @@ export async function listFinanceDashboardRecentTransactions(
     userId: string,
     monthStart: string,
     nextMonthStart: string,
-    selectedDate: string | null = null
+    selectedDate: string | null = null,
+    tags: FinanceTagFilter = {}
 ) {
-    const query = createAdminClient()
-        .from('finance_transactions')
+    const admin = createAdminClient();
+    const query = (tags.tagIds?.length ? admin.rpc('finance_tagged_transactions', { p_user_id: userId, p_tag_ids: tags.tagIds, p_mode: tags.tagMode || 'include' }) : admin.from('finance_transactions'))
         .select(FINANCE_DASHBOARD_RECENT_SELECT)
         .eq('user_id', userId)
         .eq('status', 'confirmed')

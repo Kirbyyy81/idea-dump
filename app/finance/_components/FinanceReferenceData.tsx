@@ -13,11 +13,12 @@ import {
 import { Button } from '@/components/atoms/Button';
 import { InlineLoadingState } from '@/components/molecules/InlineLoadingState';
 import { financeApiRequest } from '@/lib/finance/core/client';
-import { FinanceReferenceData, FinanceReferenceOption } from '@/lib/types';
+import { FinanceReferenceData, FinanceReferenceOption, FinanceTag } from '@/lib/types';
 
 export type FinanceReferenceDataStatus = 'loading' | 'ready' | 'error';
 
 interface FinanceReferenceDataContextValue extends FinanceReferenceData {
+    upsertTag: (tag: FinanceTag) => void;
     status: FinanceReferenceDataStatus;
     error: string | null;
     refresh: () => Promise<void>;
@@ -29,7 +30,7 @@ interface FinanceReferenceDataContextValue extends FinanceReferenceData {
 
 const FinanceReferenceDataContext = createContext<FinanceReferenceDataContextValue | null>(null);
 
-function sortFinanceReferenceOptions(options: FinanceReferenceOption[]) {
+function sortFinanceReferenceOptions<Option extends FinanceReferenceOption>(options: Option[]) {
     return [...options].sort((left, right) => (
         left.name.localeCompare(right.name, 'en', { sensitivity: 'base' })
     ));
@@ -45,9 +46,9 @@ function upsertFinanceReferenceOption(
     ]);
 }
 
-function applyFinanceReferenceMutations(
-    options: FinanceReferenceOption[],
-    mutations: Map<string, FinanceReferenceOption | null>
+function applyFinanceReferenceMutations<Option extends FinanceReferenceOption>(
+    options: Option[],
+    mutations: Map<string, Option | null>
 ) {
     const nextOptions = new Map(options.map((option) => [option.id, option]));
     mutations.forEach((option, id) => {
@@ -58,6 +59,8 @@ function applyFinanceReferenceMutations(
 }
 
 export function FinanceReferenceDataProvider({ children }: PropsWithChildren) {
+    const [tags, setTags] = useState<FinanceTag[]>([]);
+    const tagMutationsRef = useRef(new Map<string, FinanceTag | null>());
     const [sources, setSources] = useState<FinanceReferenceOption[]>([]);
     const [categories, setCategories] = useState<FinanceReferenceOption[]>([]);
     const [status, setStatus] = useState<FinanceReferenceDataStatus>('loading');
@@ -83,6 +86,8 @@ export function FinanceReferenceDataProvider({ children }: PropsWithChildren) {
             { fallbackMessage: 'Could not load Finance options' }
         ).then((payload) => {
             if (!mountedRef.current || controller.signal.aborted) return;
+            setTags(applyFinanceReferenceMutations(payload.data.tags || [], tagMutationsRef.current));
+            tagMutationsRef.current.clear();
             setSources(applyFinanceReferenceMutations(
                 payload.data.sources || [],
                 sourceMutationsRef.current
@@ -143,7 +148,14 @@ export function FinanceReferenceDataProvider({ children }: PropsWithChildren) {
         setCategories((current) => current.filter((category) => category.id !== categoryId));
     }, []);
 
+    const upsertTag = useCallback((tag: FinanceTag) => {
+        if (inFlightRef.current) tagMutationsRef.current.set(tag.id, tag);
+        setTags(current => [...current.filter(item => item.id !== tag.id), tag].sort((a, b) => a.name.localeCompare(b.name)));
+    }, []);
+
     const value = useMemo<FinanceReferenceDataContextValue>(() => ({
+        tags,
+        upsertTag,
         sources,
         categories,
         status,
@@ -154,6 +166,8 @@ export function FinanceReferenceDataProvider({ children }: PropsWithChildren) {
         upsertCategory,
         removeCategory,
     }), [
+        tags,
+        upsertTag,
         categories,
         error,
         refresh,
