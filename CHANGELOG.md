@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.18.5](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.18.4...idea-dump-v0.18.5) (2026-10-26)
+
+
+### Bug Fixes
+
+* add finance transaction tags ([308befa](https://github.com/Kirbyyy81/idea-dump/commit/308befaa8218d1d2e86db0498bb0508213d2dfde))
+* patch audited dependencies ([356891b](https://github.com/Kirbyyy81/idea-dump/commit/356891b866aaa3f80e06786cfb9852901d912dba))
+
 ## [0.18.4](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.18.3...idea-dump-v0.18.4) (2026-10-22)
 
 
