@@ -20,16 +20,18 @@ test('selects multiple tags, creates inline, and saves them in the editor',async
     await page.getByRole('button',{name:'Save changes'}).click();
     await expect.poll(()=>body?.tag_ids).toEqual([tripTag.id,'10000000-0000-4000-8000-000000000003']);
 });
-test('includes archived tags in filters and preserves exclusions across dashboard navigation',async({page})=>{
-    await page.goto('/finance?month=2026-09&tag_ids='+archivedTag.id+'&tag_mode=exclude');
-    await expect(page.getByLabel('Selected tags')).toContainText('Hackathon');
-    await expect(page.getByText('Budgets use their own filters.',{exact:false})).toBeVisible();
-    await page.getByRole('button',{name:'Previous month'}).click();
-    await expect(page).toHaveURL(url => url.searchParams.get('month') === '2026-08' && url.searchParams.get('tag_ids') === archivedTag.id && url.searchParams.get('tag_mode') === 'exclude');
-    const categories=page.getByRole('list',{name:'Spending categories'});
+test('dashboard omits tag controls and drops legacy tags from navigation and transaction links', async ({ page }) => {
+    await page.goto('/finance?month=2026-09&date=2026-09-17&tag_ids=' + archivedTag.id + '&tag_mode=exclude');
+    await expect(page.getByRole('button', { name: 'Choose filter tags', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('combobox', { name: 'Tag matching', exact: true })).toHaveCount(0);
+    const categories = page.getByRole('list', { name: 'Spending categories' });
     const href = new URL((await categories.getByRole('link').first().getAttribute('href'))!, page.url());
-    expect(href.searchParams.get('tag_ids')).toBe(archivedTag.id); expect(href.searchParams.get('tag_mode')).toBe('exclude');
-    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+    expect(href.searchParams.has('tag_ids')).toBe(false);
+    expect(href.searchParams.has('tag_mode')).toBe(false);
+    await expect(page.getByRole('link', { name: 'View all', exact: true })).toHaveAttribute('href', '/finance/transactions?date=2026-09-17');
+    await page.getByRole('button', { name: 'Previous month' }).click();
+    await expect(page).toHaveURL(url => url.searchParams.get('month') === '2026-08' && !url.searchParams.has('tag_ids') && !url.searchParams.has('tag_mode'));
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 });
 for (const operation of ['add', 'remove'] as const) {
     test(`bulk ${operation} submits only selected transactions and selected tags`,async({page})=>{
@@ -97,7 +99,6 @@ test('More menu enables keyboard multi-select and Done tagging clears the select
 for (const flow of [
     { name: 'manual entry', path: '/finance/add', label: 'Tags', baseline: 'Transaction category', baselineLabel: 'Category' },
     { name: 'editing', path: '/finance/transactions/edit?id=' + tagTransactions[0].id, label: 'Tags', baseline: 'Transaction category', baselineLabel: 'Category' },
-    { name: 'dashboard filtering', path: '/finance', label: 'Filter tags', baseline: 'Tag matching', baselineLabel: 'Tag matching' },
     { name: 'ledger filtering', path: '/finance/transactions', label: 'Filter tags', baseline: 'Ledger category', baselineLabel: 'Category' },
     { name: 'bulk tagging', path: '/finance/transactions', label: 'Bulk tags', baseline: 'Ledger category', baselineLabel: 'Category' },
 ]) {
@@ -144,8 +145,9 @@ for (const flow of [
     });
 }
 
-test('dashboard pointer selection persists multiple tags, exclusions and clearing across reloads', async ({ page }) => {
-    await page.goto('/finance?month=2026-09&date=2026-09-17');
+test('ledger pointer selection persists multiple tags, exclusions and clearing across reloads', async ({ page }, info) => {
+    await page.goto('/finance/transactions?date=2026-09-17');
+    if (info.project.name === 'mobile') await page.getByRole('button', { name: /^Filters/ }).click();
     const choose = page.getByRole('button', { name: 'Choose filter tags', exact: true });
     const selectTag = async (name: string) => {
         await choose.click();
@@ -156,20 +158,22 @@ test('dashboard pointer selection persists multiple tags, exclusions and clearin
         await page.getByRole('button', { name: 'Done', exact: true }).click();
     };
     await selectTag('Holiday');
-    await expect(page).toHaveURL(url => url.searchParams.get('tag_ids') === tripTag.id && url.searchParams.get('month') === '2026-09' && url.searchParams.get('date') === '2026-09-17');
+    await expect(page).toHaveURL(url => url.searchParams.get('tag_ids') === tripTag.id && url.searchParams.get('date') === '2026-09-17');
     await selectTag('Hackathon (archived)');
     const expectedIds = [tripTag.id, archivedTag.id].sort().join(',');
     await expect(page).toHaveURL(url => url.searchParams.get('tag_ids') === expectedIds && url.searchParams.get('tag_mode') === 'include');
     await page.reload();
+    if (info.project.name === 'mobile') await page.getByRole('button', { name: /^Filters/ }).click();
     await expect(page.getByLabel('Selected tags')).toContainText('Holiday');
     await expect(page.getByLabel('Selected tags')).toContainText('Hackathon');
     await page.getByRole('combobox', { name: 'Tag matching', exact: true }).click();
     await page.getByRole('option', { name: 'Exclude tags', exact: true }).click();
     await expect(page).toHaveURL(url => url.searchParams.get('tag_ids') === expectedIds && url.searchParams.get('tag_mode') === 'exclude' && url.searchParams.get('date') === '2026-09-17');
     await page.reload();
+    if (info.project.name === 'mobile') await page.getByRole('button', { name: /^Filters/ }).click();
     await expect(page.getByRole('combobox', { name: 'Tag matching', exact: true })).toContainText('Exclude tags');
     await choose.click();
     await page.getByRole('button', { name: 'Clear tags', exact: true }).click();
-    await expect(page).toHaveURL(url => !url.searchParams.has('tag_ids') && url.searchParams.get('month') === '2026-09');
+    await expect(page).toHaveURL(url => !url.searchParams.has('tag_ids'));
     await expect(page.getByLabel('Selected tags')).toHaveCount(0);
 });

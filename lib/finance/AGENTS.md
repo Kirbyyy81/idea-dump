@@ -57,7 +57,7 @@
 - `tags.ts` owns server-side tag management and bulk assignment. `tagValues.ts` owns pure ID parsing and tag-filter URL contracts.
 - Categories describe spending types; tags describe optional context. Tag-only changes must not teach category memory or repeat intake confirmation. Preserve missing versus empty tag lists on updates.
 - Filter before pagination with the tag RPC, using `EXISTS` to avoid duplicate totals. Keep archived tags on historical transactions and in filters, but reject new archived assignments.
-- Run `npm run test:finance-tags:db`, tag unit/browser suites and dashboard regressions after tag changes. Dashboard tag filters never rewrite budget configuration or frozen totals.
+- Run `npm run test:finance-tags:db`, tag unit/browser suites and dashboard regressions after tag changes. Keep tag filtering on the Transactions page. The main dashboard ignores tag query parameters and does not propagate them in navigation or drill-down links. Budgets use their own saved tag filters and frozen totals.
 
 ## Tag and one-time budgets
 
