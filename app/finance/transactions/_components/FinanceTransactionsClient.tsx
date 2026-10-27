@@ -28,7 +28,7 @@ export function FinanceTransactionsClient({
     initialQuery,
     initialTransactions,
 }: FinanceTransactionsClientProps) {
-    const { showError, showSuccess } = useAlert();
+    const { showError, showSuccess, showSuccessToast } = useAlert();
     const router = useRouter();
     const headerActionsRef = useRef<HTMLDivElement>(null);
     const [bulkOpen, setBulkOpen] = useState(false);
@@ -88,7 +88,7 @@ export function FinanceTransactionsClient({
             );
             setTransactions((current) => current.filter((transaction) => transaction.id !== deleting.id));
             setDeleting(null);
-            showSuccess('Transaction deleted');
+            showSuccessToast('Transaction deleted');
         } catch (error) {
             showError(error instanceof Error ? error.message : 'Could not delete transaction');
         } finally {
