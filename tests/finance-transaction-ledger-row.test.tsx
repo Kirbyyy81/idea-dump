@@ -1,7 +1,11 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TransactionLedgerRow } from '@/app/finance/transactions/_components/TransactionLedgerRow';
 import { FinanceTransaction } from '@/lib/types';
+
+const navigation = vi.hoisted(() => ({ push: vi.fn() }));
+vi.mock('next/navigation', () => ({ useRouter: () => navigation }));
+beforeEach(() => navigation.push.mockClear());
 
 const transaction: FinanceTransaction = {
     id: 'transaction-1',
@@ -43,6 +47,27 @@ const transaction: FinanceTransaction = {
 };
 
 describe('TransactionLedgerRow', () => {
+    it('opens the editor on a row double click while leaving single clicks unchanged', () => {
+        render(<TransactionLedgerRow transaction={transaction} onDelete={vi.fn()} />);
+        const recipient = screen.getByText(transaction.merchant!);
+        fireEvent.click(recipient);
+        expect(navigation.push).not.toHaveBeenCalled();
+        fireEvent.doubleClick(recipient);
+        expect(navigation.push).toHaveBeenCalledExactlyOnceWith('/finance/transactions/edit?id=transaction-1');
+    });
+
+    it('does not activate the row shortcut from the action controls', () => {
+        const onDelete = vi.fn();
+        render(<TransactionLedgerRow transaction={transaction} onDelete={onDelete} />);
+        const trigger = screen.getByRole('button', { name: `Actions for ${transaction.merchant}` });
+        fireEvent.doubleClick(trigger);
+        fireEvent.click(trigger);
+        fireEvent.doubleClick(screen.getByRole('link', { name: 'Edit' }));
+        fireEvent.doubleClick(screen.getByRole('button', { name: 'Delete' }));
+        expect(navigation.push).not.toHaveBeenCalled();
+        expect(onDelete).not.toHaveBeenCalled();
+    });
+
     it('shows source and category tags without repeating the group date or reference number', () => {
         const view = render(
             <TransactionLedgerRow transaction={transaction} onDelete={vi.fn()} />
