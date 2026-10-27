@@ -12,7 +12,7 @@
     "check:service-worker": "node scripts/build-service-worker.mjs --check && npm run typecheck:service-worker",
     "start": "next start",
     "lint": "next lint",
-    "test": "npm run check:service-worker && vitest run && npm run test:inventory:db && npm run test:finance-categories:db && npm run test:finance-tags:db",
+    "test": "npm run check:service-worker && vitest run && npm run test:inventory:db && npm run test:finance-categories:db && npm run test:finance-tags:db && npm run test:finance-budget-tags:db",
     "test:log-viewer": "vitest run tests/log-viewer",
     "test:finance-security": "vitest run tests/finance-security.test.ts",
     "test:finance-validation": "vitest run tests/finance-validation.test.ts",
@@ -35,7 +35,8 @@
     "test:api-keys": "vitest run tests/api-key-schemas.test.ts",
     "test:tickets": "vitest run tests/ticket-schemas.test.ts",
     "typecheck:service-worker": "tsc -p tsconfig.service-worker.json --noEmit",
-    "test:finance-tags:db": "node scripts/test-finance-tags-db.mjs"
+    "test:finance-tags:db": "node scripts/test-finance-tags-db.mjs",
+    "test:finance-budget-tags:db": "node scripts/test-finance-budget-tags-db.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.4",

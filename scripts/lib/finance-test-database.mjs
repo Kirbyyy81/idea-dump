@@ -6,7 +6,7 @@ export const financeSqlFile = path => readFile(new URL(path, root), 'utf8');
 
 // Real Finance migrations on disposable PostgreSQL. Hosted infrastructure is
 // represented only by metadata scaffolding, never external network calls/jobs.
-export async function createFinanceTestDatabase(database) {
+export async function createFinanceTestDatabase(database, { beforeMigration } = {}) {
     const db = database ?? new PGlite();
     await db.exec(`
         do $roles$ declare name text; begin
@@ -39,6 +39,7 @@ export async function createFinanceTestDatabase(database) {
     const migrations = (await readdir(new URL('supabase/migrations/', root))).filter(name => name.endsWith('.sql') && name > '20260713021718').sort();
     try {
         for (const name of migrations) {
+            await beforeMigration?.(db, name);
             let sql = await financeSqlFile(`supabase/migrations/${name}`);
             sql = sql.replace(/^create extension if not exists (?:pg_cron|pg_net|pgmq)[^;]*;/gim, '');
             await db.exec(sql);

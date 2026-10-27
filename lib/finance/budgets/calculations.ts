@@ -38,7 +38,9 @@ export function formatBudgetDate(value: string, options: Intl.DateTimeFormatOpti
     return new Intl.DateTimeFormat('en-GB', { ...options, timeZone: 'UTC' }).format(new Date(budgetDayNumber(value) * 86_400_000));
 }
 
-export function formatBudgetDateRange(start: string, endExclusive: string): string {
+export function formatBudgetDateRange(start: string | null, endExclusive: string | null): string {
+    if (start === null && endExclusive === null) return 'One-time';
+    if (!start || !endExclusive) throw new Error('Invalid budget cycle');
     const end = addBudgetDays(endExclusive, -1);
     if (start === end) return formatBudgetDate(start);
     const sameYear = start.slice(0, 4) === end.slice(0, 4);
@@ -57,7 +59,9 @@ export function startOfBudgetPeriod(today: string, type: FinanceBudgetCycleType)
     return today;
 }
 
-export function nextBudgetBoundary(start: string, type: FinanceBudgetCycleType, customDays: number | null, anchorDay: number | null): string {
+export function nextBudgetBoundary(start: string | null, type: FinanceBudgetCycleType, customDays: number | null, anchorDay: number | null): string | null {
+    if (type === 'one_time') return null;
+    if (!start) throw new Error('Invalid budget date');
     budgetDayNumber(start);
     if (type === 'weekly') return addBudgetDays(start, 7);
     if (type === 'custom') {
@@ -75,15 +79,12 @@ export function nextBudgetBoundary(start: string, type: FinanceBudgetCycleType, 
     return candidate > start ? candidate : boundary(1);
 }
 
-export function matchesBudgetFilters(filters: FinanceBudgetFilters, sourceId: string, categoryId: string | null): boolean {
-    const hasSources = filters.source_ids.length > 0;
-    const hasCategories = filters.category_ids.length > 0 || filters.include_uncategorised;
-    const sourceMatch = filters.source_ids.includes(sourceId);
-    const categoryMatch = categoryId === null ? filters.include_uncategorised : filters.category_ids.includes(categoryId);
-    if (!hasSources && !hasCategories) return true;
-    if (!hasSources) return categoryMatch;
-    if (!hasCategories) return sourceMatch;
-    return filters.filter_logic === 'and' ? sourceMatch && categoryMatch : sourceMatch || categoryMatch;
+export function matchesBudgetFilters(filters: FinanceBudgetFilters, sourceId: string, categoryId: string | null, tagIds: string[] = []): boolean {
+    const matches: boolean[] = [];
+    if (filters.source_ids.length) matches.push(filters.source_ids.includes(sourceId));
+    if (filters.category_ids.length || filters.include_uncategorised) matches.push(categoryId === null ? filters.include_uncategorised : filters.category_ids.includes(categoryId));
+    if (filters.tag_ids?.length) matches.push(filters.tag_ids.some(id => tagIds.includes(id)));
+    return !matches.length || (filters.filter_logic === 'and' ? matches.every(Boolean) : matches.some(Boolean));
 }
 
 function percentage(numerator: bigint, denominator: bigint): string {
@@ -93,16 +94,17 @@ function percentage(numerator: bigint, denominator: bigint): string {
     return `${scaled / scale}.${String(scaled % scale).padStart(6, '0')}`;
 }
 
-export function calculateBudgetMetrics(amount: string, expense: string, income: string, start: string, end: string, today: string): FinanceBudgetMetrics {
+export function calculateBudgetMetrics(amount: string, expense: string, income: string, start: string | null, end: string | null, today: string): FinanceBudgetMetrics {
     const limit = budgetMinorUnits(amount);
     if (limit <= ZERO) throw new Error('Invalid budget limit');
     const net = budgetMinorUnits(expense) - budgetMinorUnits(income);
     const used = net > ZERO ? net : ZERO;
-    const days = budgetDayNumber(end) - budgetDayNumber(start);
+    if ((start === null) !== (end === null)) throw new Error('Invalid budget cycle');
+    const days = start && end ? budgetDayNumber(end) - budgetDayNumber(start) : 1;
     if (days <= 0) throw new Error('Invalid budget cycle');
-    const elapsed = Math.max(0, Math.min(days, budgetDayNumber(today) - budgetDayNumber(start)));
-    const status = today < start ? 'scheduled' : used > limit ? 'over_budget' : used === limit ? 'limit_reached'
-        : used * BigInt(5) >= limit * BigInt(4) || used * BigInt(days) > limit * BigInt(elapsed) ? 'needs_attention' : 'on_track';
+    const elapsed = start ? Math.max(0, Math.min(days, budgetDayNumber(today) - budgetDayNumber(start))) : 0;
+    const status = start && today < start ? 'scheduled' : used > limit ? 'over_budget' : used === limit ? 'limit_reached'
+        : used * BigInt(5) >= limit * BigInt(4) || (start !== null && used * BigInt(days) > limit * BigInt(elapsed)) ? 'needs_attention' : 'on_track';
     return {
         amount: budgetDecimal(limit), expense, income, net_spending: budgetDecimal(net), used_amount: budgetDecimal(used),
         remaining: budgetDecimal(used < limit ? limit - used : ZERO), over_amount: budgetDecimal(used > limit ? used - limit : ZERO),
@@ -117,11 +119,12 @@ export const BUDGET_STATUS_LABELS: Record<FinanceBudgetSummary['status'], string
 
 export function prioritizeBudgets(budgets: FinanceBudgetSummary[]): FinanceBudgetSummary[] {
     const order = ['over_budget', 'limit_reached', 'needs_attention', 'on_track'];
-    return budgets.filter((budget) => budget.state === 'active').sort((left, right) => {
+    const active = budgets.filter((budget) => budget.state === 'active').sort((left, right) => {
         const status = order.indexOf(left.status) - order.indexOf(right.status);
         if (status) return status;
         const l = budgetMinorUnits(left.current_cycle!.metrics.used_amount) * budgetMinorUnits(right.configuration.amount);
         const r = budgetMinorUnits(right.current_cycle!.metrics.used_amount) * budgetMinorUnits(left.configuration.amount);
         return l === r ? left.id.localeCompare(right.id) : l > r ? -1 : 1;
-    }).slice(0, 3);
+    });
+    return [...active.filter(budget => budget.configuration.cycle_type !== 'one_time').slice(0, 3), ...active.filter(budget => budget.configuration.cycle_type === 'one_time')];
 }

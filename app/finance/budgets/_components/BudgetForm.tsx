@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useId, useState } from 'react';
+import { FinanceTagPicker } from '@/app/finance/_components/FinanceTagPicker';
 import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
@@ -17,11 +18,12 @@ import type { FinanceBudgetConfiguration, FinanceBudgetFieldErrors, FinanceBudge
 function initialConfiguration(budget?: FinanceBudgetSummary, restore = false): FinanceBudgetConfiguration {
     const zone = budget?.configuration.time_zone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
     const today = getFinanceDateInTimeZone(zone);
-    return budget ? { ...budget.configuration, start_date: restore ? today : budget.configuration.start_date,
+    return budget ? { ...budget.configuration, start_date: budget.configuration.cycle_type === 'one_time' ? null : restore ? today : budget.configuration.start_date,
         anchor_day: restore && budget.configuration.cycle_type === 'monthly' ? Number(today.slice(8)) : budget.configuration.anchor_day,
+        tag_ids: (budget.configuration.tags ?? []).map(item => item.original_id),
         source_ids: budget.configuration.sources.map((item) => item.original_id), category_ids: budget.configuration.categories.map((item) => item.original_id) }
         : { name: '', amount: '', cycle_type: 'monthly', start_date: startOfBudgetPeriod(today, 'monthly'), anchor_day: 1, custom_days: null,
-            time_zone: zone, filter_logic: 'and', include_uncategorised: false, source_ids: [], category_ids: [] };
+            time_zone: zone, filter_logic: 'and', include_uncategorised: false, source_ids: [], category_ids: [], tag_ids: [] };
 }
 
 function selectionOptions(active: FinanceReferenceOption[], selected: FinanceBudgetSelection[] = []) {
@@ -37,7 +39,7 @@ export function BudgetForm({ budget, restore = false, onClose, onSaved, onReload
     const [configuration, setConfiguration] = useState(() => initialConfiguration(budget, restore));
     const [customize, setCustomize] = useState(() => Boolean(budget && (restore || budget.configuration.cycle_type === 'custom'
         || budget.configuration.sources.length || budget.configuration.categories.length || budget.configuration.include_uncategorised
-        || budget.configuration.start_date !== startOfBudgetPeriod(budget.configuration.start_date, budget.configuration.cycle_type))));
+        || (budget.configuration.cycle_type !== 'one_time' && budget.configuration.start_date !== startOfBudgetPeriod(budget.configuration.start_date!, budget.configuration.cycle_type)))));
     const [customStart, setCustomStart] = useState(Boolean(budget));
     const [requestId] = useState(() => crypto.randomUUID());
     const [errors, setErrors] = useState<FinanceBudgetFieldErrors>({});
@@ -93,31 +95,34 @@ export function BudgetForm({ budget, restore = false, onClose, onSaved, onReload
                 <Select label="Cycle" value={configuration.cycle_type} onChange={(value) => {
                     const cycle = value as FinanceBudgetConfiguration['cycle_type'];
                     setConfiguration((current) => {
-                        const start = !customStart ? startOfBudgetPeriod(getFinanceDateInTimeZone(current.time_zone), cycle) : current.start_date;
+                        const start = cycle === 'one_time' ? null : !customStart || !current.start_date ? startOfBudgetPeriod(getFinanceDateInTimeZone(current.time_zone), cycle) : current.start_date;
                         return { ...current, cycle_type: cycle, start_date: start, custom_days: cycle === 'custom' ? 7 : null,
-                            anchor_day: cycle === 'monthly' ? activeEdit ? 1 : Number(start.slice(8)) : null };
+                            anchor_day: cycle === 'monthly' ? activeEdit ? 1 : Number(start!.slice(8)) : null };
                     });
                     setErrors((current) => ({ ...current, cycle_type: undefined, start_date: undefined, anchor_day: undefined, custom_days: undefined }));
-                }} options={[{ value: 'weekly', label: 'Weekly (starts on Monday)' }, { value: 'monthly', label: 'Monthly (starts from 1st of the month)' },
+                }} options={[{ value: 'one_time', label: 'One-time (no dates)' }, { value: 'weekly', label: 'Weekly (starts on Monday)' }, { value: 'monthly', label: 'Monthly (starts from 1st of the month)' },
                     ...(customize || configuration.cycle_type === 'custom' ? [{ value: 'custom', label: 'Custom' }] : [])]}
                     buttonClassName="h-auto min-h-10 [&>span]:whitespace-normal" menuClassName="[&_span]:whitespace-normal" disabled={saving} errorMessage={errors.cycle_type} />
             </div>
+            <FinanceTagPicker value={configuration.tag_ids ?? []} onChange={value => update('tag_ids', value)} disabled={saving}
+                errorMessage={errors.tag_ids} initialTags={(budget?.configuration.tags ?? []).map(tag => ({ id: tag.original_id, name: `${tag.name}${tag.id === null ? ' (deleted)' : ''}`, is_archived: tag.is_archived || tag.id === null }))} />
+            {configuration.cycle_type === 'one_time' && <p className="text-xs text-text-muted">Counts all matching transactions, including existing ones, until archived.</p>}
             <Button type="button" variant="ghost" aria-expanded={customize} aria-controls={customizationId} disabled={saving} onClick={() => setCustomize(!customize)}>
                 {customize ? 'Hide customization' : 'Customize'}
             </Button>
             {customize && <div id={customizationId} className="space-y-5 border-t border-border-default pt-4">
-            <div className="grid gap-4 sm:grid-cols-2">
+            {configuration.cycle_type !== 'one_time' && <div className="grid gap-4 sm:grid-cols-2">
                 {configuration.cycle_type === 'custom' && <Input label="Days per cycle" inputMode="numeric" value={configuration.custom_days ?? ''} onValueChange={(value) => update('custom_days', Number(value))} errorMessage={errors.custom_days} disabled={saving} />}
-                {!activeEdit && <div><label htmlFor={dateId} className="mb-1 block text-sm font-medium">Start date</label><DatePicker id={dateId} ariaDescribedBy={errors.start_date ? `${dateId}-error` : undefined} error={Boolean(errors.start_date)} value={configuration.start_date} ariaLabel="Start date" disabled={saving} onChange={(value) => {
+                {!activeEdit && <div><label htmlFor={dateId} className="mb-1 block text-sm font-medium">Start date</label><DatePicker id={dateId} ariaDescribedBy={errors.start_date ? `${dateId}-error` : undefined} error={Boolean(errors.start_date)} value={configuration.start_date ?? ''} ariaLabel="Start date" disabled={saving} onChange={(value) => {
                     setCustomStart(true);
                     update('start_date', value);
                     if (configuration.cycle_type === 'monthly') update('anchor_day', Number(value.slice(8)));
                 }} />{errors.start_date && <p id={`${dateId}-error`} role="alert" className="mt-1 text-xs text-error">{errors.start_date}</p>}</div>}
                 {activeEdit && configuration.cycle_type === 'monthly' && <Select label="Monthly renewal day" value={String(configuration.anchor_day)}
                     onChange={(value) => update('anchor_day', Number(value))} options={Array.from({ length: 31 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }))} errorMessage={errors.anchor_day} disabled={saving} />}
-            </div>
-            <Select label="Match sources and categories" value={configuration.filter_logic} onChange={(value) => update('filter_logic', value as 'and' | 'or')}
-                options={[{ value: 'and', label: 'AND: match both selections' }, { value: 'or', label: 'OR: match either selection' }]} errorMessage={errors.filter_logic} disabled={saving} />
+            </div>}
+            <Select label="Match selected filters" value={configuration.filter_logic} onChange={(value) => update('filter_logic', value as 'and' | 'or')}
+                options={[{ value: 'and', label: 'AND: match every selected filter' }, { value: 'or', label: 'OR: match any selected filter' }]} errorMessage={errors.filter_logic} disabled={saving} />
             {references.status === 'loading' && <p role="status" className="text-sm text-text-muted">Loading Finance options...</p>}
             {references.error && <div role="alert" className="text-sm text-error">{references.error}<Button type="button" variant="ghost" onClick={() => void references.refresh()}>Retry options</Button></div>}
             {(['source_ids', 'category_ids'] as const).map((field) => {
@@ -134,10 +139,10 @@ export function BudgetForm({ budget, restore = false, onClose, onSaved, onReload
                     {options.some((option) => option.missing && configuration[field].includes(option.id)) && <p className="mt-2 text-xs text-error">Remove or replace deleted selections before restoring.</p>}
                 </fieldset>;
             })}
-            <p className="text-xs text-text-muted">With no selections, all sources and categories count. Time zone: {configuration.time_zone}.</p>
+            <p className="text-xs text-text-muted">With no filters, all transactions count. A tag-only budget includes every category. Time zone: {configuration.time_zone}.</p>
             {errors.time_zone && <p role="alert" className="text-xs text-error">{errors.time_zone}</p>}
             </div>}
-            {activeEdit && (configuration.cycle_type !== budget.configuration.cycle_type || configuration.custom_days !== budget.configuration.custom_days || configuration.anchor_day !== budget.configuration.anchor_day)
+            {activeEdit && configuration.cycle_type !== 'one_time' && (configuration.cycle_type !== budget.configuration.cycle_type || configuration.custom_days !== budget.configuration.custom_days || configuration.anchor_day !== budget.configuration.anchor_day)
                 && <p className="text-xs text-text-secondary">Schedule changes close the current cycle through yesterday and start a new cycle today.</p>}
             <div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={onClose} disabled={saving}>Cancel</Button>
                 <Button type="submit" isLoading={saving} disabled={customize && references.status !== 'ready'}>{title === 'Edit budget' ? 'Save changes' : title}</Button></div>

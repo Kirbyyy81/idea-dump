@@ -7,7 +7,7 @@ export function BudgetProgress({ budget, compact = false }: { budget: FinanceBud
 }
 
 export function BudgetCycleProgress({ name, cycle, status = cycle?.metrics.status ?? 'archived', compact = false, scheduledStart }: {
-    name: string; cycle: FinanceBudgetCycle | null; status?: FinanceBudgetStatus; compact?: boolean; scheduledStart?: string;
+    name: string; cycle: FinanceBudgetCycle | null; status?: FinanceBudgetStatus; compact?: boolean; scheduledStart?: string | null;
 }) {
     const metrics = cycle?.metrics;
     const usage = Number(metrics?.usage_percentage ?? 0);
@@ -30,7 +30,7 @@ export function BudgetCycleProgress({ name, cycle, status = cycle?.metrics.statu
                 <div className="relative h-2.5 overflow-hidden rounded-full bg-bg-subtle" aria-hidden="true">
                     <div className={`h-full origin-left rounded-full motion-safe:animate-budget-fill ${warning ? 'bg-error' : 'bg-action-primary'}`} style={{ width: `${Math.min(usage, 100)}%` }} />
                     {overflow > 0 && <div className="absolute inset-y-0 left-0 h-full origin-left rounded-full bg-error brightness-75 motion-safe:animate-budget-fill" style={{ width: `${Math.min(overflow, 100)}%` }} />}
-                    {!compact && <span className="absolute top-0 z-10 h-full w-0.5 bg-text-muted" style={{ left: `${Math.min(pace, 99.5)}%` }} />}
+                    {!compact && cycle.start_date !== null && <span className="absolute top-0 z-10 h-full w-0.5 bg-text-muted" style={{ left: `${Math.min(pace, 99.5)}%` }} />}
                 </div>
             </div>
             <div className="flex justify-end text-xs text-text-secondary">

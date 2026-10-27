@@ -11,8 +11,8 @@ import { useFinanceReferenceData } from './FinanceReferenceData';
 import { financeApiRequest } from '@/lib/finance/core/client';
 import type { FinanceTag } from '@/lib/types';
 
-export function FinanceTagPicker({ value, onChange, allowCreate = true, includeArchived = false, disabled = false, initialTags = [], label = 'Tags' }: {
-    value: string[]; onChange: (value: string[]) => void; allowCreate?: boolean; includeArchived?: boolean; disabled?: boolean; initialTags?: FinanceTag[]; label?: string;
+export function FinanceTagPicker({ value, onChange, allowCreate = true, includeArchived = false, disabled = false, initialTags = [], label = 'Tags', errorMessage }: {
+    value: string[]; onChange: (value: string[]) => void; allowCreate?: boolean; includeArchived?: boolean; disabled?: boolean; initialTags?: FinanceTag[]; label?: string; errorMessage?: string;
 }) {
     const { tags = [], upsertTag, status } = useFinanceReferenceData();
     const [open, setOpen] = useState(false);
@@ -58,7 +58,7 @@ export function FinanceTagPicker({ value, onChange, allowCreate = true, includeA
         <div ref={root} className="min-w-0" onKeyDown={event => {
             if (event.key === 'Escape' && open) { event.stopPropagation(); setOpen(false); trigger.current?.focus(); }
         }}>
-            <FieldShell id={triggerId} label={label} errorMessage={error || undefined}>
+            <FieldShell id={triggerId} label={label} errorMessage={error || errorMessage}>
                 {({ describedBy, hasError }) => (
                     <div className="relative">
                         <SelectTrigger

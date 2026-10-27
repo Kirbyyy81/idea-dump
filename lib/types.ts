@@ -610,7 +610,7 @@ export interface FinanceDashboardSummary {
     }>;
 }
 
-export type FinanceBudgetCycleType = 'weekly' | 'monthly' | 'custom';
+export type FinanceBudgetCycleType = 'weekly' | 'monthly' | 'custom' | 'one_time';
 export type FinanceBudgetState = 'active' | 'scheduled' | 'archived';
 export type FinanceBudgetStatus = FinanceBudgetState | 'over_budget' | 'limit_reached' | 'needs_attention' | 'on_track';
 export type FinanceBudgetMoney = string;
@@ -618,13 +618,14 @@ export interface FinanceBudgetFilters {
     filter_logic: 'and' | 'or';
     source_ids: string[];
     category_ids: string[];
+    tag_ids?: string[];
     include_uncategorised: boolean;
 }
 export interface FinanceBudgetConfiguration extends FinanceBudgetFilters {
     name: string;
     amount: FinanceBudgetMoney;
     cycle_type: FinanceBudgetCycleType;
-    start_date: string;
+    start_date: string | null;
     custom_days: number | null;
     anchor_day: number | null;
     time_zone: string;
@@ -638,6 +639,7 @@ export interface FinanceBudgetSelection {
 export interface FinanceBudgetSettings extends FinanceBudgetConfiguration {
     sources: FinanceBudgetSelection[];
     categories: FinanceBudgetSelection[];
+    tags?: FinanceBudgetSelection[];
 }
 export interface FinanceBudgetMetrics {
     expense: FinanceBudgetMoney;
@@ -653,8 +655,8 @@ export interface FinanceBudgetMetrics {
 }
 export interface FinanceBudgetCycle {
     id: string;
-    start_date: string;
-    end_date: string;
+    start_date: string | null;
+    end_date: string | null;
     state: 'scheduled' | 'active' | 'completed' | 'partial';
     close_reason: 'completed' | 'schedule' | 'archived' | null;
     frozen_at: string | null;

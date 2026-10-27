@@ -43,7 +43,7 @@ describe('budget controls and feedback', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Customize' }));
         expect(screen.getByText('Start date')).toBeTruthy();
         expect(screen.getByText('Sources', { exact: true })).toBeTruthy();
-        expect(screen.getByText('Match sources and categories')).toBeTruthy();
+        expect(screen.getByText('Match selected filters')).toBeTruthy();
     });
     it('displays uncapped usage and exact money with an accessible status', () => {
         const budget = budgetFixture({ status: 'over_budget' });
@@ -125,5 +125,28 @@ describe('budget controls and feedback', () => {
         expect(within(history).getByRole('alert').textContent).toBe('Could not load budgets');
         fireEvent.click(within(history).getByRole('button', { name: 'Close' }));
         expect(screen.queryByRole('dialog', { name: 'Cycle history' })).toBeNull();
+    });
+});
+
+describe('one-time budget presentation', () => {
+    it('restores with the same unbounded window and selected tags', async () => {
+        const budget = budgetFixture({ state: 'archived', status: 'archived', current_cycle: null });
+        const tag = { id: 'b0110000-0000-4000-8000-000000000041', original_id: 'b0110000-0000-4000-8000-000000000041', name: 'Holiday', is_archived: false };
+        budget.configuration = { ...budget.configuration, cycle_type: 'one_time', start_date: null, tags: [tag], tag_ids: [tag.id] };
+        mocks.request.mockResolvedValue({ data: budget });
+        render(<BudgetForm budget={budget} restore onClose={vi.fn()} onSaved={vi.fn()} onReload={vi.fn()} />);
+        expect(screen.queryByText('Start date')).toBeNull();
+        expect(screen.getByLabelText('Selected tags').textContent).toContain('Holiday');
+        fireEvent.click(screen.getByRole('button', { name: /^Restore budget$/ }));
+        await waitFor(() => expect(mocks.request).toHaveBeenCalled());
+        expect(JSON.parse(mocks.request.mock.calls[0][1].body)).toMatchObject({ action: 'restore', configuration: { start_date: null, cycle_type: 'one_time', tag_ids: [tag.id] } });
+    });
+    it('displays no pace marker for an undated budget', () => {
+        const budget = budgetFixture();
+        budget.configuration = { ...budget.configuration, cycle_type: 'one_time', start_date: null };
+        budget.current_cycle = { ...budget.current_cycle!, start_date: null, end_date: null };
+        render(<BudgetProgress budget={budget} />);
+        expect(screen.getByText('One-time')).toBeTruthy();
+        expect(screen.getByRole('meter').querySelector('span')).toBeNull();
     });
 });

@@ -15,13 +15,13 @@ export function validateBudgetConfiguration(value: unknown, options: { allowPast
     const amount = toFinanceAmountMinorUnits(input.amount);
     if (amount === null) errors.amount = 'Enter an amount between RM 0.01 and RM 999,999,999,999.99, with up to two decimal places';
     const cycleType = input.cycle_type;
-    if (cycleType !== 'weekly' && cycleType !== 'monthly' && cycleType !== 'custom') errors.cycle_type = 'Choose weekly, monthly, or custom';
+    if (cycleType !== 'weekly' && cycleType !== 'monthly' && cycleType !== 'custom' && cycleType !== 'one_time') errors.cycle_type = 'Choose weekly, monthly, custom, or one-time';
     const days = input.custom_days;
     if (cycleType === 'custom' && (typeof days !== 'number' || !Number.isInteger(days) || days < 1 || days > 365)) errors.custom_days = 'Enter a whole number from 1 to 365';
     const anchor = input.anchor_day;
     if (cycleType === 'monthly' && (typeof anchor !== 'number' || !Number.isInteger(anchor) || anchor < 1 || anchor > 31)) errors.anchor_day = 'Choose a renewal day from 1 to 31';
     const start = normalizeFinanceDate(input.start_date);
-    if (!start || start < '1900-01-01' || start > '9998-12-31') errors.start_date = 'Choose a valid start date';
+    if (cycleType === 'one_time' ? input.start_date != null || days != null || input.anchor_day != null : !start || start < '1900-01-01' || start > '9998-12-31') errors.start_date = 'Choose a valid start date';
     let timeZone = typeof input.time_zone === 'string' ? input.time_zone : '';
     try {
         // Intl accepts named IANA zones. Fixed numeric offsets are not budget zones.
@@ -30,7 +30,7 @@ export function validateBudgetConfiguration(value: unknown, options: { allowPast
         const today = getFinanceDateInTimeZone(timeZone, options.now);
         const period = cycleType === 'weekly' || cycleType === 'monthly' ? cycleType : 'custom';
         const earliest = options.allowCurrentPeriod === false ? today : startOfBudgetPeriod(today, period);
-        if (start && !options.allowPastStart && start < earliest) errors.start_date = options.allowCurrentPeriod === false || period === 'custom'
+        if (cycleType !== 'one_time' && start && !options.allowPastStart && start < earliest) errors.start_date = options.allowCurrentPeriod === false || period === 'custom'
             ? 'Choose today or a future date' : `Choose a date in the current ${period === 'weekly' ? 'week' : 'month'} or later`;
     } catch {
         errors.time_zone = 'Your browser time zone is unavailable. Check your device settings and retry';
@@ -38,7 +38,7 @@ export function validateBudgetConfiguration(value: unknown, options: { allowPast
     }
     if (input.filter_logic !== 'and' && input.filter_logic !== 'or') errors.filter_logic = 'Choose AND or OR';
     if (typeof input.include_uncategorised !== 'boolean') errors.include_uncategorised = 'Choose whether Uncategorised transactions count';
-    const references = (key: 'source_ids' | 'category_ids') => {
+    const references = (key: 'source_ids' | 'category_ids' | 'tag_ids') => {
         const values = input[key];
         if (!Array.isArray(values) || !values.every(isBudgetUuid)) {
             errors[key] = 'Remove unavailable selections and choose valid Finance options';
@@ -48,12 +48,14 @@ export function validateBudgetConfiguration(value: unknown, options: { allowPast
     };
     const sourceIds = references('source_ids');
     const categoryIds = references('category_ids');
+    const tagIds = input.tag_ids === undefined ? undefined : references('tag_ids');
+    if (tagIds && tagIds.length > 50) errors.tag_ids = 'Choose up to 50 tags';
     if (Object.keys(errors).length) return { error: 'Check the highlighted fields', field_errors: errors };
     return { data: {
-        name, amount: budgetDecimal(amount!), cycle_type: cycleType as FinanceBudgetConfiguration['cycle_type'], start_date: start!,
+        name, amount: budgetDecimal(amount!), cycle_type: cycleType as FinanceBudgetConfiguration['cycle_type'], start_date: cycleType === 'one_time' ? null : start!,
         custom_days: cycleType === 'custom' ? days as number : null, anchor_day: cycleType === 'monthly' ? anchor as number : null,
         time_zone: timeZone, filter_logic: input.filter_logic as 'and' | 'or', include_uncategorised: input.include_uncategorised as boolean,
-        source_ids: sourceIds, category_ids: categoryIds,
+        source_ids: sourceIds, category_ids: categoryIds, ...(tagIds !== undefined && { tag_ids: tagIds }),
     } };
 }
 
