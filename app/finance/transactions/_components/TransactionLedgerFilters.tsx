@@ -255,8 +255,8 @@ export function TransactionLedgerFilters({
     return (
         <div className="border-b border-border-default">
             <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3 px-5 py-4 md:grid-cols-2 md:items-start lg:grid-cols-6">
-                <label className="min-w-0 space-y-1.5 md:col-span-2">
-                    <span className="block text-xs font-semibold text-text-secondary">Search</span>
+                <label className="min-w-0 space-y-2 md:col-span-2">
+                    <span className="block text-sm text-text-secondary">Search</span>
                     <Input
                         value={query}
                         onChange={(event) => onQueryChange(event.target.value)}
@@ -281,8 +281,8 @@ export function TransactionLedgerFilters({
                         isMobileOpen ? 'grid grid-cols-1 sm:grid-cols-2' : 'hidden'
                     )}
                 >
-                    <div className="space-y-1.5">
-                        <span className="block text-xs font-semibold text-text-secondary">Period</span>
+                    <div className="space-y-2">
+                        <span className="block text-sm text-text-secondary">Period</span>
                         <Select
                             value={period}
                             onChange={(value) => setPeriodFilter(value as FinanceLedgerPeriod)}
@@ -293,8 +293,8 @@ export function TransactionLedgerFilters({
                     </div>
                     {period === 'custom' && (
                         <>
-                            <div className="space-y-1.5">
-                                <span className="block text-xs font-semibold text-text-secondary">From</span>
+                            <div className="space-y-2">
+                                <span className="block text-sm text-text-secondary">From</span>
                                 <div className="flex items-center gap-1">
                                     <DatePicker
                                         value={customDateFrom}
@@ -316,8 +316,8 @@ export function TransactionLedgerFilters({
                                     )}
                                 </div>
                             </div>
-                            <div className="space-y-1.5">
-                                <span className="block text-xs font-semibold text-text-secondary">To</span>
+                            <div className="space-y-2">
+                                <span className="block text-sm text-text-secondary">To</span>
                                 <div className="flex items-center gap-1">
                                     <DatePicker
                                         value={customDateTo}
@@ -341,8 +341,8 @@ export function TransactionLedgerFilters({
                             </div>
                         </>
                     )}
-                    <div className="space-y-1.5">
-                        <span className="block text-xs font-semibold text-text-secondary">Source</span>
+                    <div className="space-y-2">
+                        <span className="block text-sm text-text-secondary">Source</span>
                         <Select
                             value={sourceId}
                             onChange={setSourceFilter}
@@ -352,8 +352,8 @@ export function TransactionLedgerFilters({
                             disabled={!referenceFiltersReady}
                         />
                     </div>
-                    <div className="space-y-1.5">
-                        <span className="block text-xs font-semibold text-text-secondary">Category</span>
+                    <div className="space-y-2">
+                        <span className="block text-sm text-text-secondary">Category</span>
                         <Select
                             value={categoryValue}
                             onChange={setCategoryFilter}
@@ -363,8 +363,8 @@ export function TransactionLedgerFilters({
                             disabled={!referenceFiltersReady}
                         />
                     </div>
-                    <div className="space-y-1.5">
-                        <span className="block text-xs font-semibold text-text-secondary">Type</span>
+                    <div className="space-y-2">
+                        <span className="block text-sm text-text-secondary">Type</span>
                         <Select
                             value={direction}
                             onChange={setDirectionFilter}

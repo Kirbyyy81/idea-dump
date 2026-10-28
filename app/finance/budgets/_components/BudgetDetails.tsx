@@ -32,9 +32,10 @@ export function BudgetDetails({ detail, onEdit, onArchive, onRestore, onHistoryP
     const filters = [
         ...(sources.length ? [`Sources: ${sources.join(' or ')}`] : []),
         ...(categories.length ? [`Categories: ${categories.join(' or ')}`] : []),
+        ...((configuration.tags?.length ?? 0) ? [`Tags: ${labels(configuration.tags!).join(' or ')}`] : []),
     ];
     const configurationRows = [
-        ['Schedule', `${configuration.cycle_type === 'custom' ? `Every ${configuration.custom_days} days` : configuration.cycle_type === 'monthly' ? `Monthly on day ${configuration.anchor_day}` : 'Every 7 days'} (${configuration.time_zone})`],
+        ['Schedule', configuration.cycle_type === 'one_time' ? 'One-time, no dates' : `${configuration.cycle_type === 'custom' ? `Every ${configuration.custom_days} days` : configuration.cycle_type === 'monthly' ? `Monthly on day ${configuration.anchor_day}` : 'Every 7 days'} (${configuration.time_zone})`],
     ];
     return <section aria-label={`${budget.name} details`} className="min-w-0 rounded-lg border border-border-default bg-bg-surface p-4 sm:p-5" aria-busy={busy}>
         <div className="mb-4 flex items-start justify-between gap-3"><h2 className="min-w-0 break-words text-lg font-bold">{budget.name}</h2>
@@ -79,7 +80,7 @@ export function BudgetDetails({ detail, onEdit, onArchive, onRestore, onHistoryP
                     direction={item.direction}
                     formattedAmount={formatBudgetMoney(item.amount)}
                 /></li>)}</ul>
-            {transactions.data.length === 0 && <p className="mt-3 text-sm text-text-muted">No matching transactions this cycle.</p>}
+            {transactions.data.length === 0 && <p className="mt-3 text-sm text-text-muted">{configuration.cycle_type === 'one_time' ? 'No matching transactions.' : 'No matching transactions this cycle.'}</p>}
             <BudgetPagination page={transactions} onPage={onTransactionsPage} label="Transactions" disabled={busy} />
         </details>}
         {showHistory && <FormDialog title="Cycle history" onClose={() => setShowHistory(false)} busy={busy}>
@@ -87,7 +88,7 @@ export function BudgetDetails({ detail, onEdit, onArchive, onRestore, onHistoryP
             {history.data.length === 0 && <p className="mt-3 text-sm text-text-muted">Completed cycles will appear here.</p>}
             {history.data.map((cycle) => <article key={cycle.id} className="mt-3 rounded-md border border-border-default p-3">
                 <h3 className="text-sm font-medium">{formatBudgetDateRange(cycle.start_date, cycle.end_date)}
-                    <span className="mt-1 block text-xs font-normal text-text-secondary">{cycle.state === 'partial' ? 'Partial cycle' : 'Completed cycle'} · {BUDGET_STATUS_LABELS[cycle.metrics.status]} · {formatBudgetMoney(cycle.metrics.net_spending)} net spent</span></h3>
+                    <span className="mt-1 block text-xs font-normal text-text-secondary">{cycle.start_date === null ? cycle.close_reason === 'archived' ? 'Archived' : 'Previous settings' : cycle.state === 'partial' ? 'Partial cycle' : 'Completed cycle'} · {BUDGET_STATUS_LABELS[cycle.metrics.status]} · {formatBudgetMoney(cycle.metrics.net_spending)} net spent</span></h3>
                 <p className="mt-2 text-xs text-text-muted">Budget {formatBudgetMoney(cycle.metrics.amount)} · {Number(cycle.metrics.usage_percentage).toLocaleString('en-MY', { maximumFractionDigits: 1 })}% used</p>
                 <p className="mt-1 text-xs text-text-muted">{cycle.metrics.status === 'over_budget' ? `${formatBudgetMoney(cycle.metrics.over_amount)} over` : `${formatBudgetMoney(cycle.metrics.remaining)} remaining`}</p>
             </article>)}

@@ -2,8 +2,9 @@
 
 import { KeyboardEvent, ReactNode, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, ChevronDown } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { FieldShell } from '@/components/atoms/FieldShell';
+import { SelectTrigger } from '@/components/atoms/SelectTrigger';
 import { cn } from '@/lib/utils';
 
 export interface SelectOption {
@@ -202,12 +203,13 @@ export function Select({
         hasFieldError = false
     ) => (
         <div ref={containerRef} className={cn('relative', className)}>
-            <button
+            <SelectTrigger
                 ref={buttonRef}
                 id={triggerId}
-                type="button"
                 role="combobox"
                 disabled={disabled}
+                open={isOpen}
+                error={error || hasFieldError}
                 aria-haspopup="listbox"
                 aria-expanded={isOpen}
                 aria-controls={listboxId}
@@ -218,24 +220,12 @@ export function Select({
                 data-finance-field={resolvedDataFinanceField}
                 onClick={() => setIsOpen((current) => !current)}
                 onKeyDown={handleButtonKeyDown}
-                className={cn(
-                    'input flex h-10 items-center justify-between gap-2 pr-10 text-left',
-                    disabled && 'cursor-not-allowed opacity-60',
-                    (error || hasFieldError) && 'border-error focus:border-error',
-                    buttonClassName
-                )}
+                className={buttonClassName}
             >
                 <span className={cn('truncate', !selectedOption && 'text-text-muted')}>
                     {selectedOption?.label ?? placeholder}
                 </span>
-                <ChevronDown
-                    size={16}
-                    className={cn(
-                        'pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-text-muted transition-transform',
-                        isOpen && 'rotate-180'
-                    )}
-                />
-            </button>
+            </SelectTrigger>
 
             {isOpen && createPortal(
                 <div

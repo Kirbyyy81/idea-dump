@@ -11,7 +11,7 @@
 - `core/` owns Finance-wide authorization, request security, browser requests, constants, values, schemas, repository access, and cross-capability services. Do not create duplicate common layers beside a capability module.
 - Use a nested directory only for a substantial Finance subsystem with several collaborating modules:
   - `transactions/` owns transaction-specific validation, persistence, ordering, idempotency, and duplicate analysis.
-  - `budgets/` owns recurring budget validation, exact calculations, lifecycle services and server-only budget RPC access.
+  - `budgets/` owns recurring and one-time budget validation, exact calculations, lifecycle services and server-only budget RPC access.
   - `ocr/` owns OCR parsing, normalization, source detection, and the OCR client.
   - `share/` owns PWA share-batch validation, upload preparation, browser handoff, and server handoff.
 - Do not add a directory for a small capability merely to reproduce `schemas.ts`, `repository.ts`, and `service.ts` everywhere.
@@ -28,7 +28,7 @@
 - Run `npm run test:finance-budgets` and `npm run test:finance-budgets:browser` after budgeting changes. For SQL/lifecycle changes, also run `npm run test:finance-budgets:db` on an isolated migrated loopback database using the documented test variables in `document/FINANCE_MODULE.md`.
 - Keep budgeting money as decimal strings and status comparisons exact. Budget reads and mutations reconcile expired cycles through reviewed RPCs. Never rewrite frozen cycles or bypass the Finance ledger lock.
 - Pass the selected dashboard month to `finance_budget_dashboard`. Historical cards use every frozen cycle whose inclusive final day is in that month, including archived budgets; never substitute current settings or live totals. Reconcile at actual read time. Keep current-month priority ordering and test cross-month cycles, separate weekly/custom cards, empty months and frozen totals through the budget database runner and dashboard browser suite.
-- Store current budget settings on `finance_budgets` with typed source/category selections in `finance_budget_filters`. Keep cycle history to totals and settings snapshots, without a breakdown table. Freeze configuration snapshots on cycles; do not reintroduce configuration-version tables. For storage migrations, also run `supabase/tests/finance_budget_settings_migration.test.sql` against a disposable calendar-start baseline and `supabase/tests/finance_budget_filters_migration.test.sql` against a disposable current-settings baseline before the normal lifecycle suite.
+- Store current budget settings on `finance_budgets` with typed source/category/tag selections in `finance_budget_filters`. Keep cycle history to totals and settings snapshots, without a breakdown table. Freeze configuration snapshots on cycles; do not reintroduce configuration-version tables. For storage migrations, also run `supabase/tests/finance_budget_settings_migration.test.sql` against a disposable calendar-start baseline and `supabase/tests/finance_budget_filters_migration.test.sql` against a disposable current-settings baseline before the normal lifecycle suite.
 - New weekly/monthly budgets default to Monday/the 1st in the captured time zone and can include the current period before today. Keep customization optional and preserve existing schedules and restore boundaries.
 
 - Run `npm run test:finance-security`, `npm run test:finance-idempotency`, `npm run test:finance-ordering`, and `npm run test:finance-share` after Finance structural changes.
@@ -57,4 +57,10 @@
 - `tags.ts` owns server-side tag management and bulk assignment. `tagValues.ts` owns pure ID parsing and tag-filter URL contracts.
 - Categories describe spending types; tags describe optional context. Tag-only changes must not teach category memory or repeat intake confirmation. Preserve missing versus empty tag lists on updates.
 - Filter before pagination with the tag RPC, using `EXISTS` to avoid duplicate totals. Keep archived tags on historical transactions and in filters, but reject new archived assignments.
-- Run `npm run test:finance-tags:db`, tag unit/browser suites and dashboard regressions after tag changes. Dashboard tag filters never rewrite budget configuration or frozen totals.
+- Run `npm run test:finance-tags:db`, tag unit/browser suites and dashboard regressions after tag changes. Keep tag filtering on the Transactions page. The main dashboard ignores tag query parameters and does not propagate them in navigation or drill-down links. Budgets use their own saved tag filters and frozen totals.
+
+## Tag and one-time budgets
+
+- Budget tag filters match any selected tag across categories. Combine populated source/category/tag dimensions using the saved AND/OR setting; use EXISTS so multiple tag matches never duplicate amounts. Omitted `tag_ids` preserve selections and `[]` clears them.
+- One-time budgets have null start/end dates and no renewal. Count all matching confirmed transactions, append all active one-time cards in every dashboard month, and remove them when archived. Archive freezes the cumulative snapshot; restore resumes matching without a new date window. Hide pace markers for undated cycles.
+- Reconcile due tagged cycles under the Finance ledger lock before transaction or tag membership writes. Preserve frozen history and category-learning boundaries. Run `npm run test:finance-budget-tags:db` (included in `npm test`) plus the usual budget browser and independent-session database suites.

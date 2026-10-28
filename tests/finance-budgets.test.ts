@@ -40,6 +40,29 @@ describe('budget schedules and calculations', () => {
         expect(calculateBudgetMetrics('999999999999.99', '999999999999.98', '0.00', '2026-09-14', '2026-09-21', '2026-09-21').status).toBe('needs_attention');
         expect(calculateBudgetMetrics('100.00', '101.00', '0.00', '2026-09-14', '2026-09-21', '2026-09-13').status).toBe('scheduled');
     });
+    it('has no dates or elapsed-day pace for a one-time budget', () => {
+        expect(nextBudgetBoundary(null, 'one_time', null, null)).toBeNull();
+        expect(formatBudgetDateRange(null, null)).toBe('One-time');
+        expect(() => formatBudgetDateRange(null, '2026-09-21')).toThrow();
+        expect(calculateBudgetMetrics('100.00', '50.00', '10.00', null, null, '2026-09-14')).toMatchObject({
+            net_spending: '40.00', remaining: '60.00', pace_percentage: '0.000000', status: 'on_track',
+        });
+        expect(calculateBudgetMetrics('100.00', '80.00', '0.00', null, null, '2026-09-14').status).toBe('needs_attention');
+        expect(calculateBudgetMetrics('100.00', '101.00', '0.00', null, null, '2026-09-14').status).toBe('over_budget');
+    });
+    it('matches any tag across categories and combines populated dimensions', () => {
+        const tags = { ...budgetConfiguration, tag_ids: ['trip', 'event'] };
+        expect(matchesBudgetFilters(tags, 'bank', 'food', ['trip', 'event'])).toBe(true);
+        expect(matchesBudgetFilters(tags, 'bank', 'shopping', ['event'])).toBe(true);
+        expect(matchesBudgetFilters(tags, 'bank', null, [])).toBe(false);
+        expect(matchesBudgetFilters({ ...tags, category_ids: ['food'] }, 'bank', 'shopping', ['trip'])).toBe(false);
+        expect(matchesBudgetFilters({ ...tags, category_ids: ['food'], filter_logic: 'or' }, 'bank', 'food', [])).toBe(true);
+    });
+    it('keeps every active one-time budget beyond the recurring top three', () => {
+        const recurring = Array.from({ length: 4 }, (_, i) => budgetFixture({ id: String(i) }));
+        const once = Array.from({ length: 5 }, (_, i) => budgetFixture({ id: `once-${i}`, configuration: { ...budgetFixture().configuration, cycle_type: 'one_time', start_date: null } }));
+        expect(prioritizeBudgets([...recurring, ...once, { ...once[0], state: 'archived' }])).toHaveLength(8);
+    });
     it('preserves aggregate monetary precision', () => {
         const money = '900719925474099.99';
         expect(budgetDecimal(budgetMinorUnits(money))).toBe(money);
@@ -96,6 +119,15 @@ describe('budget validation', () => {
     });
     it('defers creation date checks until after database idempotency lookup', () => {
         expect(parseBudgetMutation({ request_id: budgetFixture().id, configuration: { ...budgetConfiguration, start_date: '2000-01-01' } }, 'create')).toHaveProperty('data');
+    });
+    it('validates unbounded tag budgets and preserves omitted tags for older clients', () => {
+        const config = { ...budgetConfiguration, cycle_type: 'one_time', start_date: null, tag_ids: [budgetFixture().id] };
+        expect(validateBudgetConfiguration(config, { now })).toMatchObject({ data: { start_date: null, tag_ids: config.tag_ids } });
+        expect(validateBudgetConfiguration({ ...config, start_date: '2026-09-14' }, { now })).toHaveProperty('field_errors.start_date');
+        expect(validateBudgetConfiguration({ ...config, tag_ids: ['bad-id'] }, { now })).toHaveProperty('field_errors.tag_ids');
+        const legacy = validateBudgetConfiguration(budgetConfiguration, { now });
+        expect('data' in legacy && 'tag_ids' in legacy.data).toBe(false);
+        expect(validateBudgetConfiguration({ ...config, tag_ids: [] }, { now })).toMatchObject({ data: { tag_ids: [] } });
     });
     it('bounds independent pagination', () => {
         expect(parseBudgetListQuery(new URLSearchParams())).toEqual({ data: { state: 'active', page: 1, page_size: 20 } });

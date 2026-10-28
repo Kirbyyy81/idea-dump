@@ -197,8 +197,8 @@ test('create, edit, archive, frozen history and restore', async ({ page }, testI
     await dialog.getByRole('button', { name: 'Customize', exact: true }).click();
     await dialog.getByRole('switch', { name: 'Bank' }).click();
     await dialog.getByRole('switch', { name: 'Uncategorised' }).click();
-    await dialog.getByLabel('Match sources and categories').click();
-    await page.getByRole('option', { name: 'OR: match either selection' }).click();
+    await dialog.getByLabel('Match selected filters').click();
+    await page.getByRole('option', { name: 'OR: match any selected filter' }).click();
     await dialog.getByRole('button', { name: 'Create budget', exact: true }).click();
     await page.getByRole('button', { name: 'View Everyday spending' }).click();
     await expect(page.getByRole('region', { name: 'Everyday spending details' })).toBeVisible();
@@ -371,4 +371,36 @@ test('keyboard focus, Escape, validation, and 200 percent reflow', async ({ page
     expect(bounds!.y).toBeGreaterThanOrEqual(0);
     expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(page.viewportSize()!.height + 1);
     await page.screenshot({ path: testInfo.outputPath('budget-200-percent.png'), fullPage: true });
+});
+
+test('creates a tag-only one-time budget without date controls', async ({ page }, testInfo) => {
+    await references(page);
+    const tag = { id: 'b0110000-0000-4000-8000-000000000041', name: 'Holiday', is_archived: false };
+    await page.route('**/api/finance/reference-data', route => route.fulfill({ json: { data: { sources: [], categories: [], tags: [tag] } } }));
+    let body: Record<string, unknown> | undefined;
+    await page.route('**/api/finance/budgets', async route => {
+        if (route.request().method() === 'POST') {
+            body = route.request().postDataJSON();
+            await route.fulfill({ json: { data: budgetFixture() } });
+        } else await route.fulfill({ json: { data: [], total: 0, page: 1, page_size: 20 } });
+    });
+    await page.goto('/finance/budgets');
+    await page.getByRole('button', { name: 'Create budget' }).first().click();
+    const dialog = page.getByRole('dialog', { name: 'Create budget' });
+    await dialog.getByLabel('Name').fill('Holiday spending');
+    await dialog.getByLabel('Budget amount (MYR)').fill('1500');
+    await dialog.getByLabel('Cycle', { exact: true }).click();
+    await page.getByRole('option', { name: 'One-time (no dates)', exact: true }).click();
+    await dialog.getByRole('button', { name: 'Choose tags', exact: true }).click();
+    await page.getByRole('button', { name: 'Holiday', exact: true }).click();
+    await page.getByRole('button', { name: 'Done', exact: true }).click();
+    await expect(dialog.getByLabel('Selected tags')).toContainText('Holiday');
+    await dialog.getByRole('button', { name: 'Customize', exact: true }).click();
+    await expect(dialog.getByText('Start date', { exact: true })).toHaveCount(0);
+    await expect(dialog.getByText('Counts all matching transactions, including existing ones, until archived.')).toBeVisible();
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+    await dialog.screenshot({ path: testInfo.outputPath('one-time-tag-budget.png') });
+    await dialog.getByRole('button', { name: 'Create budget', exact: true }).click();
+    await expect.poll(() => body).toMatchObject({ configuration: { cycle_type: 'one_time', start_date: null, custom_days: null, anchor_day: null,
+        amount: '1500.00', tag_ids: [tag.id], category_ids: [], source_ids: [] } });
 });

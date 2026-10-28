@@ -8,7 +8,7 @@ import { AlertDialog } from '@/components/molecules/AlertDialog';
 import { createRoot } from 'react-dom/client';
 import { FinanceBudgetsClient } from '@/app/finance/budgets/_components/FinanceBudgetsClient';
 import { FinanceReferenceDataProvider } from '@/app/finance/_components/FinanceReferenceData';
-import type { FinanceBudgetDetail, FinanceBudgetPage, FinanceBudgetSummary, FinanceReviewCandidate } from '@/lib/types';
+import type { FinanceBudgetDetail, FinanceBudgetPage, FinanceBudgetSummary, FinanceReviewCandidate, FinanceDashboardBudget } from '@/lib/types';
 import { FinanceTransactionEntry } from '@/app/finance/add/_components/FinanceTransactionEntry';
 import { FinanceShareTargetProvider } from '@/app/finance/_components/FinanceShareTargetProvider';
 import { AlertProvider } from '@/lib/contexts/AlertContext';
@@ -24,12 +24,13 @@ const dashboardParams = new URLSearchParams(window.location.search);
 const dashboardDate = dashboardParams.get('date');
 const dashboardMonth = dashboardParams.get('month') || '2026-09';
 const budgetMonthsEnabled = (window as unknown as { dashboardBudgetMonths?: boolean }).dashboardBudgetMonths;
+const oneTimeBudgets = (window as unknown as { dashboardOneTimeBudgets?: FinanceDashboardBudget[] }).dashboardOneTimeBudgets ?? [];
 const olderDayTransaction = { ...dashboardFixture.recent_transactions[0], id: 'older-transaction', merchant: 'Earlier day cafe', finance_payee: null, transaction_date: '2026-09-17' };
 const dashboardSummary = dashboardDate ? { ...dashboardFixture, recent_transactions: [...dashboardFixture.recent_transactions, olderDayTransaction].filter((item) => item.transaction_date === dashboardDate) } : dashboardFixture;
 createRoot(document.getElementById('root')!).render(<FinanceReferenceDataProvider>
     {window.location.pathname === '/finance'
         ? <FinanceDashboardClient month={dashboardMonth} today={budgetMonthsEnabled ? '2026-10-02' : '2026-09-22'} selectedDate={dashboardDate}
-            summary={budgetMonthsEnabled ? { ...dashboardSummary, budget_cycles: dashboardBudgetMonths[dashboardMonth] ?? [] } : dashboardSummary} />
+            summary={budgetMonthsEnabled ? { ...dashboardSummary, budget_cycles: [...(dashboardBudgetMonths[dashboardMonth] ?? []), ...oneTimeBudgets] } : dashboardSummary} />
         : window.location.pathname === '/finance/transactions'
         ? <AlertProvider><AlertDialog /><FinanceTransactionsClient initialTransactions={tagTransactions} initialQuery="" /></AlertProvider>
         : window.location.pathname === '/finance/transactions/edit'

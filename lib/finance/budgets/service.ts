@@ -10,6 +10,7 @@ const FIELD_MESSAGES: FinanceBudgetFieldErrors = {
     cycle_type: 'Choose a valid cycle', custom_days: 'Choose a duration from 1 to 365 days', anchor_day: 'Choose a renewal day from 1 to 31',
     filter_logic: 'Choose AND or OR', include_uncategorised: 'Choose whether Uncategorised transactions count',
     source_ids: 'Remove missing sources or choose sources you own', category_ids: 'Remove missing categories or choose categories you own',
+    tag_ids: 'Remove missing tags or choose tags you own',
 };
 
 export function throwBudgetDatabaseError(error: { code?: string; message?: string }): never {

@@ -20,16 +20,18 @@ test('selects multiple tags, creates inline, and saves them in the editor',async
     await page.getByRole('button',{name:'Save changes'}).click();
     await expect.poll(()=>body?.tag_ids).toEqual([tripTag.id,'10000000-0000-4000-8000-000000000003']);
 });
-test('includes archived tags in filters and preserves exclusions across dashboard navigation',async({page})=>{
-    await page.goto('/finance?month=2026-09&tag_ids='+archivedTag.id+'&tag_mode=exclude');
-    await expect(page.getByLabel('Selected tags')).toContainText('Hackathon');
-    await expect(page.getByText('Budgets use their own filters.',{exact:false})).toBeVisible();
-    await page.getByRole('button',{name:'Previous month'}).click();
-    await expect(page).toHaveURL(url => url.searchParams.get('month') === '2026-08' && url.searchParams.get('tag_ids') === archivedTag.id && url.searchParams.get('tag_mode') === 'exclude');
-    const categories=page.getByRole('list',{name:'Spending categories'});
+test('dashboard omits tag controls and drops legacy tags from navigation and transaction links', async ({ page }) => {
+    await page.goto('/finance?month=2026-09&date=2026-09-17&tag_ids=' + archivedTag.id + '&tag_mode=exclude');
+    await expect(page.getByRole('button', { name: 'Choose filter tags', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('combobox', { name: 'Tag matching', exact: true })).toHaveCount(0);
+    const categories = page.getByRole('list', { name: 'Spending categories' });
     const href = new URL((await categories.getByRole('link').first().getAttribute('href'))!, page.url());
-    expect(href.searchParams.get('tag_ids')).toBe(archivedTag.id); expect(href.searchParams.get('tag_mode')).toBe('exclude');
-    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+    expect(href.searchParams.has('tag_ids')).toBe(false);
+    expect(href.searchParams.has('tag_mode')).toBe(false);
+    await expect(page.getByRole('link', { name: 'View all', exact: true })).toHaveAttribute('href', '/finance/transactions?date=2026-09-17');
+    await page.getByRole('button', { name: 'Previous month' }).click();
+    await expect(page).toHaveURL(url => url.searchParams.get('month') === '2026-08' && !url.searchParams.has('tag_ids') && !url.searchParams.has('tag_mode'));
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 });
 for (const operation of ['add', 'remove'] as const) {
     test(`bulk ${operation} submits only selected transactions and selected tags`,async({page})=>{
@@ -92,4 +94,86 @@ test('More menu enables keyboard multi-select and Done tagging clears the select
     await expect(page.getByRole('region', { name: 'Bulk transaction tags' })).toContainText('0 selected');
     await expect(trip).not.toBeChecked();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+});
+
+for (const flow of [
+    { name: 'manual entry', path: '/finance/add', label: 'Tags', baseline: 'Transaction category', baselineLabel: 'Category' },
+    { name: 'editing', path: '/finance/transactions/edit?id=' + tagTransactions[0].id, label: 'Tags', baseline: 'Transaction category', baselineLabel: 'Category' },
+    { name: 'ledger filtering', path: '/finance/transactions', label: 'Filter tags', baseline: 'Ledger category', baselineLabel: 'Category' },
+    { name: 'bulk tagging', path: '/finance/transactions', label: 'Bulk tags', baseline: 'Ledger category', baselineLabel: 'Category' },
+]) {
+    test(`tag selector matches shared fields in ${flow.name}`, async ({ page }, info) => {
+        await page.goto(flow.path);
+        if (flow.name === 'manual entry') await page.getByRole('button', { name: 'Manual', exact: true }).click();
+        if (flow.path === '/finance/transactions' && info.project.name === 'mobile') {
+            await page.getByRole('button', { name: /^Filters/ }).click();
+        }
+        if (flow.name === 'bulk tagging') {
+            await page.getByRole('button', { name: 'More transaction actions', exact: true }).click();
+            await page.getByRole('menuitem', { name: 'Tag transactions', exact: true }).click();
+        }
+        const tags = page.getByRole('button', { name: `Choose ${flow.label.toLowerCase()}`, exact: true });
+        const baseline = page.getByRole('combobox', { name: flow.baseline, exact: true });
+        await expect(tags).toBeEnabled();
+        await expect(tags).toBeVisible();
+        await expect(baseline).toBeVisible();
+        const properties = ['height', 'fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'paddingLeft', 'paddingRight', 'borderRadius', 'borderColor', 'backgroundColor'] as const;
+        const tagStyles = await tags.evaluate((element, properties) => properties.map(property => getComputedStyle(element)[property]), properties);
+        const fieldStyles = await baseline.evaluate((element, properties) => properties.map(property => getComputedStyle(element)[property]), properties);
+        expect(tagStyles).toEqual(fieldStyles);
+        const label = page.getByText(flow.label, { exact: true });
+        const baselineLabel = page.getByText(flow.baselineLabel, { exact: true });
+        for (const property of ['font-size', 'font-weight', 'color']) {
+            await expect(label).toHaveCSS(property, await baselineLabel.evaluate((element, property) => getComputedStyle(element).getPropertyValue(property), property));
+        }
+        expect(await tags.locator('svg').count()).toBe(1);
+        await tags.press('ArrowDown');
+        const search = page.getByRole('textbox', { name: 'Search tags', exact: true });
+        await expect(search).toBeFocused();
+        await search.evaluate(input => input.blur());
+        const holiday = page.getByRole('button', { name: 'Holiday', exact: true });
+        const wasSelected = await holiday.getAttribute('aria-pressed') === 'true';
+        await holiday.click();
+        await expect(holiday).toHaveAttribute('aria-pressed', String(!wasSelected));
+        if (wasSelected) await holiday.click();
+        await expect(tags).toContainText('selected');
+        await page.keyboard.press('Escape');
+        await expect(tags).toBeFocused();
+        if (flow.name === 'editing') await page.screenshot({ path: info.outputPath('consistent-tag-selector.png'), fullPage: true });
+        await page.evaluate(() => { document.documentElement.style.zoom = '2'; });
+        await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+    });
+}
+
+test('ledger pointer selection persists multiple tags, exclusions and clearing across reloads', async ({ page }, info) => {
+    await page.goto('/finance/transactions?date=2026-09-17');
+    if (info.project.name === 'mobile') await page.getByRole('button', { name: /^Filters/ }).click();
+    const choose = page.getByRole('button', { name: 'Choose filter tags', exact: true });
+    const selectTag = async (name: string) => {
+        await choose.click();
+        const search = page.getByRole('textbox', { name: 'Search tags', exact: true });
+        await expect(search).toBeFocused();
+        await search.evaluate(input => input.blur());
+        await page.getByRole('button', { name, exact: true }).click();
+        await page.getByRole('button', { name: 'Done', exact: true }).click();
+    };
+    await selectTag('Holiday');
+    await expect(page).toHaveURL(url => url.searchParams.get('tag_ids') === tripTag.id && url.searchParams.get('date') === '2026-09-17');
+    await selectTag('Hackathon (archived)');
+    const expectedIds = [tripTag.id, archivedTag.id].sort().join(',');
+    await expect(page).toHaveURL(url => url.searchParams.get('tag_ids') === expectedIds && url.searchParams.get('tag_mode') === 'include');
+    await page.reload();
+    if (info.project.name === 'mobile') await page.getByRole('button', { name: /^Filters/ }).click();
+    await expect(page.getByLabel('Selected tags')).toContainText('Holiday');
+    await expect(page.getByLabel('Selected tags')).toContainText('Hackathon');
+    await page.getByRole('combobox', { name: 'Tag matching', exact: true }).click();
+    await page.getByRole('option', { name: 'Exclude tags', exact: true }).click();
+    await expect(page).toHaveURL(url => url.searchParams.get('tag_ids') === expectedIds && url.searchParams.get('tag_mode') === 'exclude' && url.searchParams.get('date') === '2026-09-17');
+    await page.reload();
+    if (info.project.name === 'mobile') await page.getByRole('button', { name: /^Filters/ }).click();
+    await expect(page.getByRole('combobox', { name: 'Tag matching', exact: true })).toContainText('Exclude tags');
+    await choose.click();
+    await page.getByRole('button', { name: 'Clear tags', exact: true }).click();
+    await expect(page).toHaveURL(url => !url.searchParams.has('tag_ids'));
+    await expect(page.getByLabel('Selected tags')).toHaveCount(0);
 });

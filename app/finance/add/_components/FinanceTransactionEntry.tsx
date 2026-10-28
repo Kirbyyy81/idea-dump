@@ -321,8 +321,8 @@ export function FinanceTransactionEntry({ initialMode }: { initialMode: FinanceE
             <Select id="manual-category" label="Category" errorMessage={fieldErrors.category_id} data-finance-field="category_id" aria-label="Transaction category" value={form.category_id} onChange={(categoryId) => setManualField('category_id', categoryId)} placeholder="Uncategorised" options={[{ value: '', label: 'Uncategorised' }, ...availableCategories]} />
             <FinanceTagPicker value={tagIds} onChange={setTagIds} disabled={isSaving} />
             <div className="grid gap-4 sm:grid-cols-2">
-                <Input id="manual-amount" label="Amount" required errorMessage={fieldErrors.amount} data-finance-field="amount" type="number" inputMode="decimal" min="0.01" max={MAX_FINANCE_AMOUNT} step="0.01" value={form.amount} onChange={(event) => setManualField('amount', event.target.value)} placeholder="0.00" />
                 <Input id="manual-currency" label="Currency" value="MYR" readOnly aria-readonly="true" />
+                <Input id="manual-amount" label="Amount" required errorMessage={fieldErrors.amount} data-finance-field="amount" type="number" inputMode="decimal" min="0.01" max={MAX_FINANCE_AMOUNT} step="0.01" value={form.amount} onChange={(event) => setManualField('amount', event.target.value)} placeholder="0.00" />
             </div>
             <Input id="manual-merchant" label="Merchant (optional)" errorMessage={fieldErrors.merchant} data-finance-field="merchant" maxLength={MAX_FINANCE_MERCHANT_LENGTH} value={form.merchant} onChange={(event) => setManualField('merchant', event.target.value)} />
             <Toggle id="manual-has-payee" label="Payee" toggleLabel="Is a payee" errorMessage={fieldErrors.has_payee} data-finance-field="has_payee" checked={form.has_payee} aria-label="Is a payee" onChange={setManualPayeeClassification} />

@@ -45,6 +45,18 @@ describe('Finance tags', () => {
         expect(screen.queryByRole('textbox',{name:'Search tags'})).toBeNull();
         expect(document.activeElement).toBe(choose);
     });
+    it('keeps options available when pointer focus leaves the search field without a new focus target', async () => {
+        render(<Picker />);
+        const choose = screen.getByRole('button', { name: 'Choose tags' });
+        await waitFor(() => expect(choose.hasAttribute('disabled')).toBe(false));
+        fireEvent.click(choose);
+        const search = screen.getByRole('textbox', { name: 'Search tags' });
+        fireEvent.blur(search, { relatedTarget: null });
+        fireEvent.click(screen.getByRole('button', { name: 'Holiday' }));
+        expect(screen.getByRole('status').textContent).toBe(trip);
+        fireEvent.focusIn(document.body);
+        expect(screen.queryByRole('textbox', { name: 'Search tags' })).toBeNull();
+    });
     it('allows archived tags in filters without offering inline creation', async () => {
         render(<Picker filter />);
         const choose=screen.getByRole('button',{name:'Choose tags'});
