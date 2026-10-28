@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.6](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.18.5...idea-dump-v0.18.6) (2026-10-28)
+
+
+### Bug Fixes
+
+* refine Finance tags and budgets ([d1b477c](https://github.com/Kirbyyy81/idea-dump/commit/d1b477cbd5b9550e99264029fa8bb393249de74b))
+
 ## [0.18.5](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.18.4...idea-dump-v0.18.5) (2026-10-26)
 
 
