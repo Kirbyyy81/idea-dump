@@ -5,6 +5,13 @@ import { inventoryFixture, inventoryIds as id } from '../fixtures/inventory';
 const product = { ...inventoryFixture.products[0], variants: inventoryFixture.variants.slice(0, 2) };
 const line = { variant_id: id.large, product_revision: 1, quantity: 2, price: 18, price_mode: 'unit', in_use_quantity: 0, started_on: null };
 describe('Inventory validation', () => {
+    it('validates product deletion identity and revision without accepting ownership', () => {
+        expect(parseInventoryMutation({ action: 'delete_product', user_id: 'untrusted', payload: { id: id.shampoo, revision: 1, user_id: 'untrusted' } }))
+            .toEqual({ action: 'delete_product', payload: { id: id.shampoo, revision: 1 } });
+        for (const payload of [{ id: 'bad', revision: 1 }, { id: id.shampoo, revision: 0 }, { id: id.shampoo, revision: 1.5 }, { id: id.shampoo }]) {
+            expect(() => parseInventoryMutation({ action: 'delete_product', payload })).toThrow();
+        }
+    });
     const purchaseEdit = { receipt_id: id.purchase, revision: 1, kind: 'purchase', purchased_on: '2026-01-01', lines: [{ purchase_id: id.largeBatch, quantity: 2, total_paid: 36 }] };
     it('validates purchase corrections and supports unknown existing-stock prices', () => {
         expect(parseInventoryMutation({ action: 'edit_purchase', payload: purchaseEdit }).payload).toEqual(purchaseEdit);
