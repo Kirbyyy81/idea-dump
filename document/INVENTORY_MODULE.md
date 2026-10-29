@@ -14,6 +14,14 @@ Subcategory choices come from products in the selected category. Choose **Add su
 
 **Start using** removes one usable item from unopened stock and starts its usage record. **Finished** closes it; **Edit dates** corrects late or mistaken entries.
 
+## Delete a product
+
+Choose **Delete product** from the product row's three-dot actions menu. The confirmation explains that deletion permanently removes that product, all variants, stock, purchase items and usage history. Cancel leaves everything untouched. After deletion, keyboard focus moves to Add product. Successful deletion uses the shared auto-dismissing toast; failures keep the confirmation available for retry. Repeated submissions are blocked while pending.
+
+Other products and their items in a shared receipt are retained, and linked Finance transactions are never deleted or edited. Remaining items in affected receipts receive a new revision so stale purchase editors cannot save an outdated item list. Removing a product requires Inventory access only, even if its purchases were linked to Finance. `delete_product` uses the product ID and current revision through `inventory_mutate`, under the existing per-owner lock and ownership checks. Foreign, missing and stale products are rejected. After a successful delete, the product stays removed locally even if refreshing the inventory fails.
+
+Apply `20261028063403_inventory_product_deletion.sql` before releasing the UI. It adds the reviewed action to the existing service-only mutation RPC and preserves the four-table schema, ownership constraints, cascading foreign keys, existing actions and access grants. The migration itself does not delete any products. Product deletion was explicitly requested with removal of its Inventory history on 28 October 2026. Individual stock adjustments and item-removal workflows remain outside scope.
+
 ## Calculation rules
 
 - Volume uses ml, weight uses g, and count uses individual usable items. An opened item never contributes to unopened quantity or estimated duration.
@@ -161,3 +169,11 @@ The application reads `inventory_read_items`, which returns only products, varia
 Applied `20261008043228_combine_inventory_purchases.sql` to the connected Supabase project. Live verification found four Inventory tables, all 9 purchase items grouped under their 7 original receipt IDs, and both usage records linked to the same item IDs. Checksums confirm unchanged products, variants, item details and normalized usage records. Receipt metadata is consistent within each group. The removed table has no function, view or cron callers; browser access remains revoked and existing RPC owner/grants/security settings are unchanged.
 
 Validation passed: 745 application tests including 63 Inventory tests, the populated PostgreSQL consolidation and lifecycle suite, 30 desktop/mobile Inventory cases, lint, explicit TypeScript checking, service-worker consistency and production build. Finance OCR typecheck, build and tests passed (402 passed, 171 skipped). Full and production dependency audits returned zero vulnerabilities. Security advisors added no findings. Performance advisors report the two recreated purchase date and Finance-link indexes as [not used yet](https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index); both cover intended access paths and remain in place. The migration is live; application changes require deployment.
+
+## Product deletion rollout, 28 October 2026
+
+Applied `20261028063403_inventory_product_deletion.sql` to `xcaxukhjkqqnmzziqrkc`. The authenticated connector was used because the CLI had no access token. Following the migration runbook, the previously unapplied local filename was aligned to its recorded remote version; the SQL body is unchanged and its MD5 matches the migration ledger. The predecessor function matched the reviewed repository implementation after normalizing its Windows line endings. No existing stock or history is deleted by the migration.
+
+Hosted verification used newly created synthetic accounts inside a rolled-back transaction. It checked complete product-history deletion, a preserved sibling in a shared receipt with an advanced revision, unchanged linked Finance expense, and rejected foreign-owner/stale deletes. The test accounts did not remain after verification. Supabase advisors reported no new security or performance findings. The RPC retains security-invoker execution, an empty search path and service-only grants; the four Inventory tables retain RLS and revoked browser access. Verification did not use the owner's real data or signed-in browser session. The application UI remains pending the normal push/PR/merge release.
+
+Validation: 65 focused Inventory tests, 870 application tests, the isolated Inventory lifecycle/database suite, all 38 desktop/mobile Inventory browser checks, lint, TypeScript and the production build passed. Browser cases cover confirmation, cancellation, retained shared purchases, history removal, failure/retry, pending submission guards and a failed post-delete refresh. OCR typecheck, build and 402 tests passed, with 171 optional parity tests skipped. Application and OCR full/production dependency audits reported zero vulnerabilities. The disposable database suite checks access and serial operation semantics; it does not simulate independent PostgreSQL sessions.

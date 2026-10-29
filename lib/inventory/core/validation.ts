@@ -35,6 +35,8 @@ function choice<T extends string>(value: unknown, choices: readonly T[], label: 
 export function parseInventoryMutation(input: unknown): InventoryMutation {
     const body = object(input); const p = object(body.payload);
     switch (body.action) {
+        case 'delete_product':
+            return { action: 'delete_product', payload: { id: uuid(p.id), revision: number(p.revision, 'product revision', 1, 2147483647) } };
         case 'save_product': {
             const unit = choice(p.unit, ['ml', 'g', 'count'], 'unit');
             if (!Array.isArray(p.variants) || !p.variants.length || p.variants.length > 30) throw new InventoryError('Add between 1 and 30 variants.');

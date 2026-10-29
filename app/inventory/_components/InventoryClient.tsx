@@ -1,5 +1,5 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Package, Plus } from 'lucide-react';
 import { AppShell } from '@/components/organisms/AppShell';
 import { Button } from '@/components/atoms/Button';
@@ -7,10 +7,11 @@ import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { FormDialog } from '@/components/molecules/FormDialog';
 import { Toast } from '@/components/molecules/Toast';
-import type { InventoryData, InventoryMutation, InventoryReceipt, InventoryExpense } from '@/lib/types';
+import type { InventoryData, InventoryMutation, InventoryReceipt, InventoryExpense, InventoryProduct } from '@/lib/types';
 import { inventoryRequest } from '@/lib/inventory/core/client';
 import { productStock, quantityText } from '@/lib/inventory/core/values';
 import { ProductForm } from './ProductForm';
+import { DeleteProduct } from './DeleteProduct';
 import { ReceiveCart } from './ReceiveCart';
 import { StockAction, type StockActionChoice } from './StockAction';
 import { EditPurchase } from './EditPurchase';
@@ -23,9 +24,11 @@ import { PurchaseHistory, UsageHistory } from './InventoryHistory';
 import { panelClass } from './fields';
 
 type Dialog = { type: 'product'; id?: string } | { type: 'cart'; productId?: string } | { type: 'detail'; id: string }
+    | { type: 'delete_product'; product: InventoryProduct }
     | { type: 'stock'; choice: StockActionChoice } | { type: 'finance' | 'edit_purchase'; purchase: InventoryReceipt; expense?: InventoryExpense };
 export function InventoryClient({ initialData, canLinkFinance, view = 'shelf' }: { initialData: InventoryData; canLinkFinance: boolean; view?: 'shelf' | 'purchases' | 'usage' }) {
     const [data, setData] = useState(initialData);
+    const addProductRef = useRef<HTMLButtonElement>(null);
     const [search, setSearch] = useState(''); const [category, setCategory] = useState(''); const [subcategory, setSubcategory] = useState('');
     const [dialog, setDialog] = useState<Dialog | null>(null);
     const [notice, setNotice] = useState<{ id: string; message: string; variant: 'success' | 'error' } | null>(null);
@@ -37,11 +40,22 @@ export function InventoryClient({ initialData, canLinkFinance, view = 'shelf' }:
     async function save(mutation: InventoryMutation) {
         setNotice(null);
         const result = await inventoryRequest<{ id: string }>('/api/inventory', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(mutation) });
+        if (mutation.action === 'delete_product') {
+            setData(current => {
+                const removedItems = new Set(current.purchases.filter(item => item.product_id === mutation.payload.id).map(item => item.id));
+                return {
+                    products: current.products.filter(product => product.id !== mutation.payload.id),
+                    variants: current.variants.filter(variant => variant.product_id !== mutation.payload.id),
+                    purchases: current.purchases.filter(item => !removedItems.has(item.id)),
+                    usages: current.usages.filter(usage => !removedItems.has(usage.purchase_id)),
+                };
+            });
+        }
         try {
             setData(await inventoryRequest<InventoryData>('/api/inventory'));
-            setNotice({ id: crypto.randomUUID(), variant: 'success', message: mutation.action === 'receive' ? 'Stock added to your shelf.' : 'Changes saved.' });
+            setNotice({ id: crypto.randomUUID(), variant: 'success', message: mutation.action === 'delete_product' ? 'Product deleted.' : mutation.action === 'receive' ? 'Stock added to your shelf.' : 'Changes saved.' });
         } catch {
-            setNotice({ id: crypto.randomUUID(), variant: 'error', message: 'Saved successfully, but the latest stock could not load. Reload the page before making another change.' });
+            setNotice({ id: crypto.randomUUID(), variant: 'error', message: `${mutation.action === 'delete_product' ? 'Deleted' : 'Saved'} successfully, but the latest stock could not load. Reload the page before making another change.` });
         }
         return result;
     }
@@ -54,7 +68,7 @@ export function InventoryClient({ initialData, canLinkFinance, view = 'shelf' }:
                 <div className="flex flex-wrap items-end gap-3"><Input label="Search products" value={search} onValueChange={setSearch} containerClassName="min-w-0 flex-1 basis-52" />
                     <Select label="Category" value={category} onChange={(value) => { setCategory(value); setSubcategory(''); }} options={[{ value: '', label: 'All categories' }, ...categories.map((item) => ({ value: item, label: item }))]} className="w-full sm:w-48" />
                     <Select label="Subcategory" value={subcategory} onChange={setSubcategory} disabled={!category} options={[{ value: '', label: 'All subcategories' }, ...subcategories.map((value) => ({ value, label: value }))]} className="w-full sm:w-48" />
-                    <Button variant="secondary" onClick={() => setDialog({ type: 'product' })}>Add product</Button></div>
+                    <Button ref={addProductRef} variant="secondary" onClick={() => setDialog({ type: 'product' })}>Add product</Button></div>
                 {!products.length && <div className={`${panelClass} flex flex-col items-center gap-3 py-12`}><Package size={30} aria-hidden="true" /><h2 className="text-lg font-bold">{data.products.length ? 'No matching products' : 'Your shelf is ready'}</h2>
                     {!data.products.length && <Button onClick={() => setDialog({ type: 'product' })}>Create your first product</Button>}</div>}
                 {products.length > 0 && <div role="region" aria-label="Inventory table" tabIndex={0} className="relative overflow-x-auto rounded-lg border border-border-default bg-bg-surface">
@@ -72,6 +86,7 @@ export function InventoryClient({ initialData, canLinkFinance, view = 'shelf' }:
                                     { label: 'Add stock', onSelect: () => setDialog({ type: 'cart', productId: product.id }) },
                                     { label: 'Start using', disabled: !stock.units, onSelect: () => action({ action: 'start', productId: product.id }) },
                                     { label: 'Edit product', onSelect: () => setDialog({ type: 'product', id: product.id }) },
+                                    { label: 'Delete product', onSelect: () => setDialog({ type: 'delete_product', product }) },
                                 ]} /></td>
                             </tr>;
                         })}</tbody>
@@ -82,6 +97,9 @@ export function InventoryClient({ initialData, canLinkFinance, view = 'shelf' }:
             {view === 'usage' && <UsageHistory data={data} onAction={action} />}
         </div>
         {dialog?.type === 'product' && <FormDialog title={dialog.id ? 'Edit product' : 'Add product'} onClose={close}><ProductForm key={dialog.id ?? 'new'} productId={dialog.id} data={data} save={save} onSaved={close} /></FormDialog>}
+        {dialog?.type === 'delete_product' && <DeleteProduct product={dialog.product} save={save} onClose={close} onDeleted={() => {
+            close(); requestAnimationFrame(() => addProductRef.current?.focus());
+        }} />}
         {dialog?.type === 'cart' && <ReceiveCart initialProductId={dialog.productId} data={data} save={save} onClose={close} />}
         {dialog?.type === 'stock' && <StockAction choice={dialog.choice} data={data} save={save} onClose={close} />}
         {dialog?.type === 'edit_purchase' && <EditPurchase purchase={dialog.purchase} expense={dialog.expense} data={data} save={save} onClose={close} />}

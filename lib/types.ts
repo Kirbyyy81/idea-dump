@@ -1582,6 +1582,7 @@ export interface InventoryReceiptInput {
 }
 export type InventoryMutation = (
     | { action: 'save_product'; payload: InventoryProductInput }
+    | { action: 'delete_product'; payload: { id: string; revision: number } }
     | { action: 'receive'; payload: InventoryReceiptInput }
     | { action: 'edit_purchase'; payload: { finance_transaction_id?: string; receipt_id: string; revision: number; kind: InventoryPurchase['kind']; purchased_on: string | null; lines: { purchase_id: string; quantity: number; total_paid: number | null }[] } }
     | { action: 'start'; payload: { purchase_id: string; started_on: string } }
