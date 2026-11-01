@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.18.7](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.18.6...idea-dump-v0.18.7) (2026-11-01)
+
+
+### Bug Fixes
+
+* allow inventory product deletion ([29134a2](https://github.com/Kirbyyy81/idea-dump/commit/29134a2e58cc80e9371a4e69ae0109a8911915bc))
+* map yes shop content data to observed endpoints ([544f478](https://github.com/Kirbyyy81/idea-dump/commit/544f478bd9b9c7ac2051a5826aebfb13e352a6d6))
+* rotate film canister labels ([e7552a7](https://github.com/Kirbyyy81/idea-dump/commit/e7552a7940cc35acc76138d518b69c3e0296b2fb))
+
 ## [0.18.6](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.18.5...idea-dump-v0.18.6) (2026-10-28)
 
 
