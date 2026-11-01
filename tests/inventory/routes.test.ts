@@ -33,6 +33,12 @@ describe('Inventory API authorization', () => {
         expect((await POST(request({ ...command, payload: {} }))).status).toBe(422);
         expect(mocks.write).not.toHaveBeenCalled();
     });
+    it('authorizes product deletion with Inventory access only and verified ownership', async () => {
+        mocks.access.mockReturnValue(false);
+        const deletion = { action: 'delete_product', payload: { id: command.payload.purchase_id, revision: 1 } };
+        expect((await POST(request({ ...deletion, user_id: 'untrusted' }))).status).toBe(200);
+        expect(mocks.write).toHaveBeenCalledExactlyOnceWith('verified-owner', deletion);
+    });
     it('requires Finance access for expense discovery and linking', async () => {
         mocks.access.mockReturnValue(false);
         expect((await expenses(new NextRequest('http://localhost/api/inventory/expenses'))).status).toBe(403);

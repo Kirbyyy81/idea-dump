@@ -88,6 +88,7 @@ try {
     await assert.rejects(() => db.exec(consolidation), /Every Inventory receipt must contain an item/);
     await db.exec('rollback');
     await db.exec(consolidation);
+    await db.exec(await file('supabase/migrations/20261028063403_inventory_product_deletion.sql'));
     assert.deepEqual(await snapshot(upgradeOwner), beforeMerge, 'deployed clients retain the same receipt and stock response after consolidation');
     assert.deepEqual((await db.query("select proname,proacl,proconfig,prosecdef,proowner from pg_proc where proname in ('inventory_read','inventory_mutate') order by proname")).rows, contractBefore, 'consolidation preserves existing RPC permissions');
     const merged = (await db.query('select public.inventory_read_items($1) as data', [upgradeOwner])).rows[0].data;
@@ -270,7 +271,51 @@ try {
     assert.equal((await db.query('select amount from public.finance_transactions where id=$1', [ownExpense])).rows[0].amount, '180');
     await mutation('link_finance', { purchase_id: saved.id, finance_transaction_id: null });
     await rejects(() => mutation('edit_purchase', { ...combined, revision: combined.revision + 1 }), '40001');
+    // Product deletion removes only that catalogue subtree, preserving shared receipts and Finance.
+    const beforeDelete = (await db.query('select public.inventory_read_items($1) as data', [owner])).rows[0].data;
+    const deletingProduct = beforeDelete.products.find(item => item.id === productId);
+    const deletingItems = beforeDelete.purchases.filter(item => item.product_id === productId);
+    const affectedReceipts = new Set(deletingItems.map(item => item.receipt_id));
+    await mutation('link_finance', { receipt_id: saved.id, finance_transaction_id: ownExpense });
+    const linkedBeforeDelete = (await db.query('select public.inventory_read_items($1) as data', [owner])).rows[0].data;
+    const deleteCommand = { id: productId, revision: deletingProduct.revision };
+    const deletionBefore = await snapshot();
+    await rejects(() => mutation('delete_product', deleteCommand, other), 'P0002');
+    await rejects(() => mutation('delete_product', { ...deleteCommand, revision: deleteCommand.revision + 1 }), '40001');
+    await db.query("update public.bridge_user_module_overrides set effect='deny' where user_id=$1 and module_id=(select id from public.dim_modules where modules='inventory')", [owner]);
+    await rejects(() => mutation('delete_product', deleteCommand), '42501');
+    await db.query("update public.bridge_user_module_overrides set effect='allow' where user_id=$1 and module_id=(select id from public.dim_modules where modules='inventory')", [owner]);
+    assert.deepEqual(await snapshot(), deletionBefore, 'failed deletions preserve all stock and history');
+    for (const role of ['anon', 'authenticated']) {
+        await db.exec(`set role ${role}`);
+        await rejects(() => mutation('delete_product', deleteCommand), '42501');
+        await db.exec('reset role');
+    }
+    await db.exec('begin');
+    await mutation('delete_product', deleteCommand);
+    await db.exec('rollback');
+    assert.deepEqual(await snapshot(), deletionBefore, 'transaction rollback restores the complete product subtree');
+    // Removing an Inventory product does not require Finance access, even when linked.
+    await db.query("update public.bridge_user_module_overrides set effect='deny' where user_id=$1 and module_id=(select id from public.dim_modules where modules='finance')", [owner]);
+    await db.exec('set role service_role');
+    assert.equal((await mutation('delete_product', deleteCommand)).id, productId);
+    const afterDelete = (await db.query('select public.inventory_read_items($1) as data', [owner])).rows[0].data;
+    assert.ok(!afterDelete.products.some(item => item.id === productId));
+    assert.ok(!afterDelete.variants.some(item => item.product_id === productId));
+    assert.ok(!afterDelete.purchases.some(item => item.product_id === productId));
+    assert.ok(!afterDelete.usages.some(usage => deletingItems.some(item => usage.purchase_id === item.id)));
+    const otherItems = linkedBeforeDelete.purchases.filter(item => item.product_id !== productId);
+    assert.deepEqual(afterDelete.purchases, otherItems.map(item => ({ ...item, revision: item.revision + Number(affectedReceipts.has(item.receipt_id)) })), 'other product stock, costs, snapshots and Finance links remain; affected receipt revisions advance');
+    assert.equal((await db.query('select amount from public.finance_transactions where id=$1', [ownExpense])).rows[0].amount, '180', 'deletion never deletes or changes a linked Finance expense');
+    await rejects(() => mutation('delete_product', deleteCommand), 'P0002');
+    await rejects(() => mutation('save_product', { ...product, revision: deletingProduct.revision }), 'P0002');
+    await rejects(() => mutation('start', { purchase_id: deletingItems[0].id, started_on: '2026-01-02' }), 'P0002');
+    const remainingReceipt = afterDelete.purchases.filter(item => item.receipt_id === saved.id);
+    await rejects(() => mutation('edit_purchase', { receipt_id: saved.id, revision: remainingReceipt[0].revision - 1, kind: 'purchase', purchased_on: '2026-01-01', lines: remainingReceipt.map(item => ({ purchase_id: item.id, quantity: item.purchased_quantity, total_paid: item.total_paid })) }), '40001');
+    await mutation('delete_product', { id: classification.id, revision: 5 });
+    assert.ok(!(await snapshot()).products.some(item => item.id === classification.id), 'products with no stock can be deleted');
+    await db.exec('reset role');
     await db.query('delete from auth.users where id=$1', [owner]);
     assert.equal((await db.query('select count(*)::int as n from public.inventory_purchases')).rows[0].n, 0, 'owner removal cascades inventory data');
-    process.stdout.write('Inventory PostgreSQL consolidation, legacy compatibility, lifecycle, snapshots, rollback, ownership, module overrides, role grants, and Finance linking passed.\n');
+    process.stdout.write('Inventory PostgreSQL consolidation, legacy compatibility, lifecycle, snapshots, rollback, ownership, module overrides, role grants, Finance linking and product deletion passed.\n');
 } finally { await db.close(); }

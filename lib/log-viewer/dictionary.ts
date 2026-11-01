@@ -37,6 +37,17 @@ const yesShopAliases: Readonly<Record<string, readonly string[]>> = {
   getCvpTopUpAndCvpTransferHistoryTransactionData: ['getCVPHistory'],
   getCvpTransferLoadData: ['cvpTransferLoadDetails'],
   getDealerOwnerStoreList: ['GetStoreList'],
+  getESimSerialNumber: ['GetESim'],
+  getUpdateSubscriberInfoContentData: ['updateSubscriberInfo'],
+  createPostpaidContentData: ['ProcessPostpaidAccountCreation'],
+  getSupplementaryPlanNameContentData: ['GetSupplementaryPlanDetails'],
+  'getQuick Sell PostpaidProductsByBranchContentData': ['GetQuickSellProducts'],
+  getLowCvpContentData: ['stockThresholdValidation'],
+  getAddSupplementaryUserDataByIdentificationNoContentData: ['GetEligiblePrimaryAccountDetails'],
+  createCustomerCode: ['createCustomer'],
+  createCustomer: ['createCustomer'],
+  AddSupplementaryLinesAccountCreationRequest: ['ProcessSupplementaryAccountCreation'],
+  getPlanList: ['getPlanList'],
 };
 
 const normalizedAliases = new Map(Object.entries(yesShopAliases)

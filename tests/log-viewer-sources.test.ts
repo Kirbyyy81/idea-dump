@@ -19,6 +19,19 @@ describe('updated Yes Shop normalization', () => {
     ['getCvpTopUpAndCvpTransferHistoryTransactionData', 'yesshop-admin/ws/v1/cvptopup/getCVPHistory'],
     ['getCvpTransferLoadData', 'yesshop-admin/ws/v1/cvptransfer/cvpTransferLoadDetails'],
     ['getDealerOwnerStoreList', 'yesshop-admin/ws/v1/GetStoreList'],
+    ['verifyCtosReport', 'yesshop/mobile/ws/v1/json/VerifyCTOSCredit'],
+    ['getPrepaidDeviceListPartNumber', 'yesshop/mobile/ws/v1/json/getDevicePartNos'],
+    ['Postpaid Registration', 'yesshop/mobile/ws/v1/json/ProcessPostpaidAccountConversion'],
+    ['getESimSerialNumber', 'yesshop/mobile/ws/v1/json/GetESim'],
+    ['createPostpaidContentData', 'yesshop/mobile/ws/v1/json/ProcessPostpaidAccountCreation'],
+    ['getSupplementaryPlanNameContentData', 'yesshop/mobile/ws/v1/json/GetSupplementaryPlanDetails'],
+    ['getQuick Sell PostpaidProductsByBranchContentData', 'yesshop/mobile/ws/v1/json/GetQuickSellProducts'],
+    ['getLowCvpContentData', 'yesshop-scm/ws/v1/dealer/sb/stockThresholdValidation'],
+    ['getAddSupplementaryUserDataByIdentificationNoContentData', 'yesshop/mobile/ws/v1/json/GetEligiblePrimaryAccountDetails'],
+    ['createCustomerCode', 'yesshop/mobile/ws/v1/json/createCustomer'],
+    ['createCustomer', 'yesshop/mobile/ws/v1/json/createCustomer'],
+    ['AddSupplementaryLinesAccountCreationRequest', 'yesshop/mobile/ws/v1/json/ProcessSupplementaryAccountCreation'],
+    ['getPlanList', 'yesshop/mobile/ws/v1/json/getPlanList'],
   ])('matches %s to the observed endpoint, including orphan responses', (name, path) => {
     const url = 'https://example.test/' + path;
     for (const withRequest of [true, false]) {
@@ -31,6 +44,18 @@ describe('updated Yes Shop normalization', () => {
       expect(result.transactions[0].orphanKind).toBe(withRequest ? null : 'response');
       expect(result.transactions[0].responses[0].source).toBe('yes-shop');
     }
+  });
+
+  it('matches eKYC-hosted updateSubscriberInfo content through surrounding yes-shop anchors', () => {
+    const result = build(log(`CONTENT DATA >> getIcScanConfigData >> {"configName":"SAMPLE"}`,
+      `REQUEST >>>>>>> ${yes('GetMaterConfig')} >>>>>> {"contentData":"encoded"}`,
+      'CONTENT DATA >> getUpdateSubscriberInfoContentData >> {"msisdn":"sample"}',
+      'REQUEST https://example.test/ekyc/ws/v1/json/updateSubscriberInfo {"contentData":"encoded"}',
+      'RESPONSE https://example.test/ekyc/ws/v1/json/updateSubscriberInfo {"responseCode":0}'));
+    expect(result.unmatchedContentData).toEqual([]);
+    const tx = result.transactions.find((item) => item.request?.path === '/ekyc/ws/v1/json/updateSubscriberInfo')!;
+    expect(tx.contentData?.functionName).toBe('getUpdateSubscriberInfoContentData');
+    expect(tx.contentMatch).toEqual({ method: 'dictionary', confidence: 'medium' });
   });
 
   it('does not classify a success message in responseStatus.errorMessage as failure', () => {

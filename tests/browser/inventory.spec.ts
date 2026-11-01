@@ -17,6 +17,14 @@ async function setup(page: Page, initial: InventoryData = structuredClone(invent
             const { variants, ...product } = command.payload; resultId = product.id;
             data.products = [...data.products.filter((item) => item.id !== product.id), { ...product, revision: product.revision + 1, created_at: '2026-10-05T00:00:00Z' }];
             data.variants = [...data.variants.filter((item) => item.product_id !== product.id), ...variants.map((variant) => ({ ...variant, product_id: product.id }))];
+        } else if (command.action === 'delete_product') {
+            resultId = command.payload.id;
+            const removedItems = new Set(data.purchases.filter(item => item.product_id === resultId).map(item => item.id));
+            const affectedReceipts = new Set(data.purchases.filter(item => removedItems.has(item.id)).map(item => item.receipt_id));
+            data.products = data.products.filter(product => product.id !== resultId);
+            data.variants = data.variants.filter(variant => variant.product_id !== resultId);
+            data.purchases = data.purchases.filter(item => !removedItems.has(item.id)).map(item => ({ ...item, revision: item.revision + Number(affectedReceipts.has(item.receipt_id)) }));
+            data.usages = data.usages.filter(usage => !removedItems.has(usage.purchase_id));
         } else if (command.action === 'start') {
             const batch = data.purchases.find((item) => item.id === command.payload.purchase_id)!;
             batch.unopened_units -= 1;
@@ -371,4 +379,95 @@ test('table exposes unit prices, pack breakdown and keyboard actions without pag
     await page.keyboard.press('Escape');
     await expect(trigger).toBeFocused();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
+
+test('product More menu requires confirmation, supports cancellation and deletes its Inventory history', async ({ page }, info) => {
+    const { commands } = await setup(page);
+    const row = page.getByRole('row', { name: 'Dove Shampoo', exact: true });
+    const more = row.getByRole('button', { name: 'Dove Shampoo actions', exact: true });
+    await more.focus();
+    await page.keyboard.press('ArrowUp');
+    await expect(page.getByRole('menuitem', { name: 'Delete product', exact: true })).toBeFocused();
+    await page.keyboard.press('Enter');
+    const confirmation = page.getByRole('alertdialog', { name: 'Delete Dove Shampoo?', exact: true });
+    await expect(confirmation).toContainText('Linked Finance transactions and other products in the same purchase are kept.');
+    await expect(confirmation.getByRole('button', { name: 'Cancel', exact: true })).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(confirmation).toHaveCount(0);
+    await expect(more).toBeFocused();
+    expect(commands).toHaveLength(0);
+    await more.click();
+    await page.getByRole('menuitem', { name: 'Delete product', exact: true }).click();
+    await confirmation.screenshot({ path: info.outputPath('delete-product-confirmation.png') });
+    await confirmation.getByRole('button', { name: 'Delete product', exact: true }).click();
+    await expect(confirmation).toHaveCount(0);
+    await expect(row).toHaveCount(0);
+    await expect(page.getByRole('row', { name: 'Tissues', exact: true })).toBeVisible();
+    await expect(page.getByRole('status')).toHaveText('Product deleted.');
+    await expect(page.getByRole('button', { name: 'Add product', exact: true })).toBeFocused();
+    expect(commands).toEqual([{ action: 'delete_product', payload: { id: id.shampoo, revision: 1 } }]);
+    await page.goto('/inventory/purchases');
+    await expect(page.getByText(/^Dove Shampoo ·/)).toHaveCount(0);
+    await expect(page.getByText('Tissues · Five boxes', { exact: true })).toBeVisible();
+    await page.goto('/inventory/usage');
+    await expect(page.getByText('No usage recorded yet.', { exact: true })).toBeVisible();
+    await expect(page.getByText(/^Dove Shampoo ·/)).toHaveCount(0);
+});
+
+test('failed product deletion keeps the confirmation and product available for retry', async ({ page }) => {
+    const state = await setup(page);
+    await page.getByRole('button', { name: 'Dove Shampoo actions', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Delete product', exact: true }).click();
+    state.failNext();
+    const confirmation = page.getByRole('alertdialog');
+    await confirmation.getByRole('button', { name: 'Delete product', exact: true }).click();
+    await expect(page.getByRole('alert')).toContainText('Temporary failure');
+    await expect(confirmation).toBeVisible();
+    await expect(page.getByRole('row', { name: 'Dove Shampoo', exact: true })).toHaveCount(1);
+    await confirmation.getByRole('button', { name: 'Delete product', exact: true }).click();
+    await expect(confirmation).toHaveCount(0);
+    await expect(page.getByRole('row', { name: 'Dove Shampoo', exact: true })).toHaveCount(0);
+    expect(state.commands).toHaveLength(2);
+});
+
+test('successful deletion stays removed when the inventory refresh fails', async ({ page }) => {
+    const state = await setup(page);
+    let deleted = false;
+    await page.route('**/api/inventory', async route => {
+        if (route.request().method() === 'POST') { deleted = true; await route.fallback(); }
+        else if (deleted) await route.fulfill({ status: 503, json: { error: 'Refresh unavailable' } });
+        else await route.fallback();
+    });
+    await page.getByRole('button', { name: 'Dove Shampoo actions', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Delete product', exact: true }).click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Delete product', exact: true }).click();
+    await expect(page.getByRole('alertdialog')).toHaveCount(0);
+    await expect(page.getByRole('alert')).toContainText('Deleted successfully, but the latest stock could not load.');
+    await expect(page.getByRole('row', { name: 'Dove Shampoo', exact: true })).toHaveCount(0);
+    expect(state.commands).toHaveLength(1);
+});
+
+
+test('product deletion blocks repeated submissions and dismissal while pending', async ({ page }) => {
+    const state = await setup(page);
+    let release!: () => void;
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    let requests = 0;
+    await page.route('**/api/inventory', async route => {
+        if (route.request().method() === 'POST') { requests++; await gate; }
+        await route.fallback();
+    });
+    await page.getByRole('button', { name: 'Dove Shampoo actions', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Delete product', exact: true }).click();
+    const confirmation = page.getByRole('alertdialog');
+    await confirmation.getByRole('button', { name: 'Delete product', exact: true }).evaluate((button: HTMLButtonElement) => { button.click(); button.click(); });
+    await expect.poll(() => requests).toBe(1);
+    await expect(confirmation.getByRole('button', { name: 'Cancel', exact: true })).toBeDisabled();
+    await page.keyboard.press('Escape');
+    await expect(confirmation).toBeVisible();
+    release();
+    await expect(confirmation).toHaveCount(0);
+    await expect(page.getByRole('row', { name: 'Dove Shampoo', exact: true })).toHaveCount(0);
+    expect(state.commands).toHaveLength(1);
 });
