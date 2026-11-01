@@ -73,14 +73,16 @@ function FilmCoverFallback({
     if (labelImage) {
         return (
             <div className="relative h-full w-full bg-bg-subtle">
-                <Image
-                    src={labelImage}
-                    alt={`${roll.brand} ${roll.film_name} label`}
-                    fill
-                    sizes="92px"
-                    unoptimized
-                    className="object-contain"
-                />
+                <div className="absolute left-1/2 top-1/2 h-[92px] w-[183px] -translate-x-1/2 -translate-y-1/2 rotate-90">
+                    <Image
+                        src={labelImage}
+                        alt={`${roll.brand} ${roll.film_name} label`}
+                        fill
+                        sizes="183px"
+                        unoptimized
+                        className="object-fill"
+                    />
+                </div>
             </div>
         );
     }
