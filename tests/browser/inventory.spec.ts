@@ -17,6 +17,12 @@ async function setup(page: Page, initial: InventoryData = structuredClone(invent
             const { variants, ...product } = command.payload; resultId = product.id;
             data.products = [...data.products.filter((item) => item.id !== product.id), { ...product, revision: product.revision + 1, created_at: '2026-10-05T00:00:00Z' }];
             data.variants = [...data.variants.filter((item) => item.product_id !== product.id), ...variants.map((variant) => ({ ...variant, product_id: product.id }))];
+            // Mirror the server's inventory_ensure_taxonomy behaviour.
+            let categoryRow = data.categories.find((item) => item.name.toLowerCase() === product.category.trim().toLowerCase());
+            if (!categoryRow) { categoryRow = { id: crypto.randomUUID(), name: product.category.trim(), is_archived: false }; data.categories.push(categoryRow); }
+            if (product.subcategory?.trim() && !data.subcategories.some((item) => item.category_id === categoryRow.id && item.name.toLowerCase() === product.subcategory!.trim().toLowerCase())) {
+                data.subcategories.push({ id: crypto.randomUUID(), category_id: categoryRow.id, name: product.subcategory.trim(), is_archived: false });
+            }
         } else if (command.action === 'delete_product') {
             resultId = command.payload.id;
             const removedItems = new Set(data.purchases.filter(item => item.product_id === resultId).map(item => item.id));
@@ -52,20 +58,24 @@ async function setup(page: Page, initial: InventoryData = structuredClone(invent
     });
     await page.route('**/api/inventory/expenses?*', (route) => route.fulfill({ json: { data: { expenses: [{ id: id.purchase, merchant: 'Essentials shop', amount: 180, transaction_date: '2026-10-01', currency: 'MYR' }], total: 1, page: 1 } } }));
     await page.goto('/inventory');
+    await page.getByRole('button', { name: 'Table view', exact: true }).click();
     return { commands, failNext: () => { failNext = true; } };
 }
-async function choose(page: Page, label: string, option: string, inDialog = false) {
+async function choose(page: Page, label: string | RegExp, option: string, inDialog = false) {
     const scope = inDialog ? page.getByRole('dialog') : page;
-    await scope.getByRole('combobox', { name: label, exact: true }).click();
+    await scope.getByRole('combobox', { name: label }).first().click();
     await page.getByRole('option', { name: option, exact: true }).click();
 }
 test('shelf totals, breakdown, estimate, and read-only price comparison', async ({ page }, info) => {
     const { commands } = await setup(page);
+    await page.getByRole('button', { name: 'Table view', exact: true }).click();
     const shampoo = page.getByRole('row', { name: 'Dove Shampoo' });
     await expect(shampoo.getByText('1,250 ml', { exact: true })).toBeVisible();
     await expect(shampoo.getByText('1 in use', { exact: true })).toBeVisible();
-    await expect(shampoo.getByText('Approximately 100 days')).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'Stock lasts (approx.)', exact: true })).toBeVisible();
+    await expect(shampoo.getByText('100 days', { exact: true })).toBeVisible();
     await expect(page.getByRole('row', { name: 'Tissues' }).getByText('10 boxes')).toBeVisible();
+    await expect(shampoo.getByText('Dove', { exact: true })).toBeVisible();
     await shampoo.getByRole('button', { name: /View breakdown/ }).click();
     const dialog = page.getByRole('dialog', { name: 'Dove Shampoo', exact: true });
     await expect(dialog.getByText('2 unopened · 1 in use')).toBeVisible();
@@ -238,6 +248,7 @@ test('subcategories can be added, reused, filtered, and cleared', async ({ page 
     await expect(page.getByRole('row', { name: 'Tissues' })).toBeVisible();
     await page.getByRole('button', { name: 'Add product', exact: true }).click();
     await choose(page, 'Subcategory', 'Conditioner', true);
+    await choose(page, 'Category', 'Add category', true);
     await page.getByRole('dialog').getByRole('textbox', { name: /^Category/ }).fill('Skin Care');
     await expect(page.getByRole('dialog').getByRole('combobox', { name: 'Subcategory', exact: true })).toHaveText('None');
     await page.getByRole('dialog').getByRole('combobox', { name: 'Subcategory', exact: true }).click();
@@ -404,7 +415,7 @@ test('product More menu requires confirmation, supports cancellation and deletes
     await expect(confirmation).toHaveCount(0);
     await expect(row).toHaveCount(0);
     await expect(page.getByRole('row', { name: 'Tissues', exact: true })).toBeVisible();
-    await expect(page.getByRole('status')).toHaveText('Product deleted.');
+    await expect(page.getByRole('alert')).toHaveText('Product deleted.');
     await expect(page.getByRole('button', { name: 'Add product', exact: true })).toBeFocused();
     expect(commands).toEqual([{ action: 'delete_product', payload: { id: id.shampoo, revision: 1 } }]);
     await page.goto('/inventory/purchases');
