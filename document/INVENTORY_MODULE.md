@@ -8,7 +8,9 @@ Create a product with a required category, optional subcategory, and size or pac
 
 **Existing stock** allows unknown purchase dates and prices and individual items already in use, with an optional usage start date. Two five-box tissue packs become ten usable boxes. Opening the outer packaging is not a usage event.
 
-Subcategory choices come from products in the selected category. Choose **Add subcategory** to type a new name in the same field, which receives focus without adding a form row. The arrow returns to the existing choices while retaining the typed name. Choose **None** to leave it blank. Changing category clears the subcategory. The shelf category filter enables a matching subcategory filter; changing the filter category resets that filter. Existing products keep their categories and initially have no subcategory.
+Category and subcategory choices come from shared reference lists, not from other products. Choose **Add category** or **Add subcategory** to type a new name in the same field, which receives focus without adding a form row. The arrow returns to the existing choices while retaining the typed name. Choose **None** to leave the subcategory blank. Changing category clears the subcategory. Names typed into the form are remembered in the reference lists, so the next product and the shelf filters can reuse them. Archived reference entries disappear from the dropdowns but remain on existing products. The shelf category filter enables a matching subcategory filter; changing the filter category resets that filter.
+
+The shelf renders two layouts. The default **Shelf** view groups product cards under category headings, with add-stock and start-using actions directly on each card. The **Table** view keeps the product table with a dedicated Brand column. The chosen layout is remembered in the browser.
 
 **My Shelf** shows unopened quantities and a separate in-use count. Hover over a quantity for a brief breakdown, or activate it by touch or keyboard for product details. Product details include purchased items, prices and usage records. Products remain in the catalogue at zero stock.
 

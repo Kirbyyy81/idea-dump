@@ -1,6 +1,6 @@
 'use client';
 import { useMemo, useRef, useState } from 'react';
-import { Package, Plus } from 'lucide-react';
+import { LayoutGrid, List, Package, Plus } from 'lucide-react';
 import { AppShell } from '@/components/organisms/AppShell';
 import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
@@ -26,16 +26,66 @@ import { panelClass } from './fields';
 type Dialog = { type: 'product'; id?: string } | { type: 'cart'; productId?: string } | { type: 'detail'; id: string }
     | { type: 'delete_product'; product: InventoryProduct }
     | { type: 'stock'; choice: StockActionChoice } | { type: 'finance' | 'edit_purchase'; purchase: InventoryReceipt; expense?: InventoryExpense };
+type ShelfLayout = 'shelf' | 'table';
+const LAYOUT_KEY = 'inventory-shelf-layout';
+function initialLayout(): ShelfLayout {
+    if (typeof window === 'undefined') return 'shelf';
+    return window.localStorage.getItem(LAYOUT_KEY) === 'table' ? 'table' : 'shelf';
+}
+function LayoutToggle({ layout, onChange }: { layout: ShelfLayout; onChange: (layout: ShelfLayout) => void }) {
+    const option = (value: ShelfLayout, label: string, Icon: typeof List) => (
+        <button type="button" key={value} aria-pressed={layout === value} aria-label={`${label} view`} onClick={() => onChange(value)}
+            className={`grid size-9 place-items-center rounded-md transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-border-strong ${layout === value ? 'bg-bg-surface text-text-primary shadow-subtle' : 'text-text-secondary hover:text-text-primary'}`}>
+            <Icon size={16} aria-hidden="true" /><span className="sr-only">{label} view</span>
+        </button>
+    );
+    return <div role="group" aria-label="Shelf layout" className="flex items-center gap-1 rounded-lg border border-border-default bg-bg-subtle p-1">
+        {option('shelf', 'Shelf', LayoutGrid)}{option('table', 'Table', List)}
+    </div>;
+}
+function ShelfCard({ product, data, onOpen, onAddStock, onStartUsing, onEdit, onDelete }: {
+    product: InventoryProduct; data: InventoryData; onOpen: () => void; onAddStock: () => void;
+    onStartUsing: () => void; onEdit: () => void; onDelete: () => void;
+}) {
+    const stock = productStock(data, product.id);
+    return <div className={`${panelClass} flex min-w-44 flex-1 basis-44 flex-col gap-2`}>
+        <button type="button" onClick={onOpen} className="break-words text-left font-bold underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-border-strong">{product.name}</button>
+        {product.brand && <p className="text-xs text-text-secondary">{product.brand}</p>}
+        <StockSummary data={data} product={product} onOpen={onOpen} />
+        <UnitPrice data={data} product={product} />
+        <p className="text-sm text-text-secondary">{stock.estimate.days === null ? 'No estimate yet' : `${stock.estimate.days} days`}</p>
+        <div className="mt-auto flex flex-wrap items-center gap-2 pt-1">
+            <Button type="button" variant="secondary" onClick={onAddStock}>Add stock</Button>
+            <Button type="button" variant="ghost" disabled={!stock.units} onClick={onStartUsing}>Start using</Button>
+            <ActionMenu portal label={`${product.name} actions`} items={[
+                { label: 'Edit product', onSelect: onEdit },
+                { label: 'Delete product', onSelect: onDelete },
+            ]} />
+        </div>
+    </div>;
+}
 export function InventoryClient({ initialData, canLinkFinance, view = 'shelf' }: { initialData: InventoryData; canLinkFinance: boolean; view?: 'shelf' | 'purchases' | 'usage' }) {
     const [data, setData] = useState(initialData);
     const addProductRef = useRef<HTMLButtonElement>(null);
     const [search, setSearch] = useState(''); const [category, setCategory] = useState(''); const [subcategory, setSubcategory] = useState('');
     const [dialog, setDialog] = useState<Dialog | null>(null);
+    const [layout, setLayout] = useState<ShelfLayout>(initialLayout);
     const [notice, setNotice] = useState<{ id: string; message: string; variant: 'success' | 'error' } | null>(null);
-    const categories = useMemo(() => [...new Set(data.products.map((product) => product.category))].sort(), [data.products]);
-    const subcategories = useMemo(() => [...new Set(data.products.filter((product) => product.category === category)
-        .map((product) => product.subcategory).filter((value): value is string => Boolean(value)))].sort(), [data.products, category]);
-    const products = data.products.filter((product) => (!category || product.category === category) && (!subcategory || product.subcategory === subcategory) && `${product.name} ${product.brand ?? ''}`.toLowerCase().includes(search.toLowerCase()));
+    const activeCategories = useMemo(() => data.categories.filter((item) => !item.is_archived), [data.categories]);
+    const activeSubcategories = useMemo(() => data.subcategories.filter((item) => !item.is_archived), [data.subcategories]);
+    const subcategories = useMemo(() => activeSubcategories.filter((item) => {
+        const parent = data.categories.find((categoryItem) => categoryItem.id === item.category_id);
+        return parent && parent.name.toLowerCase() === category.trim().toLowerCase();
+    }).map((item) => item.name), [activeSubcategories, data.categories, category]);
+    const products = data.products.filter((product) => (!category || product.category.trim().toLowerCase() === category.trim().toLowerCase()) && (!subcategory || product.subcategory === subcategory) && `${product.name} ${product.brand ?? ''}`.toLowerCase().includes(search.toLowerCase()));
+    const grouped = useMemo(() => {
+        const groups = new Map<string, InventoryProduct[]>();
+        for (const product of products) {
+            const key = product.category.trim() || 'Uncategorised';
+            groups.set(key, [...(groups.get(key) ?? []), product]);
+        }
+        return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b));
+    }, [products]);
     const detail = dialog?.type === 'detail' ? data.products.find((product) => product.id === dialog.id) : null;
     async function save(mutation: InventoryMutation) {
         setNotice(null);
@@ -48,12 +98,16 @@ export function InventoryClient({ initialData, canLinkFinance, view = 'shelf' }:
                     variants: current.variants.filter(variant => variant.product_id !== mutation.payload.id),
                     purchases: current.purchases.filter(item => !removedItems.has(item.id)),
                     usages: current.usages.filter(usage => !removedItems.has(usage.purchase_id)),
+                    categories: current.categories,
+                    subcategories: current.subcategories,
                 };
             });
         }
         try {
             setData(await inventoryRequest<InventoryData>('/api/inventory'));
-            setNotice({ id: crypto.randomUUID(), variant: 'success', message: mutation.action === 'delete_product' ? 'Product deleted.' : mutation.action === 'receive' ? 'Stock added to your shelf.' : 'Changes saved.' });
+            // Deletion is a destructive action, so its confirmation toast uses
+            // the warning (error) styling instead of the success styling.
+            setNotice({ id: crypto.randomUUID(), variant: mutation.action === 'delete_product' ? 'error' : 'success', message: mutation.action === 'delete_product' ? 'Product deleted.' : mutation.action === 'receive' ? 'Stock added to your shelf.' : 'Changes saved.' });
         } catch {
             setNotice({ id: crypto.randomUUID(), variant: 'error', message: `${mutation.action === 'delete_product' ? 'Deleted' : 'Saved'} successfully, but the latest stock could not load. Reload the page before making another change.` });
         }
@@ -66,22 +120,30 @@ export function InventoryClient({ initialData, canLinkFinance, view = 'shelf' }:
         <div className="space-y-5">
             {view === 'shelf' && <>
                 <div className="flex flex-wrap items-end gap-3"><Input label="Search products" value={search} onValueChange={setSearch} containerClassName="min-w-0 flex-1 basis-52" />
-                    <Select label="Category" value={category} onChange={(value) => { setCategory(value); setSubcategory(''); }} options={[{ value: '', label: 'All categories' }, ...categories.map((item) => ({ value: item, label: item }))]} className="w-full sm:w-48" />
+                    <Select label="Category" value={category} onChange={(value) => { setCategory(value); setSubcategory(''); }} options={[{ value: '', label: 'All categories' }, ...activeCategories.map((item) => ({ value: item.name, label: item.name }))]} className="w-full sm:w-48" />
                     <Select label="Subcategory" value={subcategory} onChange={setSubcategory} disabled={!category} options={[{ value: '', label: 'All subcategories' }, ...subcategories.map((value) => ({ value, label: value }))]} className="w-full sm:w-48" />
-                    <Button ref={addProductRef} variant="secondary" onClick={() => setDialog({ type: 'product' })}>Add product</Button></div>
+                    <Button ref={addProductRef} variant="secondary" onClick={() => setDialog({ type: 'product' })}>Add product</Button>
+                    <LayoutToggle layout={layout} onChange={(next) => { setLayout(next); window.localStorage.setItem(LAYOUT_KEY, next); }} /></div>
                 {!products.length && <div className={`${panelClass} flex flex-col items-center gap-3 py-12`}><Package size={30} aria-hidden="true" /><h2 className="text-lg font-bold">{data.products.length ? 'No matching products' : 'Your shelf is ready'}</h2>
                     {!data.products.length && <Button onClick={() => setDialog({ type: 'product' })}>Create your first product</Button>}</div>}
-                {products.length > 0 && <div role="region" aria-label="Inventory table" tabIndex={0} className="relative overflow-x-auto rounded-lg border border-border-default bg-bg-surface">
-                    <table className="w-full min-w-[44rem] table-fixed text-left text-sm">
-                        <colgroup><col className="w-40 sm:w-64" /><col className="w-32" /><col className="w-48" /><col className="w-36" /><col className="w-16" /></colgroup>
-                        <thead className="border-b border-border-default bg-bg-subtle"><tr>{['Product', 'Stock', 'Unit price', 'Stock lasts', 'Actions'].map((label) => <th key={label} scope="col" className="px-3 py-3 font-semibold">{label === 'Actions' ? <span className="sr-only">Actions</span> : label}</th>)}</tr></thead>
+                {products.length > 0 && layout === 'shelf' && <div role="region" aria-label="Inventory shelf" className="space-y-6">
+                    {grouped.map(([categoryName, groupProducts]) => <section key={categoryName} aria-label={`${categoryName} shelf`} className="space-y-3">
+                        <h2 className="text-base font-bold">{categoryName}</h2>
+                        <div className="flex flex-wrap gap-3">{groupProducts.map((product) => <ShelfCard key={product.id} product={product} data={data} onOpen={() => setDialog({ type: 'detail', id: product.id })} onAddStock={() => setDialog({ type: 'cart', productId: product.id })} onStartUsing={() => action({ action: 'start', productId: product.id })} onEdit={() => setDialog({ type: 'product', id: product.id })} onDelete={() => setDialog({ type: 'delete_product', product })} />)}</div>
+                    </section>)}
+                </div>}
+                {products.length > 0 && layout === 'table' && <div role="region" aria-label="Inventory table" tabIndex={0} className="relative overflow-x-auto rounded-lg border border-border-default bg-bg-surface">
+                    <table className="w-full min-w-[46rem] table-fixed text-left text-sm">
+                        <colgroup><col className="w-40 sm:w-56" /><col className="w-28 sm:w-36" /><col className="w-28" /><col className="w-40" /><col className="w-32" /><col className="w-16" /></colgroup>
+                        <thead className="border-b border-border-default bg-bg-subtle"><tr>{['Product', 'Brand', 'Stock', 'Unit price', 'Stock lasts (approx.)', 'Actions'].map((label) => <th key={label} scope="col" className="px-3 py-3 font-semibold">{label === 'Actions' ? <span className="sr-only">Actions</span> : label}</th>)}</tr></thead>
                         <tbody className="divide-y divide-border-default">{products.map((product) => {
                             const stock = productStock(data, product.id);
                             return <tr key={product.id} aria-label={product.name} className="align-top">
-                                <th scope="row" className="px-3 py-4 font-normal"><button type="button" onClick={() => setDialog({ type: 'detail', id: product.id })} className="break-words text-left font-bold underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-border-strong">{product.name}</button><p className="mt-1 text-xs text-text-secondary">{[product.brand, product.category, product.subcategory].filter(Boolean).join(' · ')}</p></th>
+                                <th scope="row" className="px-3 py-4 font-normal"><button type="button" onClick={() => setDialog({ type: 'detail', id: product.id })} className="break-words text-left font-bold underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-border-strong">{product.name}</button><p className="mt-1 text-xs text-text-secondary">{[product.category, product.subcategory].filter(Boolean).join(' · ')}</p></th>
+                                <td className="px-3 py-4 text-text-secondary">{product.brand ?? ''}</td>
                                 <td className="px-3 py-4"><StockSummary data={data} product={product} onOpen={() => setDialog({ type: 'detail', id: product.id })} /></td>
                                 <td className="px-3 py-4"><UnitPrice data={data} product={product} /></td>
-                                <td className="px-3 py-4 text-text-secondary">{stock.estimate.days === null ? 'No estimate yet' : `Approximately ${stock.estimate.days} days`}</td>
+                                <td className="px-3 py-4 text-text-secondary">{stock.estimate.days === null ? 'No estimate yet' : `${stock.estimate.days} days`}</td>
                                 <td className="px-2 py-3"><ActionMenu portal label={`${product.name} actions`} items={[
                                     { label: 'Add stock', onSelect: () => setDialog({ type: 'cart', productId: product.id }) },
                                     { label: 'Start using', disabled: !stock.units, onSelect: () => action({ action: 'start', productId: product.id }) },

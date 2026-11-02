@@ -15,11 +15,15 @@ export function ProductForm({ data, productId, save, onSaved, onCancel }: {
     const original = data.products.find((product) => product.id === productId);
     const [product, setProduct] = useState<InventoryProductInput>(() => original
         ? { ...original, variants: data.variants.filter((variant) => variant.product_id === original.id) }
-        : { id: crypto.randomUUID(), revision: 0, name: '', brand: null, category: 'Hair Care', subcategory: null, unit: 'ml', item_label: 'bottles', variants: [newVariant()] });
+        : { id: crypto.randomUUID(), revision: 0, name: '', brand: null, category: data.categories.find((item) => !item.is_archived)?.name ?? '', subcategory: null, unit: 'ml', item_label: 'bottles', variants: [newVariant()] });
+    const categoryId = useId();
     const subcategoryId = useId();
+    const [addingCategory, setAddingCategory] = useState(false);
     const [addingSubcategory, setAddingSubcategory] = useState(false);
-    const subcategories = [...new Set([...data.products.filter((item) => item.category.trim().toLowerCase() === product.category.trim().toLowerCase())
-        .map((item) => item.subcategory), product.subcategory?.trim()].filter((value): value is string => Boolean(value)))].sort();
+    const activeCategories = data.categories.filter((item) => !item.is_archived);
+    const subcategories = [...new Set(data.subcategories.filter((item) => !item.is_archived
+        && data.categories.find((categoryItem) => categoryItem.id === item.category_id)?.name.trim().toLowerCase() === product.category.trim().toLowerCase())
+        .map((item) => item.name).concat(product.subcategory?.trim() ?? []))].sort();
     const { busy, error, run } = useInventoryAction(save);
     const unitFixed = data.purchases.some((item) => item.product_id === product.id);
     const editVariant = (id: string, change: Partial<InventoryVariantInput>) => setProduct((current) => ({ ...current, variants: current.variants.map((variant) => variant.id === id ? { ...variant, ...change } : variant) }));
@@ -29,7 +33,15 @@ export function ProductForm({ data, productId, save, onSaved, onCancel }: {
             <div className="grid gap-4 sm:grid-cols-2">
                 <Input label="Product name" value={product.name} maxLength={120} onValueChange={(name) => setProduct({ ...product, name })} required />
                 <Input label="Brand" value={product.brand ?? ''} maxLength={120} onValueChange={(brand) => setProduct({ ...product, brand: brand || null })} />
-                <Input label="Category" value={product.category} maxLength={60} onValueChange={(category) => { setProduct({ ...product, category, subcategory: null }); setAddingSubcategory(false); }} required />
+                {addingCategory ? <div className="relative">
+                    <Input id={categoryId} label="Category" autoFocus value={product.category} maxLength={60} className="pr-12"
+                        onValueChange={(category) => { setProduct({ ...product, category, subcategory: null }); setAddingSubcategory(false); }} required />
+                    <button type="button" aria-label="Choose existing category" title="Choose existing category"
+                        className="absolute bottom-0 right-0 grid size-10 place-items-center rounded-md text-text-secondary hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-border-strong"
+                        onClick={() => { setProduct({ ...product, category: product.category.trim() }); setAddingCategory(false); requestAnimationFrame(() => document.getElementById(categoryId)?.blur()); }}><ChevronDown size={16} aria-hidden="true" /></button>
+                </div> : <Select id={categoryId} label="Category" value={activeCategories.some((item) => item.name === product.category) ? product.category : ''}
+                    options={[...activeCategories.map((item) => ({ value: item.name, label: item.name })), { value: '__new__', label: 'Add category' }]}
+                    onChange={(value) => { if (value === '__new__') { setAddingCategory(true); } else { setAddingCategory(false); setProduct({ ...product, category: value, subcategory: null }); setAddingSubcategory(false); } }} required />}
                 {addingSubcategory ? <div className="relative">
                     <Input id={subcategoryId} label="Subcategory" autoFocus value={product.subcategory ?? ''} maxLength={60} className="pr-12"
                         onValueChange={(subcategory) => setProduct({ ...product, subcategory: subcategory || null })} />

@@ -1560,11 +1560,16 @@ export interface InventoryUsage {
     revision: number;
     created_at: string;
 }
+// Shared inventory taxonomy. Category rows are module-wide, not per user.
+export interface InventoryCategory { id: string; name: string; is_archived: boolean; }
+export interface InventorySubcategory { id: string; category_id: string; name: string; is_archived: boolean; }
 export interface InventoryData {
     products: InventoryProduct[];
     variants: InventoryVariant[];
     purchases: InventoryPurchase[];
     usages: InventoryUsage[];
+    categories: InventoryCategory[];
+    subcategories: InventorySubcategory[];
 }
 export interface InventoryReceiptLine {
     variant_id: string;
