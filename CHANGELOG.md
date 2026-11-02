@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.19.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.18.7...idea-dump-v0.19.0) (2026-11-02)
+
+
+### Features
+
+* expose inventory taxonomy in the read payload ([905952f](https://github.com/Kirbyyy81/idea-dump/commit/905952f9132278a1973d825ea453c848a44d128c))
+* inventory category picker with inline creation ([1980c7b](https://github.com/Kirbyyy81/idea-dump/commit/1980c7b24432f72a84c9ae258d9ba0cd9b7d07ad))
+* shared inventory category and subcategory dimensions ([5f1bfab](https://github.com/Kirbyyy81/idea-dump/commit/5f1bfab625ffd043005e25e4be9b44ef83cc47d4))
+* shelf card layout with table toggle and brand column ([d1cf678](https://github.com/Kirbyyy81/idea-dump/commit/d1cf678265b4549e9bad022e6cc4730d37d9f8ca))
+
+
+### Bug Fixes
+
+* resolve minimatch audit failures ([e3156e9](https://github.com/Kirbyyy81/idea-dump/commit/e3156e918adf1e8bce13983804dd63da3f52e901))
+
 ## [0.18.7](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.18.6...idea-dump-v0.18.7) (2026-11-01)
 
 
