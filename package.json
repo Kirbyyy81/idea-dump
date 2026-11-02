@@ -69,6 +69,7 @@
     "eslint": "^8.56.0",
     "eslint-config-next": "15.5.28",
     "jsdom": "^27.4.0",
+    "minimatch": "file:vendor/minimatch",
     "postcss": "8.5.26",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.3.3",
@@ -81,6 +82,10 @@
     },
     "ws": "8.21.3",
     "braces": "$braces",
+    "minimatch": "$minimatch",
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "11.0.1"
+    },
     "source-map-js": "1.2.2",
     "postcss-selector-parser": "7.1.6",
     "katex": "0.18.2",
