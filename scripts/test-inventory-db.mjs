@@ -89,6 +89,7 @@ try {
     await db.exec('rollback');
     await db.exec(consolidation);
     await db.exec(await file('supabase/migrations/20261028063403_inventory_product_deletion.sql'));
+    await db.exec(await file('supabase/migrations/20261102090000_inventory_category_dimensions.sql'));
     assert.deepEqual(await snapshot(upgradeOwner), beforeMerge, 'deployed clients retain the same receipt and stock response after consolidation');
     assert.deepEqual((await db.query("select proname,proacl,proconfig,prosecdef,proowner from pg_proc where proname in ('inventory_read','inventory_mutate') order by proname")).rows, contractBefore, 'consolidation preserves existing RPC permissions');
     const merged = (await db.query('select public.inventory_read_items($1) as data', [upgradeOwner])).rows[0].data;
@@ -317,5 +318,22 @@ try {
     await db.exec('reset role');
     await db.query('delete from auth.users where id=$1', [owner]);
     assert.equal((await db.query('select count(*)::int as n from public.inventory_purchases')).rows[0].n, 0, 'owner removal cascades inventory data');
-    process.stdout.write('Inventory PostgreSQL consolidation, legacy compatibility, lifecycle, snapshots, rollback, ownership, module overrides, role grants, Finance linking and product deletion passed.\n');
+    // Shared taxonomy: seeded from products, extended by save_product, case-insensitive.
+    const taxonomy = (await db.query("select name, is_archived from public.dim_inventory_categories order by lower(name)")).rows;
+    assert.ok(taxonomy.some((row) => row.name === 'Fixture'), 'existing product categories are seeded');
+    await db.exec('set role anon');
+    await rejects(() => db.query('select * from public.dim_inventory_categories'), '42501');
+    await db.exec('reset role');
+    await db.query("select public.inventory_ensure_taxonomy('Bath & Body','Body Wash')");
+    await db.query("select public.inventory_ensure_taxonomy('  bath & body ','  Loofah ')");
+    const deduped = (await db.query("select count(*)::int as n from public.dim_inventory_categories where lower(btrim(name))='bath & body'")).rows[0].n;
+    assert.equal(deduped, 1, 'taxonomy insert is case-insensitively unique');
+    const subcategoryRows = (await db.query("select s.name from public.dim_inventory_subcategories s join public.dim_inventory_categories c on c.id=s.category_id where lower(c.name)='bath & body' order by lower(s.name)")).rows;
+    assert.deepEqual(subcategoryRows.map((row) => row.name), ['Body Wash', 'Loofah'], 'subcategories attach to their case-insensitive category');
+    const seededRead = (await db.query("select public.inventory_read_items($1) as data", [owner])).rows[0].data;
+    assert.ok(Array.isArray(seededRead.categories) && seededRead.categories.some((item) => item.name === 'Bath & Body'), 'read contract exposes the taxonomy');
+    assert.ok(Array.isArray(seededRead.subcategories));
+    const legacyRead = (await db.query("select public.inventory_read($1) as data", [owner])).rows[0].data;
+    assert.ok(!('categories' in legacyRead), 'legacy projection keeps its previous shape');
+    process.stdout.write('Inventory PostgreSQL consolidation, legacy compatibility, lifecycle, snapshots, rollback, ownership, module overrides, role grants, Finance linking, product deletion and category dimensions passed.\n');
 } finally { await db.close(); }
