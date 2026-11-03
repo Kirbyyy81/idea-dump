@@ -3,12 +3,16 @@
 import Link from 'next/link';
 import { getFilmPhotoThumbnailUrl } from '@/lib/film/core/client';
 import { getFilmLabelImageForRoll } from '@/lib/film/catalog';
+import labelArtwork from '@/lib/film/labelArtwork.json';
 import Image from 'next/image';
 import type { FilmRollSummary as FilmRoll } from '@/lib/types';
 import { formatCurrencyMYR } from '@/lib/utils';
 
 export const FILM_ROLL_WIDTH = 128;
 export const FILM_ROLL_EXPANDED_WIDTH = 270;
+
+// Artwork bounds within each 200px catalogue image, excluding its white canvas.
+const LABEL_ARTWORK_BOUNDS: Record<string, number[]> = labelArtwork;
 
 interface FilmCanisterProps {
     roll: FilmRoll;
@@ -71,16 +75,23 @@ function FilmCoverFallback({
 }) {
     const labelImage = getFilmLabelImageForRoll(roll.brand, roll.film_name);
     if (labelImage) {
+        const [left, top, width, height] = LABEL_ARTWORK_BOUNDS[labelImage] ?? [0, 0, 200, 200];
         return (
             <div className="relative h-full w-full bg-bg-subtle">
-                <div className="absolute left-1/2 top-1/2 h-[92px] w-[183px] -translate-x-1/2 -translate-y-1/2 rotate-90">
+                <div className="absolute left-1/2 top-1/2 h-[92px] w-[183px] -translate-x-1/2 -translate-y-1/2 rotate-90 overflow-hidden">
                     <Image
                         src={labelImage}
                         alt={`${roll.brand} ${roll.film_name} label`}
                         fill
-                        sizes="183px"
+                        sizes={`${Math.ceil(183 * 200 / width)}px`}
                         unoptimized
-                        className="object-fill"
+                        className="max-w-none object-fill"
+                        style={{
+                            left: `${-left / width * 100}%`,
+                            top: `${-top / height * 100}%`,
+                            width: `${200 / width * 100}%`,
+                            height: `${200 / height * 100}%`,
+                        }}
                     />
                 </div>
             </div>
