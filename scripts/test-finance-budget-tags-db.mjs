@@ -21,6 +21,10 @@ try {
     const frozenAfter = (await db.query(`select to_jsonb(c) row from public.finance_budget_cycles c where user_id='${upgradeOwner}' and frozen_at is not null order by id`)).rows;
     assert.deepEqual(frozenAfter, frozenBefore, 'Forward migration preserves every frozen field and settings snapshot');
     await db.exec(`delete from auth.users where id='${upgradeOwner}'`);
-    await db.exec(await financeSqlFile('supabase/tests/finance_budget_tags_one_time.test.sql'));
-    process.stdout.write('Passed tag-only budgets, one-time lifecycle, ownership, matching, dashboard visibility and frozen history.\n');
+    const lifecycleSql = await financeSqlFile('supabase/tests/finance_budget_tags_one_time.test.sql');
+    for (const timeZone of ['UTC', 'Asia/Kuala_Lumpur']) {
+        await db.query("select set_config('TimeZone', $1, false)", [timeZone]);
+        await db.exec(lifecycleSql);
+        process.stdout.write(`Passed tag-only budgets, one-time lifecycle, ownership, matching, dashboard visibility and frozen history (${timeZone}).\n`);
+    }
 } finally { await db.close(); }
