@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.19.1](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.19.0...idea-dump-v0.19.1) (2026-11-03)
+
+
+### Bug Fixes
+
+* align budget fixture dates ([fe83ee8](https://github.com/Kirbyyy81/idea-dump/commit/fe83ee830e5467a3d37f21fc98ece39330d32385))
+* fill film canister artwork ([4997f53](https://github.com/Kirbyyy81/idea-dump/commit/4997f53965118ec483b27932bd9f6acd46ebb8c6))
+
 ## [0.19.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.18.7...idea-dump-v0.19.0) (2026-11-02)
 
 
