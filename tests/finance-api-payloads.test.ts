@@ -51,6 +51,8 @@ describe('Finance browser payloads', () => {
             direction: 'expense',
             amount: 12.5,
             currency: 'MYR',
+            foreign_amount: null,
+            foreign_currency: null,
             merchant: 'Merchant',
             payee_id: 'payee-1',
             reference_number: 'REF-1',

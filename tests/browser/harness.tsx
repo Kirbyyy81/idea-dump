@@ -8,7 +8,7 @@ import { AlertDialog } from '@/components/molecules/AlertDialog';
 import { createRoot } from 'react-dom/client';
 import { FinanceBudgetsClient } from '@/app/finance/budgets/_components/FinanceBudgetsClient';
 import { FinanceReferenceDataProvider } from '@/app/finance/_components/FinanceReferenceData';
-import type { FinanceBudgetDetail, FinanceBudgetPage, FinanceBudgetSummary, FinanceReviewCandidate, FinanceDashboardBudget } from '@/lib/types';
+import type { FinanceBudgetDetail, FinanceBudgetPage, FinanceBudgetSummary, FinanceReviewCandidate, FinanceDashboardBudget, FinanceTransactionView } from '@/lib/types';
 import { FinanceTransactionEntry } from '@/app/finance/add/_components/FinanceTransactionEntry';
 import { FinanceShareTargetProvider } from '@/app/finance/_components/FinanceShareTargetProvider';
 import { AlertProvider } from '@/lib/contexts/AlertContext';
@@ -20,6 +20,7 @@ import { reviewCandidates } from '../fixtures/finance-review';
 
 const initial = (window as unknown as { budgetInitial?: { list: FinanceBudgetPage<FinanceBudgetSummary>; detail: FinanceBudgetDetail | null } }).budgetInitial
     ?? { list: { data: [], page: 1, page_size: 20, total: 0 }, detail: null };
+const transactions = (window as unknown as { transactionInitial?: FinanceTransactionView[] }).transactionInitial ?? tagTransactions;
 const dashboardParams = new URLSearchParams(window.location.search);
 const dashboardDate = dashboardParams.get('date');
 const dashboardMonth = dashboardParams.get('month') || '2026-09';
@@ -32,9 +33,9 @@ createRoot(document.getElementById('root')!).render(<FinanceReferenceDataProvide
         ? <FinanceDashboardClient month={dashboardMonth} today={budgetMonthsEnabled ? '2026-10-02' : '2026-09-22'} selectedDate={dashboardDate}
             summary={budgetMonthsEnabled ? { ...dashboardSummary, budget_cycles: [...(dashboardBudgetMonths[dashboardMonth] ?? []), ...oneTimeBudgets] } : dashboardSummary} />
         : window.location.pathname === '/finance/transactions'
-        ? <AlertProvider><AlertDialog /><FinanceTransactionsClient initialTransactions={tagTransactions} initialQuery="" /></AlertProvider>
+        ? <AlertProvider><AlertDialog /><FinanceTransactionsClient initialTransactions={transactions} initialQuery="" /></AlertProvider>
         : window.location.pathname === '/finance/transactions/edit'
-        ? <AlertProvider><AlertDialog /><FinanceTransactionEditor canRetry={false} loadError={null} initialTransaction={{ ...tagTransactions[0], finance_source: undefined, finance_payee: undefined, category: undefined, user_id: 'test-user', source: 'manual', status: 'confirmed', intake_item_id: null, manual_idempotency_key: null, updated_at: tagTransactions[0].created_at }} /></AlertProvider>
+        ? <AlertProvider><AlertDialog /><FinanceTransactionEditor canRetry={false} loadError={null} initialTransaction={{ ...transactions[0], finance_source: undefined, finance_payee: undefined, category: undefined, user_id: 'test-user', source: 'manual', status: 'confirmed', intake_item_id: null, manual_idempotency_key: null, updated_at: transactions[0].created_at }} /></AlertProvider>
         : window.location.pathname === '/finance/settings' && dashboardParams.get('section') === 'tags'
         ? <AlertProvider><AlertDialog /><TagsSettingsPanel /></AlertProvider>
         : window.location.pathname === '/finance/settings/notifications'

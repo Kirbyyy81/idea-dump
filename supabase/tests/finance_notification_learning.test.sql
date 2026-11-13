@@ -39,7 +39,7 @@ declare
  config jsonb:='{"format_key":"tng-incoming","name":"Reviewed transfer","definition":{"version":1,"parts":[{"kind":"text","field":"payee_name"}," has transferred ",{"kind":"amount","field":"amount"}," to you"],"direction":"income","trailing_sentence":true}}';
  args jsonb;
 begin
- perform pg_temp.check_companion((select count(*)=15 from public.finance_notification_patterns_for_user_v1(u,s)),'starter patterns available');
+ perform pg_temp.check_companion((select count(*)=16 from public.finance_notification_patterns_for_user_v1(u,s)),'starter patterns available');
  perform pg_temp.check_companion(not exists(select 1 from public.finance_notification_patterns_for_user_v1(u,'21000000-0000-4000-8000-000000000012')),'source ownership');
  args:=jsonb_build_object('p_source_id',s,'p_category_id',null,'p_direction','income','p_amount',25.9,'p_merchant',null,'p_payee_name','Alex',
   'p_transaction_date',current_date,'p_notes',null,'p_currency','MYR','p_reference_number',null,'p_allow_duplicate',true,

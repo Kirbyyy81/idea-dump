@@ -62,6 +62,8 @@ export type FinanceTransactionField =
     | 'category_id'
     | 'direction'
     | 'amount'
+    | 'foreign_amount'
+    | 'foreign_currency'
     | 'merchant'
     | 'has_payee'
     | 'payee_name'

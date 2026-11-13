@@ -534,7 +534,12 @@ export interface FinancePayee {
     updated_at: string;
 }
 
-export interface FinanceTransaction {
+export interface FinanceForeignDetails {
+    foreign_amount?: string | null;
+    foreign_currency?: string | null;
+}
+
+export interface FinanceTransaction extends FinanceForeignDetails {
     tags?: FinanceTag[];
     tag_links?: Array<{ tag: FinanceTag | null }>;
     id: string;
@@ -560,7 +565,7 @@ export interface FinanceTransaction {
     finance_payee?: FinancePayee | null;
 }
 
-export interface FinanceTransactionView {
+export interface FinanceTransactionView extends FinanceForeignDetails {
     tags?: FinanceTag[];
     id: string;
     source_id: string;
@@ -772,7 +777,7 @@ export interface FinanceIntakeItem {
     updated_at: string;
 }
 
-export interface FinanceCandidatePayload {
+export interface FinanceCandidatePayload extends FinanceForeignDetails {
     category_assignment?: {
         origin: 'manual' | 'learned' | 'payee_default';
         status?: 'applied' | 'disabled' | 'conflict' | 'category_unavailable';
@@ -1461,10 +1466,10 @@ export interface FinanceNotificationPrepared extends FinanceNotificationParseRes
     duplicate_outcome?: FinanceDuplicateOutcome; duplicate_score?: number; duplicate_signals?: FinanceDuplicateSignal[];
     duplicate_explanation?: string; duplicate_checked_at?: string;
 }
-export type FinanceNotificationField = 'amount' | 'direction' | 'merchant' | 'payee_name' | 'transaction_date' | 'reference_number';
+export type FinanceNotificationField = 'amount' | 'direction' | 'merchant' | 'payee_name' | 'transaction_date' | 'reference_number' | 'foreign_amount' | 'foreign_currency';
 export type FinanceNotificationPart = string | {
-    kind: 'amount' | 'date' | 'time' | 'text' | 'reference';
-    field?: Exclude<FinanceNotificationField, 'direction'>;
+    kind: 'amount' | 'date' | 'time' | 'text' | 'reference' | 'foreign_money';
+    field?: Exclude<FinanceNotificationField, 'direction' | 'foreign_currency'>;
 };
 export interface FinanceNotificationPatternDefinition {
     version: 1;

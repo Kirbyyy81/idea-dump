@@ -480,6 +480,7 @@ export async function createManualFinanceTransactionForUser(
         p_category_id: input.category_id,
         p_direction: input.direction,
         p_amount: input.amount,
+        ...foreignWriteParams(input),
         p_merchant: input.merchant,
         p_payee_name: input.payee_name,
         p_transaction_date: input.transaction_date,
@@ -527,6 +528,7 @@ function transactionRpcError(error: { code?: string; message?: string }) {
 }
 
 function financeRpcFieldErrors(message: string): FinanceFieldErrors {
+    if (/foreign details/i.test(message)) return { foreign_amount: 'Check the foreign amount and currency' };
     if (/payee/i.test(message)) return { payee_name: message };
     if (/amount/i.test(message)) return { amount: message };
     if (/date/i.test(message)) return { transaction_date: message };
@@ -547,7 +549,11 @@ export async function updateFinanceTransactionForUser(
     if (!existing) fail('Transaction not found', 404);
     const existingTransaction = existing as unknown as FinanceTransaction;
     if (existingTransaction.status !== 'confirmed') fail('Only confirmed ledger transactions can be edited', 409);
-    const parsed = parseFinanceTransaction({ ...existingTransaction, ...body }, today);
+    // Omitted foreign fields must stay omitted through the locked write.
+    const editable: Record<string, unknown> = { ...existingTransaction };
+    delete editable.foreign_amount;
+    delete editable.foreign_currency;
+    const parsed = parseFinanceTransaction({ ...editable, ...body }, today);
     if ('error' in parsed) fail(parsed.error, 422, { field_errors: parsed.field_errors || {} });
     const input = parsed.data;
     await validateFinanceTransactionReferences(userId, input, existingTransaction);
@@ -557,6 +563,7 @@ export async function updateFinanceTransactionForUser(
         p_category_id: input.category_id,
         p_direction: input.direction,
         p_amount: input.amount,
+        ...foreignWriteParams(input),
         p_merchant: input.merchant,
         p_payee_name: input.payee_name,
         p_transaction_date: input.transaction_date,
@@ -564,7 +571,10 @@ export async function updateFinanceTransactionForUser(
         p_currency: input.currency,
         p_reference_number: input.reference_number,
     });
-    if (error) transactionRpcError(error);
+    if (error) {
+        transactionRpcError(error);
+        throw error;
+    }
     const { data, error: reloadError } = await findFinanceTransaction(
         userId,
         transactionId,
@@ -623,7 +633,7 @@ function reviewRpcError(error: { code?: string; message?: string }) {
     if (error.code === '40001') fail('Finance data changed concurrently. Retry the action.', 409);
     if (error.code === '23505' || /already|duplicate|conflict/i.test(message)) fail('Review item was already changed. Reload and retry.', 409);
     if (error.code === '23514' || error.code === '23503') fail('Review action conflicts with current Finance data', 409);
-    if (/not found/i.test(message)) fail('Review item not found', 404);
+    if (error.code === 'P0002' || /not found/i.test(message)) fail('Review item not found', 404);
     if (error.code === '22023' || /invalid|required/i.test(message)) {
         fail('Check the highlighted fields', 422, { field_errors: financeRpcFieldErrors(message) });
     }
@@ -681,6 +691,12 @@ async function validateFinanceReviewReferences(
     }
 }
 
+function foreignWriteParams(input: FinanceTransactionInput) {
+    return input.foreign_amount === undefined ? {} : {
+        p_foreign_amount: input.foreign_amount, p_foreign_currency: input.foreign_currency,
+    };
+}
+
 function confirmationParams(userId: string, input: FinanceReviewConfirmInput) {
     return {
         p_user_id: userId,
@@ -689,6 +705,7 @@ function confirmationParams(userId: string, input: FinanceReviewConfirmInput) {
         p_category_id: input.category_id,
         p_direction: input.direction,
         p_amount: input.amount,
+        ...foreignWriteParams(input),
         p_merchant: input.merchant,
         p_payee_name: input.payee_name,
         p_transaction_date: input.transaction_date,

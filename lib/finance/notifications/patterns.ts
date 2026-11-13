@@ -1,13 +1,29 @@
+import { normalizeForeignAmount, normalizeForeignCurrency } from '@/lib/finance/transactions/foreignCurrency';
 import type { FinanceNotificationField, FinanceNotificationPattern, FinanceNotificationPatternDefinition, FinanceNotificationExtractionTrace } from '@/lib/types';
 import { normalizeFinanceNotificationText as normalize } from './normalization';
 import { normalizeFinanceDate, toPositiveFinanceAmount } from '@/lib/finance/core/values';
 import { toIsoDate } from '@/shared/date';
 
-export const notificationFields: FinanceNotificationField[] = ['amount', 'direction', 'merchant', 'payee_name', 'transaction_date', 'reference_number'];
+export const notificationFields: FinanceNotificationField[] = ['amount', 'direction', 'merchant', 'payee_name', 'transaction_date', 'reference_number', 'foreign_amount', 'foreign_currency'];
 export const moneyToken = '(?:RM|MYR)\\s*((?:\\d{1,3}(?:,\\d{3})+|\\d+)\\.\\d{2})(?!\\d|\\.\\d)';
 export const dateToken = '(?:20\\d{2}-\\d{2}-\\d{2}|\\d{1,2}[/-]\\d{1,2}[/-]20\\d{2}|\\d{1,2}\\s+[A-Za-z]+\\s+20\\d{2})';
+// The pattern can recognize an invalid amount without treating it as a domestic payment.
+const foreignMoneyCapture = '[A-Z]{3}\\s*[+-]?[0-9](?:[0-9,.]*[0-9])?';
+export function parseNotificationForeignMoney(value: string) {
+    const match = /^([A-Z]{3})\s*((?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,4})?)$/i.exec(value.trim());
+    const currency = normalizeForeignCurrency(match?.[1]);
+    const amount = normalizeForeignAmount(match?.[2].replace(/,/g, ''));
+    return currency && amount ? { foreign_currency: currency, foreign_amount: amount } : null;
+}
+
+export function notificationForeignMoneySpans(text: string) {
+    return [...text.matchAll(new RegExp('\\b' + foreignMoneyCapture + '(?![\\w,]|\\.\\d)', 'gi'))]
+        .filter(match => normalizeForeignCurrency(match[0].slice(0, 3)));
+}
+
 const kinds: Record<string, string> = {
     amount: '(?:RM|MYR)\\s*(?:\\d{1,3}(?:,\\d{3})+|\\d+)\\.\\d{2}(?!\\d|\\.\\d)',
+    foreign_money: foreignMoneyCapture,
     date: dateToken, time: '\\d{1,2}:\\d{2}\\s*(?:am|pm)',
     text: '.{1,500}?', reference: '[\\p{L}\\p{N}/@._-]{1,200}?',
 };
@@ -40,7 +56,9 @@ export function validNotificationDefinition(input: unknown): input is FinanceNot
             if (!p || Object.keys(p).some(k => !['kind','field'].includes(k)) || !Object.hasOwn(kinds,p.kind)) return false;
             if (seenKinds.has(p.kind)) return false;
             seenKinds.add(p.kind);
-            if (p.field && (seen.has(p.field) || !notificationFields.includes(p.field)
+            if (p.kind === 'foreign_money' && (p.field !== 'foreign_amount' || d.match)) return false;
+            if (p.kind !== 'foreign_money' && p.field === 'foreign_amount') return false;
+            if (p.field && (typeof p.field !== 'string' || seen.has(p.field) || !notificationFields.includes(p.field)
                 || (p.kind === 'amount' && p.field !== 'amount')
                 || (p.kind === 'date' && p.field !== 'transaction_date')
                 || (p.kind === 'time')
@@ -50,6 +68,7 @@ export function validNotificationDefinition(input: unknown): input is FinanceNot
             if (i && typeof d.parts[i-1] !== 'string') return false;
         }
     }
+    if (seenKinds.has('foreign_money') && (!seen.has('amount') || !(seen.has('merchant') || seen.has('payee_name')))) return false;
     return (literalLength >= 4 || (d.match === 'contains' && d.parts.length === 1 && typeof d.parts[0] !== 'string' && d.parts[0].kind === 'date')) && literalLength <= 500 && !(seen.has('merchant') && seen.has('payee_name'));
 }
 function escape(value: string) { return value.replace(/[.*+?^{}()|[\]\\$]/g, '\\$&'); }
@@ -65,6 +84,12 @@ export function extractNotificationPattern(definition: FinanceNotificationPatter
     captures.forEach((p, i) => {
         if (!p.field) return;
         const value = match[i+1].trim();
+        if (p.kind === 'foreign_money') {
+            const foreign = parseNotificationForeignMoney(value);
+            values.foreign_amount = foreign?.foreign_amount ?? null;
+            values.foreign_currency = foreign?.foreign_currency ?? null;
+            return;
+        }
         values[p.field] = p.kind === 'amount' ? toPositiveFinanceAmount(value.replace(/^(RM|MYR)\s*/i,'').replace(/,/g,''))
             : p.kind === 'date' ? notificationDate(value)
                 : p.kind === 'reference' ? value.toUpperCase() : value;

@@ -76,6 +76,8 @@ export async function confirmFinanceNotification(userId: string, candidateId: st
         notification: { title: row.title, text: row.body, subtext: row.subtext, posted_at: row.posted_at },
     };
     const learning = learnNotificationPattern(event, {
+        foreign_amount: params.p_foreign_amount as string | null | undefined,
+        foreign_currency: params.p_foreign_currency as string | null | undefined,
         amount: params.p_amount as number, direction: params.p_direction as 'expense' | 'income',
         merchant: params.p_merchant as string | null, payee_name: params.p_payee_name as string | null,
         transaction_date: params.p_transaction_date as string, reference_number: params.p_reference_number as string | null,

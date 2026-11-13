@@ -1180,7 +1180,7 @@ Manual notification confirmation saves reusable definitions directly into `finan
 
 Transactions retain one category and may have up to 50 optional tags. Use categories for spending types and tags for trips/events. Finance settings includes a Tags library with create, rename, archive and restore actions. Names are trimmed, limited to 120 characters and unique per owner without case sensitivity. Archived tags retain historical assignments and remain filterable; they cannot be newly assigned until restored.
 
-Manual entry and ledger editing provide a searchable multi-tag picker with inline creation. Ledger rows show tag chips. Choose More transaction actions > Tag transactions to show selection checkboxes at the left of each ledger row and add/remove tags on up to 100 selected transactions atomically. Done tagging exits selection mode. Screenshots and notifications start untagged and can be tagged after confirmation. Tag edits do not teach category memory.
+Manual entry and ledger editing provide a searchable multi-tag picker with inline creation. Ledger rows show tag chips. Choose More transaction actions > Tag transactions to show selection checkboxes at the left of each ledger row and add/remove tags on up to 100 selected transactions atomically. Done tagging exits selection mode. Imports normally start untagged. Confirmed imports with a valid foreign amount can receive a travel tag automatically. Tag edits do not teach category memory.
 
 `GET/POST/PUT /api/finance/tags` lists, creates and updates owned tags. `POST /api/finance/transactions/tags` accepts `transaction_ids`, `tag_ids` and `operation` (`add` or `remove`). These session-only routes use the existing Finance mutation guards. Transaction POST/PUT accepts optional `tag_ids`: omitted preserves existing tags on updates, while `[]` clears them. Creation replay compares canonical tag selections, and financial/tag writes share one database transaction.
 
@@ -1189,3 +1189,14 @@ Transaction ledger URLs support comma-separated `tag_ids` UUIDs plus `tag_mode=i
 The additive tag migration introduces server-only, RLS-enabled `dim_finance_tags` and `finance_transaction_tags`, owner-matched foreign keys, version-compatible save wrappers and indexed EXISTS-based filtering. Apply only the reviewed migration using the Supabase runbook, deploy the compatible app, then run any separately reviewed account data cleanup. Do not publish personal cleanup rows in migrations or automatically reclassify new uncategorised records.
 
 Validation: `npm run test:finance-tags:db`, `npx vitest run tests/finance-tags.test.tsx`, and `npx playwright test tests/browser/finance-tags.spec.ts tests/browser/finance-calendar.spec.ts tests/browser/finance-dashboard-budgets.spec.ts tests/browser/finance-transaction-rows.spec.ts`, followed by repository-required checks.
+
+
+## Foreign currency and travel tags
+
+Add and Edit show **Foreign currency** and **Foreign amount** when a selected tag starts with `Travel -`, ignoring case. Review accepts the pair without a tag picker. Removing or renaming a tag does not erase existing foreign details. Clear both fields while visible to remove the pair.
+
+A newly confirmed import with a foreign pair receives the owner's newest unarchived travel tag by creation time. Archive a finished trip to stop future automatic assignments. Replay and duplicate linking preserve existing tags and foreign details. The ledger shows the foreign amount and the effective MYR exchange rate; reports, budgets, and duplicate checks use the MYR charge.
+
+Transaction and review confirmation requests accept optional `foreign_currency` and `foreign_amount` together. The amount is a positive decimal with up to four places; the code must be a supported currency other than MYR. The app sends the decimal as text to preserve precision. Omitting the pair in an edit preserves it, and two nulls clear it. New writes use existing Finance authorization and ledger locking.
+
+Apply `20261113084805_finance_foreign_currency.sql` before releasing the web app. It adds nullable columns without backfilling rows, extends the existing RPCs compatibly, and seeds the Ryt foreign card pattern. Use synthetic owners for migration verification and run the Finance tag, budget, notification and browser regressions.

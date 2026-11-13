@@ -1,3 +1,4 @@
+import { parseForeignDetails } from '@/lib/finance/transactions/foreignCurrency';
 import { parseFinanceTagIds } from '@/lib/finance/tagValues';
 import { FINANCE_LINK_LABELS } from '@/lib/finance/review';
 import type { FinanceLinkChanges, FinanceLinkField, FinanceReviewDuplicateTransaction } from '@/lib/types';
@@ -67,6 +68,8 @@ export interface FinanceRuleUpdateInput {
 
 export interface FinanceTransactionInput {
     tag_ids?: string[];
+    foreign_amount?: string | null;
+    foreign_currency?: string | null;
     source_id: string;
     category_id: string | null;
     direction: FinanceTransactionDirection;
@@ -307,13 +310,21 @@ export function parseFinanceTransaction(
     const transactionDate = normalizeFinanceDate(body.transaction_date);
     const categoryId = toNullableFinanceText(body.category_id);
     const direction = isFinanceTransactionDirection(body.direction) ? body.direction : null;
-    const fieldErrors = getFinanceTransactionFieldErrors(body, today, { validateIds: true });
+    const hasAmount = Object.hasOwn(body, 'foreign_amount');
+    const hasCurrency = Object.hasOwn(body, 'foreign_currency');
+    const foreign = parseForeignDetails(body);
+    const fieldErrors = { ...getFinanceTransactionFieldErrors(body, today, { validateIds: true }), ...foreign.errors };
+    if (hasAmount !== hasCurrency) {
+        if (!hasAmount) fieldErrors.foreign_amount = 'Send foreign currency and amount together';
+        if (!hasCurrency) fieldErrors.foreign_currency = 'Send foreign currency and amount together';
+    }
     if (Object.keys(fieldErrors).length > 0 || amount === null || !transactionDate || !direction) {
         return { error: 'Check the highlighted fields', field_errors: fieldErrors };
     }
     return {
         data: {
             ...(tagIds === undefined ? {} : { tag_ids: tagIds }),
+            ...(hasAmount && hasCurrency ? foreign.details : {}),
             source_id: sourceId,
             category_id: categoryId,
             direction,

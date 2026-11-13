@@ -182,7 +182,7 @@ try {
     assert.equal((await query('select count(*)::int as n from public.finance_category_evidence where user_id=$1', [owner]))[0].n, 0, 'account deletion cascades all teaching evidence');
     await db.exec('rollback');
     // Existing notification RPC/cleanup and duplicate-link SQL regression suites.
-    for (const file of ['finance_notifications.test.sql', 'finance_duplicate_link.test.sql', 'finance_notification_learning.test.sql', 'finance_notification_auto_confirmation.test.sql']) {
+    for (const file of ['finance_notifications.test.sql', 'finance_duplicate_link.test.sql', 'finance_notification_learning.test.sql', 'finance_notification_auto_confirmation.test.sql', 'finance_foreign_currency.test.sql']) {
         await db.exec((await financeSqlFile(`supabase/tests/${file}`)).replace(/^\\.*$/gm, ''));
         console.log(`Passed ${file}`);
     }

@@ -24,6 +24,7 @@ type FinanceTransactionRowProps = RowInteraction & {
     date?: string | null;
     direction?: FinanceTransactionDirection | null;
     formattedAmount: string | null;
+    foreignDetails?: string | null;
     density?: 'default' | 'compact' | 'summary';
     status?: ReactNode;
     tags?: Array<{ id: string; name: string }>;
@@ -42,7 +43,7 @@ const categoryIcons = {
 
 /** Shared presentation only. Callers retain navigation, review and mutation ownership. */
 export function FinanceTransactionRow({
-    payeeName, merchant, sourceName, categoryName, date, direction, formattedAmount,
+    payeeName, merchant, sourceName, categoryName, date, direction, formattedAmount, foreignDetails,
     density = 'default', status, tags = [], actions, href, onSelect, selected,
 }: FinanceTransactionRowProps) {
     const recipient = payeeName || merchant || 'Untitled transaction';
@@ -78,6 +79,7 @@ export function FinanceTransactionRow({
                 </span>}
             </span>}
             {tags.length > 0 && <span className="mt-2 flex flex-wrap gap-1" aria-label="Transaction tags">{tags.map(tag => <span key={tag.id} className="max-w-full break-words rounded-full border border-border-default bg-bg-selected px-2 py-1 text-xs">{tag.name}</span>)}</span>}
+            {foreignDetails && <span className="mt-1 block break-words text-xs text-text-secondary">{foreignDetails}</span>}
             {status && <span className="mt-2 block text-xs">{status}</span>}
         </span>
         <span className={cn('col-start-2 flex min-w-0 flex-wrap items-center justify-between gap-2', density === 'default' && 'sm:col-start-3 sm:row-start-1 sm:justify-end', density === 'summary' && 'col-start-3 row-start-1 max-w-32 justify-end text-right')}>
