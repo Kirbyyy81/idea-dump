@@ -41,23 +41,13 @@ export function parseForeignDetails(fields: Partial<Record<ForeignField, unknown
     return { errors };
 }
 
-function getForeignAmountDisplay(details: FinanceForeignDetails) {
+export function formatFinanceForeignDetails(myrAmount: number | string, details: FinanceForeignDetails) {
     const amount = normalizeForeignAmount(details.foreign_amount);
     const currency = normalizeForeignCurrency(details.foreign_currency);
-    if (!amount || !currency) return null;
+    const charged = Number(myrAmount);
+    if (!amount || !currency || !Number.isFinite(charged) || charged <= 0) return null;
     const [whole, fraction] = amount.split('.');
     const displayAmount = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (fraction ? '.' + fraction.padEnd(2, '0') : '.00');
-    return { amount, currency, label: `${currency} ${displayAmount}` };
-}
-
-export function formatFinanceForeignAmount(details: FinanceForeignDetails) {
-    return getForeignAmountDisplay(details)?.label ?? null;
-}
-
-export function formatFinanceForeignDetails(myrAmount: number | string, details: FinanceForeignDetails) {
-    const foreign = getForeignAmountDisplay(details);
-    const charged = Number(myrAmount);
-    if (!foreign || !Number.isFinite(charged) || charged <= 0) return null;
-    const rate = new Intl.NumberFormat('en-MY', { maximumSignificantDigits: 8 }).format(charged / Number(foreign.amount));
-    return `${foreign.label} · 1 ${foreign.currency} = MYR ${rate}`;
+    const rate = new Intl.NumberFormat('en-MY', { maximumSignificantDigits: 8 }).format(charged / Number(amount));
+    return `${currency} ${displayAmount} · 1 ${currency} = MYR ${rate}`;
 }

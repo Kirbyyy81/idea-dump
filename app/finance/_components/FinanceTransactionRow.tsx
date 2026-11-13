@@ -24,7 +24,6 @@ type FinanceTransactionRowProps = RowInteraction & {
     date?: string | null;
     direction?: FinanceTransactionDirection | null;
     formattedAmount: string | null;
-    formattedForeignAmount?: string | null;
     density?: 'default' | 'compact' | 'summary';
     status?: ReactNode;
     tags?: Array<{ id: string; name: string }>;
@@ -45,7 +44,7 @@ const metadataChip = 'inline-flex min-h-7 max-w-full items-center gap-1.5 rounde
 
 /** Shared presentation only. Callers retain navigation, review and mutation ownership. */
 export function FinanceTransactionRow({
-    payeeName, merchant, sourceName, categoryName, date, direction, formattedAmount, formattedForeignAmount,
+    payeeName, merchant, sourceName, categoryName, date, direction, formattedAmount,
     density = 'default', status, tags = [], actions, href, onSelect, selected,
 }: FinanceTransactionRowProps) {
     const recipient = payeeName || merchant || 'Untitled transaction';
@@ -86,7 +85,6 @@ export function FinanceTransactionRow({
                     <span className="break-words [overflow-wrap:anywhere]">{tag.name}</span>
                 </span>)}
             </span>}
-            {formattedForeignAmount && <span className="mt-1 block break-words text-xs text-text-secondary">{formattedForeignAmount}</span>}
             {status && <span className="mt-2 block text-xs">{status}</span>}
         </span>
         <span className={cn('col-start-2 flex min-w-0 flex-wrap items-center justify-between gap-2', density === 'default' && 'sm:col-start-3 sm:row-start-1 sm:justify-end', density === 'summary' && 'col-start-3 row-start-1 max-w-32 justify-end text-right')}>

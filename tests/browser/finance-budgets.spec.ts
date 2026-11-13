@@ -404,3 +404,51 @@ test('creates a tag-only one-time budget without date controls', async ({ page }
     await expect.poll(() => body).toMatchObject({ configuration: { cycle_type: 'one_time', start_date: null, custom_days: null, anchor_day: null,
         amount: '1500.00', tag_ids: [tag.id], category_ids: [], source_ids: [] } });
 });
+
+test('selects and saves a travel tag in a short budget edit dialog', async ({ page, isMobile }) => {
+    await page.setViewportSize({ width: isMobile ? 390 : 1024, height: 520 });
+    await references(page);
+    const sources = [{ id: sourceId, name: 'Bank' }];
+    const tags = ['Gifts', 'Hackathon', 'Travel - Taiwan 2026'].map((name, index) => ({
+        id: `b0110000-0000-4000-8000-00000000004${index}`, name, is_archived: false,
+    }));
+    const travelTag = tags[2];
+    const budget = budgetFixture();
+    budget.configuration.sources = [{ ...sources[0], original_id: sourceId, is_archived: false }];
+    budget.configuration.source_ids = [sourceId];
+    await page.addInitScript((detail) => {
+        Object.assign(window, { budgetInitial: { list: { data: [detail.budget], page: 1, page_size: 20, total: 1 }, detail } });
+    }, budgetDetailFixture(budget));
+    await page.route('**/api/finance/reference-data', route => route.fulfill({ json: { data: { sources, categories: [], tags } } }));
+    let saved: Record<string, unknown> | undefined;
+    await page.route('**/api/finance/budgets?*', route => route.fulfill({ json: { data: [budget], page: 1, page_size: 20, total: 1 } }));
+    await page.route('**/api/finance/budgets', async route => {
+        saved = route.request().postDataJSON();
+        await route.fulfill({ json: { data: budget } });
+    });
+    await page.goto('/finance/budgets');
+    await page.getByRole('button', { name: 'Budget actions' }).click();
+    await page.getByRole('menuitem', { name: 'Edit', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Edit budget' });
+    const picker = dialog.getByRole('button', { name: 'Choose tags', exact: true });
+    await picker.click();
+    const search = dialog.getByRole('textbox', { name: 'Search tags' });
+    await expect(search).toBeFocused();
+    await search.press('Escape');
+    await expect(picker).toBeFocused();
+    await picker.click();
+    const tag = dialog.getByRole('button', { name: travelTag.name, exact: true });
+    const point = await tag.boundingBox();
+    expect(point).not.toBeNull();
+    // Use the option's position without automatically scrolling the dialog.
+    const x = point!.x + point!.width / 2;
+    const y = point!.y + point!.height / 2;
+    if (isMobile) await page.touchscreen.tap(x, y);
+    else await page.mouse.click(x, y);
+    await expect(tag).toHaveAttribute('aria-pressed', 'true');
+    await dialog.getByRole('button', { name: 'Done', exact: true }).click();
+    await expect(dialog.getByLabel('Selected tags')).toContainText(travelTag.name);
+    await expect(dialog.getByRole('switch', { name: 'Bank' })).toBeChecked();
+    await dialog.getByRole('button', { name: 'Save changes', exact: true }).click();
+    await expect.poll(() => saved).toMatchObject({ configuration: { tag_ids: [travelTag.id], source_ids: [sourceId] } });
+});
