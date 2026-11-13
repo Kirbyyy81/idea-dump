@@ -1,7 +1,7 @@
 import { parseFinanceNotification } from './parser';
 import { createHash } from 'node:crypto';
 import type { FinanceCandidatePayload, FinanceNotificationEventInput, FinanceNotificationPart, FinanceNotificationPattern, FinanceNotificationPatternDefinition } from '@/lib/types';
-import { normalizeFinanceNotificationText as normalize } from './normalization';
+import { financeNotificationPatternBody, normalizeFinanceNotificationText as normalize } from './normalization';
 import { dateToken, moneyToken, notificationDate, extractNotificationPattern, validNotificationDefinition, notificationForeignMoneySpans, parseNotificationForeignMoney } from './patterns';
 import { normalizeFinancePayeeKey } from '@/lib/finance/ocr/normalizer';
 
@@ -28,7 +28,7 @@ function matchedFields(definition: FinanceNotificationPatternDefinition, text: s
 }
 export function learnNotificationPattern(event: FinanceNotificationEventInput, reviewed: Reviewed, patterns: FinanceNotificationPattern[], userId: string) {
     if (!parseFinanceNotification(event).payload) return null;
-    const text = normalize(event.notification.text).replace(/[.!?]$/,'');
+    const text = financeNotificationPatternBody(event).replace(/[.!?]$/,'');
     const monies = [...text.matchAll(new RegExp(moneyToken,'ig'))];
     if (monies.length !== 1 || !reviewed.direction) return null;
     const foreignSpans = notificationForeignMoneySpans(text);

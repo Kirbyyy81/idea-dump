@@ -92,6 +92,8 @@ interface PendingReviewDraft {
     form: ReviewForm;
     isDirectionProposalPending: boolean;
     isDateProposalPending: boolean;
+    newSourceName?: string;
+    newCategoryName?: string;
 }
 
 function formFromCandidate(candidate: FinanceReviewCandidate, today: string): ReviewForm {
@@ -123,6 +125,23 @@ interface FinanceReviewClientProps {
     initialFailedIntakes: FinanceFailedIntake[];
     initialSelectedId: string;
     today: string;
+}
+
+interface QueueRetryProgress {
+    checked: number;
+    total: number;
+    added: number;
+    remaining: number;
+    failed: number;
+    running: boolean;
+}
+
+function queueRetryMessage(progress: QueueRetryProgress) {
+    if (progress.running) return `Retrying review queue: ${progress.checked} of ${progress.total} checked.`;
+    const parts = [`${progress.added} added.`, `${progress.remaining} still need review.`];
+    if (progress.failed) parts.push(`${progress.failed} could not be retried.`);
+    if (progress.checked < progress.total) parts.push(`${progress.total - progress.checked} not checked.`);
+    return parts.join(' ');
 }
 
 export function FinanceReviewClient({
@@ -158,9 +177,12 @@ export function FinanceReviewClient({
         Boolean(initialSelected && !initialSelected.payload.transaction_date)
     );
     const [isSaving, setIsSaving] = useState(false);
+    const [queueRetry, setQueueRetry] = useState<QueueRetryProgress | null>(null);
     const [fieldErrors, setFieldErrors] = useState<FinanceFieldErrors>({});
     const [isRefreshing, startRefresh] = useTransition();
     const pendingDraftRef = useRef<PendingReviewDraft | null>(null);
+    const mutationInProgress = useRef(false);
+    const isRetryingQueue = queueRetry?.running ?? false;
     const selected = candidates.find((candidate) => candidate.id === selectedId) || null;
 
     useEffect(() => {
@@ -177,13 +199,15 @@ export function FinanceReviewClient({
             setForm(pendingDraft.form);
             setIsDirectionProposalPending(pendingDraft.isDirectionProposalPending);
             setIsDateProposalPending(pendingDraft.isDateProposalPending);
+            setNewSourceName(pendingDraft.newSourceName ?? '');
+            setNewCategoryName(pendingDraft.newCategoryName ?? '');
         } else {
             setForm(selected ? formFromCandidate(selected, today) : null);
             setIsDirectionProposalPending(Boolean(selected && !selected.payload.direction));
             setIsDateProposalPending(Boolean(selected && !selected.payload.transaction_date));
+            setNewSourceName('');
+            setNewCategoryName('');
         }
-        setNewSourceName('');
-        setNewCategoryName('');
         setFieldErrors({});
     }, [selected, today]);
 
@@ -217,12 +241,12 @@ export function FinanceReviewClient({
     };
 
     const resolveItem = async (
-        action: 'confirm' | 'reject' | 'retry' | 'mark_duplicate' | 'link_duplicate',
+        action: 'confirm' | 'reject' | 'mark_duplicate' | 'link_duplicate',
         event?: FormEvent,
         changes?: FinanceLinkChanges
     ) => {
         event?.preventDefault();
-        if (!selected || !form) return;
+        if (!selected || !form || mutationInProgress.current) return;
         const foreign = parseForeignDetails(form);
         let normalizedAmount: number | null = null;
         if (action === 'confirm') {
@@ -253,6 +277,8 @@ export function FinanceReviewClient({
             if (normalizedAmount === null) return;
         }
         setFieldErrors({});
+        setQueueRetry(null);
+        mutationInProgress.current = true;
         setIsSaving(true);
         let attemptedForm = form;
         try {
@@ -314,27 +340,19 @@ export function FinanceReviewClient({
                         matched_transaction_id: selected.payload.duplicate_transaction_id,
                     }
                     : { candidate_id: selected.id, action };
-            const payload = await financeApiRequest<{ data?: FinanceReviewCandidate }>('/api/finance/review', {
+            await financeApiRequest('/api/finance/review', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', [FINANCE_TIME_ZONE_HEADER]: getFinanceTimeZone() },
                 body: JSON.stringify(requestBody),
             }, { fallbackMessage: 'Could not update review item' });
-            if (action === 'retry' && payload.data) {
-                const retriedCandidate = payload.data;
-                setCandidates((current) => current.map((item) => item.id === selected.id ? retriedCandidate : item));
-                showSuccess('Rules and duplicate checks applied again');
-            } else {
-                setCandidates((current) => current.filter((item) => item.id !== selected.id));
-                showSuccess(action === 'retry'
-                    ? 'Transaction added automatically'
-                    : action === 'confirm'
-                    ? 'Transaction confirmed'
-                    : action === 'link_duplicate'
-                        ? 'Details linked to the existing transaction'
+            setCandidates((current) => current.filter((item) => item.id !== selected.id));
+            showSuccess(action === 'confirm'
+                ? 'Transaction confirmed'
+                : action === 'link_duplicate'
+                    ? 'Details linked to the existing transaction'
                     : action === 'mark_duplicate'
                         ? 'Review item marked as duplicate'
                         : 'Review item rejected');
-            }
         } catch (error) {
             if (error instanceof FinanceApiError && Object.keys(error.fieldErrors).length > 0) {
                 setFieldErrors(error.fieldErrors);
@@ -354,18 +372,94 @@ export function FinanceReviewClient({
             }
             showError(error instanceof Error ? error.message : 'Could not update review item');
         } finally {
+            mutationInProgress.current = false;
             setIsSaving(false);
         }
     };
 
+    const retryQueue = async () => {
+        if (mutationInProgress.current || isRefreshing || !candidates.length) return;
+        mutationInProgress.current = true;
+        const progress: QueueRetryProgress = {
+            checked: 0, total: candidates.length, added: 0, remaining: 0, failed: 0, running: true,
+        };
+        const results = new Map<string, FinanceReviewCandidate | null>();
+        const headers = { 'Content-Type': 'application/json', [FINANCE_TIME_ZONE_HEADER]: getFinanceTimeZone() };
+        setQueueRetry({ ...progress });
+        try {
+            // Use the existing owner-scoped Retry path and let each save settle before the next duplicate check.
+            for (const candidate of candidates) {
+                let stop = false;
+                try {
+                    const response = await financeApiRequest<{ data?: FinanceReviewCandidate; success?: boolean }>('/api/finance/review', {
+                        method: 'POST',
+                        headers,
+                        body: JSON.stringify({ action: 'retry', candidate_id: candidate.id }),
+                    });
+                    if (response.data?.id === candidate.id) {
+                        results.set(candidate.id, response.data);
+                        progress.remaining++;
+                    } else if (response.success === true) {
+                        results.set(candidate.id, null);
+                        progress.added++;
+                    } else {
+                        progress.failed++;
+                    }
+                } catch (error) {
+                    progress.failed++;
+                    stop = error instanceof FinanceApiError && (error.status === 401 || error.status === 403);
+                }
+                progress.checked++;
+                setQueueRetry({ ...progress });
+                if (stop) break;
+            }
+        } finally {
+            const refreshed = selected && results.get(selected.id);
+            if (selected && form && refreshed) {
+                const original = formFromCandidate(selected, today);
+                const edits = Object.fromEntries(Object.entries(form).filter(([field, value]) =>
+                    field !== 'allow_duplicate' && field !== 'duplicate_override_reason'
+                    && value !== original[field as keyof ReviewForm]));
+                pendingDraftRef.current = {
+                    candidateId: selected.id,
+                    form: { ...formFromCandidate(refreshed, today), ...edits },
+                    isDirectionProposalPending: !('direction' in edits || (!selected.payload.direction && !isDirectionProposalPending))
+                        && !refreshed.payload.direction,
+                    isDateProposalPending: !('transaction_date' in edits || (!selected.payload.transaction_date && !isDateProposalPending))
+                        && !refreshed.payload.transaction_date,
+                    newSourceName,
+                    newCategoryName,
+                };
+            }
+            setCandidates(current => current.flatMap(candidate => {
+                const result = results.get(candidate.id);
+                return result === null ? [] : [result ?? candidate];
+            }));
+            setSelectedId(current => results.get(current) === null
+                ? candidates.find(candidate => results.get(candidate.id) !== null)?.id ?? ''
+                : current);
+            setQueueRetry({ ...progress, running: false });
+            mutationInProgress.current = false;
+        }
+    };
+
     return (
-        <AppShell contentClassName="p-5 md:p-8" pageTitle="Review queue">
+        <AppShell contentClassName="p-5 md:p-8" pageTitle="Review queue" headerAction={
+            candidates.length > 0 ? <Button type="button" variant="secondary" icon={<RefreshDoodleIcon size={15} />}
+                onClick={() => void retryQueue()} disabled={isSaving || isRefreshing} isLoading={isRetryingQueue}>
+                Retry and add if complete
+            </Button> : undefined
+        }>
             <div className="mx-auto max-w-7xl">
+                {queueRetry && <p role="status" className="mb-4 text-sm text-text-secondary">
+                    {queueRetryMessage(queueRetry)}
+                </p>}
                 <div className="grid grid-cols-1 gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
                     <section className="border border-border-default bg-bg-surface">
                         {isRefreshing && <span className="sr-only" role="status">Refreshing review queue...</span>}
                         <div className="border-b border-border-default px-5 py-4"><h2 className="text-base font-bold">Awaiting review <span className="text-text-muted">({candidates.length})</span></h2></div>
-                        <div className="divide-y divide-border-default" aria-live="polite" aria-busy={isRefreshing}>
+                        <div className="divide-y divide-border-default" aria-live="polite" aria-busy={isRefreshing || isRetryingQueue}
+                            inert={isRetryingQueue}>
                             {candidates.map((candidate) => {
                                 const outcome = duplicateOutcome(candidate);
                                 return (
@@ -394,9 +488,9 @@ export function FinanceReviewClient({
                     </section>
 
                     {selected && form ? (
-                        <form onSubmit={(event) => void resolveItem('confirm', event)}>
+                        <form inert={isRetryingQueue} onSubmit={(event) => void resolveItem('confirm', event)}>
                             <Card className="p-5">
-                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-center gap-2"><OcrDoodleIcon size={18} className="text-accent-blue" /><h2 className="text-base font-bold">Candidate details</h2></div><Button type="button" variant="ghost" icon={<RefreshDoodleIcon size={15} />} onClick={() => void resolveItem('retry')} disabled={isSaving}>{selected.intake?.source === 'notification' ? 'Retry and add if complete' : 'Retry rules'}</Button></div>
+                                <div className="flex items-center gap-2"><OcrDoodleIcon size={18} className="text-accent-blue" /><h2 className="text-base font-bold">Candidate details</h2></div>
                                 {referenceStatus !== 'ready' && (
                                     <div className="mt-4 border border-dashed border-border-default">
                                         <FinanceReferenceDataState

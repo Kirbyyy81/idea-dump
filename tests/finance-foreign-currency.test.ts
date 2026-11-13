@@ -63,6 +63,31 @@ describe('foreign transaction details', () => {
 });
 
 describe('foreign notification extraction and learning', () => {
+    it('extracts and learns the same Ryt card format when the title is joined to the payment body', () => {
+        const body = 'RM30.32 (TWD240.00) paid at SYNTHETIC SHOP using your Main Account.';
+        const seed = notificationPatterns.find(pattern => pattern.format_key === 'ryt-foreign-card-payment')!;
+        for (const text of [body, 'Card payment completed 👍\n' + body, 'Card payment completed👍🏻 ' + body]) {
+            const input = event(text);
+            const result = parseFinanceNotification(input, notificationPatterns, user);
+            expect(result.payload).toMatchObject({
+                amount: 30.32, currency: 'MYR', direction: 'expense', merchant: 'SYNTHETIC SHOP',
+                foreign_amount: '240', foreign_currency: 'TWD',
+                notification_extraction: { conflicts: [], fields: { amount: { pattern_id: seed.id } } },
+            });
+            expect(learnNotificationPattern(input, { ...reviewed, amount: 30.32, merchant: 'SYNTHETIC SHOP',
+                foreign_amount: '240' }, notificationPatterns, user)).toMatchObject({
+                format_key: seed.format_key, definition: seed.definition,
+            });
+        }
+        const combined = event('Card payment completed 👍\n' + body);
+        const disabled = { ...seed, id: 'override', user_id: user, source_id: source, is_active: false };
+        expect(parseFinanceNotification(combined, [seed, disabled], user).payload?.foreign_amount).toBeUndefined();
+        expect(parseFinanceNotification({ ...combined, source_package: 'my.com.tngdigital.ewallet' }, [seed], user)
+            .payload?.foreign_amount).toBeUndefined();
+        expect(parseFinanceNotification(event('Card payment completed 👍\n' + body + ' OTP 123456'), [seed], user)
+            .failure_code).toBe('sensitive_notification');
+    });
+
     it('extracts the Ryt pair and keeps the MYR amount separate', () => {
         const result = parseFinanceNotification(event(payment), notificationPatterns, user);
         expect(result.payload).toMatchObject({ amount: 200.76, currency: 'MYR', merchant: 'SYNTHETIC STORE', ...foreign });

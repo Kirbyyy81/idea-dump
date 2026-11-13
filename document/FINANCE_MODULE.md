@@ -542,7 +542,7 @@ OCR text is normalized before parsing and hashing. The normalizer provides stabl
 - Exact normalized OCR-text duplicate detection.
 - Review retry behavior.
 
-The parser is pure TypeScript shared by the Next.js application and the OCR service. Review's `Retry rules` action reparses stored normalized OCR text using the user's current active sources, manual rules, algorithm 2/3 parser templates, and payees.
+The parser is pure TypeScript shared by the Next.js application and the OCR service. The Review queue's `Retry and add if complete` action reparses stored normalized OCR text using the user's current active sources, manual rules, algorithm 2/3 parser templates, and payees.
 
 ### Amount extraction
 
@@ -738,6 +738,8 @@ The advisor's new missing-index finding is resolved. The two pre-existing securi
 See [the retirement rollout instructions](FINANCE_PARSER_LEARNING_ROLLOUT.md#legacy-learning-retirement) for migration order and validation.
 
 ## Automatic confirmation
+
+**Retry and add if complete** in the Review queue header rechecks every pending notification and screenshot. It shows a single progress and results summary. Complete items are added after the usual duplicate checks; incomplete items, possible duplicates, and failed retries stay in the queue.
 
 New notifications and explicit notification Retry add a transaction automatically when amount, direction, merchant or payee, and date are valid and no database duplicate is found. Category and reference are optional. Missing/conflicting values, stale patterns and possible duplicates stay in Review. Automatic entries are excluded from notification learning; manual confirmation provides learning evidence. See [notification automatic transactions](ANDROID_COMPANION.md#automatic-notification-transactions).
 
@@ -1099,7 +1101,7 @@ Do not silently add a field to duplicate matching or automatic confirmation. Tho
 - Do not let Recipient Reference become the transaction reference.
 - Avoid aggressive cleanup that can destroy free-form references.
 - Re-run duplicate and auto-confirmation tests because parsed values affect both.
-- Verify `Retry rules` produces the same behavior as newly processed OCR for the same stored text and context.
+- Verify `Retry and add if complete` produces the same behavior as newly processed OCR for the same stored text and context.
 
 ### Changing share behavior
 
