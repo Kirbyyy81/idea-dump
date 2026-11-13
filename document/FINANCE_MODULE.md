@@ -1197,7 +1197,7 @@ Validation: `npm run test:finance-tags:db`, `npx vitest run tests/finance-tags.t
 
 Add and Edit show **Foreign currency** and **Foreign amount** when a selected tag starts with `Travel -`, ignoring case. Review accepts the pair without a tag picker. Removing or renaming a tag does not erase existing foreign details. Clear both fields while visible to remove the pair.
 
-A newly confirmed import with a foreign pair receives the owner's newest unarchived travel tag by creation time. Archive a finished trip to stop future automatic assignments. Replay and duplicate linking preserve existing tags and foreign details. The ledger shows the foreign amount and the effective MYR exchange rate; reports, budgets, and duplicate checks use the MYR charge.
+A newly confirmed import with a foreign pair receives the owner's newest unarchived travel tag by creation time. Archive a finished trip to stop future automatic assignments. Replay and duplicate linking preserve existing tags and foreign details. Ledger rows show the foreign amount, and the transaction editor shows the effective MYR exchange rate. Reports, budgets, and duplicate checks use the MYR charge.
 
 Transaction and review confirmation requests accept optional `foreign_currency` and `foreign_amount` together. The amount is a positive decimal with up to four places; the code must be a supported currency other than MYR. The app sends the decimal as text to preserve precision. Omitting the pair in an edit preserves it, and two nulls clear it. New writes use existing Finance authorization and ledger locking.
 

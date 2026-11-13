@@ -38,7 +38,7 @@ for (const operation of ['add', 'remove'] as const) {
         let body:Record<string,unknown>|undefined;
         await page.route('**/api/finance/transactions/tags',async route=>{body=route.request().postDataJSON();await route.fulfill({json:{data:{updated:1}}});});
         await page.goto('/finance/transactions');
-        await expect(page.getByLabel('Transaction tags')).toContainText('Holiday');
+        await expect(page.getByRole('group', { name: 'Transaction metadata' }).filter({ hasText: 'Holiday' })).toBeVisible();
         await expect(page.getByRole('checkbox')).toHaveCount(0);
         await page.getByRole('button',{name:'More transaction actions',exact:true}).click();
         await page.getByRole('menuitem',{name:'Tag transactions',exact:true}).click();
