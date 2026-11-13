@@ -1,12 +1,12 @@
 import type { FinanceCandidatePayload, FinanceNotificationEventInput, FinanceNotificationParseResult, FinanceNotificationPattern } from '@/lib/types';
 import { FINANCE_TIME_ZONE, getFinanceDateInTimeZone } from '@/lib/finance/core/values';
-import { normalizeFinanceNotificationText } from './normalization';
+import { financeNotificationPatternBody, normalizeFinanceNotificationText } from './normalization';
 import { applyNotificationPatterns, moneyToken, dateToken, notificationDate, notificationForeignMoneySpans } from './patterns';
 
 const sensitive = /\b(?:otp|tac|one[- ]time (?:password|passcode)|verification code|security code|authentication code)\b|sensitive (?:content|notification) (?:hidden|redacted)/i;
 const irrelevant = /\b(?:cashback offer|promotion|promo code|special offer|payment reminder|payment due|unsuccessful|failed|declined|cancelled)\b/i;
 export function parseFinanceNotification(event: FinanceNotificationEventInput, patterns: FinanceNotificationPattern[] = [], userId?: string): FinanceNotificationParseResult {
-    const body = normalizeFinanceNotificationText(event.notification.text);
+    const body = financeNotificationPatternBody(event);
     const text = normalizeFinanceNotificationText([event.notification.title,event.notification.text,event.notification.subtext].filter(Boolean).join('\n'));
     if (sensitive.test(text)) return { status:'ignored', failure_code:'sensitive_notification', payload:null, date_provenance:'unavailable' };
     const amounts = [...body.matchAll(new RegExp(moneyToken,'ig'))];

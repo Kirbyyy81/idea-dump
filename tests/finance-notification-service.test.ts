@@ -76,6 +76,29 @@ beforeEach(() => {
 });
 
 describe('notification preparation for intake and Retry', () => {
+    it('reparses a queued Ryt card payment with a joined title without changing its stored text', async () => {
+        const input = event();
+        input.source_package = 'my.rytbank.app';
+        input.notification.title = 'Card payment completed 👍';
+        input.notification.text = 'Card payment completed 👍\nRM30.32 (TWD240.00) paid at SYNTHETIC SHOP using your Main Account.';
+        const stored = storedNotification(input);
+        mocks.tables.finance_notification_events = [stored];
+        mocks.rpc.mockResolvedValue({ data: { confirmed: true }, error: null });
+
+        await expect(retryFinanceNotification(owner, 'candidate-1', 'intake-1')).resolves.toMatchObject({ data: { confirmed: true } });
+        expect(mocks.rpc).toHaveBeenCalledExactlyOnceWith('finance_retry_notification_v1', expect.objectContaining({
+            p_expected_digest: stored.payload_digest,
+            p_parsed: expect.objectContaining({
+                payload: expect.objectContaining({
+                    amount: 30.32, currency: 'MYR', foreign_amount: '240', foreign_currency: 'TWD',
+                    direction: 'expense', merchant: 'SYNTHETIC SHOP',
+                }),
+            }),
+        }));
+        expect(mocks.assess).toHaveBeenCalledWith(expect.objectContaining({ amount: 30.32, currency: 'MYR' }));
+        expect(mocks.tables.finance_notification_events[0]).toEqual(storedNotification(input));
+    });
+
     it('keeps merchant payments out of saved payees on intake and Retry, then applies merchant rules', async () => {
         const input = event();
         input.source_package = 'my.rytbank.app';
