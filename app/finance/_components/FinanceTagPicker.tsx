@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { Button } from '@/components/atoms/Button';
 import { CheckDoodleIcon } from '@/components/atoms/DoodleIcons';
 import { FieldShell } from '@/components/atoms/FieldShell';
@@ -11,11 +11,14 @@ import { useFinanceReferenceData } from './FinanceReferenceData';
 import { financeApiRequest } from '@/lib/finance/core/client';
 import type { FinanceTag } from '@/lib/types';
 
+const preferredMenuHeight = 370;
+
 export function FinanceTagPicker({ value, onChange, allowCreate = true, includeArchived = false, disabled = false, initialTags = [], label = 'Tags', errorMessage }: {
     value: string[]; onChange: (value: string[]) => void; allowCreate?: boolean; includeArchived?: boolean; disabled?: boolean; initialTags?: FinanceTag[]; label?: string; errorMessage?: string;
 }) {
     const { tags = [], upsertTag, status } = useFinanceReferenceData();
     const [open, setOpen] = useState(false);
+    const [menuPosition, setMenuPosition] = useState<CSSProperties>();
     const [search, setSearch] = useState('');
     const [error, setError] = useState('');
     const [saving, setSaving] = useState(false);
@@ -27,9 +30,51 @@ export function FinanceTagPicker({ value, onChange, allowCreate = true, includeA
     const library = [...new Map([...initialTags, ...tags].map(tag => [tag.id, tag])).values()];
     const query = search.trim().toLowerCase();
     const available = library.filter(tag => (includeArchived || !tag.is_archived || value.includes(tag.id)) && tag.name.toLowerCase().includes(query));
+
+    useLayoutEffect(() => {
+        if (!open) return;
+
+        const viewport = window.visualViewport;
+        const positionMenu = () => {
+            const button = trigger.current;
+            if (!button) return;
+
+            const rect = button.getBoundingClientRect();
+            const zoom = button.currentCSSZoom || 1;
+            const gap = 4 * zoom;
+            const gutter = 8;
+            const viewportTop = viewport?.offsetTop ?? 0;
+            const viewportBottom = viewportTop + (viewport?.height ?? window.innerHeight);
+            const below = viewportBottom - rect.bottom - gap - gutter;
+            const above = rect.top - viewportTop - gap - gutter;
+            const openAbove = below < preferredMenuHeight * zoom && above > below;
+            setMenuPosition({
+                left: rect.left / zoom,
+                width: rect.width / zoom,
+                maxHeight: Math.max(0, openAbove ? above : below) / zoom,
+                ...(openAbove ? { bottom: (window.innerHeight - rect.top + gap) / zoom } : { top: (rect.bottom + gap) / zoom }),
+            });
+        };
+        const handleScroll = (event: Event) => {
+            if (!(event.target instanceof Node) || !root.current?.contains(event.target)) positionMenu();
+        };
+
+        positionMenu();
+        window.addEventListener('resize', positionMenu);
+        window.addEventListener('scroll', handleScroll, true);
+        viewport?.addEventListener('resize', positionMenu);
+        viewport?.addEventListener('scroll', positionMenu);
+        return () => {
+            window.removeEventListener('resize', positionMenu);
+            window.removeEventListener('scroll', handleScroll, true);
+            viewport?.removeEventListener('resize', positionMenu);
+            viewport?.removeEventListener('scroll', positionMenu);
+        };
+    }, [open]);
+
     useEffect(() => {
         if (!open) return;
-        searchRef.current?.focus();
+        searchRef.current?.focus({ preventScroll: true });
         // Safari can blur search before clicking a button without focusing it.
         // Close only when a pointer or focus target actually moves outside.
         const outside = (event: PointerEvent | FocusEvent) => {
@@ -86,7 +131,7 @@ export function FinanceTagPicker({ value, onChange, allowCreate = true, includeA
                             </span>
                         </SelectTrigger>
                         {open && (
-                            <div id={id} role="group" aria-label={label} className="absolute left-0 top-full z-30 mt-1 w-full min-w-0 rounded-md border border-border-default bg-bg-elevated p-3 text-sm shadow-subtle">
+                            <div id={id} role="group" aria-label={label} style={menuPosition} className="custom-scrollbar fixed z-50 flex min-w-0 flex-col overflow-y-auto rounded-md border border-border-default bg-bg-elevated p-3 text-sm shadow-subtle">
                                 <Input ref={searchRef} aria-label="Search tags" placeholder="Search tags" maxLength={120} value={search}
                                     onChange={event => setSearch(event.target.value)}
                                     onKeyDown={event => {
@@ -98,7 +143,7 @@ export function FinanceTagPicker({ value, onChange, allowCreate = true, includeA
                                             ?? (available.length === 1 ? available[0] : undefined);
                                         if (match && !value.includes(match.id)) toggle(match.id);
                                     }} />
-                                <div className="custom-scrollbar mt-2 max-h-60 space-y-1 overflow-y-auto">
+                                <div className="custom-scrollbar mt-2 min-h-10 max-h-60 space-y-1 overflow-y-auto">
                                     {available.map(tag => (
                                         <Button key={tag.id} variant="ghost" type="button" aria-pressed={value.includes(tag.id)} disabled={saving || (!includeArchived && tag.is_archived && !value.includes(tag.id)) || (!value.includes(tag.id) && value.length >= 50)}
                                             className={cn('min-h-10 w-full justify-between gap-3 rounded-sm px-3 py-2 text-left text-sm font-normal', value.includes(tag.id) ? 'bg-bg-hover text-text-primary' : 'text-text-secondary hover:bg-bg-subtle hover:text-text-primary')}
@@ -110,9 +155,9 @@ export function FinanceTagPicker({ value, onChange, allowCreate = true, includeA
                                     {!available.length && <p className="py-2 text-sm text-text-muted">No matching tags.</p>}
                                 </div>
                                 {allowCreate && search.trim() && !library.some(tag => tag.name.toLowerCase() === search.trim().toLowerCase()) && (
-                                    <Button type="button" variant="secondary" className="mt-2 w-full whitespace-normal break-words" isLoading={saving} disabled={saving || value.length >= 50} onClick={() => void create()}>Create “{search.trim()}”</Button>
+                                    <Button type="button" variant="secondary" className="mt-2 w-full shrink-0 whitespace-normal break-words" isLoading={saving} disabled={saving || value.length >= 50} onClick={() => void create()}>Create “{search.trim()}”</Button>
                                 )}
-                                <div className="mt-2 flex justify-between">
+                                <div className="mt-2 flex shrink-0 justify-between">
                                     <Button type="button" variant="ghost" onClick={() => onChange([])}>Clear tags</Button>
                                     <Button type="button" variant="ghost" onClick={() => { setOpen(false); trigger.current?.focus(); }}>Done</Button>
                                 </div>
