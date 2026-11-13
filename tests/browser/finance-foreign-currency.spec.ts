@@ -76,6 +76,34 @@ test('edit explicitly clears both visible values', async ({ page }) => {
     await expect.poll(() => body).toMatchObject({ foreign_amount: null, foreign_currency: null });
 });
 
+for (const selection of ['Enter', 'click'] as const) {
+    test(`selects a searched travel tag in the editor with ${selection} without submitting the form`, async ({ page }) => {
+        let body: Record<string, unknown> | undefined;
+        await page.addInitScript(rows => { Object.assign(window, { transactionInitial: rows }); }, [
+            { ...transaction, tags: [], foreign_amount: null, foreign_currency: null },
+        ]);
+        await page.route('**/api/finance/transactions', async route => {
+            body = route.request().postDataJSON();
+            await route.fulfill({ json: { data: transaction } });
+        });
+        await page.goto('/finance/transactions/edit?id=' + transaction.id);
+        const picker = page.getByRole('button', { name: 'Choose tags', exact: true });
+        await picker.click();
+        const search = page.getByRole('textbox', { name: 'Search tags' });
+        await search.fill('Taiwan');
+        const option = page.getByRole('button', { name: travelTag.name, exact: true });
+        if (selection === 'Enter') await search.press('Enter');
+        else await option.click();
+        await expect(option).toHaveAttribute('aria-pressed', 'true');
+        await page.getByRole('button', { name: 'Done', exact: true }).click();
+        await expect(page.getByLabel('Selected tags')).toContainText(travelTag.name);
+        await expect(page.getByLabel('Foreign amount', { exact: true })).toBeVisible();
+        expect(body).toBeUndefined();
+        await page.getByRole('button', { name: 'Save changes', exact: true }).click();
+        await expect.poll(() => body?.tag_ids).toEqual([travelTag.id]);
+    });
+}
+
 for (const intakeSource of ['notification', 'screenshot'] as const) {
     test(`review saves foreign details for a ${intakeSource}`, async ({ page }) => {
         let body: Record<string, unknown> | undefined;
