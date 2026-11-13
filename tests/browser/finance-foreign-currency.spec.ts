@@ -41,7 +41,7 @@ test('manual entry opens foreign fields only for a travel tag and saves both amo
     await expect.poll(() => body).toMatchObject({ ...foreign, amount: 200.76, tag_ids: [travelTag.id, plainTag.id].sort() });
 });
 
-test('ledger groups source, category and tags, and the editor shows the exchange rate', async ({ page }, info) => {
+test('ledger groups source, category and tags and shows the MYR charge, with foreign details in the editor', async ({ page }, info) => {
     const tagged = { ...transaction, finance_source: source, category: {
         id: '10000000-0000-4000-8000-000000000099', name: 'Shopping', is_archived: false,
     } };
@@ -58,8 +58,8 @@ test('ledger groups source, category and tags, and the editor shows the exchange
         expect(boxes.map(box => box?.y)).toEqual([boxes[0]?.y, boxes[0]?.y, boxes[0]?.y]);
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
-    await expect(row.getByText('TWD 1,600.00', { exact: true })).toBeVisible();
-    await expect(row.getByText(/1 TWD = MYR/)).toHaveCount(0);
+    await expect(row.getByText(/RM\s*200\.76/)).toBeVisible();
+    await expect(row).not.toContainText('TWD');
     await page.goto('/finance/transactions/edit?id=' + transaction.id);
     await expect(page.getByText('TWD 1,600.00 · 1 TWD = MYR 0.125475')).toBeVisible();
 });
