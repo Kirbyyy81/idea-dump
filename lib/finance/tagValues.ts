@@ -3,6 +3,13 @@ export type { FinanceTagFilter } from '@/lib/types';
 
 export const MAX_FINANCE_TAGS = 50;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export function hasFinanceTravelTag(
+    selectedIds: string[], library: FinanceTag[] = [], initialTags: FinanceTag[] = []
+) {
+    const byId = new Map([...initialTags, ...library].map(tag => [tag.id, tag]));
+    return selectedIds.some(id => /^travel -\s*\S/i.test(byId.get(id)?.name || ''));
+}
+
 export function parseFinanceTagIds(value: unknown): string[] {
     if (!Array.isArray(value) || value.length > MAX_FINANCE_TAGS || value.some(id => typeof id !== 'string' || !uuid.test(id))) {
         throw new Error('Choose up to 50 valid tags');

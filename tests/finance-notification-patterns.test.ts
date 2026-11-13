@@ -21,7 +21,7 @@ describe('stored notification patterns', () => {
   expect(parseFinanceNotification(sampleNotification('RM19.00 settled at EXAMPLE SHOP.')).status).toBe('review');
  });
  it('validates every migration seed and rejects executable or unbounded rules', () => {
-  expect(notificationPatterns.length).toBe(15);
+  expect(notificationPatterns.length).toBe(16);
   for (const p of notificationPatterns) expect(validNotificationDefinition(p.definition),p.name).toBe(true);
   expect(validNotificationDefinition({version:1,regex:'.*',parts:['paid ',{kind:'amount',field:'amount'}]})).toBe(false);
   expect(validNotificationDefinition({version:1,parts:[{kind:'text'},' and ',{kind:'text'}]})).toBe(false);

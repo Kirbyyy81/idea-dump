@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { DeleteDoodleIcon, EditDoodleIcon, MoreDoodleIcon } from '@/components/atoms/DoodleIcons';
 import type { FinanceTransactionView } from '@/lib/types';
+import { formatFinanceForeignDetails } from '@/lib/finance/transactions/foreignCurrency';
 import { formatCurrency } from '@/lib/utils';
 import { FinanceTransactionRow } from '../../_components/FinanceTransactionRow';
 
@@ -74,6 +75,7 @@ export function TransactionLedgerRow({
                 sourceName={transaction.finance_source?.name}
                 categoryName={transaction.category?.name ?? null}
                 direction={transaction.direction}
+                foreignDetails={formatFinanceForeignDetails(transaction.amount, transaction)}
                 formattedAmount={formatCurrency(transaction.amount, transaction.currency || 'MYR')}
                 actions={
                     <span ref={containerRef} className="relative">

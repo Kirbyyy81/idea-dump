@@ -141,6 +141,8 @@ describe('Finance transaction edit route', () => {
     it('creates the editable form from the loaded transaction', () => {
         expect(createFinanceTransactionEditForm(transaction)).toEqual({
             amount: '12.5',
+            foreign_amount: '',
+            foreign_currency: '',
             category_id: 'category-1',
             direction: 'expense',
             has_payee: true,

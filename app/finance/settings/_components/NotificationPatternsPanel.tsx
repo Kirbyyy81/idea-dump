@@ -10,7 +10,7 @@ import { useFinanceReferenceData } from '@/app/finance/_components/FinanceRefere
 import type { FinanceNotificationPattern, FinanceNotificationPart } from '@/lib/types';
 
 type Pattern = Pick<FinanceNotificationPattern,'id'|'name'|'definition'|'is_active'|'evidence_valid'|'revision'|'origin'|'source_package'>;
-const slotLabel=(part: Exclude<FinanceNotificationPart,string>) => part.field?.replace(/_/g,' ') || part.kind;
+const slotLabel=(part: Exclude<FinanceNotificationPart,string>) => part.kind === 'foreign_money' ? 'foreign currency and amount' : part.field?.replace(/_/g,' ') || part.kind;
 export function NotificationPatternsPanel() {
     const {sources}=useFinanceReferenceData();
     const [chosenSource,setChosenSource]=useState('');

@@ -132,6 +132,10 @@ The live IdeaDump project records the canonical version `20261001103729`. Catalo
 
 The branch-wide CLI dry run encountered an existing ledger discrepancy: deployed dashboard migration `20260920122733` is absent locally, while parser migrations `20260918033827` and `20260929055515` remain undeployed. A temporary deployment directory contained the applied migrations (reconstructing the missing dashboard file from stored migration statements) and the exact committed linking migration. Its dry run listed only `20261001103729_finance_link_duplicate_details.sql`; the canonical CLI push applied it, and a second dry run reported no pending migrations in that deployment set. The unrelated parser migrations and existing production history were left unchanged. The corresponding web release is still required; this rollout did not deploy application code.
 
+### Foreign card payments
+
+Ryt notifications such as `RM200.76 (TWD1,600.00) paid at … using your Main Account` extract the MYR charge, the foreign currency and amount, and the merchant. The normal auto-confirm checks apply. Ambiguous or malformed foreign details stay in Review. Corrected, manually confirmed notifications can teach an additional format when the foreign pair, MYR charge, and counterparty match unique values in the message. Learned formats stay scoped to the owner, source, and app package, and contain no sample amounts or party names. Automatic confirmation never teaches a pattern.
+
 ## Local database regression tests
 
 Use only a disposable, fully migrated loopback PostgreSQL database:

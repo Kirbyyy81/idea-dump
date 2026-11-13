@@ -1,3 +1,4 @@
+import { normalizeForeignAmount } from '@/lib/finance/transactions/foreignCurrency';
 import { transactionTags } from '@/lib/finance/tagValues';
 import { FINANCE_V1_CURRENCY } from '@/lib/finance/core/constants';
 import type {
@@ -188,6 +189,8 @@ export function toFinanceTransactionView(transaction: FinanceTransaction): Finan
         category_id: transaction.category_id || null,
         direction: transaction.direction,
         amount: Number(transaction.amount),
+        foreign_amount: normalizeForeignAmount(transaction.foreign_amount),
+        foreign_currency: transaction.foreign_currency ?? null,
         currency: transaction.currency || FINANCE_V1_CURRENCY,
         merchant: transaction.merchant || null,
         payee_id: transaction.payee_id || null,

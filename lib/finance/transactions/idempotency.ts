@@ -1,3 +1,4 @@
+import { normalizeForeignAmount } from './foreignCurrency';
 import { transactionTags } from '@/lib/finance/tagValues';
 import type { FinanceTransaction } from '@/lib/types';
 
@@ -16,6 +17,8 @@ type ManualTransactionReplayRequest = Pick<
     | 'direction'
     | 'amount'
     | 'currency'
+    | 'foreign_amount'
+    | 'foreign_currency'
     | 'merchant'
     | 'reference_number'
     | 'transaction_date'
@@ -56,6 +59,8 @@ export function isManualTransactionReplay(
         && existing.direction === requested.direction
         && Number(existing.amount) === Number(requested.amount)
         && existing.currency === requested.currency
+        && normalizeForeignAmount(existing.foreign_amount) === normalizeForeignAmount(requested.foreign_amount)
+        && (existing.foreign_currency ?? null) === (requested.foreign_currency ?? null)
         && (existing.merchant || null) === (requested.merchant || null)
         && (existing.finance_payee?.name || null) === (requested.payee_name || null)
         && (existing.reference_number || null) === (requested.reference_number || null)

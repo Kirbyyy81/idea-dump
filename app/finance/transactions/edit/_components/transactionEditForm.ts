@@ -1,9 +1,10 @@
+import { foreignFormDetails, type ForeignForm } from '@/lib/finance/transactions/foreignCurrency';
 import type {
     FinanceTransaction,
     FinanceTransactionDirection,
 } from '@/lib/types';
 
-export interface FinanceTransactionEditFormState {
+export interface FinanceTransactionEditFormState extends ForeignForm {
     amount: string;
     category_id: string;
     direction: FinanceTransactionDirection;
@@ -24,6 +25,7 @@ export function createFinanceTransactionEditForm(
         category_id: transaction.category_id || '',
         direction: transaction.direction,
         amount: transaction.amount.toString(),
+        ...foreignFormDetails(transaction),
         merchant: transaction.merchant || '',
         has_payee: Boolean(transaction.payee_id),
         payee_name: transaction.finance_payee?.name || '',

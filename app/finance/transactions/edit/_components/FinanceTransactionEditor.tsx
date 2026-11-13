@@ -3,6 +3,9 @@
 import { FormEvent, useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { FinanceForeignFields } from '@/app/finance/_components/FinanceForeignFields';
+import { hasFinanceTravelTag } from '@/lib/finance/tagValues';
+import { parseForeignDetails } from '@/lib/finance/transactions/foreignCurrency';
 import { FinanceTagPicker } from '@/app/finance/_components/FinanceTagPicker';
 import { AppShell } from '@/components/organisms/AppShell';
 import { Button } from '@/components/atoms/Button';
@@ -63,6 +66,7 @@ export function FinanceTransactionEditor({
         error: referenceError,
         refresh: refreshReferenceData,
         sources,
+        tags,
         status: referenceStatus,
         upsertCategory,
     } = useFinanceReferenceData();
@@ -71,6 +75,7 @@ export function FinanceTransactionEditor({
             ? createFinanceTransactionEditForm(initialTransaction)
             : null
     ));
+    const showForeignFields = hasFinanceTravelTag(tagIds, tags, initialTransaction?.tags);
     const [fieldErrors, setFieldErrors] = useState<FinanceFieldErrors>({});
     const [isSaving, setIsSaving] = useState(false);
     const [isRetrying, startRetryTransition] = useTransition();
@@ -124,7 +129,9 @@ export function FinanceTransactionEditor({
     const saveTransaction = async (event: FormEvent) => {
         event.preventDefault();
         if (!form || !initialTransaction) return;
-        const nextErrors = getFinanceTransactionFieldErrors(form);
+        const { foreign_amount, foreign_currency, ...transaction } = form;
+        const foreign = showForeignFields ? parseForeignDetails({ foreign_amount, foreign_currency }) : undefined;
+        const nextErrors = { ...getFinanceTransactionFieldErrors(form), ...foreign?.errors };
         if (Object.keys(nextErrors).length > 0) {
             setFieldErrors(nextErrors);
             focusFirstFinanceError(nextErrors, Object.keys(nextErrors) as FinanceTransactionField[]);
@@ -148,7 +155,8 @@ export function FinanceTransactionEditor({
                     [FINANCE_TIME_ZONE_HEADER]: getFinanceTimeZone(),
                 },
                 body: JSON.stringify({
-                    ...form,
+                    ...transaction,
+                    ...foreign?.details,
                     tag_ids: tagIds,
                     amount,
                     category_id: categoryId,
@@ -228,6 +236,8 @@ export function FinanceTransactionEditor({
                                     <Input id="edit-currency" label="Currency" value="MYR" readOnly aria-readonly="true" />
                                     <Input id="edit-amount" label="Amount" required errorMessage={fieldErrors.amount} data-finance-field="amount" inputMode="decimal" type="number" min="0.01" max={MAX_FINANCE_AMOUNT} step="0.01" value={form.amount} onChange={(event) => setTransactionField('amount', event.target.value)} placeholder="0.00" />
                                 </div>
+                                {showForeignFields && <FinanceForeignFields id="edit" value={form} myrAmount={form.amount}
+                                    errors={fieldErrors} disabled={isSaving} onChange={setTransactionField} />}
                                 <Input id="edit-merchant" label="Merchant (optional)" errorMessage={fieldErrors.merchant} data-finance-field="merchant" maxLength={MAX_FINANCE_MERCHANT_LENGTH} value={form.merchant} onChange={(event) => setTransactionField('merchant', event.target.value)} />
                                 <Toggle id="edit-has-payee" label="Payee" toggleLabel="Is a payee" errorMessage={fieldErrors.has_payee} data-finance-field="has_payee" checked={form.has_payee} aria-label="Is a payee" onChange={setTransactionPayeeClassification} />
                                 {form.has_payee && <Input id="edit-payee" label="Payee name" required errorMessage={fieldErrors.payee_name} data-finance-field="payee_name" maxLength={MAX_FINANCE_PAYEE_LENGTH} value={form.payee_name} onChange={(event) => setTransactionField('payee_name', event.target.value)} />}

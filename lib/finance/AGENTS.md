@@ -59,6 +59,12 @@
 - Filter before pagination with the tag RPC, using `EXISTS` to avoid duplicate totals. Keep archived tags on historical transactions and in filters, but reject new archived assignments.
 - Run `npm run test:finance-tags:db`, tag unit/browser suites and dashboard regressions after tag changes. Keep tag filtering on the Transactions page. The main dashboard ignores tag query parameters and does not propagate them in navigation or drill-down links. Budgets use their own saved tag filters and frozen totals.
 
+## Foreign currency
+
+- Keep foreign currency and amount paired, with decimal text on browser/API boundaries and exact numeric storage. Use the MYR charge for accounting and duplicate checks.
+- Only new import confirmations may assign the newest unarchived owner travel tag. Keep the foreign pair, tag link, raw-text cleanup, and any learning in the locked confirmation transaction. Omitted edits, replay, and duplicate linking must preserve saved foreign details.
+- Run `supabase/tests/finance_foreign_currency.test.sql` via the isolated Finance category and companion database runners, and `tests/browser/finance-foreign-currency.spec.ts` for Add, Edit, Review and ledger changes.
+
 ## Tag and one-time budgets
 
 - Budget tag filters match any selected tag across categories. Combine populated source/category/tag dimensions using the saved AND/OR setting; use EXISTS so multiple tag matches never duplicate amounts. Omitted `tag_ids` preserve selections and `[]` clears them.

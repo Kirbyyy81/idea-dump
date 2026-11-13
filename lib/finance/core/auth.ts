@@ -1,3 +1,4 @@
+import { normalizeForeignAmount } from '@/lib/finance/transactions/foreignCurrency';
 import { transactionTags } from '@/lib/finance/tagValues';
 import { NextRequest, NextResponse } from 'next/server';
 import { authorizeSessionModule } from '@/lib/rbac/guards';
@@ -124,6 +125,8 @@ export function normalizeFinanceTransaction(transaction: FinanceTransaction) {
         ...transaction,
         tags: transactionTags(transaction),
         amount: Number(transaction.amount),
+        foreign_amount: normalizeForeignAmount(transaction.foreign_amount),
+        foreign_currency: transaction.foreign_currency ?? null,
         currency: transaction.currency || FINANCE_V1_CURRENCY,
         payee_id: transaction.payee_id || null,
         reference_number: transaction.reference_number || null,

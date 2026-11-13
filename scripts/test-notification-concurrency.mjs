@@ -52,8 +52,11 @@ try {
  const counts=await checked("select (select count(*) from public.finance_transactions where user_id="+literal(owner)+")||','||(select count(*) from public.finance_notification_patterns where user_id="+literal(owner)+");");
  if(counts!=='1,1') throw new Error('Expected exactly one transaction and one saved pattern');
  const autoDate=await checked("select (now() at time zone 'Asia/Kuala_Lumpur')::date;");
- const autoParsed={status:'review',date_provenance:'posted_at',duplicate_outcome:'none',payload:{source_id:source,amount:777.77,direction:'expense',merchant:'Synthetic concurrent cafe',currency:'MYR',transaction_date:autoDate,
-  notification_extraction:{version:1,fields:{amount:{pattern_id:'52000000-0000-4000-8000-000000000008',revision:1,learned:false}},conflicts:[],date_provenance:'posted_at'}}};
+ const trip=randomUUID();
+ await checked('insert into public.dim_finance_tags(id,user_id,name) values('+literal(trip)+','+literal(owner)+",'Travel - Synthetic trip');");
+ const fxTrace={pattern_id:'52000000-0000-4000-8000-000000000017',revision:1,learned:false};
+ const autoParsed={status:'review',date_provenance:'posted_at',duplicate_outcome:'none',payload:{source_id:source,amount:777.77,direction:'expense',merchant:'Synthetic concurrent cafe',currency:'MYR',transaction_date:autoDate,foreign_amount:'3456.1234',foreign_currency:'TWD',
+  notification_extraction:{version:1,fields:{amount:fxTrace,foreign_amount:fxTrace,foreign_currency:fxTrace},conflicts:[],date_provenance:'posted_at'}}};
  const uploads=[randomUUID(),randomUUID()].map(id=>"set role service_role; select public.finance_accept_notification_v2("+[owner,device,JSON.stringify({...event,client_event_id:id,source_package:'my.rytbank.app'}),'e'.repeat(64),JSON.stringify(autoParsed)].map(literal).join(',')+');');
  const automatic=await Promise.all(uploads.map(sql=>checked(sql).then(text=>JSON.parse(text))));
  if(automatic.map(r=>r.status).sort().join(',')!=='completed,review') throw new Error('Concurrent duplicate auto-add was not stopped');
@@ -61,6 +64,9 @@ try {
  if(!replayed.replayed||replayed.status!==automatic[0].status) throw new Error('Automatic upload replay changed the result');
  const autoCounts=await checked("select (select count(*) from public.finance_transactions where user_id="+literal(owner)+")||','||(select count(*) from public.finance_notification_patterns where user_id="+literal(owner)+");");
  if(autoCounts!=='2,1') throw new Error('Automatic intake added duplicate transactions or saved patterns');
+ const autoTags=await checked("select count(*) from public.finance_transactions t join public.finance_transaction_tags x on x.transaction_id=t.id and x.user_id=t.user_id "+
+  "where t.user_id="+literal(owner)+" and x.tag_id="+literal(trip)+" and t.amount=777.77 and t.foreign_amount=3456.1234 and t.foreign_currency='TWD';");
+ if(autoTags!=='1') throw new Error('Concurrent foreign confirmation did not save exactly one pair and trip link');
  const category=randomUUID();
  await checked('insert into public.dim_finance_categories(id,user_id,name) values('+literal(category)+','+literal(owner)+",'Concurrency category');");
  const screenshotPayload={source_id:source,category_id:category,amount:888.88,direction:'expense',merchant:'Synthetic concurrent screenshot',

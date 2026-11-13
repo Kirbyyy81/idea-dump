@@ -1,5 +1,7 @@
 'use client';
 
+import { FinanceForeignFields } from '@/app/finance/_components/FinanceForeignFields';
+import { foreignFormDetails, parseForeignDetails, type ForeignForm } from '@/lib/finance/transactions/foreignCurrency';
 import { NotificationExtractionStatus } from './NotificationExtractionStatus';
 import { FinanceDuplicateLink } from './FinanceDuplicateLink';
 import type { FinanceLinkChanges } from '@/lib/types';
@@ -70,7 +72,7 @@ const DUPLICATE_SIGNAL_LABELS: Record<FinanceDuplicateSignal, string> = {
     merchant: 'Same merchant',
 };
 
-interface ReviewForm {
+interface ReviewForm extends ForeignForm {
     source_id: string;
     category_id: string;
     direction: FinanceTransactionDirection;
@@ -99,6 +101,7 @@ function formFromCandidate(candidate: FinanceReviewCandidate, today: string): Re
         category_id: payload.category_id || '',
         direction: payload.direction || 'expense',
         amount: payload.amount?.toString() || '',
+        ...foreignFormDetails(payload),
         merchant: payload.merchant || '',
         has_payee: Boolean(payload.payee_name || payload.payee_id),
         payee_name: payload.payee_name || '',
@@ -220,9 +223,10 @@ export function FinanceReviewClient({
     ) => {
         event?.preventDefault();
         if (!selected || !form) return;
+        const foreign = parseForeignDetails(form);
         let normalizedAmount: number | null = null;
         if (action === 'confirm') {
-            const nextErrors = getFinanceTransactionFieldErrors(form, today);
+            const nextErrors = { ...getFinanceTransactionFieldErrors(form, today), ...foreign.errors };
             if (form.source_id === NEW_SOURCE) {
                 delete nextErrors.source_id;
                 if (!newSourceName.trim()) nextErrors.new_source_name = 'Enter the new source name';
@@ -297,6 +301,7 @@ export function FinanceReviewClient({
                     candidate_id: selected.id,
                     action,
                     ...form,
+                    ...foreign.details,
                     amount: normalizedAmount,
                     source_id: sourceId,
                     category_id: categoryId,
@@ -466,6 +471,10 @@ export function FinanceReviewClient({
                                     </div>
                                     <Input id="review-currency" label="Currency" value="MYR" readOnly aria-readonly="true" />
                                     <Input id="review-amount" label="Amount" required errorMessage={fieldErrors.amount} data-finance-field="amount" type="number" min="0.01" max={MAX_FINANCE_AMOUNT} step="0.01" value={form.amount} onChange={(event) => setReviewField('amount', event.target.value)} />
+                                    <div className="sm:col-span-2">
+                                        <FinanceForeignFields id="review" value={form} myrAmount={form.amount}
+                                            errors={fieldErrors} disabled={isSaving} onChange={setReviewField} />
+                                    </div>
                                     <Input id="review-reference" label="Transaction reference" containerClassName="md:col-span-2" errorMessage={fieldErrors.reference_number} data-finance-field="reference_number" maxLength={MAX_FINANCE_REFERENCE_LENGTH} value={form.reference_number} onChange={(event) => setReviewField('reference_number', event.target.value)} />
                                     <div className="space-y-4"><Select id="review-source" label="Source" required errorMessage={fieldErrors.source_id} data-finance-field="source_id" disabled={referenceStatus !== 'ready'} aria-label="Transaction source" value={form.source_id} onChange={(source_id) => setReviewField('source_id', source_id)} placeholder="Choose a source" options={[...sources.map((source) => ({ value: source.id, label: source.name })), { value: NEW_SOURCE, label: '+ Add new source' }]} />{form.source_id === NEW_SOURCE && <Input id="review-new-source" label="New source name" required errorMessage={fieldErrors.new_source_name} data-finance-field="new_source_name" maxLength={MAX_FINANCE_NAME_LENGTH} value={newSourceName} onChange={(event) => { setNewSourceName(event.target.value); setFieldErrors((current) => ({ ...current, new_source_name: undefined })); }} placeholder="e.g. Maybank" />}</div>
                                     <div className="space-y-4"><Select id="review-category" label="Category" errorMessage={fieldErrors.category_id} data-finance-field="category_id" disabled={referenceStatus !== 'ready'} aria-label="Transaction category" value={form.category_id} onChange={(category_id) => setReviewField('category_id', category_id)} placeholder="Uncategorised" options={[{ value: '', label: 'Uncategorised' }, ...availableCategories, { value: NEW_CATEGORY, label: '+ Add new category' }]} />{form.category_id === NEW_CATEGORY && <Input id="review-new-category" label="New category name" required errorMessage={fieldErrors.new_category_name} data-finance-field="new_category_name" maxLength={MAX_FINANCE_NAME_LENGTH} value={newCategoryName} onChange={(event) => { setNewCategoryName(event.target.value); setFieldErrors((current) => ({ ...current, new_category_name: undefined })); }} placeholder="e.g. Groceries" />}</div>

@@ -2,6 +2,9 @@
 
 import { useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { FinanceForeignFields } from '@/app/finance/_components/FinanceForeignFields';
+import { hasFinanceTravelTag } from '@/lib/finance/tagValues';
+import { foreignFormDetails, parseForeignDetails } from '@/lib/finance/transactions/foreignCurrency';
 import { FinanceTagPicker } from '@/app/finance/_components/FinanceTagPicker';
 import { AppShell } from '@/components/organisms/AppShell';
 import { Button } from '@/components/atoms/Button';
@@ -56,7 +59,7 @@ import type { FinanceEntryMode } from '@/lib/types';
 const NEW_SOURCE = '__new__';
 const MAX_FINANCE_UPLOAD_BYTES = 4 * 1024 * 1024;
 const FINANCE_UPLOAD_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
-const initialForm = { source_id: '', category_id: '', direction: 'expense' as FinanceTransactionDirection, amount: '', merchant: '', has_payee: false, payee_name: '', reference_number: '', transaction_date: getLocalFinanceDate(), notes: '' };
+const initialForm = { source_id: '', category_id: '', direction: 'expense' as FinanceTransactionDirection, amount: '', ...foreignFormDetails({}), merchant: '', has_payee: false, payee_name: '', reference_number: '', transaction_date: getLocalFinanceDate(), notes: '' };
 
 type ScreenshotDialogState =
     | { status: 'processing' }
@@ -78,6 +81,7 @@ export function FinanceTransactionEntry({ initialMode }: { initialMode: FinanceE
     const { files: sharedFiles } = useFinanceShareTarget();
     const {
         sources,
+        tags,
         categories,
         status: referenceStatus,
         error: referenceError,
@@ -88,6 +92,7 @@ export function FinanceTransactionEntry({ initialMode }: { initialMode: FinanceE
     const { showError, showSuccess } = useAlert();
     const [mode, setMode] = useState<FinanceEntryMode>(initialMode);
     const [form, setForm] = useState(initialForm);
+    const showForeignFields = hasFinanceTravelTag(tagIds, tags);
     const [newSource, setNewSource] = useState('');
     const [file, setFile] = useState<File | null>(null);
     const [selectedFiles, setSelectedFiles] = useState<IncomingFinanceShareFile[]>([]);
@@ -143,7 +148,9 @@ export function FinanceTransactionEntry({ initialMode }: { initialMode: FinanceE
 
     const submitManual = async (event: FormEvent) => {
         event.preventDefault();
-        const nextErrors = getFinanceTransactionFieldErrors(form);
+        const { foreign_amount, foreign_currency, ...transaction } = form;
+        const foreign = showForeignFields ? parseForeignDetails({ foreign_amount, foreign_currency }) : undefined;
+        const nextErrors = { ...getFinanceTransactionFieldErrors(form), ...foreign?.errors };
         if (form.source_id === NEW_SOURCE) {
             delete nextErrors.source_id;
             if (!newSource.trim()) nextErrors.new_source_name = 'Enter the new source name';
@@ -172,7 +179,7 @@ export function FinanceTransactionEntry({ initialMode }: { initialMode: FinanceE
                 categoryId = persistedCategory.id;
                 upsertCategory(persistedCategory);
             }
-            const requestBody = { ...form, tag_ids: tagIds, amount, source_id: sourceId, category_id: categoryId };
+            const requestBody = { ...transaction, ...foreign?.details, tag_ids: tagIds, amount, source_id: sourceId, category_id: categoryId };
             const requestFingerprint = JSON.stringify(requestBody);
             const attempt = getManualTransactionAttempt(
                 manualAttemptRef.current,
@@ -324,6 +331,8 @@ export function FinanceTransactionEntry({ initialMode }: { initialMode: FinanceE
                 <Input id="manual-currency" label="Currency" value="MYR" readOnly aria-readonly="true" />
                 <Input id="manual-amount" label="Amount" required errorMessage={fieldErrors.amount} data-finance-field="amount" type="number" inputMode="decimal" min="0.01" max={MAX_FINANCE_AMOUNT} step="0.01" value={form.amount} onChange={(event) => setManualField('amount', event.target.value)} placeholder="0.00" />
             </div>
+            {showForeignFields && <FinanceForeignFields id="manual" value={form} myrAmount={form.amount}
+                errors={fieldErrors} disabled={isSaving} onChange={setManualField} />}
             <Input id="manual-merchant" label="Merchant (optional)" errorMessage={fieldErrors.merchant} data-finance-field="merchant" maxLength={MAX_FINANCE_MERCHANT_LENGTH} value={form.merchant} onChange={(event) => setManualField('merchant', event.target.value)} />
             <Toggle id="manual-has-payee" label="Payee" toggleLabel="Is a payee" errorMessage={fieldErrors.has_payee} data-finance-field="has_payee" checked={form.has_payee} aria-label="Is a payee" onChange={setManualPayeeClassification} />
             {form.has_payee && <Input id="manual-payee" label="Payee name" required errorMessage={fieldErrors.payee_name} data-finance-field="payee_name" maxLength={MAX_FINANCE_PAYEE_LENGTH} value={form.payee_name} onChange={(event) => setManualField('payee_name', event.target.value)} />}

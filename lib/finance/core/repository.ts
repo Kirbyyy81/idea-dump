@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { FinanceCategory, FinanceLinkChanges, FinanceSource, FinanceTransaction } from '@/lib/types';
 
 export const FINANCE_TRANSACTION_VIEW_SELECT = [
-    'id, source_id, category_id, direction, amount, currency, merchant, payee_id',
+    'id, source_id, category_id, direction, amount, currency, foreign_amount::text, foreign_currency, merchant, payee_id',
     'reference_number, transaction_date, notes, created_at',
     'finance_source:dim_finance_sources(id,name)',
     'tag_links:finance_transaction_tags(tag:dim_finance_tags(id,name,is_archived))',
@@ -11,7 +11,7 @@ export const FINANCE_TRANSACTION_VIEW_SELECT = [
     'finance_payee:dim_finance_payees(id,name)',
 ].join(', ');
 const FINANCE_TRANSACTION_REPLAY_SELECT = [
-    'id, source_id, category_id, direction, amount, currency, merchant, payee_id',
+    'id, source_id, category_id, direction, amount, currency, foreign_amount::text, foreign_currency, merchant, payee_id',
     'reference_number, transaction_date, notes, source, status, created_at',
     'finance_source:dim_finance_sources(id,name)',
     'tag_links:finance_transaction_tags(tag:dim_finance_tags(id,name,is_archived))',
@@ -19,7 +19,7 @@ const FINANCE_TRANSACTION_REPLAY_SELECT = [
     'finance_payee:dim_finance_payees(id,name)',
 ].join(', ');
 const FINANCE_TRANSACTION_INTERNAL_SELECT =
-    'id, source_id, category_id, direction, amount, currency, merchant, payee_id, reference_number, transaction_date, notes, source, status';
+    'id, source_id, category_id, direction, amount, currency, foreign_amount::text, foreign_currency, merchant, payee_id, reference_number, transaction_date, notes, source, status';
 const FINANCE_DASHBOARD_RECENT_SELECT = [
     'id, direction, amount, merchant, transaction_date',
     'tag_links:finance_transaction_tags(tag:dim_finance_tags(id,name,is_archived))',
@@ -410,7 +410,7 @@ export async function getManualFinanceTransactionByIdempotencyKey(userId: string
 }
 
 export async function createManualFinanceTransaction(userId: string, input: Record<string, unknown>) {
-    if (input.p_tag_ids !== undefined) return createAdminClient().rpc('finance_save_tagged_transaction', { p_user_id: userId, p_input: input }).single();
+    if (input.p_tag_ids !== undefined || input.p_foreign_amount !== undefined) return createAdminClient().rpc('finance_save_tagged_transaction', { p_user_id: userId, p_input: input }).single();
     return createAdminClient().rpc('finance_create_manual_transaction_v2', {
         p_user_id: userId,
         ...input,
@@ -431,7 +431,7 @@ export async function updateFinanceTransaction(
     transactionId: string,
     input: Record<string, unknown>
 ) {
-    if (input.p_tag_ids !== undefined) return createAdminClient().rpc('finance_save_tagged_transaction', { p_user_id: userId, p_transaction_id: transactionId, p_input: input });
+    if (input.p_tag_ids !== undefined || input.p_foreign_amount !== undefined) return createAdminClient().rpc('finance_save_tagged_transaction', { p_user_id: userId, p_transaction_id: transactionId, p_input: input });
     return createAdminClient().rpc('finance_update_transaction_v3', {
         p_user_id: userId,
         p_transaction_id: transactionId,
@@ -629,6 +629,10 @@ export async function updateFinanceReviewDuplicateAssessment(
 export async function confirmFinanceReviewCandidate(
     params: Record<string, unknown>
 ) {
+    if (params.p_foreign_amount !== undefined) {
+        const { p_user_id, p_candidate_id, ...p_confirmation } = params;
+        return createAdminClient().rpc('finance_confirm_review_with_foreign', { p_user_id, p_candidate_id, p_confirmation });
+    }
     return createAdminClient().rpc('finance_confirm_candidate_v3', params);
 }
 
