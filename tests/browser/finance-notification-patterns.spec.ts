@@ -86,13 +86,60 @@ for (const completed of [true,false]) {
    await route.fulfill({json:completed?{success:true}:{data:{...candidate,payload:{...candidate.payload,amount:null}}}});
   });
   await page.goto('/finance/review');
+  if (!completed) await page.getByLabel('Notes', { exact: true }).fill('Keep this draft');
   await page.getByRole('button',{name:'Retry and add if complete',exact:true}).click();
   if(completed) {
-   await expect(page.getByText('Transaction added automatically',{exact:true})).toBeVisible();
+   await expect(page.getByRole('status')).toHaveText('1 added. 0 still need review.');
    await expect(page.getByRole('button',{name:'Retry and add if complete',exact:true})).toHaveCount(0);
   } else {
-   await expect(page.getByText('Rules and duplicate checks applied again',{exact:true})).toBeVisible();
+   await expect(page.getByRole('status')).toHaveText('0 added. 1 still need review.');
    await expect(page.getByRole('button',{name:'Retry and add if complete',exact:true})).toBeVisible();
+   await expect(page.getByLabel('Notes', { exact: true })).toHaveValue('Keep this draft');
+   await expect(page.getByRole('spinbutton', { name: 'Amount' })).toHaveValue('');
   }
  });
 }
+
+test('queue retry checks all items in order, including screenshots, and keeps failures and duplicates visible', async ({ page }) => {
+ const makeCandidate = (id: string, merchant: string, intakeSource: 'notification' | 'screenshot') => ({
+  ...reviewCandidates[0], id, intake: { source: intakeSource },
+  payload: { ...reviewCandidates[0].payload, merchant, payee_name: null },
+ });
+ const added = makeCandidate('candidate-1', 'Trip shop', 'notification');
+ const failed = makeCandidate('candidate-2', 'Offline shop', 'notification');
+ const duplicate = makeCandidate('candidate-3', 'Receipt shop', 'screenshot');
+ await page.addInitScript(rows => { Object.assign(window, { reviewInitial: rows }); }, [added, failed, duplicate]);
+ const attempts: string[] = [];
+ let releaseFirst!: () => void;
+ const firstResponse = new Promise<void>(resolve => { releaseFirst = resolve; });
+ await page.route('**/api/finance/review', async route => {
+  const { candidate_id, action } = route.request().postDataJSON();
+  expect(action).toBe('retry');
+  attempts.push(candidate_id);
+  if (candidate_id === added.id) {
+   await firstResponse;
+   await route.fulfill({ json: { success: true } });
+  } else if (candidate_id === failed.id) {
+   await route.fulfill({ status: 503, json: { error: 'Temporarily unavailable' } });
+  } else {
+   await route.fulfill({ json: { data: { ...duplicate, payload: { ...duplicate.payload, amount: 22 },
+    duplicate_outcome: 'strong' } } });
+  }
+ });
+ await page.goto('/finance/review');
+ const retry = page.locator('header').filter({ has: page.getByRole('heading', { name: 'Review queue', exact: true }) })
+  .getByRole('button', { name: 'Retry and add if complete', exact: true });
+ await expect(retry).toBeVisible();
+ await expect(page.getByRole('button', { name: 'Retry rules', exact: true })).toHaveCount(0);
+ await retry.click();
+ await expect(retry).toBeDisabled();
+ await expect(page.getByText('Retrying review queue: 0 of 3 checked.')).toBeVisible();
+ await expect.poll(() => attempts).toEqual([added.id]);
+ releaseFirst();
+ await expect(page.getByRole('status')).toHaveText('1 added. 1 still need review. 1 could not be retried.');
+ expect(attempts).toEqual([added.id, failed.id, duplicate.id]);
+ await expect(page.getByRole('button', { name: /Trip shop/ })).toHaveCount(0);
+ await expect(page.getByRole('button', { name: /Offline shop/ })).toHaveAttribute('aria-pressed', 'true');
+ await expect(page.getByRole('button', { name: /Receipt shop/ })).toContainText('Strong duplicate match');
+ await expect(retry).toBeEnabled();
+});
