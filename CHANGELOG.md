@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.20.1](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.20.0...idea-dump-v0.20.1) (2026-11-13)
+
+
+### Bug Fixes
+
+* hide foreign amounts in transaction rows ([3011887](https://github.com/Kirbyyy81/idea-dump/commit/30118870c1692c19741448afe78b0ff567c92e85))
+* keep budget tags selectable ([26b2ef7](https://github.com/Kirbyyy81/idea-dump/commit/26b2ef7f5cd6d26f4674a5d569f0de667ce2fb02))
+
 ## [0.20.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.19.0...idea-dump-v0.20.0) (2026-11-13)
 
 
