@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FinanceForeignFields } from '@/app/finance/_components/FinanceForeignFields';
 import { hasFinanceTravelTag } from '@/lib/finance/tagValues';
-import { parseForeignDetails } from '@/lib/finance/transactions/foreignCurrency';
+import { formatFinanceForeignDetails, parseForeignDetails } from '@/lib/finance/transactions/foreignCurrency';
 import { FinanceTagPicker } from '@/app/finance/_components/FinanceTagPicker';
 import { AppShell } from '@/components/organisms/AppShell';
 import { Button } from '@/components/atoms/Button';
@@ -76,6 +76,9 @@ export function FinanceTransactionEditor({
             : null
     ));
     const showForeignFields = hasFinanceTravelTag(tagIds, tags, initialTransaction?.tags);
+    const savedConversion = !showForeignFields && form && initialTransaction
+        ? formatFinanceForeignDetails(form.amount, initialTransaction)
+        : null;
     const [fieldErrors, setFieldErrors] = useState<FinanceFieldErrors>({});
     const [isSaving, setIsSaving] = useState(false);
     const [isRetrying, startRetryTransition] = useTransition();
@@ -238,6 +241,7 @@ export function FinanceTransactionEditor({
                                 </div>
                                 {showForeignFields && <FinanceForeignFields id="edit" value={form} myrAmount={form.amount}
                                     errors={fieldErrors} disabled={isSaving} onChange={setTransactionField} />}
+                                {savedConversion && <p className="text-xs text-text-secondary">{savedConversion}</p>}
                                 <Input id="edit-merchant" label="Merchant (optional)" errorMessage={fieldErrors.merchant} data-finance-field="merchant" maxLength={MAX_FINANCE_MERCHANT_LENGTH} value={form.merchant} onChange={(event) => setTransactionField('merchant', event.target.value)} />
                                 <Toggle id="edit-has-payee" label="Payee" toggleLabel="Is a payee" errorMessage={fieldErrors.has_payee} data-finance-field="has_payee" checked={form.has_payee} aria-label="Is a payee" onChange={setTransactionPayeeClassification} />
                                 {form.has_payee && <Input id="edit-payee" label="Payee name" required errorMessage={fieldErrors.payee_name} data-finance-field="payee_name" maxLength={MAX_FINANCE_PAYEE_LENGTH} value={form.payee_name} onChange={(event) => setTransactionField('payee_name', event.target.value)} />}

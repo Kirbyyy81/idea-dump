@@ -41,21 +41,43 @@ test('manual entry opens foreign fields only for a travel tag and saves both amo
     await expect.poll(() => body).toMatchObject({ ...foreign, amount: 200.76, tag_ids: [travelTag.id, plainTag.id].sort() });
 });
 
-test('ledger shows the conversion and edit omits hidden foreign details when removing the tag', async ({ page }) => {
+test('ledger groups source, category and tags, and the editor shows the exchange rate', async ({ page }, info) => {
+    const tagged = { ...transaction, finance_source: source, category: {
+        id: '10000000-0000-4000-8000-000000000099', name: 'Shopping', is_archived: false,
+    } };
+    await page.addInitScript(rows => { Object.assign(window, { transactionInitial: rows }); }, [tagged]);
+    await page.goto('/finance/transactions');
+    const row = page.locator('[data-finance-transaction-row="default"]');
+    const chips = row.getByRole('group', { name: 'Transaction metadata' }).locator(':scope > span');
+    await expect(chips).toHaveText(['Bank', 'Shopping', travelTag.name]);
+    await expect(chips.last().locator('svg[aria-hidden="true"]')).toBeVisible();
+    const categoryBackground = await chips.nth(1).evaluate(chip => getComputedStyle(chip).backgroundColor);
+    await expect(chips.last()).toHaveCSS('background-color', categoryBackground);
+    if (info.project.name === 'desktop') {
+        const boxes = await Promise.all([0, 1, 2].map(index => chips.nth(index).boundingBox()));
+        expect(boxes.map(box => box?.y)).toEqual([boxes[0]?.y, boxes[0]?.y, boxes[0]?.y]);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+    await expect(row.getByText('TWD 1,600.00', { exact: true })).toBeVisible();
+    await expect(row.getByText(/1 TWD = MYR/)).toHaveCount(0);
+    await page.goto('/finance/transactions/edit?id=' + transaction.id);
+    await expect(page.getByText('TWD 1,600.00 · 1 TWD = MYR 0.125475')).toBeVisible();
+});
+
+test('edit preserves the saved conversion when removing the travel tag', async ({ page }) => {
     let body: Record<string, unknown> | undefined;
     await page.addInitScript(rows => { Object.assign(window, { transactionInitial: rows }); }, [transaction]);
     await page.route('**/api/finance/transactions', async route => {
         body = route.request().postDataJSON();
         await route.fulfill({ json: { data: { ...transaction, tags: [] } } });
     });
-    await page.goto('/finance/transactions');
-    await expect(page.getByText('TWD 1,600.00 · 1 TWD = MYR 0.125475')).toBeVisible();
     await page.goto('/finance/transactions/edit?id=' + transaction.id);
     await expect(page.getByLabel('Foreign amount', { exact: true })).toHaveValue('1600');
     await page.getByRole('button', { name: 'Choose tags', exact: true }).click();
     await page.getByRole('button', { name: travelTag.name, exact: true }).click();
     await page.getByRole('button', { name: 'Done', exact: true }).click();
     await expect(page.getByLabel('Foreign amount', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('TWD 1,600.00 · 1 TWD = MYR 0.125475')).toBeVisible();
     await page.getByRole('button', { name: 'Save changes', exact: true }).click();
     await expect.poll(() => body?.tag_ids).toEqual([]);
     expect(body).not.toHaveProperty('foreign_amount');
@@ -75,6 +97,34 @@ test('edit explicitly clears both visible values', async ({ page }) => {
     await page.getByRole('button', { name: 'Save changes', exact: true }).click();
     await expect.poll(() => body).toMatchObject({ foreign_amount: null, foreign_currency: null });
 });
+
+for (const selection of ['Enter', 'click'] as const) {
+    test(`selects a searched travel tag in the editor with ${selection} without submitting the form`, async ({ page }) => {
+        let body: Record<string, unknown> | undefined;
+        await page.addInitScript(rows => { Object.assign(window, { transactionInitial: rows }); }, [
+            { ...transaction, tags: [], foreign_amount: null, foreign_currency: null },
+        ]);
+        await page.route('**/api/finance/transactions', async route => {
+            body = route.request().postDataJSON();
+            await route.fulfill({ json: { data: transaction } });
+        });
+        await page.goto('/finance/transactions/edit?id=' + transaction.id);
+        const picker = page.getByRole('button', { name: 'Choose tags', exact: true });
+        await picker.click();
+        const search = page.getByRole('textbox', { name: 'Search tags' });
+        await search.fill('Taiwan');
+        const option = page.getByRole('button', { name: travelTag.name, exact: true });
+        if (selection === 'Enter') await search.press('Enter');
+        else await option.click();
+        await expect(option).toHaveAttribute('aria-pressed', 'true');
+        await page.getByRole('button', { name: 'Done', exact: true }).click();
+        await expect(page.getByLabel('Selected tags')).toContainText(travelTag.name);
+        await expect(page.getByLabel('Foreign amount', { exact: true })).toBeVisible();
+        expect(body).toBeUndefined();
+        await page.getByRole('button', { name: 'Save changes', exact: true }).click();
+        await expect.poll(() => body?.tag_ids).toEqual([travelTag.id]);
+    });
+}
 
 for (const intakeSource of ['notification', 'screenshot'] as const) {
     test(`review saves foreign details for a ${intakeSource}`, async ({ page }) => {

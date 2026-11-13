@@ -25,7 +25,8 @@ export function FinanceTagPicker({ value, onChange, allowCreate = true, includeA
     const id = useId();
     const triggerId = `${id}-trigger`;
     const library = [...new Map([...initialTags, ...tags].map(tag => [tag.id, tag])).values()];
-    const available = library.filter(tag => (includeArchived || !tag.is_archived || value.includes(tag.id)) && tag.name.toLowerCase().includes(search.trim().toLowerCase()));
+    const query = search.trim().toLowerCase();
+    const available = library.filter(tag => (includeArchived || !tag.is_archived || value.includes(tag.id)) && tag.name.toLowerCase().includes(query));
     useEffect(() => {
         if (!open) return;
         searchRef.current?.focus();
@@ -86,7 +87,17 @@ export function FinanceTagPicker({ value, onChange, allowCreate = true, includeA
                         </SelectTrigger>
                         {open && (
                             <div id={id} role="group" aria-label={label} className="absolute left-0 top-full z-30 mt-1 w-full min-w-0 rounded-md border border-border-default bg-bg-elevated p-3 text-sm shadow-subtle">
-                                <Input ref={searchRef} aria-label="Search tags" placeholder="Search tags" maxLength={120} value={search} onChange={event => setSearch(event.target.value)} />
+                                <Input ref={searchRef} aria-label="Search tags" placeholder="Search tags" maxLength={120} value={search}
+                                    onChange={event => setSearch(event.target.value)}
+                                    onKeyDown={event => {
+                                        if (event.key !== 'Enter' || event.nativeEvent.isComposing) return;
+                                        // The picker can be inside a form. Enter here must not submit it.
+                                        event.preventDefault();
+                                        if (!query || saving || disabled || value.length >= 50) return;
+                                        const match = available.find(tag => tag.name.toLowerCase() === query)
+                                            ?? (available.length === 1 ? available[0] : undefined);
+                                        if (match && !value.includes(match.id)) toggle(match.id);
+                                    }} />
                                 <div className="custom-scrollbar mt-2 max-h-60 space-y-1 overflow-y-auto">
                                     {available.map(tag => (
                                         <Button key={tag.id} variant="ghost" type="button" aria-pressed={value.includes(tag.id)} disabled={saving || (!includeArchived && tag.is_archived && !value.includes(tag.id)) || (!value.includes(tag.id) && value.length >= 50)}

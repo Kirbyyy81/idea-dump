@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import {
-    CategoryDoodleIcon, FoodDoodleIcon, HealthDoodleIcon, HomeDoodleIcon,
+    CategoryDoodleIcon, FoodDoodleIcon, HashtagDoodleIcon, HealthDoodleIcon, HomeDoodleIcon,
     MoneyDoodleIcon, ShoppingDoodleIcon, SourceDoodleIcon, SparkleDoodleIcon,
     TransportDoodleIcon,
 } from '@/components/atoms/DoodleIcons';
@@ -24,7 +24,7 @@ type FinanceTransactionRowProps = RowInteraction & {
     date?: string | null;
     direction?: FinanceTransactionDirection | null;
     formattedAmount: string | null;
-    foreignDetails?: string | null;
+    formattedForeignAmount?: string | null;
     density?: 'default' | 'compact' | 'summary';
     status?: ReactNode;
     tags?: Array<{ id: string; name: string }>;
@@ -41,9 +41,11 @@ const categoryIcons = {
     general: CategoryDoodleIcon,
 };
 
+const metadataChip = 'inline-flex min-h-7 max-w-full items-center gap-1.5 rounded-full border border-border-subtle bg-bg-subtle px-2.5 py-1 text-xs font-semibold text-text-secondary';
+
 /** Shared presentation only. Callers retain navigation, review and mutation ownership. */
 export function FinanceTransactionRow({
-    payeeName, merchant, sourceName, categoryName, date, direction, formattedAmount, foreignDetails,
+    payeeName, merchant, sourceName, categoryName, date, direction, formattedAmount, formattedForeignAmount,
     density = 'default', status, tags = [], actions, href, onSelect, selected,
 }: FinanceTransactionRowProps) {
     const recipient = payeeName || merchant || 'Untitled transaction';
@@ -70,16 +72,21 @@ export function FinanceTransactionRow({
             {payeeName && merchant && <span className="block break-words text-sm text-text-secondary [overflow-wrap:anywhere]">Merchant: {merchant}</span>}
             {date !== undefined && <span className="mt-1 block text-xs text-text-muted">{date ? <time dateTime={date}>{date}</time> : 'No date'}</span>}
             {density === 'summary' && <span className="sr-only">Category: {categoryName || 'Uncategorised'}</span>}
-            {density !== 'summary' && <span className="mt-2 flex min-w-0 flex-wrap gap-2">
-                <span className="inline-flex min-h-7 max-w-full items-center gap-1.5 rounded-full border border-border-subtle bg-bg-subtle px-2.5 py-1 text-xs font-semibold text-text-secondary">
-                    <SourceDoodleIcon size={13} className="shrink-0" /><span className="break-words [overflow-wrap:anywhere]">{sourceName || 'Unknown source'}</span>
-                </span>
-                {categoryName !== undefined && <span className="inline-flex min-h-7 max-w-full items-center gap-1.5 rounded-full border border-border-subtle bg-bg-subtle px-2.5 py-1 text-xs font-semibold text-text-secondary">
-                    <CategoryDoodleIcon size={13} className="shrink-0" /><span className="break-words [overflow-wrap:anywhere]">{categoryName || 'Uncategorised'}</span>
-                </span>}
+            {(density !== 'summary' || tags.length > 0) && <span className="mt-2 flex min-w-0 flex-wrap gap-2" role="group" aria-label="Transaction metadata">
+                {density !== 'summary' && <>
+                    <span className={metadataChip}>
+                        <SourceDoodleIcon size={13} className="shrink-0" /><span className="break-words [overflow-wrap:anywhere]">{sourceName || 'Unknown source'}</span>
+                    </span>
+                    {categoryName !== undefined && <span className={metadataChip}>
+                        <CategoryDoodleIcon size={13} className="shrink-0" /><span className="break-words [overflow-wrap:anywhere]">{categoryName || 'Uncategorised'}</span>
+                    </span>}
+                </>}
+                {tags.map(tag => <span key={tag.id} className={metadataChip}>
+                    <HashtagDoodleIcon size={13} className="shrink-0" />
+                    <span className="break-words [overflow-wrap:anywhere]">{tag.name}</span>
+                </span>)}
             </span>}
-            {tags.length > 0 && <span className="mt-2 flex flex-wrap gap-1" aria-label="Transaction tags">{tags.map(tag => <span key={tag.id} className="max-w-full break-words rounded-full border border-border-default bg-bg-selected px-2 py-1 text-xs">{tag.name}</span>)}</span>}
-            {foreignDetails && <span className="mt-1 block break-words text-xs text-text-secondary">{foreignDetails}</span>}
+            {formattedForeignAmount && <span className="mt-1 block break-words text-xs text-text-secondary">{formattedForeignAmount}</span>}
             {status && <span className="mt-2 block text-xs">{status}</span>}
         </span>
         <span className={cn('col-start-2 flex min-w-0 flex-wrap items-center justify-between gap-2', density === 'default' && 'sm:col-start-3 sm:row-start-1 sm:justify-end', density === 'summary' && 'col-start-3 row-start-1 max-w-32 justify-end text-right')}>
