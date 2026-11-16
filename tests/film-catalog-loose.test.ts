@@ -25,4 +25,17 @@ describe('findFilmCatalogEntryLoose', () => {
     test('cross-brand lookup when brand unknown', () => {
         expect(findFilmCatalogEntryLoose('', 'Portra 400')?.slug).toBe('kodak-portra-400');
     });
+
+    test('rebrand aliases match catalogue films', () => {
+        expect(findFilmCatalogEntryLoose('T5SWF', 'Kinoeye 400')?.slug).toBe('kinoeye-400d');
+        expect(findFilmCatalogEntryLoose('Lucidfilms', 'Kodak Vision 500T')?.slug).toBe('kodak-vision3-500t-5219');
+        expect(findFilmCatalogEntryLoose('Yue Films', 'Kodak Vision3 500T 5219')?.slug).toBe('kodak-vision3-500t-5219');
+        expect(findFilmCatalogEntryLoose('Piccolo', 'Piccolo')?.slug).toBe('piccolo-250');
+    });
+
+    test('distinct films do not collide', () => {
+        expect(findFilmCatalogEntryLoose('Kodak', 'Gold 200')?.slug).toBe('kodak-gold-200-v2');
+        expect(findFilmCatalogEntryLoose('Kodak', 'Vision3 250D 5207')?.slug).toBe('kodak-vision3-250d-5207');
+        expect(findFilmCatalogEntryLoose('Ilford', 'HP5 Plus 400')?.slug).toBe('ilford-hp5-plus-400');
+    });
 });
