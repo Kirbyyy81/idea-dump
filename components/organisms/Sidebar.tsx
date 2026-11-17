@@ -393,6 +393,7 @@ export function Sidebar({ projects, collapsed = false, className, onToggleCollap
                         <div>
                             {renderSubItem({ href: '/inventory/purchases', icon: <ReceiptText size={14} />, isActive: isExactPath(pathname, '/inventory/purchases'), label: 'Purchases' })}
                             {renderSubItem({ href: '/inventory/usage', icon: <BarChart3 size={14} />, isActive: isExactPath(pathname, '/inventory/usage'), label: 'Usage history' })}
+                            {renderSubItem({ href: '/inventory/price-check', icon: <ReceiptText size={14} />, isActive: isExactPath(pathname, '/inventory/price-check'), label: 'Price checker' })}
                         </div>
                     ),
                 })}
