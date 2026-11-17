@@ -13,6 +13,10 @@ export const FILM_ROLL_EXPANDED_WIDTH = 270;
 
 // Artwork bounds within each 200px catalogue image, excluding its white canvas.
 const LABEL_ARTWORK_BOUNDS: Record<string, number[]> = labelArtwork;
+const UPRIGHT_LABELS = new Set([
+    '/film-labels/kinoeye-400d.webp',
+    '/film-labels/street-candy-psychedelic-400.webp',
+]);
 
 interface FilmCanisterProps {
     roll: FilmRoll;
@@ -76,14 +80,17 @@ function FilmCoverFallback({
     const labelImage = getFilmLabelImageForRoll(roll.brand, roll.film_name);
     if (labelImage) {
         const [left, top, width, height] = LABEL_ARTWORK_BOUNDS[labelImage] ?? [0, 0, 200, 200];
+        const upright = UPRIGHT_LABELS.has(labelImage);
         return (
             <div className="relative h-full w-full bg-bg-subtle">
-                <div className="absolute left-1/2 top-1/2 h-[92px] w-[183px] -translate-x-1/2 -translate-y-1/2 rotate-90 overflow-hidden">
+                <div className={upright
+                    ? 'absolute inset-0 overflow-hidden'
+                    : 'absolute left-1/2 top-1/2 h-[92px] w-[183px] -translate-x-1/2 -translate-y-1/2 rotate-90 overflow-hidden'}>
                     <Image
                         src={labelImage}
                         alt={`${roll.brand} ${roll.film_name} label`}
                         fill
-                        sizes={`${Math.ceil(183 * 200 / width)}px`}
+                        sizes={`${Math.ceil((upright ? 92 : 183) * 200 / width)}px`}
                         unoptimized
                         className="max-w-none object-fill"
                         style={{
@@ -99,7 +106,7 @@ function FilmCoverFallback({
     }
     return (
         <div className="flex h-full flex-col justify-between bg-bg-subtle p-3 text-text-primary">
-            <div>
+            <div className="[overflow-wrap:anywhere]">
                 <div className="mb-3 h-1.5 w-12 rounded-full" style={{ backgroundColor: accentColor }} />
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-text-secondary">
                     {roll.brand}

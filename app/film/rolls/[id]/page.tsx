@@ -422,7 +422,10 @@ function RollDetailContent() {
                             <h2 className="text-lg font-bold">Processing</h2>
                         </div>
                         <div className="mt-4 space-y-3">
-                            <Input value={rollForm.lab_name} onChange={(event) => setRollForm({ ...rollForm, lab_name: event.target.value })} />
+                            <label className="space-y-2">
+                                <span className="text-sm text-text-secondary">Lab name</span>
+                                <Input value={rollForm.lab_name} onChange={(event) => setRollForm({ ...rollForm, lab_name: event.target.value })} />
+                            </label>
                             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                                 <label className="space-y-2">
                                     <span className="text-sm text-text-secondary">Processing cost</span>

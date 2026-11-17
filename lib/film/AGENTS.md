@@ -14,7 +14,7 @@
 
 ## Boundaries
 
-- Catalogue images in `public/film-labels/` use 200px square canvases. Keep `labelArtwork.json` bounds (`left`, `top`, `width`, `height`) aligned with the printed artwork when replacing or adding catalogue images; the canister display uses them to crop the surrounding white padding.
+- Use flat, edge-to-edge landscape artwork for new catalogue labels in `public/film-labels/`. A 2:1 image without a crop entry fits the canister face after rotation. For padded 200px square assets, keep `labelArtwork.json` bounds (`left`, `top`, `width`, `height`) aligned with the printed artwork.
 - Route handlers authorize through `authorizeFilmJournal`, parse with `schemas.ts`, and delegate domain behavior to `service.ts`.
 - Repositories must scope every query and mutation to the authenticated user ID.
 - `client.ts` is browser-only. Do not import Supabase admin, server credentials, or server-only provider modules into it.

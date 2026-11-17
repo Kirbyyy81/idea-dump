@@ -115,6 +115,7 @@ export const FILM_CATALOG: FilmCatalogEntry[] = [
     { brand: 'Konica', name: 'Centuria 400', slug: 'konica-centuria-400', iso: 400, process: 'C41' },
     { brand: 'Lomography', name: 'LomoChrome Metropolis', slug: 'lomochrome-metropolis', iso: 400, process: 'C41' },
     { brand: 'Lomography', name: 'LomoChrome Purple', slug: 'lomochrome-purple', iso: 400, process: 'C41' },
+    { brand: 'Lucid Film', name: '500T 5219', slug: 'lucid-film-500t-5219', iso: 500, process: 'ECN2' },
     { brand: 'Lucky', name: 'SHD 100', slug: 'lucky-shd-100', iso: 100, process: 'BW' },
     { brand: 'Lucky', name: 'SHD 400', slug: 'lucky-shd-400', iso: 400, process: 'BW' },
     { brand: 'ORWO', name: 'FPan 100', slug: 'orwo-fpan100', iso: 100, process: 'BW' },
@@ -135,6 +136,7 @@ export const FILM_CATALOG: FilmCatalogEntry[] = [
     { brand: 'Sunny', name: 'Sunny 100', slug: 'sunny-100', iso: 100, process: 'C41' },
     { brand: 'Wolffen', name: 'NC400 Color', slug: 'wolffen-nc400-color', iso: 400, process: 'C41' },
     { brand: 'Yesstar', name: 'Yesstar 200', slug: 'yesstar-200', iso: 200, process: 'C41' },
+    { brand: 'Yue Films', name: 'Crystal 500T 5219', slug: 'yue-films-crystal-500t-5219', iso: 500, process: 'ECN2' },
 ];
 
 export function filmCatalogBrands(): string[] {
@@ -176,22 +178,24 @@ function tokenMatches(rollToken: string, entryToken: string): boolean {
 }
 
 export function findFilmCatalogEntryLoose(brand: string, name: string): FilmCatalogEntry | undefined {
-    if (findFilmCatalogEntry(brand, name)) return findFilmCatalogEntry(brand, name);
-    // Catalogue aliases: shelf rolls that store a rebrand maker or shorthand name
-    // alongside a catalogue film's tokens.
-    const aliasBrand = brand.trim().toLowerCase();
-    const aliasCandidates = FILM_CATALOG.filter((entry) => {
-        if (aliasBrand === 't5swf' && entry.slug === 'kinoeye-400d') return true;
-        if ((aliasBrand === 'lucidfilms' || aliasBrand === 'yue films') && entry.slug === 'kodak-vision3-500t-5219') return true;
-        return false;
-    });
-    const tokens = filmNameTokens(name);
+    let catalogBrand = brand.trim().toLowerCase();
+    if (/^lucid\s*films?$/.test(catalogBrand)) catalogBrand = 'lucid film';
+    if (/^yue\s*films?$/.test(catalogBrand)) catalogBrand = 'yue films';
+    if (catalogBrand === '慢曝t5swf') catalogBrand = 't5swf';
+
+    let catalogName = name;
+    if (catalogBrand === 't5swf') catalogName = name.replace(/\bkinoeye(?=\d)/i, 'Kinoeye ');
+    // Older rolls use the emulsion name instead of the rebrand's box title.
+    if (catalogBrand === 'lucid film' || catalogBrand === 'yue films') {
+        catalogName = name.replace(/^\s*(?:kodak\s+)?vision\s*3?\s+(?=500t\b)/i, '');
+    }
+    const exactMatch = findFilmCatalogEntry(catalogBrand, catalogName);
+    if (exactMatch) return exactMatch;
+    const tokens = filmNameTokens(catalogName);
     if (!tokens.length) return undefined;
-    const brandCandidates = aliasCandidates.length
-        ? aliasCandidates
-        : brand.trim()
-            ? FILM_CATALOG.filter((entry) => entry.brand.toLowerCase() === brand.trim().toLowerCase())
-            : FILM_CATALOG;
+    const brandCandidates = catalogBrand
+        ? FILM_CATALOG.filter((entry) => entry.brand.toLowerCase() === catalogBrand)
+        : FILM_CATALOG;
     return brandCandidates.find((entry) => {
         const entryTokens = filmNameTokens(entry.name);
         if (!tokens.length || !entryTokens.length) return false;
