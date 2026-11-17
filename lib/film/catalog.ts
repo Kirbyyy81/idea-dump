@@ -180,12 +180,13 @@ export function findFilmCatalogEntryLoose(brand: string, name: string): FilmCata
     // Catalogue aliases: shelf rolls that store a rebrand maker or shorthand name
     // alongside a catalogue film's tokens.
     const aliasBrand = brand.trim().toLowerCase();
+    const isKinoeyeBrand = aliasBrand === 't5swf' || aliasBrand === '慢曝t5swf';
     const aliasCandidates = FILM_CATALOG.filter((entry) => {
-        if (aliasBrand === 't5swf' && entry.slug === 'kinoeye-400d') return true;
+        if (isKinoeyeBrand && entry.slug === 'kinoeye-400d') return true;
         if ((aliasBrand === 'lucidfilms' || aliasBrand === 'yue films') && entry.slug === 'kodak-vision3-500t-5219') return true;
         return false;
     });
-    const tokens = filmNameTokens(name);
+    const tokens = filmNameTokens(isKinoeyeBrand ? name.replace(/\bkinoeye(?=\d)/i, 'Kinoeye ') : name);
     if (!tokens.length) return undefined;
     const brandCandidates = aliasCandidates.length
         ? aliasCandidates

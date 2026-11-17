@@ -28,6 +28,8 @@ describe('findFilmCatalogEntryLoose', () => {
 
     test('rebrand aliases match catalogue films', () => {
         expect(findFilmCatalogEntryLoose('T5SWF', 'Kinoeye 400')?.slug).toBe('kinoeye-400d');
+        expect(findFilmCatalogEntryLoose('慢曝T5SWF', 'Kinoeye400D')?.slug).toBe('kinoeye-400d');
+        expect(findFilmCatalogEntryLoose('慢曝T5SWF', 'Another Film')).toBeUndefined();
         expect(findFilmCatalogEntryLoose('Lucidfilms', 'Kodak Vision 500T')?.slug).toBe('kodak-vision3-500t-5219');
         expect(findFilmCatalogEntryLoose('Yue Films', 'Kodak Vision3 500T 5219')?.slug).toBe('kodak-vision3-500t-5219');
         expect(findFilmCatalogEntryLoose('Piccolo', 'Piccolo')?.slug).toBe('piccolo-250');
