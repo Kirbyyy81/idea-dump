@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.20.1](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.20.0...idea-dump-v0.20.1) (2026-11-17)
+
+
+### Bug Fixes
+
+* add labels for Kinoeye, Psychedelic, Edo Ukiyoe and Piccolo ([e4fee1b](https://github.com/Kirbyyy81/idea-dump/commit/e4fee1b5859a5984e3896d7349dc77ebe6dfc4de))
+* add standalone inventory bundle price checker ([23e985d](https://github.com/Kirbyyy81/idea-dump/commit/23e985d2d5ff3b745a30519127ee5137492ea86f))
+* hide foreign amounts in transaction rows ([3011887](https://github.com/Kirbyyy81/idea-dump/commit/30118870c1692c19741448afe78b0ff567c92e85))
+* keep budget tags selectable ([26b2ef7](https://github.com/Kirbyyy81/idea-dump/commit/26b2ef7f5cd6d26f4674a5d569f0de667ce2fb02))
+* link product details to filtered inventory histories ([e6de57b](https://github.com/Kirbyyy81/idea-dump/commit/e6de57bd47271513d13e4af87e2d9d99cd952da2))
+* preserve selected inventory price references ([7080a3d](https://github.com/Kirbyyy81/idea-dump/commit/7080a3d2ab325779e1ca919476b363a11468ad3c))
+* show stock duration as numeric approximate days ([f809b88](https://github.com/Kirbyyy81/idea-dump/commit/f809b886dbd88214619c28f972de77b139bf0a72))
+
 ## [0.20.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.19.0...idea-dump-v0.20.0) (2026-11-13)
 
 
