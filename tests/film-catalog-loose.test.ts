@@ -30,9 +30,16 @@ describe('findFilmCatalogEntryLoose', () => {
         expect(findFilmCatalogEntryLoose('T5SWF', 'Kinoeye 400')?.slug).toBe('kinoeye-400d');
         expect(findFilmCatalogEntryLoose('慢曝T5SWF', 'Kinoeye400D')?.slug).toBe('kinoeye-400d');
         expect(findFilmCatalogEntryLoose('慢曝T5SWF', 'Another Film')).toBeUndefined();
-        expect(findFilmCatalogEntryLoose('Lucidfilms', 'Kodak Vision 500T')?.slug).toBe('kodak-vision3-500t-5219');
-        expect(findFilmCatalogEntryLoose('Yue Films', 'Kodak Vision3 500T 5219')?.slug).toBe('kodak-vision3-500t-5219');
         expect(findFilmCatalogEntryLoose('Piccolo', 'Piccolo')?.slug).toBe('piccolo-250');
+    });
+
+    test('uses the rebrand packaging for Lucid and Yue 500T rolls', () => {
+        expect(findFilmCatalogEntryLoose('Lucidfilms', 'Kodak Vision 500T')?.slug).toBe('lucid-film-500t-5219');
+        expect(findFilmCatalogEntryLoose('Lucid Film', '500T 5219')?.slug).toBe('lucid-film-500t-5219');
+        expect(findFilmCatalogEntryLoose('Yue Films', 'Kodak Vision3 500T 5219')?.slug).toBe('yue-films-crystal-500t-5219');
+        expect(findFilmCatalogEntryLoose('Yuefilms', 'Crystal 500T')?.slug).toBe('yue-films-crystal-500t-5219');
+        expect(findFilmCatalogEntryLoose('Lucidfilms', 'Kodak Vision3 200T 5213')).toBeUndefined();
+        expect(findFilmCatalogEntryLoose('Kodak', 'Vision3 500T 5219')?.slug).toBe('kodak-vision3-500t-5219');
     });
 
     test('distinct films do not collide', () => {
