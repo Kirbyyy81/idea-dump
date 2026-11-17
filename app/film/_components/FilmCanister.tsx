@@ -99,7 +99,7 @@ function FilmCoverFallback({
     }
     return (
         <div className="flex h-full flex-col justify-between bg-bg-subtle p-3 text-text-primary">
-            <div>
+            <div className="[overflow-wrap:anywhere]">
                 <div className="mb-3 h-1.5 w-12 rounded-full" style={{ backgroundColor: accentColor }} />
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-text-secondary">
                     {roll.brand}
