@@ -11,6 +11,10 @@ export interface FilmCatalogEntry {
 }
 
 export const FILM_CATALOG: FilmCatalogEntry[] = [
+    { brand: 'Escura', name: 'Edo Ukiyoe 400', slug: 'escura-edo-ukiyoe-400', iso: 400, process: 'C41' },
+    { brand: 'T5SWF', name: 'Kinoeye 400D', slug: 'kinoeye-400d', iso: 400, process: 'C41' },
+    { brand: 'Piccolo', name: 'Piccolo 250', slug: 'piccolo-250', iso: 250, process: 'ECN2' },
+    { brand: 'Street Candy', name: 'Psychedelic 400', slug: 'street-candy-psychedelic-400', iso: 400, process: 'C41' },
     { brand: 'Aeronega', name: 'Aeronega C41', slug: 'aeronega-c41', iso: 400, process: 'C41' },
     { brand: 'Agfa', name: 'Aviphot Pan 200', slug: 'agfa-aviphot-pan-200', iso: 200, process: 'BW' },
     { brand: 'Alien', name: 'Cinefilm 50D 5203', slug: 'alien-5203-50d', iso: 50, process: 'ECN2' },
@@ -163,19 +167,42 @@ function filmNameTokens(name: string): string[] {
         .filter((token) => !/^(120|135|4x5|super8|35mm)$/.test(token));
 }
 
+function tokenMatches(rollToken: string, entryToken: string): boolean {
+    if (rollToken === entryToken) return true;
+    // Vision3 prints as Vision on some rebrand labels.
+    if (rollToken === 'vision' && entryToken === 'vision3') return true;
+    // 400D vs 400 style suffixes: a shorter roll token may be a prefix of the entry token.
+    return rollToken.length >= 2 && entryToken.startsWith(rollToken) && /\d/.test(rollToken);
+}
+
 export function findFilmCatalogEntryLoose(brand: string, name: string): FilmCatalogEntry | undefined {
     if (findFilmCatalogEntry(brand, name)) return findFilmCatalogEntry(brand, name);
+    // Catalogue aliases: shelf rolls that store a rebrand maker or shorthand name
+    // alongside a catalogue film's tokens.
+    const aliasBrand = brand.trim().toLowerCase();
+    const aliasCandidates = FILM_CATALOG.filter((entry) => {
+        if (aliasBrand === 't5swf' && entry.slug === 'kinoeye-400d') return true;
+        if ((aliasBrand === 'lucidfilms' || aliasBrand === 'yue films') && entry.slug === 'kodak-vision3-500t-5219') return true;
+        return false;
+    });
     const tokens = filmNameTokens(name);
     if (!tokens.length) return undefined;
-    const brandCandidates = brand.trim()
-        ? FILM_CATALOG.filter((entry) => entry.brand.toLowerCase() === brand.trim().toLowerCase())
-        : FILM_CATALOG;
+    const brandCandidates = aliasCandidates.length
+        ? aliasCandidates
+        : brand.trim()
+            ? FILM_CATALOG.filter((entry) => entry.brand.toLowerCase() === brand.trim().toLowerCase())
+            : FILM_CATALOG;
     return brandCandidates.find((entry) => {
         const entryTokens = filmNameTokens(entry.name);
-        return tokens.length > 0
-            && entryTokens.length > 0
-            && (tokens.every((token) => entryTokens.includes(token))
-                || entryTokens.every((token) => tokens.includes(token)));
+        if (!tokens.length || !entryTokens.length) return false;
+        const rollMatched = tokens.filter((token) => entryTokens.some((entryToken) => tokenMatches(token, entryToken))).length;
+        const entryMatched = entryTokens.filter((entryToken) => tokens.some((token) => tokenMatches(entryToken, token))).length;
+        if (rollMatched === tokens.length || entryMatched === entryTokens.length) return true;
+        // Partial overlap: rebrand labels often add or drop one token (e.g. the
+        // "Kodak" prefix or the "5219" emulsion code). Accept when the shared
+        // tokens are at least two and cover at least half of each name.
+        const overlap = Math.max(rollMatched, entryMatched);
+        return overlap >= 2 && overlap * 2 >= tokens.length && overlap * 2 >= entryTokens.length;
     });
 }
 
