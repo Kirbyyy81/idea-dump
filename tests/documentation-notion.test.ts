@@ -43,6 +43,21 @@ describe('Notion read boundary', () => {
         expect(fetchMock.mock.calls[0][0]).toContain(`/data_sources/${sourceId}/query`);
     });
 
+    it('requests newest edits first on every catalog page', async () => {
+        const fetchMock = vi.fn(async (_url: string, _options: RequestInit) =>
+            Response.json({ results: [], next_cursor: 'next-cursor' }));
+        vi.stubGlobal('fetch', fetchMock);
+
+        const firstPage = await listDocuments(null);
+        await listDocuments(firstPage.nextCursor);
+
+        const sorts = [{ timestamp: 'last_edited_time', direction: 'descending' }];
+        expect(fetchMock.mock.calls.map(([, options]) => JSON.parse(String(options.body)))).toEqual([
+            { page_size: 100, sorts },
+            { page_size: 100, sorts, start_cursor: 'next-cursor' },
+        ]);
+    });
+
     it('rejects direct access to a page outside the Document Hub', async () => {
         vi.stubGlobal('fetch', vi.fn(async () => Response.json(notionPage(otherId, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'))));
         await expect(getDocument(otherId)).rejects.toMatchObject({ status: 404 });

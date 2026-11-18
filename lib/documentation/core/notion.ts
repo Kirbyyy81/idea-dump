@@ -149,7 +149,12 @@ export async function listDocuments(cursor: string | null, signal?: AbortSignal)
     const { dataSourceId } = configured();
     if (cursor && cursor.length > 300) throw new DocumentationError(400, 'Invalid cursor.');
     const result = await notion(`data_sources/${dataSourceId}/query`, {
-        body: { page_size: 100, ...(cursor ? { start_cursor: cursor } : {}) }, signal,
+        body: {
+            page_size: 100,
+            sorts: [{ timestamp: 'last_edited_time', direction: 'descending' }],
+            ...(cursor ? { start_cursor: cursor } : {}),
+        },
+        signal,
     });
     if (!Array.isArray(result.results)) throw new DocumentationError(502, 'Notion returned an invalid document list.');
     const pages = array(result.results).map(record).filter(isCurrentDocument);
