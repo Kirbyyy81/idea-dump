@@ -157,18 +157,23 @@ export function DocumentReader({ pageId, initialQuery }: { pageId: string; initi
     const versions = useMemo(() => versionsPage(blocks), [blocks]);
     const move = (offset: number) => setActiveIndex((current) => (current + offset + matchIds.length) % matchIds.length);
 
-    return <AppShell pageTitle="Documentation">
+    return <AppShell
+        pageTitle={metadata?.title || 'Documentation'}
+        headerLeading={
+            <Link href="/documentation" aria-label="All documents" className="flex size-10 shrink-0 items-center justify-center text-text-secondary transition-colors hover:text-text-primary">
+                <ArrowLeft size={20} aria-hidden="true" />
+            </Link>
+        }
+        headerAction={metadata && <>
+            <button className="btn-secondary" type="button" onClick={fetchCurrent} disabled={refreshing}><RefreshCw size={16} /> {refreshing ? 'Refreshing…' : 'Refresh'}</button>
+            <a className="btn-secondary" href={metadata.notionUrl} target="_blank" rel="noopener noreferrer"><ExternalLink size={16} /> Open in Notion</a>
+        </>}
+    >
         <div className="documentation-reader">
-            <Link href="/documentation" className="documentation-back"><ArrowLeft size={16} /> All documents</Link>
-            {metadata && <header className="documentation-document-header">
+            {metadata && <div className="documentation-document-meta">
                 <div className="documentation-kicker">{metadata.type || 'Document'} {metadata.version && <span> · {metadata.version}</span>}</div>
-                <h1>{metadata.title}</h1>
-                <div className="documentation-actions">
-                    <button className="btn-secondary" type="button" onClick={fetchCurrent} disabled={refreshing}><RefreshCw size={16} /> {refreshing ? 'Refreshing…' : 'Refresh'}</button>
-                    <a className="btn-secondary" href={metadata.notionUrl} target="_blank" rel="noopener noreferrer"><ExternalLink size={16} /> Open in Notion</a>
-                    {versions && <a className="btn-secondary" href={versions} target="_blank" rel="noopener noreferrer">Versions</a>}
-                </div>
-            </header>}
+                {versions && <a className="text-sm font-semibold text-text-secondary underline hover:text-text-primary" href={versions} target="_blank" rel="noopener noreferrer">Versions</a>}
+            </div>}
             {(loading || refreshing) && <p role="status">{refreshing ? 'Refreshing' : 'Loading'} document…</p>}
             {error && <div className="documentation-notice" role="alert">{error} {stale && <strong>Showing the last loaded copy.</strong>} <button className="btn-secondary" type="button" onClick={fetchCurrent}>Retry</button></div>}
             {metadata && <div className="documentation-reader-grid">

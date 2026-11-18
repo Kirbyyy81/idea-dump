@@ -69,7 +69,28 @@ test('library search and reader find work across desktop and mobile', async ({ p
     await expect(page.getByText('Searched 1 of 1 documents')).toBeVisible();
     await expect(page.getByText('2 matches')).toBeVisible();
     await page.getByRole('link', { name: /Hybrid Technical Documentation/ }).click();
-    await expect(page.getByRole('heading', { name: 'Hybrid Technical Documentation' })).toBeVisible();
+    const title = page.getByRole('heading', { level: 1, name: 'Hybrid Technical Documentation' });
+    const header = page.locator('header').filter({ has: title });
+    const back = header.getByRole('link', { name: 'All documents' });
+    const refresh = header.getByRole('button', { name: 'Refresh', exact: true });
+    const notion = header.getByRole('link', { name: 'Open in Notion' });
+    await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
+    await expect(title).toBeVisible();
+    await expect(back).toBeVisible();
+    await expect(refresh).toBeVisible();
+    await expect(notion).toBeVisible();
+    const [backBox, titleBox, refreshBox, notionBox] = await Promise.all([
+        back.boundingBox(), title.boundingBox(), refresh.boundingBox(), notion.boundingBox(),
+    ]);
+    if (!backBox || !titleBox || !refreshBox || !notionBox) throw new Error('The document header is missing a visible item.');
+    expect(backBox.x + backBox.width).toBeLessThanOrEqual(titleBox.x);
+    if (test.info().project.name === 'desktop') {
+        expect(titleBox.x + titleBox.width).toBeLessThanOrEqual(refreshBox.x);
+        expect(refreshBox.x + refreshBox.width).toBeLessThanOrEqual(notionBox.x);
+        expect(refreshBox.y).toBeLessThan(titleBox.y + titleBox.height);
+    } else {
+        expect(refreshBox.y).toBeGreaterThanOrEqual(titleBox.y + titleBox.height);
+    }
     await expect(page.getByRole('heading', { name: 'Architecture' })).toBeVisible();
     await expect(page.getByRole('table')).toBeVisible();
     await expect(page.getByRole('img', { name: 'Diagram' })).toBeVisible();
@@ -83,4 +104,6 @@ test('library search and reader find work across desktop and mobile', async ({ p
         const width = await page.evaluate(() => document.documentElement.scrollWidth);
         expect(width).toBeLessThanOrEqual(viewport.width + 2);
     }
+    await back.click();
+    await expect(page).toHaveURL(/\/documentation$/);
 });

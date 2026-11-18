@@ -19,6 +19,7 @@ interface AppShellProps extends PropsWithChildren {
     contentClassName?: string;
     headerAction?: ReactNode;
     headerClassName?: string;
+    headerLeading?: ReactNode;
     projects?: Project[];
     isLoading?: boolean;
     loadingMessage?: string;
@@ -40,14 +41,15 @@ function ShellContent({
     children,
     headerAction,
     headerClassName,
+    headerLeading,
     isLoading,
     loadingMessage,
     pageTitle,
-}: PropsWithChildren<Pick<AppShellProps, 'headerAction' | 'headerClassName' | 'isLoading' | 'loadingMessage' | 'pageTitle'>>) {
+}: PropsWithChildren<Pick<AppShellProps, 'headerAction' | 'headerClassName' | 'headerLeading' | 'isLoading' | 'loadingMessage' | 'pageTitle'>>) {
     if (!isLoading) {
         return (
             <>
-                {pageTitle && <PageHeader title={pageTitle} action={headerAction} className={headerClassName} />}
+                {pageTitle && <PageHeader title={pageTitle} action={headerAction} className={headerClassName} leading={headerLeading} />}
                 {children}
             </>
         );
@@ -68,6 +70,7 @@ export function AppShell({
     contentClassName = 'p-5 md:p-6',
     headerAction,
     headerClassName,
+    headerLeading,
     projects: externalProjects,
     isLoading,
     loadingMessage,
@@ -207,6 +210,7 @@ export function AppShell({
                 <ShellContent
                     headerAction={headerAction}
                     headerClassName={headerClassName}
+                    headerLeading={headerLeading}
                     isLoading={isLoading}
                     loadingMessage={loadingMessage}
                     pageTitle={pageTitle}
@@ -306,6 +310,7 @@ export function AppShell({
                         <ShellContent
                             headerAction={headerAction}
                             headerClassName={headerClassName}
+                            headerLeading={headerLeading}
                             isLoading={isLoading}
                             loadingMessage={loadingMessage}
                             pageTitle={pageTitle}

@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DocumentReader } from '@/app/documentation/_components/DocumentReader';
 
-vi.mock('@/components/organisms/AppShell', () => ({ AppShell: ({ children }: { children: React.ReactNode }) => <main>{children}</main> }));
+vi.mock('@/components/organisms/AppShell', () => import('./browser/shell'));
 vi.mock('next/link', () => ({ default: ({ href, children }: { href: string; children: React.ReactNode }) => <a href={href}>{children}</a> }));
 
 const id = '11111111-1111-1111-1111-111111111111';
