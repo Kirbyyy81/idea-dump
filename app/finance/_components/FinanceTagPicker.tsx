@@ -13,8 +13,8 @@ import type { FinanceTag } from '@/lib/types';
 
 const preferredMenuHeight = 370;
 
-export function FinanceTagPicker({ value, onChange, allowCreate = true, includeArchived = false, disabled = false, initialTags = [], label = 'Tags', errorMessage }: {
-    value: string[]; onChange: (value: string[]) => void; allowCreate?: boolean; includeArchived?: boolean; disabled?: boolean; initialTags?: FinanceTag[]; label?: string; errorMessage?: string;
+export function FinanceTagPicker({ value, onChange, allowCreate = true, includeArchived = false, disabled = false, initialTags = [], label = 'Tags', hideLabel = false, errorMessage }: {
+    value: string[]; onChange: (value: string[]) => void; allowCreate?: boolean; includeArchived?: boolean; disabled?: boolean; initialTags?: FinanceTag[]; label?: string; hideLabel?: boolean; errorMessage?: string;
 }) {
     const { tags = [], upsertTag, status } = useFinanceReferenceData();
     const [open, setOpen] = useState(false);
@@ -104,7 +104,7 @@ export function FinanceTagPicker({ value, onChange, allowCreate = true, includeA
         <div ref={root} className="min-w-0" onKeyDown={event => {
             if (event.key === 'Escape' && open) { event.stopPropagation(); setOpen(false); trigger.current?.focus(); }
         }}>
-            <FieldShell id={triggerId} label={label} errorMessage={error || errorMessage}>
+            <FieldShell id={triggerId} label={hideLabel ? undefined : label} errorMessage={error || errorMessage}>
                 {({ describedBy, hasError }) => (
                     <div className="relative">
                         <SelectTrigger
@@ -131,7 +131,14 @@ export function FinanceTagPicker({ value, onChange, allowCreate = true, includeA
                             </span>
                         </SelectTrigger>
                         {open && (
-                            <div id={id} role="group" aria-label={label} style={menuPosition} className="custom-scrollbar fixed z-50 flex min-w-0 flex-col overflow-y-auto rounded-md border border-border-default bg-bg-elevated p-3 text-sm shadow-subtle">
+                            <div id={id} role="group" aria-label={label} style={menuPosition} className="custom-scrollbar fixed z-50 flex min-w-0 flex-col overflow-y-auto rounded-md border border-border-default bg-bg-elevated p-3 text-sm shadow-subtle"
+                                onMouseDown={event => {
+                                    if (event.button !== 0 || !(event.target instanceof Element)) return;
+                                    const button = event.target.closest('button');
+                                    if (!button || button.disabled) return;
+                                    event.preventDefault();
+                                    button.focus({ preventScroll: true });
+                                }}>
                                 <Input ref={searchRef} aria-label="Search tags" placeholder="Search tags" maxLength={120} value={search}
                                     onChange={event => setSearch(event.target.value)}
                                     onKeyDown={event => {

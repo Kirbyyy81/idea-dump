@@ -67,6 +67,6 @@
 
 ## Tag and one-time budgets
 
-- Budget tag filters match any selected tag across categories. Combine populated source/category/tag dimensions using the saved AND/OR setting; use EXISTS so multiple tag matches never duplicate amounts. Omitted `tag_ids` preserve selections and `[]` clears them.
+- Budget tag filters match any selected tag across categories. Combine populated source/category/tag dimensions using the saved outer AND/OR and optional `filter_group` pair. Grouping holds exactly two distinct dimensions with its own AND/OR, and empty cards are absent operands. Omitted grouping preserves it on edit/restore and null clears it. Keep TypeScript matching, rule descriptions and SQL evaluation aligned; use EXISTS so multiple tag matches never duplicate amounts. Omitted `tag_ids` preserve selections and `[]` clears them.
 - One-time budgets have null start/end dates and no renewal. Count all matching confirmed transactions, append all active one-time cards in every dashboard month, and remove them when archived. Archive freezes the cumulative snapshot; restore resumes matching without a new date window. Hide pace markers for undated cycles.
 - Reconcile due tagged cycles under the Finance ledger lock before transaction or tag membership writes. Preserve frozen history and category-learning boundaries. Run `npm run test:finance-budget-tags:db` (included in `npm test`) plus the usual budget browser and independent-session database suites.

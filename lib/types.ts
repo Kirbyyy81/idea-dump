@@ -619,8 +619,14 @@ export type FinanceBudgetCycleType = 'weekly' | 'monthly' | 'custom' | 'one_time
 export type FinanceBudgetState = 'active' | 'scheduled' | 'archived';
 export type FinanceBudgetStatus = FinanceBudgetState | 'over_budget' | 'limit_reached' | 'needs_attention' | 'on_track';
 export type FinanceBudgetMoney = string;
+export type FinanceBudgetFilterDimension = 'source' | 'category' | 'tag';
+export interface FinanceBudgetFilterGroup {
+    dimensions: [FinanceBudgetFilterDimension, FinanceBudgetFilterDimension];
+    logic: 'and' | 'or';
+}
 export interface FinanceBudgetFilters {
     filter_logic: 'and' | 'or';
+    filter_group?: FinanceBudgetFilterGroup | null;
     source_ids: string[];
     category_ids: string[];
     tag_ids?: string[];
