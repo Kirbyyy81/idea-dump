@@ -429,7 +429,7 @@ export async function getFinanceTransactions(
         date: string | null;
         dateFrom: string | null;
         dateTo: string | null;
-        direction: FinanceTransactionDirection | null;
+        direction: FinanceTransactionDirection | 'transfer' | null;
         uncategorised: boolean;
     }
 ) {
@@ -814,6 +814,7 @@ export async function resolveFinanceReviewCandidateForUser(
             intakeId: candidate.intake_item_id,
             ocrTextHash: candidate.intake?.ocr_text_hash || null,
             amount: parsed.payload.amount,
+            direction: parsed.payload.direction,
             currency: FINANCE_V1_CURRENCY,
             merchant: parsed.payload.merchant,
             transactionDate: parsed.payload.transaction_date,
@@ -860,6 +861,7 @@ export async function resolveFinanceReviewCandidateForUser(
         intakeId: candidate.intake_item_id,
         ocrTextHash: candidate.intake?.ocr_text_hash || null,
         amount: input.amount,
+        direction: input.direction,
         currency: FINANCE_V1_CURRENCY,
         merchant: input.merchant,
         transactionDate: input.transaction_date,

@@ -1,4 +1,5 @@
 'use client';
+import { FinanceTransferLink } from '@/app/finance/_components/FinanceTransferLink';
 
 import { FormEvent, useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
@@ -229,24 +230,27 @@ export function FinanceTransactionEditor({
                 ) : form ? (
                     <form onSubmit={saveTransaction} noValidate>
                         <Card className="p-5">
+                            <FinanceTransferLink kind="transaction" id={initialTransaction.id} transfer={initialTransaction.transfer} disabled={isSaving} onBusyChange={setIsSaving}
+                                blockedReason={!initialTransaction.transfer_id && form && JSON.stringify(form) !== JSON.stringify(createFinanceTransactionEditForm(initialTransaction)) ? 'Save your changes before linking a transfer.' : undefined}
+                                onChanged={() => router.refresh()} />
                             <FinanceFormErrorSummary errors={fieldErrors} />
                             <div className="space-y-4">
-                                <Select id="edit-direction" label="Direction" required errorMessage={fieldErrors.direction} data-finance-field="direction" aria-label="Transaction direction" value={form.direction} onChange={(direction) => setTransactionField('direction', direction as FinanceTransactionDirection)} options={[{ value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }]} />
-                                <Select id="edit-source" label="Source" required errorMessage={fieldErrors.source_id} data-finance-field="source_id" aria-label="Transaction source" value={form.source_id} onChange={(sourceId) => setTransactionField('source_id', sourceId)} placeholder="Choose a source" options={sourceOptions} />
+                                <Select id="edit-direction" disabled={Boolean(initialTransaction.transfer_id)} label="Direction" required errorMessage={fieldErrors.direction} data-finance-field="direction" aria-label="Transaction direction" value={form.direction} onChange={(direction) => setTransactionField('direction', direction as FinanceTransactionDirection)} options={[{ value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }]} />
+                                <Select id="edit-source" disabled={Boolean(initialTransaction.transfer_id)} label="Source" required errorMessage={fieldErrors.source_id} data-finance-field="source_id" aria-label="Transaction source" value={form.source_id} onChange={(sourceId) => setTransactionField('source_id', sourceId)} placeholder="Choose a source" options={sourceOptions} />
                                 <Select id="edit-category" label="Category" errorMessage={fieldErrors.category_id} data-finance-field="category_id" aria-label="Transaction category" value={form.category_id} onChange={(categoryId) => setTransactionField('category_id', categoryId)} placeholder="Uncategorised" options={[{ value: '', label: 'Uncategorised' }, ...categoryOptions]} />
                                 <FinanceTagPicker value={tagIds} onChange={setTagIds} disabled={isSaving} initialTags={initialTransaction.tags} />
                                 <div className="grid gap-4 sm:grid-cols-2">
                                     <Input id="edit-currency" label="Currency" value="MYR" readOnly aria-readonly="true" />
-                                    <Input id="edit-amount" label="Amount" required errorMessage={fieldErrors.amount} data-finance-field="amount" inputMode="decimal" type="number" min="0.01" max={MAX_FINANCE_AMOUNT} step="0.01" value={form.amount} onChange={(event) => setTransactionField('amount', event.target.value)} placeholder="0.00" />
+                                    <Input id="edit-amount" disabled={Boolean(initialTransaction.transfer_id)} label="Amount" required errorMessage={fieldErrors.amount} data-finance-field="amount" inputMode="decimal" type="number" min="0.01" max={MAX_FINANCE_AMOUNT} step="0.01" value={form.amount} onChange={(event) => setTransactionField('amount', event.target.value)} placeholder="0.00" />
                                 </div>
                                 {showForeignFields && <FinanceForeignFields id="edit" value={form} myrAmount={form.amount}
-                                    errors={fieldErrors} disabled={isSaving} onChange={setTransactionField} />}
+                                    errors={fieldErrors} disabled={isSaving || Boolean(initialTransaction.transfer_id)} onChange={setTransactionField} />}
                                 {savedConversion && <p className="text-xs text-text-secondary">{savedConversion}</p>}
-                                <Input id="edit-merchant" label="Merchant (optional)" errorMessage={fieldErrors.merchant} data-finance-field="merchant" maxLength={MAX_FINANCE_MERCHANT_LENGTH} value={form.merchant} onChange={(event) => setTransactionField('merchant', event.target.value)} />
-                                <Toggle id="edit-has-payee" label="Payee" toggleLabel="Is a payee" errorMessage={fieldErrors.has_payee} data-finance-field="has_payee" checked={form.has_payee} aria-label="Is a payee" onChange={setTransactionPayeeClassification} />
-                                {form.has_payee && <Input id="edit-payee" label="Payee name" required errorMessage={fieldErrors.payee_name} data-finance-field="payee_name" maxLength={MAX_FINANCE_PAYEE_LENGTH} value={form.payee_name} onChange={(event) => setTransactionField('payee_name', event.target.value)} />}
-                                <Input id="edit-reference" label="Transaction reference" errorMessage={fieldErrors.reference_number} data-finance-field="reference_number" maxLength={MAX_FINANCE_REFERENCE_LENGTH} value={form.reference_number} onChange={(event) => setTransactionField('reference_number', event.target.value)} />
-                                <Input id="edit-date" label="Date" required errorMessage={fieldErrors.transaction_date} data-finance-field="transaction_date" type="date" max={getLocalFinanceDate()} value={form.transaction_date} onChange={(event) => setTransactionField('transaction_date', event.target.value)} />
+                                <Input id="edit-merchant" disabled={Boolean(initialTransaction.transfer_id)} label="Merchant (optional)" errorMessage={fieldErrors.merchant} data-finance-field="merchant" maxLength={MAX_FINANCE_MERCHANT_LENGTH} value={form.merchant} onChange={(event) => setTransactionField('merchant', event.target.value)} />
+                                <Toggle id="edit-has-payee" disabled={Boolean(initialTransaction.transfer_id)} label="Payee" toggleLabel="Is a payee" errorMessage={fieldErrors.has_payee} data-finance-field="has_payee" checked={form.has_payee} aria-label="Is a payee" onChange={setTransactionPayeeClassification} />
+                                {form.has_payee && <Input id="edit-payee" disabled={Boolean(initialTransaction.transfer_id)} label="Payee name" required errorMessage={fieldErrors.payee_name} data-finance-field="payee_name" maxLength={MAX_FINANCE_PAYEE_LENGTH} value={form.payee_name} onChange={(event) => setTransactionField('payee_name', event.target.value)} />}
+                                <Input id="edit-reference" disabled={Boolean(initialTransaction.transfer_id)} label="Transaction reference" errorMessage={fieldErrors.reference_number} data-finance-field="reference_number" maxLength={MAX_FINANCE_REFERENCE_LENGTH} value={form.reference_number} onChange={(event) => setTransactionField('reference_number', event.target.value)} />
+                                <Input id="edit-date" disabled={Boolean(initialTransaction.transfer_id)} label="Date" required errorMessage={fieldErrors.transaction_date} data-finance-field="transaction_date" type="date" max={getLocalFinanceDate()} value={form.transaction_date} onChange={(event) => setTransactionField('transaction_date', event.target.value)} />
                                 <Textarea id="edit-notes" label="Notes" errorMessage={fieldErrors.notes} data-finance-field="notes" maxLength={MAX_FINANCE_NOTES_LENGTH} value={form.notes} onChange={(event) => setTransactionField('notes', event.target.value)} />
                             </div>
                             <div className="mt-5 flex flex-wrap justify-end gap-2">

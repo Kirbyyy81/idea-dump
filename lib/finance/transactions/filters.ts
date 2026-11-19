@@ -20,7 +20,7 @@ export interface FinanceTransactionFilters extends FinanceTagFilter {
     date: string | null;
     dateFrom: string | null;
     dateTo: string | null;
-    direction: FinanceTransactionDirection | null;
+    direction: FinanceTransactionDirection | 'transfer' | null;
     sourceId: string | null;
     uncategorised: boolean;
 }
@@ -63,8 +63,8 @@ export function parseFinanceTransactionFilters(
     if (rawDateTo !== null && !normalizeFinanceDate(rawDateTo)) {
         return { error: 'End date must use YYYY-MM-DD format' };
     }
-    if (rawDirection !== null && rawDirection !== 'income' && rawDirection !== 'expense') {
-        return { error: 'Direction must be income or expense' };
+    if (rawDirection !== null && rawDirection !== 'income' && rawDirection !== 'expense' && rawDirection !== 'transfer') {
+        return { error: 'Direction must be income, expense or transfer' };
     }
     if (rawUncategorised !== null && rawUncategorised !== 'true') {
         return { error: 'Uncategorised must be true when provided' };
@@ -89,7 +89,7 @@ export function parseFinanceTransactionFilters(
             date: rawDate === null ? null : normalizeFinanceDate(rawDate),
             dateFrom,
             dateTo,
-            direction: rawDirection as FinanceTransactionDirection | null,
+            direction: rawDirection as FinanceTransactionDirection | 'transfer' | null,
             sourceId,
             uncategorised: rawUncategorised === 'true',
         },

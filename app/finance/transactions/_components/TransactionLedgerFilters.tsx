@@ -54,6 +54,7 @@ const directionOptions = [
     { value: ALL_VALUE, label: 'All transactions' },
     { value: 'income', label: 'Income' },
     { value: 'expense', label: 'Expense' },
+    { value: 'transfer', label: 'Internal transfers' },
 ];
 
 function deleteDateFilters(searchParams: URLSearchParams) {

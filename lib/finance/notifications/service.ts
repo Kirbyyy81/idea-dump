@@ -23,7 +23,7 @@ async function prepareNotification(userId: string, event: FinanceNotificationEve
     const ruled = applyNotificationRules(matched, [event.notification.title,event.notification.text,event.notification.subtext].filter(Boolean).join('\n'), (ruleResult.data || []) as FinanceOcrRule[]);
     const assessment = await assessFinanceDuplicate({
         userId, intakeId: intakeId || null, ocrTextHash: null,
-        amount: ruled.payload.amount, currency: 'MYR', merchant: ruled.payload.merchant,
+        amount: ruled.payload.amount, direction: ruled.payload.direction, currency: 'MYR', merchant: ruled.payload.merchant,
         transactionDate: ruled.payload.transaction_date, sourceId: ruled.payload.source_id,
         referenceNumber: ruled.payload.reference_number,
     });

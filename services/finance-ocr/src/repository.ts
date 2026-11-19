@@ -197,6 +197,7 @@ function dateWithOffset(value: string, offset: number) {
 }
 
 interface DuplicateRow {
+    direction?: 'expense' | 'income';
     id: string;
     intake_item_id: string | null;
     amount: number | string;
@@ -230,6 +231,8 @@ function scoreDuplicate(
     const merchantMatches = Boolean(
         merchantKey && merchantKey === normalizeFinanceMerchantKey(transaction.merchant),
     );
+    if (input.direction && transaction.direction && input.direction !== transaction.direction
+        && input.sourceId && !sourceMatches && !textHashMatches) return null;
     const reference = normalizeReference(input.referenceNumber);
     const referenceMatches = Boolean(
         reference && reference === normalizeReference(transaction.reference_number) && sourceMatches,
@@ -387,7 +390,7 @@ export class SupabaseFinanceRepository implements FinanceRepository, ShareQueueR
     async assessDuplicate(
         input: Parameters<FinanceRepository['assessDuplicate']>[0],
     ): Promise<DuplicateAssessment> {
-        const select = 'id, intake_item_id, amount, currency, merchant, reference_number, transaction_date, source_id';
+        const select = 'id, intake_item_id, amount, currency, merchant, reference_number, transaction_date, source_id, direction';
         const rows = new Map<string, DuplicateRow>();
         const textHashIds = new Set<string>();
         const fieldQuery = input.amount !== null && input.transactionDate

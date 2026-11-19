@@ -23,6 +23,7 @@ type FinanceTransactionRowProps = RowInteraction & {
     categoryName?: string | null;
     date?: string | null;
     direction?: FinanceTransactionDirection | null;
+    transferLabel?: string | null;
     formattedAmount: string | null;
     density?: 'default' | 'compact' | 'summary';
     status?: ReactNode;
@@ -44,13 +45,13 @@ const metadataChip = 'inline-flex min-h-7 max-w-full items-center gap-1.5 rounde
 
 /** Shared presentation only. Callers retain navigation, review and mutation ownership. */
 export function FinanceTransactionRow({
-    payeeName, merchant, sourceName, categoryName, date, direction, formattedAmount,
+    payeeName, merchant, sourceName, categoryName, date, direction, formattedAmount, transferLabel,
     density = 'default', status, tags = [], actions, href, onSelect, selected,
 }: FinanceTransactionRowProps) {
     const recipient = payeeName || merchant || 'Untitled transaction';
-    const categoryIcon = getFinanceLedgerCategoryIcon(categoryName);
+    const categoryIcon = transferLabel ? 'general' : getFinanceLedgerCategoryIcon(categoryName);
     const Icon = categoryIcons[categoryIcon];
-    const tone = direction === 'income' ? 'text-success' : direction === 'expense' ? 'text-error' : 'text-text-secondary';
+    const tone = transferLabel ? 'text-text-secondary' : direction === 'income' ? 'text-success' : direction === 'expense' ? 'text-error' : 'text-text-secondary';
     const className = cn(
         'grid min-w-0 w-full grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 gap-y-2 text-left',
         density === 'summary' ? 'grid-cols-[auto_minmax(0,1fr)_auto] px-3 py-3 text-sm'
@@ -62,21 +63,21 @@ export function FinanceTransactionRow({
     const content = <>
         <span aria-hidden="true" data-ledger-category-icon={categoryIcon} className={cn(
             'grid size-9 shrink-0 place-items-center rounded-md border',
-            direction === 'income' ? 'border-success/30 bg-success-bg text-success'
-                : direction === 'expense' ? 'border-error/30 bg-error-bg text-error'
+            !transferLabel && direction === 'income' ? 'border-success/30 bg-success-bg text-success'
+                : !transferLabel && direction === 'expense' ? 'border-error/30 bg-error-bg text-error'
                     : 'border-border-subtle bg-bg-subtle text-text-secondary'
         )}><Icon size={19} /></span>
         <span className="min-w-0">
             <span className="block break-words font-semibold [overflow-wrap:anywhere]">{recipient}</span>
             {payeeName && merchant && <span className="block break-words text-sm text-text-secondary [overflow-wrap:anywhere]">Merchant: {merchant}</span>}
             {date !== undefined && <span className="mt-1 block text-xs text-text-muted">{date ? <time dateTime={date}>{date}</time> : 'No date'}</span>}
-            {density === 'summary' && <span className="sr-only">Category: {categoryName || 'Uncategorised'}</span>}
+            {density === 'summary' && !transferLabel && <span className="sr-only">Category: {categoryName || 'Uncategorised'}</span>}
             {(density !== 'summary' || tags.length > 0) && <span className="mt-2 flex min-w-0 flex-wrap gap-2" role="group" aria-label="Transaction metadata">
                 {density !== 'summary' && <>
                     <span className={metadataChip}>
                         <SourceDoodleIcon size={13} className="shrink-0" /><span className="break-words [overflow-wrap:anywhere]">{sourceName || 'Unknown source'}</span>
                     </span>
-                    {categoryName !== undefined && <span className={metadataChip}>
+                    {!transferLabel && categoryName !== undefined && <span className={metadataChip}>
                         <CategoryDoodleIcon size={13} className="shrink-0" /><span className="break-words [overflow-wrap:anywhere]">{categoryName || 'Uncategorised'}</span>
                     </span>}
                 </>}
@@ -85,11 +86,12 @@ export function FinanceTransactionRow({
                     <span className="break-words [overflow-wrap:anywhere]">{tag.name}</span>
                 </span>)}
             </span>}
+            {transferLabel && <span className="mt-2 block break-words text-xs font-semibold text-text-secondary">{transferLabel}</span>}
             {status && <span className="mt-2 block text-xs">{status}</span>}
         </span>
         <span className={cn('col-start-2 flex min-w-0 flex-wrap items-center justify-between gap-2', density === 'default' && 'sm:col-start-3 sm:row-start-1 sm:justify-end', density === 'summary' && 'col-start-3 row-start-1 max-w-32 justify-end text-right')}>
             <span className={cn('break-all font-bold', formattedAmount === null ? 'text-text-muted' : tone)}>
-                {formattedAmount === null ? 'No amount' : <>{direction && <><span className="sr-only">{direction === 'income' ? 'Income ' : 'Expense '}</span><span aria-hidden="true">{direction === 'income' ? '+' : '-'}</span></>}{formattedAmount}</>}
+                {formattedAmount === null ? 'No amount' : <>{direction && !transferLabel && <><span className="sr-only">{direction === 'income' ? 'Income ' : 'Expense '}</span><span aria-hidden="true">{direction === 'income' ? '+' : '-'}</span></>}{formattedAmount}</>}
             </span>
             {actions}
         </span>

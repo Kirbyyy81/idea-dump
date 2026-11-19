@@ -95,8 +95,10 @@ export function groupFinanceLedgerTransactions(transactions: FinanceTransactionV
             transactions: [],
         };
         group.transactions.push(transaction);
-        if (transaction.direction === 'income') group.incomeTotal += transaction.amount;
-        else group.expenseTotal += transaction.amount;
+        if (!transaction.transfer_id) {
+            if (transaction.direction === 'income') group.incomeTotal += transaction.amount;
+            else group.expenseTotal += transaction.amount;
+        }
         groups.set(transaction.transaction_date, group);
     });
 

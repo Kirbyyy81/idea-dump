@@ -185,6 +185,7 @@ export async function processScreenshot(
             intakeId,
             ocrTextHash,
             amount: parsed.payload.amount,
+            direction: parsed.payload.direction,
             merchant: parsed.payload.merchant,
             transactionDate: parsed.payload.transaction_date,
             sourceId: parsed.payload.source_id,

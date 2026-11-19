@@ -24,6 +24,7 @@ export function resolveFinanceDashboardMonth(
 }
 
 export interface FinanceDashboardRow {
+    transfer_id?: string | null;
     amount: unknown;
     direction: FinanceTransactionDirection;
     transaction_date: string;
@@ -53,6 +54,7 @@ export function aggregateFinanceDashboard(rows: FinanceDashboardRow[]) {
     const dailyCashFlow = new Map<string, DailyAccumulator>();
 
     for (const item of rows) {
+        if (item.transfer_id) continue;
         const amountMinorUnits = toFinanceAmountMinorUnits(item.amount);
         if (amountMinorUnits === null) continue;
 
