@@ -20,6 +20,7 @@ export interface FinanceDuplicateInput {
     userId: string;
     intakeId?: string | null;
     ocrTextHash?: string | null;
+    direction?: 'expense' | 'income' | null;
     amount: number | null;
     currency: FinanceCurrency;
     merchant: string | null;
@@ -30,6 +31,7 @@ export interface FinanceDuplicateInput {
 
 interface DuplicateTransactionRow {
     id: string;
+    direction?: 'expense' | 'income';
     intake_item_id: string | null;
     amount: number | string;
     currency: string;
@@ -83,6 +85,8 @@ function scoreTransaction(
         && sourceMatches
     );
     const textHashMatches = textHashTransactionIds.has(transaction.id);
+    if (input.direction && transaction.direction && input.direction !== transaction.direction
+        && input.sourceId && !sourceMatches && !textHashMatches) return null;
 
     let outcome: FinanceDuplicateOutcome = 'none';
     let score = 0;

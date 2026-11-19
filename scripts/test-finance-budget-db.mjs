@@ -30,6 +30,8 @@ const dashboard = await run('', ['-f', path.join(root, 'supabase/tests/finance_b
 check(dashboard.code === 0, dashboard.error || 'SQL dashboard month suite');
 const tags = await run('', ['-f', path.join(root, 'supabase/tests/finance_budget_tags_one_time.test.sql')]);
 check(tags.code === 0, tags.error || 'SQL tag and one-time suite');
+const groups = await run('', ['-f', path.join(root, 'supabase/tests/finance_budget_filter_groups.test.sql')]);
+check(groups.code === 0, groups.error || 'SQL grouped filter suite');
 const owner = randomUUID(); const source = randomUUID(); const requestId = randomUUID();
 const config = JSON.stringify({ name: 'Concurrent fixture', amount: '100.00', cycle_type: 'custom', start_date: '2026-09-14', custom_days: 1,
     anchor_day: null, time_zone: 'Asia/Kuala_Lumpur', filter_logic: 'and', source_ids: [source], category_ids: [], include_uncategorised: false });

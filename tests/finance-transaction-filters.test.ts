@@ -80,7 +80,7 @@ describe('Finance transaction filters', () => {
         [{ date: '2026-02-30' }, 'Date must use YYYY-MM-DD format'],
         [{ date_from: '2026-02-30' }, 'Start date must use YYYY-MM-DD format'],
         [{ date_to: 'not-a-date' }, 'End date must use YYYY-MM-DD format'],
-        [{ direction: 'transfer' }, 'Direction must be income or expense'],
+        [{ direction: 'invalid' }, 'Direction must be income, expense or transfer'],
         [{ uncategorised: 'false' }, 'Uncategorised must be true when provided'],
         [{ category_id: CATEGORY_ID, uncategorised: 'true' }, 'Choose a category or uncategorised, not both'],
         [{ date: '2026-08-13', date_from: '2026-08-01' }, 'Choose an exact date or a date range, not both'],

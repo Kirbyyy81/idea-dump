@@ -86,6 +86,7 @@ export interface FinanceRepository {
         userId: string;
         intakeId: string;
         ocrTextHash: string;
+        direction?: 'expense' | 'income' | null;
         amount: number | null;
         merchant: string | null;
         transactionDate: string | null;

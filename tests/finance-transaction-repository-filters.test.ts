@@ -17,6 +17,7 @@ const database = vi.hoisted(() => {
         lt: vi.fn(),
         limit: vi.fn(),
         maybeSingle: vi.fn(),
+        not: vi.fn(),
         or: vi.fn(),
         order: vi.fn(),
         range: vi.fn(),
@@ -24,7 +25,7 @@ const database = vi.hoisted(() => {
         rpc: vi.fn().mockResolvedValue({ data: [], error: null }),
         then: (resolve: (value: typeof result) => unknown) => Promise.resolve(resolve(result)),
     };
-    for (const method of ['eq', 'from', 'gte', 'is', 'lte', 'lt', 'limit', 'or', 'order', 'range', 'select'] as const) {
+    for (const method of ['eq', 'from', 'gte', 'is', 'lte', 'lt', 'limit', 'not', 'or', 'order', 'range', 'select'] as const) {
         query[method].mockReturnValue(query);
     }
     query.maybeSingle.mockResolvedValue(result);
@@ -81,6 +82,15 @@ describe('Finance transaction repository filters', () => {
         expect(database.rpc).toHaveBeenCalledWith('finance_budget_dashboard', {
             p_user_id: 'user-1', p_month: month,
         });
+    });
+
+    it.each(['income', 'expense', 'transfer'] as const)('applies the %s ledger filter before reading pages', async direction => {
+        await listFinanceTransactions('owner', { status: 'confirmed', sourceId: null, query: null, categoryId: null, date: null, dateFrom: null, dateTo: null, direction, uncategorised: false, pageSize: 500 });
+        if (direction === 'transfer') expect(database.not).toHaveBeenCalledWith('transfer_id', 'is', null);
+        else {
+            expect(database.eq).toHaveBeenCalledWith('direction', direction);
+            expect(database.is).toHaveBeenCalledWith('transfer_id', null);
+        }
     });
 
     it('scopes single-transaction reads to both the transaction and user', async () => {

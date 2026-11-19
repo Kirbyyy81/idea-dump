@@ -73,6 +73,8 @@ export function TransactionLedgerRow({
                 merchant={transaction.merchant}
                 sourceName={transaction.finance_source?.name}
                 categoryName={transaction.category?.name ?? null}
+                transferLabel={transaction.transfer_id ? transaction.transfer
+                    ? `Internal transfer · ${transaction.transfer.outgoing_source.name} → ${transaction.transfer.incoming_source.name}` : 'Internal transfer' : null}
                 direction={transaction.direction}
                 formattedAmount={formatCurrency(transaction.amount, transaction.currency || 'MYR')}
                 actions={
@@ -105,6 +107,8 @@ export function TransactionLedgerRow({
                                 </Link>
                                 <button
                                     type="button"
+                                    disabled={Boolean(transaction.transfer_id)}
+                                    title={transaction.transfer_id ? 'Unlink the internal transfer before deleting this entry' : undefined}
                                     className="flex min-h-10 w-full items-center gap-2 rounded-sm px-3 py-2 text-left text-sm font-semibold text-error hover:bg-error-bg focus-visible:bg-error-bg focus-visible:outline-none"
                                     onClick={() => {
                                         closeMenu(true);

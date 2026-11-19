@@ -7,6 +7,7 @@ import { Button } from '@/components/atoms/Button';
 import { ActionMenu } from '@/components/molecules/ActionMenu';
 import { FormDialog } from '@/components/molecules/FormDialog';
 import { BudgetProgress } from './BudgetProgress';
+import { describeBudgetFilters } from '@/lib/finance/budgets/filterGroups';
 import type { FinanceBudgetDetail, FinanceBudgetPage } from '@/lib/types';
 import { BUDGET_STATUS_LABELS, formatBudgetDateRange, formatBudgetMoney } from '@/lib/finance/budgets/calculations';
 
@@ -29,11 +30,9 @@ export function BudgetDetails({ detail, onEdit, onArchive, onRestore, onHistoryP
     const labels = (items: typeof configuration.sources) => items.map((item) => `${item.name}${item.id === null ? ' (deleted)' : item.is_archived ? ' (archived)' : ''}`);
     const sources = labels(configuration.sources);
     const categories = [...labels(configuration.categories), ...(configuration.include_uncategorised ? ['Uncategorised'] : [])];
-    const filters = [
-        ...(sources.length ? [`Sources: ${sources.join(' or ')}`] : []),
-        ...(categories.length ? [`Categories: ${categories.join(' or ')}`] : []),
-        ...((configuration.tags?.length ?? 0) ? [`Tags: ${labels(configuration.tags!).join(' or ')}`] : []),
-    ];
+    const filters = describeBudgetFilters(configuration, {
+        source: sources, category: categories, tag: labels(configuration.tags ?? []),
+    });
     const configurationRows = [
         ['Schedule', configuration.cycle_type === 'one_time' ? 'One-time, no dates' : `${configuration.cycle_type === 'custom' ? `Every ${configuration.custom_days} days` : configuration.cycle_type === 'monthly' ? `Monthly on day ${configuration.anchor_day}` : 'Every 7 days'} (${configuration.time_zone})`],
     ];
@@ -56,12 +55,9 @@ export function BudgetDetails({ detail, onEdit, onArchive, onRestore, onHistoryP
                 <th scope="row" className="w-28 py-3 pr-3 align-top font-semibold sm:w-32">{heading}</th>
                 <td className="break-words py-3 align-top text-text-secondary">{value}</td>
             </tr>)}
-                {filters.length > 0 && <tr>
+                {filters !== 'All transactions' && <tr>
                     <th scope="row" className="w-28 py-3 pr-3 align-top font-semibold sm:w-32">Filters</th>
-                    <td className="break-words py-3 align-top text-text-secondary">{filters.map((filter, index) => <div key={filter}>
-                        {index > 0 && <span className="my-1 block font-semibold">{configuration.filter_logic === 'and' ? 'and' : 'or'}</span>}
-                        {filter}
-                    </div>)}</td>
+                    <td className="break-words py-3 align-top text-text-secondary">{filters}</td>
                 </tr>}
             </tbody>
         </table>

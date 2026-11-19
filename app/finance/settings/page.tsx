@@ -1,3 +1,4 @@
+import { TransferRulesPanel } from './_components/TransferRulesPanel';
 import { TagsSettingsPanel } from './_components/TagsSettingsPanel';
 import Link from 'next/link';
 import { CompanionDevicesPanel } from './_components/CompanionDevicesPanel';
@@ -14,6 +15,7 @@ import {
 } from './sections';
 
 const SECTION_LABELS: Record<FinanceSettingsSection, string> = {
+    transfers: 'Transfers',
     devices: 'Companion',
     sources: 'Sources',
     categories: 'Categories',
@@ -22,6 +24,7 @@ const SECTION_LABELS: Record<FinanceSettingsSection, string> = {
 };
 
 const PANELS: Record<FinanceSettingsSection, ComponentType> = {
+    transfers: TransferRulesPanel,
     devices: CompanionDevicesPanel,
     sources: SourcesSettingsPanel,
     categories: CategoriesSettingsPanel,

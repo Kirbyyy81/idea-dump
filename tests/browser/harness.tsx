@@ -1,3 +1,4 @@
+import { TransferRulesPanel } from '@/app/finance/settings/_components/TransferRulesPanel';
 import { FinanceTransactionsClient } from '@/app/finance/transactions/_components/FinanceTransactionsClient';
 import { FinanceTransactionEditor } from '@/app/finance/transactions/edit/_components/FinanceTransactionEditor';
 import { TagsSettingsPanel } from '@/app/finance/settings/_components/TagsSettingsPanel';
@@ -36,6 +37,8 @@ createRoot(document.getElementById('root')!).render(<FinanceReferenceDataProvide
         ? <AlertProvider><AlertDialog /><FinanceTransactionsClient initialTransactions={transactions} initialQuery="" /></AlertProvider>
         : window.location.pathname === '/finance/transactions/edit'
         ? <AlertProvider><AlertDialog /><FinanceTransactionEditor canRetry={false} loadError={null} initialTransaction={{ ...transactions[0], finance_source: undefined, finance_payee: undefined, category: undefined, user_id: 'test-user', source: 'manual', status: 'confirmed', intake_item_id: null, manual_idempotency_key: null, updated_at: transactions[0].created_at }} /></AlertProvider>
+        : window.location.pathname === '/finance/settings' && dashboardParams.get('section') === 'transfers'
+        ? <TransferRulesPanel />
         : window.location.pathname === '/finance/settings' && dashboardParams.get('section') === 'tags'
         ? <AlertProvider><AlertDialog /><TagsSettingsPanel /></AlertProvider>
         : window.location.pathname === '/finance/settings/notifications'

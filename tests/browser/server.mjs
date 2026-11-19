@@ -1,6 +1,6 @@
 import { build } from 'esbuild';
 import { createServer } from 'node:http';
-import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -66,5 +66,5 @@ const server = createServer(async (request, response) => {
         response.end(`<!doctype html><html lang="en" style="--font-sans:Arial,sans-serif"><head><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/styles.css">${documentation ? '<link rel="stylesheet" href="/documentation-app.css">' : ''}<title>${documentation ? 'Documentation' : app === 'log-viewer-app' ? 'Log Viewer' : 'Budget'} UI test</title></head><body><div id="root"></div><script src="/${app}.js"></script></body></html>`);
     }
 });
-server.listen(4179, '127.0.0.1', () => process.stdout.write('Budget UI test server ready\n'));
-for (const signal of ['SIGTERM', 'SIGINT']) process.on(signal, () => server.close(() => process.exit(0)));
+server.listen(Number(process.env.BROWSER_TEST_PORT || 4179), '127.0.0.1', () => process.stdout.write('Budget UI test server ready\n'));
+for (const signal of ['SIGTERM', 'SIGINT']) process.on(signal, () => server.close(async () => { await rm(output, { recursive: true, force: true }); process.exit(0); }));

@@ -67,6 +67,14 @@
 
 ## Tag and one-time budgets
 
-- Budget tag filters match any selected tag across categories. Combine populated source/category/tag dimensions using the saved AND/OR setting; use EXISTS so multiple tag matches never duplicate amounts. Omitted `tag_ids` preserve selections and `[]` clears them.
+- Budget tag filters match any selected tag across categories. Combine populated source/category/tag dimensions using the saved outer AND/OR and optional `filter_group` pair. Grouping holds exactly two distinct dimensions with its own AND/OR, and empty cards are absent operands. Omitted grouping preserves it on edit/restore and null clears it. Keep TypeScript matching, rule descriptions and SQL evaluation aligned; use EXISTS so multiple tag matches never duplicate amounts. Omitted `tag_ids` preserve selections and `[]` clears them.
 - One-time budgets have null start/end dates and no renewal. Count all matching confirmed transactions, append all active one-time cards in every dashboard month, and remove them when archived. Archive freezes the cumulative snapshot; restore resumes matching without a new date window. Hide pace markers for undated cycles.
 - Reconcile due tagged cycles under the Finance ledger lock before transaction or tag membership writes. Preserve frozen history and category-learning boundaries. Run `npm run test:finance-budget-tags:db` (included in `npm test`) plus the usual budget browser and independent-session database suites.
+
+## Internal transfers
+
+- Keep `expense` and `income` as the stored directions. A valid transfer links exactly two confirmed, equal MYR entries from different owner sources; `transfer_id` controls exclusion from all income, expense, chart, ledger-group and budget totals.
+- Link and unlink through the transfer RPCs under the Finance ledger lock. Reconcile due budgets first, preserve frozen cycles, reject stale previews, and require unlinking before financial edits or deletion. Notes and tags remain editable.
+- Only explicit saved source/party rules permit automatic notification pairing. Require current extraction evidence, posting times within ten minutes and a unique match in both directions. Missing sides follow ordinary intake; ambiguous pairs stay in review. Do not scan historical entries, teach category memory from transfers, retain raw notification text or automatically relink dismissed pairs.
+- Run `npm run test:finance-transfers:db`, the transfer API/accounting tests, `tests/browser/finance-transfers.spec.ts`, and the existing notification/duplicate/budget suites after transfer changes. The database runner restores the real migration chain on disposable PGlite. Run independent-session concurrency tests against disposable loopback PostgreSQL as well when changing locking.
+- Set `BROWSER_TEST_PORT` to an unused loopback port when another browser test server is running; the default remains 4179.

@@ -1,6 +1,7 @@
 import type { FinanceBudgetConfiguration, FinanceBudgetDetailQuery, FinanceBudgetFieldErrors, FinanceBudgetListQuery, FinanceBudgetMutation } from '@/lib/types';
 import { getFinanceDateInTimeZone, normalizeFinanceDate, toFinanceAmountMinorUnits } from '@/lib/finance/core/values';
 import { budgetDecimal, startOfBudgetPeriod } from './calculations';
+import { parseBudgetFilterGroup } from './filterGroups';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const isBudgetUuid = (value: unknown): value is string => typeof value === 'string' && UUID.test(value);
@@ -37,6 +38,11 @@ export function validateBudgetConfiguration(value: unknown, options: { allowPast
         timeZone = '';
     }
     if (input.filter_logic !== 'and' && input.filter_logic !== 'or') errors.filter_logic = 'Choose AND or OR';
+    let filterGroup: FinanceBudgetConfiguration['filter_group'];
+    if (Object.hasOwn(input, 'filter_group')) {
+        try { filterGroup = parseBudgetFilterGroup(input.filter_group); }
+        catch { errors.filter_group = 'Choose two different filter cards and AND or OR'; }
+    }
     if (typeof input.include_uncategorised !== 'boolean') errors.include_uncategorised = 'Choose whether Uncategorised transactions count';
     const references = (key: 'source_ids' | 'category_ids' | 'tag_ids') => {
         const values = input[key];
@@ -55,6 +61,7 @@ export function validateBudgetConfiguration(value: unknown, options: { allowPast
         name, amount: budgetDecimal(amount!), cycle_type: cycleType as FinanceBudgetConfiguration['cycle_type'], start_date: cycleType === 'one_time' ? null : start!,
         custom_days: cycleType === 'custom' ? days as number : null, anchor_day: cycleType === 'monthly' ? anchor as number : null,
         time_zone: timeZone, filter_logic: input.filter_logic as 'and' | 'or', include_uncategorised: input.include_uncategorised as boolean,
+        ...(Object.hasOwn(input, 'filter_group') && { filter_group: filterGroup }),
         source_ids: sourceIds, category_ids: categoryIds, ...(tagIds !== undefined && { tag_ids: tagIds }),
     } };
 }

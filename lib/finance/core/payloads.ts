@@ -183,6 +183,8 @@ function namedReference(value: { name: string } | null | undefined) {
 
 export function toFinanceTransactionView(transaction: FinanceTransaction): FinanceTransactionView {
     return {
+        transfer_id: transaction.transfer_id ?? null,
+        transfer: transaction.transfer ?? null,
         tags: transactionTags(transaction),
         id: transaction.id,
         source_id: transaction.source_id,
@@ -212,6 +214,8 @@ export function toFinanceDashboardRecentTransaction(
     transaction: FinanceTransaction
 ): FinanceDashboardRecentTransaction {
     return {
+        transfer_id: transaction.transfer_id ?? null,
+        transfer: transaction.transfer ?? null,
         tags: transactionTags(transaction),
         id: transaction.id,
         direction: transaction.direction,

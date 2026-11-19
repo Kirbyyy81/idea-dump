@@ -1,35 +1,29 @@
 'use client';
 
 import { FormEvent, useId, useState } from 'react';
-import { FinanceTagPicker } from '@/app/finance/_components/FinanceTagPicker';
+import { BudgetFilterEditor } from './BudgetFilterEditor';
 import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { DatePicker } from '@/components/atoms/DatePicker';
-import { Toggle } from '@/components/atoms/Toggle';
 import { FormDialog } from '@/components/molecules/FormDialog';
 import { useFinanceReferenceData } from '@/app/finance/_components/FinanceReferenceData';
 import { financeApiRequest, FinanceApiError } from '@/lib/finance/core/client';
 import { getFinanceDateInTimeZone } from '@/lib/finance/core/values';
 import { validateBudgetConfiguration } from '@/lib/finance/budgets/validation';
 import { startOfBudgetPeriod } from '@/lib/finance/budgets/calculations';
-import type { FinanceBudgetConfiguration, FinanceBudgetFieldErrors, FinanceBudgetSelection, FinanceBudgetSummary, FinanceReferenceOption } from '@/lib/types';
+import type { FinanceBudgetConfiguration, FinanceBudgetFieldErrors, FinanceBudgetSummary } from '@/lib/types';
 
 function initialConfiguration(budget?: FinanceBudgetSummary, restore = false): FinanceBudgetConfiguration {
     const zone = budget?.configuration.time_zone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
     const today = getFinanceDateInTimeZone(zone);
     return budget ? { ...budget.configuration, start_date: budget.configuration.cycle_type === 'one_time' ? null : restore ? today : budget.configuration.start_date,
         anchor_day: restore && budget.configuration.cycle_type === 'monthly' ? Number(today.slice(8)) : budget.configuration.anchor_day,
+        filter_group: budget.configuration.filter_group ?? null,
         tag_ids: (budget.configuration.tags ?? []).map(item => item.original_id),
         source_ids: budget.configuration.sources.map((item) => item.original_id), category_ids: budget.configuration.categories.map((item) => item.original_id) }
         : { name: '', amount: '', cycle_type: 'monthly', start_date: startOfBudgetPeriod(today, 'monthly'), anchor_day: 1, custom_days: null,
-            time_zone: zone, filter_logic: 'and', include_uncategorised: false, source_ids: [], category_ids: [], tag_ids: [] };
-}
-
-function selectionOptions(active: FinanceReferenceOption[], selected: FinanceBudgetSelection[] = []) {
-    const result = new Map(active.map((item) => [item.id, { ...item, missing: false, archived: false }]));
-    selected.forEach((item) => result.set(item.original_id, { id: item.original_id, name: item.name, missing: item.id === null, archived: item.is_archived }));
-    return [...result.values()].sort((a, b) => a.name.localeCompare(b.name));
+            time_zone: zone, filter_logic: 'and', filter_group: null, include_uncategorised: false, source_ids: [], category_ids: [], tag_ids: [] };
 }
 
 export function BudgetForm({ budget, restore = false, onClose, onSaved, onReload }: {
@@ -48,8 +42,6 @@ export function BudgetForm({ budget, restore = false, onClose, onSaved, onReload
     const [saving, setSaving] = useState(false);
     const [creationAttempted, setCreationAttempted] = useState(false);
     const dateId = useId();
-    const sourceErrorId = useId();
-    const categoryErrorId = useId();
     const customizationId = useId();
     const title = restore ? 'Restore budget' : budget ? 'Edit budget' : 'Create budget';
     const activeEdit = budget?.state === 'active' && !restore;
@@ -57,8 +49,6 @@ export function BudgetForm({ budget, restore = false, onClose, onSaved, onReload
         setConfiguration((current) => ({ ...current, [key]: value }));
         setErrors((current) => ({ ...current, [key]: undefined }));
     };
-    const toggleSelection = (field: 'source_ids' | 'category_ids', id: string) => update(field,
-        configuration[field].includes(id) ? configuration[field].filter((value) => value !== id) : [...configuration[field], id]);
     const submit = async (event: FormEvent) => {
         event.preventDefault();
         const parsed = validateBudgetConfiguration(configuration, { allowPastStart: activeEdit || (!budget && creationAttempted), allowCurrentPeriod: !restore });
@@ -104,8 +94,9 @@ export function BudgetForm({ budget, restore = false, onClose, onSaved, onReload
                     ...(customize || configuration.cycle_type === 'custom' ? [{ value: 'custom', label: 'Custom' }] : [])]}
                     buttonClassName="h-auto min-h-10 [&>span]:whitespace-normal" menuClassName="[&_span]:whitespace-normal" disabled={saving} errorMessage={errors.cycle_type} />
             </div>
-            <FinanceTagPicker value={configuration.tag_ids ?? []} onChange={value => update('tag_ids', value)} disabled={saving}
-                errorMessage={errors.tag_ids} initialTags={(budget?.configuration.tags ?? []).map(tag => ({ id: tag.original_id, name: `${tag.name}${tag.id === null ? ' (deleted)' : ''}`, is_archived: tag.is_archived || tag.id === null }))} />
+            <BudgetFilterEditor value={configuration} saved={budget?.configuration} disabled={saving || references.status !== 'ready'} errors={errors}
+                onChange={next => { setConfiguration(next); setErrors(current => ({ ...current, source_ids: undefined, category_ids: undefined,
+                    tag_ids: undefined, filter_logic: undefined, filter_group: undefined })); }} />
             {configuration.cycle_type === 'one_time' && <p className="text-xs text-text-muted">Counts all matching transactions, including existing ones, until archived.</p>}
             <Button type="button" variant="ghost" aria-expanded={customize} aria-controls={customizationId} disabled={saving} onClick={() => setCustomize(!customize)}>
                 {customize ? 'Hide customization' : 'Customize'}
@@ -121,31 +112,13 @@ export function BudgetForm({ budget, restore = false, onClose, onSaved, onReload
                 {activeEdit && configuration.cycle_type === 'monthly' && <Select label="Monthly renewal day" value={String(configuration.anchor_day)}
                     onChange={(value) => update('anchor_day', Number(value))} options={Array.from({ length: 31 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }))} errorMessage={errors.anchor_day} disabled={saving} />}
             </div>}
-            <Select label="Match selected filters" value={configuration.filter_logic} onChange={(value) => update('filter_logic', value as 'and' | 'or')}
-                options={[{ value: 'and', label: 'AND: match every selected filter' }, { value: 'or', label: 'OR: match any selected filter' }]} errorMessage={errors.filter_logic} disabled={saving} />
-            {references.status === 'loading' && <p role="status" className="text-sm text-text-muted">Loading Finance options...</p>}
-            {references.error && <div role="alert" className="text-sm text-error">{references.error}<Button type="button" variant="ghost" onClick={() => void references.refresh()}>Retry options</Button></div>}
-            {(['source_ids', 'category_ids'] as const).map((field) => {
-                const isSource = field === 'source_ids';
-                const options = selectionOptions(isSource ? references.sources : references.categories, isSource ? budget?.configuration.sources : budget?.configuration.categories);
-                return <fieldset key={field} aria-describedby={errors[field] ? isSource ? sourceErrorId : categoryErrorId : undefined}>
-                    <legend className="mb-2 text-sm font-semibold">{isSource ? 'Sources' : 'Categories'}</legend>
-                    <div className="flex max-h-48 flex-wrap gap-2 overflow-y-auto">
-                        {options.map((option) => <Toggle key={option.id} checked={configuration[field].includes(option.id)} onChange={() => toggleSelection(field, option.id)}
-                            toggleLabel={`${option.name}${option.missing ? ' (deleted)' : option.archived ? ' (archived)' : ''}`} disabled={saving} />)}
-                        {!isSource && <Toggle checked={configuration.include_uncategorised} onChange={(value) => update('include_uncategorised', value)} toggleLabel="Uncategorised" disabled={saving} />}
-                    </div>
-                    {errors[field] && <p id={isSource ? sourceErrorId : categoryErrorId} className="mt-1 text-xs text-error">{errors[field]}</p>}
-                    {options.some((option) => option.missing && configuration[field].includes(option.id)) && <p className="mt-2 text-xs text-error">Remove or replace deleted selections before restoring.</p>}
-                </fieldset>;
-            })}
-            <p className="text-xs text-text-muted">With no filters, all transactions count. A tag-only budget includes every category. Time zone: {configuration.time_zone}.</p>
+            <p className="text-xs text-text-muted">Time zone {configuration.time_zone}</p>
             {errors.time_zone && <p role="alert" className="text-xs text-error">{errors.time_zone}</p>}
             </div>}
             {activeEdit && configuration.cycle_type !== 'one_time' && (configuration.cycle_type !== budget.configuration.cycle_type || configuration.custom_days !== budget.configuration.custom_days || configuration.anchor_day !== budget.configuration.anchor_day)
                 && <p className="text-xs text-text-secondary">Schedule changes close the current cycle through yesterday and start a new cycle today.</p>}
             <div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={onClose} disabled={saving}>Cancel</Button>
-                <Button type="submit" isLoading={saving} disabled={customize && references.status !== 'ready'}>{title === 'Edit budget' ? 'Save changes' : title}</Button></div>
+                <Button type="submit" isLoading={saving} disabled={references.status !== 'ready'}>{title === 'Edit budget' ? 'Save changes' : title}</Button></div>
         </form>
     </FormDialog>;
 }

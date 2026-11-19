@@ -460,6 +460,51 @@ export const filmTypes: FilmType[] = ['NEGATIVE', 'REVERSAL', 'BW_NEGATIVE'];
 export const filmProcessTypes: FilmProcessType[] = ['C41', 'E6', 'BW', 'ECN2'];
 
 export type FinanceTransactionDirection = 'expense' | 'income';
+export interface FinanceInternalTransfer {
+    id: string;
+    created_at: string;
+    outgoing_transaction_id: string;
+    incoming_transaction_id: string;
+    outgoing_source: FinanceReferenceOption;
+    incoming_source: FinanceReferenceOption;
+}
+
+export interface FinanceTransferMetadata {
+    transfer_id?: string | null;
+    transfer?: FinanceInternalTransfer | null;
+}
+
+export interface FinanceTransferEntry {
+    kind: 'transaction' | 'candidate';
+    id: string;
+    version: string;
+    transaction_id: string | null;
+    transfer_id: string | null;
+    source_id: string;
+    source_name?: string;
+    direction: FinanceTransactionDirection;
+    amount: number;
+    currency: FinanceCurrency;
+    transaction_date: string;
+    party_name: string | null;
+    party_kind: 'payee' | 'merchant';
+}
+
+export interface FinanceTransferOptions {
+    entry: FinanceTransferEntry;
+    options: FinanceTransferEntry[];
+}
+
+export interface FinanceInternalTransferRule {
+    id: string;
+    updated_at: string;
+    outgoing_source_name: string;
+    incoming_source_name: string;
+    outgoing_party_name: string;
+    incoming_party_name: string;
+    is_active: boolean;
+}
+
 export type FinanceEntryMode = 'manual' | 'screenshot';
 export type FinanceTransactionSource = 'manual' | 'screenshot' | 'notification';
 export type FinanceTransactionStatus = 'confirmed' | 'review' | 'duplicate' | 'rejected';
@@ -539,7 +584,7 @@ export interface FinanceForeignDetails {
     foreign_currency?: string | null;
 }
 
-export interface FinanceTransaction extends FinanceForeignDetails {
+export interface FinanceTransaction extends FinanceForeignDetails, FinanceTransferMetadata {
     tags?: FinanceTag[];
     tag_links?: Array<{ tag: FinanceTag | null }>;
     id: string;
@@ -565,7 +610,7 @@ export interface FinanceTransaction extends FinanceForeignDetails {
     finance_payee?: FinancePayee | null;
 }
 
-export interface FinanceTransactionView extends FinanceForeignDetails {
+export interface FinanceTransactionView extends FinanceForeignDetails, FinanceTransferMetadata {
     tags?: FinanceTag[];
     id: string;
     source_id: string;
@@ -584,7 +629,7 @@ export interface FinanceTransactionView extends FinanceForeignDetails {
     finance_payee?: FinanceReferenceOption | null;
 }
 
-export interface FinanceDashboardRecentTransaction {
+export interface FinanceDashboardRecentTransaction extends FinanceTransferMetadata {
     tags?: FinanceTag[];
     category?: Pick<FinanceReferenceOption, 'name'> | null;
     id: string;
@@ -619,8 +664,14 @@ export type FinanceBudgetCycleType = 'weekly' | 'monthly' | 'custom' | 'one_time
 export type FinanceBudgetState = 'active' | 'scheduled' | 'archived';
 export type FinanceBudgetStatus = FinanceBudgetState | 'over_budget' | 'limit_reached' | 'needs_attention' | 'on_track';
 export type FinanceBudgetMoney = string;
+export type FinanceBudgetFilterDimension = 'source' | 'category' | 'tag';
+export interface FinanceBudgetFilterGroup {
+    dimensions: [FinanceBudgetFilterDimension, FinanceBudgetFilterDimension];
+    logic: 'and' | 'or';
+}
 export interface FinanceBudgetFilters {
     filter_logic: 'and' | 'or';
+    filter_group?: FinanceBudgetFilterGroup | null;
     source_ids: string[];
     category_ids: string[];
     tag_ids?: string[];

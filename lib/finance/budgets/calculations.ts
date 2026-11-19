@@ -1,4 +1,5 @@
 import type { FinanceBudgetCycleType, FinanceBudgetFilters, FinanceBudgetMetrics, FinanceBudgetSummary } from '@/lib/types';
+import { combineBudgetFilterValues } from './filterGroups';
 
 const ZERO = BigInt(0);
 const HUNDRED = BigInt(100);
@@ -80,11 +81,12 @@ export function nextBudgetBoundary(start: string | null, type: FinanceBudgetCycl
 }
 
 export function matchesBudgetFilters(filters: FinanceBudgetFilters, sourceId: string, categoryId: string | null, tagIds: string[] = []): boolean {
-    const matches: boolean[] = [];
-    if (filters.source_ids.length) matches.push(filters.source_ids.includes(sourceId));
-    if (filters.category_ids.length || filters.include_uncategorised) matches.push(categoryId === null ? filters.include_uncategorised : filters.category_ids.includes(categoryId));
-    if (filters.tag_ids?.length) matches.push(filters.tag_ids.some(id => tagIds.includes(id)));
-    return !matches.length || (filters.filter_logic === 'and' ? matches.every(Boolean) : matches.some(Boolean));
+    return combineBudgetFilterValues(filters, {
+        source: filters.source_ids.length ? filters.source_ids.includes(sourceId) : undefined,
+        category: filters.category_ids.length || filters.include_uncategorised
+            ? categoryId === null ? filters.include_uncategorised : filters.category_ids.includes(categoryId) : undefined,
+        tag: filters.tag_ids?.length ? filters.tag_ids.some(id => tagIds.includes(id)) : undefined,
+    }, (items, logic) => logic === 'and' ? items.every(Boolean) : items.some(Boolean)) ?? true;
 }
 
 function percentage(numerator: bigint, denominator: bigint): string {

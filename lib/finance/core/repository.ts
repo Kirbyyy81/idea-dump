@@ -2,9 +2,12 @@ import type { FinanceTagFilter } from '@/lib/finance/tagValues';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { FinanceCategory, FinanceLinkChanges, FinanceSource, FinanceTransaction } from '@/lib/types';
 
+const FINANCE_TRANSFER_SELECT = 'transfer_id, transfer:finance_internal_transfers!finance_transactions_transfer_fkey(id,created_at,outgoing_transaction_id,incoming_transaction_id,outgoing_source:dim_finance_sources!finance_internal_transfers_outgoing_source_fkey(id,name),incoming_source:dim_finance_sources!finance_internal_transfers_incoming_source_fkey(id,name))';
+
 export const FINANCE_TRANSACTION_VIEW_SELECT = [
     'id, source_id, category_id, direction, amount, currency, foreign_amount::text, foreign_currency, merchant, payee_id',
     'reference_number, transaction_date, notes, created_at',
+    FINANCE_TRANSFER_SELECT,
     'finance_source:dim_finance_sources(id,name)',
     'tag_links:finance_transaction_tags(tag:dim_finance_tags(id,name,is_archived))',
     'category:dim_finance_categories(id,name,is_archived)',
@@ -13,6 +16,7 @@ export const FINANCE_TRANSACTION_VIEW_SELECT = [
 const FINANCE_TRANSACTION_REPLAY_SELECT = [
     'id, source_id, category_id, direction, amount, currency, foreign_amount::text, foreign_currency, merchant, payee_id',
     'reference_number, transaction_date, notes, source, status, created_at',
+    FINANCE_TRANSFER_SELECT,
     'finance_source:dim_finance_sources(id,name)',
     'tag_links:finance_transaction_tags(tag:dim_finance_tags(id,name,is_archived))',
     'category:dim_finance_categories(id,name,is_archived)',
@@ -22,6 +26,7 @@ const FINANCE_TRANSACTION_INTERNAL_SELECT =
     'id, source_id, category_id, direction, amount, currency, foreign_amount::text, foreign_currency, merchant, payee_id, reference_number, transaction_date, notes, source, status';
 const FINANCE_DASHBOARD_RECENT_SELECT = [
     'id, direction, amount, merchant, transaction_date',
+    FINANCE_TRANSFER_SELECT,
     'tag_links:finance_transaction_tags(tag:dim_finance_tags(id,name,is_archived))',
     'category:dim_finance_categories(name)',
     'finance_source:dim_finance_sources(name)',
@@ -344,7 +349,7 @@ export async function listFinanceTransactions(
         date: string | null;
         dateFrom: string | null;
         dateTo: string | null;
-        direction: FinanceTransaction['direction'] | null;
+        direction: FinanceTransaction['direction'] | 'transfer' | null;
         uncategorised: boolean;
         pageSize: number;
     }
@@ -379,7 +384,8 @@ export async function listFinanceTransactions(
             if (options.dateFrom) query = query.gte('transaction_date', options.dateFrom);
             if (options.dateTo) query = query.lte('transaction_date', options.dateTo);
         }
-        if (options.direction) query = query.eq('direction', options.direction);
+        if (options.direction === 'transfer') query = query.not('transfer_id', 'is', null);
+        else if (options.direction) query = query.eq('direction', options.direction).is('transfer_id', null);
         if (options.query) {
             const filters = [
                 `merchant.ilike.%${options.query}%`,
@@ -472,7 +478,8 @@ export async function listFinanceDashboardMonthTransactions(
     const admin = createAdminClient();
     for (let from = 0; ; from += pageSize) {
         const { data, error } = await (tags.tagIds?.length ? admin.rpc('finance_tagged_transactions', { p_user_id: userId, p_tag_ids: tags.tagIds, p_mode: tags.tagMode || 'include' }) : admin.from('finance_transactions'))
-            .select('amount, direction, transaction_date, category_id, category:dim_finance_categories(name)')
+            .select('amount, direction, transaction_date, category_id, transfer_id, category:dim_finance_categories(name)')
+            .is('transfer_id', null)
             .eq('user_id', userId)
             .eq('status', 'confirmed')
             .gte('transaction_date', monthStart)
@@ -708,7 +715,7 @@ export async function listFinanceDuplicateCandidates(input: {
     referenceKey: string;
 }) {
     const admin = createAdminClient();
-    const select = 'id, intake_item_id, amount, currency, merchant, reference_number, transaction_date, source_id';
+    const select = 'id, intake_item_id, amount, currency, merchant, reference_number, transaction_date, source_id, direction';
     const fieldQuery = input.amount !== null && input.transactionDate
         ? admin
             .from('finance_transactions')

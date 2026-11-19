@@ -28,7 +28,8 @@ test('simple calendar budget defaults and optional customization', async ({ page
     const dialog = page.getByRole('dialog', { name: 'Create budget' });
     await expect(dialog.getByLabel('Cycle', { exact: true })).toHaveText('Monthly (starts from 1st of the month)');
     await expect(dialog.getByText('Start date', { exact: true })).toHaveCount(0);
-    await expect(dialog.getByRole('switch')).toHaveCount(0);
+    await expect(dialog.getByRole('switch', { name: 'Bank', exact: true })).not.toBeChecked();
+    await expect(dialog.getByRole('region', { name: 'Tags filter' })).toBeVisible();
     await dialog.getByLabel('Cycle', { exact: true }).click();
     await expect(page.getByRole('option', { name: 'Custom', exact: true })).toHaveCount(0);
     await page.getByRole('option', { name: 'Weekly (starts on Monday)', exact: true }).click();
@@ -198,7 +199,7 @@ test('create, edit, archive, frozen history and restore', async ({ page }, testI
     await dialog.getByRole('switch', { name: 'Bank' }).click();
     await dialog.getByRole('switch', { name: 'Uncategorised' }).click();
     await dialog.getByLabel('Match selected filters').click();
-    await page.getByRole('option', { name: 'OR: match any selected filter' }).click();
+    await page.getByRole('option', { name: 'Match any (OR)', exact: true }).click();
     await dialog.getByRole('button', { name: 'Create budget', exact: true }).click();
     await page.getByRole('button', { name: 'View Everyday spending' }).click();
     await expect(page.getByRole('region', { name: 'Everyday spending details' })).toBeVisible();
@@ -438,6 +439,8 @@ test('selects and saves a travel tag in a short budget edit dialog', async ({ pa
     await expect(picker).toBeFocused();
     await picker.click();
     const tag = dialog.getByRole('button', { name: travelTag.name, exact: true });
+    await tag.scrollIntoViewIfNeeded();
+    await expect(tag).toBeInViewport({ ratio: 1 });
     const point = await tag.boundingBox();
     expect(point).not.toBeNull();
     // Use the option's position without automatically scrolling the dialog.

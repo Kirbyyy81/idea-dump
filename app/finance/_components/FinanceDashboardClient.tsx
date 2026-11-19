@@ -151,7 +151,9 @@ export function FinanceDashboardClient({ month, today, selectedDate = null, summ
                         merchant={transaction.merchant}
                         sourceName={transaction.finance_source?.name}
                         date={transaction.transaction_date}
-                        direction={transaction.direction}
+                        transferLabel={transaction.transfer_id ? transaction.transfer
+                    ? `Internal transfer · ${transaction.transfer.outgoing_source.name} → ${transaction.transfer.incoming_source.name}` : 'Internal transfer' : null}
+                direction={transaction.direction}
                         formattedAmount={formatCurrencyMYR(transaction.amount)}
                     />
                 </li>)}{!summary.recent_transactions.length && <li className="py-10 text-center text-sm text-text-muted">{selectedDate ? 'No transactions for this day.' : 'No transactions this month.'}</li>}</ul>}</section>

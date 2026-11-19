@@ -9,6 +9,7 @@ const FIELD_MESSAGES: FinanceBudgetFieldErrors = {
     start_date: 'Choose a valid start date for this schedule', time_zone: 'The budget time zone is unavailable',
     cycle_type: 'Choose a valid cycle', custom_days: 'Choose a duration from 1 to 365 days', anchor_day: 'Choose a renewal day from 1 to 31',
     filter_logic: 'Choose AND or OR', include_uncategorised: 'Choose whether Uncategorised transactions count',
+    filter_group: 'Choose two different filter cards and AND or OR',
     source_ids: 'Remove missing sources or choose sources you own', category_ids: 'Remove missing categories or choose categories you own',
     tag_ids: 'Remove missing tags or choose tags you own',
 };

@@ -23,23 +23,23 @@ describe('budget controls and feedback', () => {
         expect(transactions.closest('details')?.className).toBe('group mt-6');
         detail.budget.configuration.categories = [{ id: 'food', original_id: 'food', name: 'Food', is_archived: false }];
         rerender(<BudgetDetails {...props} />);
-        expect(screen.getByText('Categories: Food')).toBeTruthy();
+        expect(screen.getByText('Categories (Food)')).toBeTruthy();
         expect(screen.queryByText(/Sources:/)).toBeNull();
         expect(screen.queryByText('and', { exact: true })).toBeNull();
         detail.budget.configuration.sources = [{ id: null, original_id: 'bank', name: 'Bank', is_archived: false }];
         detail.budget.configuration.include_uncategorised = true;
         rerender(<BudgetDetails {...props} />);
-        expect(screen.getByText('Sources: Bank (deleted)')).toBeTruthy();
-        expect(screen.getByText('Categories: Food or Uncategorised')).toBeTruthy();
-        expect(screen.getByText('and', { exact: true })).toBeTruthy();
+        expect(screen.getByText('(Sources (Bank (deleted)) AND Categories (Food or Uncategorised))')).toBeTruthy();
         detail.budget.configuration.filter_logic = 'or';
         rerender(<BudgetDetails {...props} />);
-        expect(screen.getByText('or', { exact: true })).toBeTruthy();
+        expect(screen.getByText('(Sources (Bank (deleted)) OR Categories (Food or Uncategorised))')).toBeTruthy();
     });
-    it('starts with only basic controls and reveals customization on request', () => {
+    it('shows all filter cards together and keeps schedule customization available', () => {
         render(<BudgetForm onClose={vi.fn()} onSaved={vi.fn()} onReload={vi.fn()} />);
         expect(screen.queryByText('Start date')).toBeNull();
-        expect(screen.queryByText('Sources', { exact: true })).toBeNull();
+        expect(screen.getByRole('region', { name: 'Sources filter' })).toBeTruthy();
+        expect(screen.getByRole('region', { name: 'Categories filter' })).toBeTruthy();
+        expect(screen.getByRole('region', { name: 'Tags filter' })).toBeTruthy();
         fireEvent.click(screen.getByRole('button', { name: 'Customize' }));
         expect(screen.getByText('Start date')).toBeTruthy();
         expect(screen.getByText('Sources', { exact: true })).toBeTruthy();
