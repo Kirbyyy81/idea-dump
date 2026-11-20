@@ -5,6 +5,7 @@ node_modules/
 
 # Build output
 .next/
+.scannerwork/
 out/
 build/
 services/finance-ocr/dist/

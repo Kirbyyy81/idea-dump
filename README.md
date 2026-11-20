@@ -146,10 +146,20 @@ If `npm` is easier to run through Git Bash on your machine, the repo includes a 
 | Shared Finance OCR helpers, the imported Finance constants/rule matching/value/dashboard modules, `lib/types.ts`, or `shared/date.ts` | Web and OCR |
 | `android/` | Android |
 | `.nvmrc` or `.npmrc` | Web and OCR |
-| The validation workflow or `.gitattributes` | All three |
+| Any file under `.github/workflows/` or `.gitattributes` | All three |
 | Root documentation or `document/` only | No application jobs |
 
 Changes spanning multiple components run each affected job. Unaffected jobs remain visible as skipped and do not produce build artifacts. Manual `workflow_dispatch` runs skip change detection and validate all three projects. If change detection fails, all three validation jobs run conservatively. The job names and their existing audit, test, build, and APK upload steps stay the same. The workflow uses a commit-pinned [paths-filter action](https://github.com/dorny/paths-filter) to handle pull requests, new branches, deletions, and renames.
+
+### SonarQube Cloud
+
+[SonarQube analysis](.github/workflows/sonarqube.yml) runs independently of validation on pushes to `main` and pull requests targeting `main`. It also supports manual runs on `main` after the workflow is available on the default branch. Fork and Dependabot pull requests are skipped because they cannot access the repository's `SONAR_TOKEN` secret. A missing token on other runs fails with setup instructions.
+
+The project uses organization `kirbyyy81` and project key `Kirbyyy81_idea-dump`. Before the first CI scan, disable Automatic Analysis under the Sonar project's **Administration > Analysis Method**, leave Automatic configuration off, and add an analysis token as the GitHub repository Actions secret `SONAR_TOKEN`. Never store the token in source control.
+
+[Analysis scope](sonar-project.properties) includes the web application, shared code, service worker source, and Finance OCR source. Application and OCR tests are classified separately. Android, database migrations, scripts, vendored dependencies, and generated deployment output are outside the initial source scope. Dependencies are installed for TypeScript type inference; application tests and builds remain in the validation workflow. This initial scan does not generate or import coverage reports, so coverage is not a measured baseline yet.
+
+The workflow submits findings without waiting for a quality-gate result and is initially advisory. Keep the Sonar check out of required branch-protection checks until its baseline has been reviewed. No paid features are required. The Cloud Free plan allows up to 50,000 private lines of code across the organization; public projects have no private-code allowance usage. Verify the intended project visibility and subscription plan in SonarQube Cloud, particularly if onboarding activated a paid-plan trial.
 
 ## Local validation
 

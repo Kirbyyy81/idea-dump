@@ -39,7 +39,7 @@ jobs:
           base: ${{ github.event_name == 'push' && github.ref || '' }}
           filters: |
             web:
-              - '.github/workflows/validate.yml'
+              - '.github/workflows/**'
               - '.gitattributes'
               - '.nvmrc'
               - '.npmrc'
@@ -68,7 +68,7 @@ jobs:
               - 'tsconfig*.json'
               - 'vitest.config.*'
             finance_ocr:
-              - '.github/workflows/validate.yml'
+              - '.github/workflows/**'
               - '.gitattributes'
               - '.nvmrc'
               - '.npmrc'
@@ -82,7 +82,7 @@ jobs:
               - 'lib/types.ts'
               - 'shared/date.ts'
             android:
-              - '.github/workflows/validate.yml'
+              - '.github/workflows/**'
               - '.gitattributes'
               - 'android/**'
 
