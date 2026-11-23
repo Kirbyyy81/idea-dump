@@ -10,6 +10,26 @@ export const sampleNotification = (text: string): FinanceNotificationEventInput 
  notification:{title:'Card payment completed',text,subtext:null,posted_at:'2026-10-02T07:45:54Z'},
 });
 describe('stored notification patterns', () => {
+ it('honors a disabled starter override only for its owner and source', () => {
+  const input=sampleNotification('Confirm card payment of RM143.24 to MY SHOPEE MARKETPLACE?');
+  input.notification.title='Ryt Bank';
+  const starter=notificationPatterns.find(p=>p.format_key==='ryt-card-approval-request')!;
+  const disabled={...starter,id:'override',user_id:'owner',source_id:input.source_id,is_active:false};
+  expect(parseFinanceNotification(input,[...notificationPatterns,disabled],'owner').status).toBe('review');
+  expect(parseFinanceNotification(input,[...notificationPatterns,disabled],'other').status).toBe('ignored');
+  expect(parseFinanceNotification({...input,source_id:'different-source'},[...notificationPatterns,disabled],'owner').status).toBe('ignored');
+  expect(parseFinanceNotification(input,[...notificationPatterns,{...disabled,is_active:true}],'owner').status).toBe('ignored');
+ });
+ it('supports editable literal prefixes without substring or regex matching', () => {
+  const starter=notificationPatterns.find(p=>p.definition.action==='ignore')!;
+  const saved={...starter,id:'custom',user_id:'owner',source_id:'00000000-0000-4000-8000-000000000002',
+   definition:{version:1 as const,action:'ignore' as const,parts:['Reminder [card]'],trailing_sentence:true}};
+  expect(parseFinanceNotification(sampleNotification('REMINDER [card] payment RM16.00'),[saved],'owner').status).toBe('ignored');
+  expect(parseFinanceNotification(sampleNotification('RM16.00 paid at Reminder [card] using your Main Account.'),[...notificationPatterns,saved],'owner').status).toBe('review');
+  expect(parseFinanceNotification(sampleNotification('Reminder card payment RM16.00'),[saved],'owner').status).toBe('review');
+  expect(parseFinanceNotification({...sampleNotification('Reminder [card] payment RM16.00'),source_package:'my.com.tngdigital.ewallet'},[saved],'owner').status).toBe('review');
+  expect(parseFinanceNotification(sampleNotification('Your OTP is 123456 for payment RM16.00'),[{...saved,is_active:false}],'owner').failure_code).toBe('sensitive_notification');
+ });
  it('ignores approval requests even when a saved extraction pattern could recognize them', () => {
   const input = sampleNotification('Confirm card payment of RM143.24 to MY SHOPEE MARKETPLACE?');
   input.notification.title = 'Ryt Bank';
@@ -18,7 +38,7 @@ describe('stored notification patterns', () => {
    definition:{version:1 as const,parts:['Confirm card payment of ',{kind:'amount' as const,field:'amount' as const},' to ',
     {kind:'text' as const,field:'merchant' as const},'?'],direction:'expense' as const},
   };
-  expect(parseFinanceNotification(input,[learned],'owner')).toMatchObject({status:'ignored',payload:null,failure_code:'not_transaction'});
+  expect(parseFinanceNotification(input,[...notificationPatterns,learned],'owner')).toMatchObject({status:'ignored',payload:null,failure_code:'not_transaction'});
  });
  it('extracts the new card format using only stored starter data', () => {
   const event = sampleNotification('RM16.00 paid at SYNTHETIC CAFE - PJ using your Main Account.');
@@ -31,7 +51,7 @@ describe('stored notification patterns', () => {
   expect(parseFinanceNotification(sampleNotification('RM19.00 settled at EXAMPLE SHOP.')).status).toBe('review');
  });
  it('validates every migration seed and rejects executable or unbounded rules', () => {
-  expect(notificationPatterns.length).toBe(16);
+  expect(notificationPatterns.length).toBe(18);
   for (const p of notificationPatterns) expect(validNotificationDefinition(p.definition),p.name).toBe(true);
   expect(validNotificationDefinition({version:1,regex:'.*',parts:['paid ',{kind:'amount',field:'amount'}]})).toBe(false);
   expect(validNotificationDefinition({version:1,parts:[{kind:'text'},' and ',{kind:'text'}]})).toBe(false);

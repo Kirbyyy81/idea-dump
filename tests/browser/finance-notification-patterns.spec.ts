@@ -16,7 +16,7 @@ test('inspects a learned format and disables it with keyboard controls',async({p
  await page.goto('/finance/settings/notifications');
  await expect(page.getByText('Learned from your review',{exact:true})).toBeVisible();
  await expect(page.getByRole('table',{name:'Notification patterns'})).toBeVisible();
- await expect(page.getByRole('columnheader')).toHaveText(['Pattern','Matching format and fields','Direction','Status']);
+ await expect(page.getByRole('columnheader')).toHaveText(['Pattern','Matching format and fields','Action','Direction','Status']);
  await expect(page.getByText('[amount] paid at [merchant] using your Main Account',{exact:true})).toBeVisible();
  const toggle=page.getByRole('switch',{name:'Enable Reviewed card payment'});
  await expect(toggle.getByText('Enabled',{exact:true})).toHaveClass('sr-only');
@@ -142,4 +142,44 @@ test('queue retry checks all items in order, including screenshots, and keeps fa
  await expect(page.getByRole('button', { name: /Offline shop/ })).toHaveAttribute('aria-pressed', 'true');
  await expect(page.getByRole('button', { name: /Receipt shop/ })).toContainText('Strong duplicate match');
  await expect(retry).toBeEnabled();
+});
+
+test('edits, disables, restores and creates saved ignore rules',async({page},info)=>{
+ if(info.project.name==='mobile') await page.setViewportSize({width:330,height:800});
+ const ignore={...pattern,id:'52000000-0000-4000-8000-000000000018',name:'Card payment approval prompt',origin:'starter',revision:1,
+  definition:{version:1,action:'ignore',parts:['Tap to confirm card payment'],trailing_sentence:true}};
+ let rows=[ignore]; const writes:Record<string,unknown>[]=[];
+ await page.route('**/api/finance/notification-patterns**',async route=>{
+  const method=route.request().method();
+  if(method==='GET') return route.fulfill({json:{data:rows}});
+  const body=route.request().postDataJSON();writes.push(body);
+  if(method==='PATCH') rows=rows.map(row=>({...row,is_active:body.is_active,revision:row.revision+1}));
+  else if(body.id) rows=rows.map(row=>({...row,name:body.name,is_active:body.is_active,origin:'override',revision:row.revision+1,definition:{...row.definition,parts:[body.prefix]}}));
+  else rows.push({...ignore,id:'custom-ignore',name:body.name,source_package:body.source_package,is_active:body.is_active,origin:'override',definition:{...ignore.definition,parts:[body.prefix]}});
+  await route.fulfill({json:{success:true}});
+ });
+ await page.goto('/finance/settings/notifications');
+ const row=page.getByRole('row').filter({hasText:'Card payment approval prompt'});
+ await expect(row.getByRole('cell',{name:'Ignore notification',exact:true})).toBeVisible();
+ const edit=row.getByRole('button',{name:'Edit Card payment approval prompt'});
+ await edit.focus();await page.keyboard.press('Enter');
+ const dialog=page.getByRole('dialog',{name:'Edit ignore rule'});
+ await expect(dialog.getByLabel('Application')).toBeDisabled();
+ await dialog.getByLabel('Rule name').fill('Approval requests');
+ await dialog.getByLabel('Starts with').fill('Confirm card payment of');
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1)).toBe(true);
+ await page.screenshot({path:info.outputPath('ignore-rule-editor.png'),fullPage:true});
+ await dialog.getByRole('button',{name:'Save rule',exact:true}).click();
+ await expect(dialog).toHaveCount(0);
+ expect(writes[0]).toMatchObject({id:ignore.id,revision:1,source_id:source,name:'Approval requests',prefix:'Confirm card payment of'});
+ const toggle=page.getByRole('switch',{name:'Enable Approval requests'});
+ await toggle.click();await expect(toggle).toHaveAttribute('aria-checked','false');
+ await toggle.focus();await page.keyboard.press('Space');await expect(toggle).toHaveAttribute('aria-checked','true');
+ await page.getByRole('button',{name:'Add ignore rule',exact:true}).click();
+ const create=page.getByRole('dialog',{name:'Add ignore rule'});
+ await create.getByLabel('Rule name').fill('Payment reminders');
+ await create.getByLabel('Starts with').fill('Please complete your payment');
+ await create.getByRole('button',{name:'Save rule',exact:true}).click();
+ await expect(page.getByText('Payment reminders',{exact:true})).toBeVisible();
+ expect(writes.at(-1)).toMatchObject({id:null,revision:null,source_id:source,prefix:'Please complete your payment'});
 });

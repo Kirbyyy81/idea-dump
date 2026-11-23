@@ -1524,10 +1524,20 @@ export type FinanceNotificationPart = string | {
 };
 export interface FinanceNotificationPatternDefinition {
     version: 1;
+    action?: 'ignore';
     parts: FinanceNotificationPart[];
     direction?: FinanceTransactionDirection;
     trailing_sentence?: boolean;
     match?: "contains";
+}
+export interface FinanceNotificationIgnoreRuleInput {
+    id: string | null;
+    revision: number | null;
+    source_id: string;
+    source_package: string;
+    name: string;
+    prefix: string;
+    is_active: boolean;
 }
 export interface FinanceNotificationPattern {
     origin?: 'starter' | 'learned' | 'override';

@@ -770,3 +770,10 @@ export async function updateFinanceNotificationPatternStatus(userId: string, sou
         p_user_id:userId,p_source_id:sourceId,p_pattern_id:id,p_is_active:active,p_expected_revision:revision,
     });
 }
+
+export async function saveFinanceNotificationIgnoreRule(userId: string, rule: import('@/lib/types').FinanceNotificationIgnoreRuleInput) {
+    return createAdminClient().rpc('finance_save_notification_ignore_rule_v1', {
+        p_user_id: userId, p_source_id: rule.source_id, p_id: rule.id, p_revision: rule.revision,
+        p_name: rule.name, p_prefix: rule.prefix, p_source_package: rule.source_package, p_is_active: rule.is_active,
+    });
+}

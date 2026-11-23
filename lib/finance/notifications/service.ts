@@ -13,10 +13,11 @@ import { assessFinanceDuplicate, financeDuplicateColumns } from '@/lib/finance/t
 async function prepareNotification(userId: string, event: FinanceNotificationEventInput, intakeId?: string): Promise<FinanceNotificationPrepared> {
     let parsed = parseFinanceNotification(event);
     if (!parsed.payload) return parsed;
-    const [ruleResult, payeeResult, patternResult] = await Promise.all([listActiveFinanceRules(userId), listActiveFinancePayees(userId), listFinanceNotificationPatterns(userId, event.source_id)]);
+    const patternResult = await listFinanceNotificationPatterns(userId, event.source_id);
     if (patternResult.error) throw new CompanionError('Could not load notification patterns', 503);
     parsed = parseFinanceNotification(event, (patternResult.data || []) as FinanceNotificationPattern[], userId);
     if (!parsed.payload) return parsed;
+    const [ruleResult, payeeResult] = await Promise.all([listActiveFinanceRules(userId), listActiveFinancePayees(userId)]);
     if (ruleResult.error) throw new CompanionError('Could not load Finance rules', 503);
     if (payeeResult.error) throw new CompanionError('Could not load Finance payees', 503);
     const matched = matchFinanceNotificationPayee(parsed.payload, (payeeResult.data || []) as FinanceOcrPayee[]);

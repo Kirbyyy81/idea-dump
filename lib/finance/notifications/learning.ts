@@ -27,7 +27,7 @@ function matchedFields(definition: FinanceNotificationPatternDefinition, text: s
     return next;
 }
 export function learnNotificationPattern(event: FinanceNotificationEventInput, reviewed: Reviewed, patterns: FinanceNotificationPattern[], userId: string) {
-    if (!parseFinanceNotification(event).payload) return null;
+    if (!parseFinanceNotification(event, patterns, userId).payload) return null;
     const text = financeNotificationPatternBody(event).replace(/[.!?]$/,'');
     const monies = [...text.matchAll(new RegExp(moneyToken,'ig'))];
     if (monies.length !== 1 || !reviewed.direction) return null;
