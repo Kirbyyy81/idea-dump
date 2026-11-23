@@ -1,3 +1,4 @@
+import { FINANCE_SHARE_ERROR_QUERY_PARAM, FINANCE_SHARE_NOT_READY } from '@/lib/finance/share/protocol';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import {
@@ -13,6 +14,16 @@ type PendingCookie = {
 };
 
 export async function middleware(request: NextRequest) {
+    // A missed service-worker handoff must never forward multipart images to a
+    // page as a POST. The destination still performs normal authentication.
+    if (request.method === 'POST' && request.nextUrl.pathname === '/share-target/finance') {
+        const target = new URL('/finance/add', request.url);
+        target.searchParams.set(FINANCE_SHARE_ERROR_QUERY_PARAM, FINANCE_SHARE_NOT_READY);
+        const response = NextResponse.redirect(target, 303);
+        response.headers.set('Cache-Control', 'private, no-store');
+        return response;
+    }
+
     const pendingCookies: PendingCookie[] = [];
     const pendingHeaders = new Headers();
 

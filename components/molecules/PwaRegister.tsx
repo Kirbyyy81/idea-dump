@@ -7,25 +7,18 @@ export function PwaRegister() {
         if (process.env.NODE_ENV !== 'production') return;
         if (!('serviceWorker' in navigator)) return;
 
-        const register = () => {
-            navigator.serviceWorker
-                .register('/sw.js', { updateViaCache: 'none' })
-                .then((registration) => {
-                    registration.update().catch((error) => {
-                        console.error('[PWA] Service worker update failed', error);
-                    });
-                })
-                .catch((error) => {
-                    console.error('[PWA] Service worker registration failed', error);
+        // Register as soon as the app mounts so an early Android share can be
+        // intercepted even while the rest of the page is still loading.
+        navigator.serviceWorker
+            .register('/sw.js', { updateViaCache: 'none' })
+            .then((registration) => {
+                registration.update().catch((error) => {
+                    console.error('[PWA] Service worker update failed', error);
                 });
-        };
-
-        if (document.readyState === 'complete') {
-            register();
-        } else {
-            window.addEventListener('load', register, { once: true });
-            return () => window.removeEventListener('load', register);
-        }
+            })
+            .catch((error) => {
+                console.error('[PWA] Service worker registration failed', error);
+            });
     }, []);
 
     return null;

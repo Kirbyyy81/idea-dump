@@ -1,4 +1,6 @@
 export const FINANCE_SHARE_QUERY_PARAM = 'finance_share';
+export const FINANCE_SHARE_ERROR_QUERY_PARAM = 'finance_share_error';
+export const FINANCE_SHARE_NOT_READY = 'not_ready';
 
 export const FINANCE_SHARE_MESSAGE_TYPES = {
     ready: 'finance-share:ready',

@@ -1233,3 +1233,10 @@ Deploy the additive `finance_internal_transfers` migration before the compatible
 
 
 Rollout verification on 19 November 2026: the connected Supabase project records `20261119044123_finance_internal_transfers.sql`. The connector assigned that version, and the previously unapplied local filename was aligned without changing its SQL body. A rollback-only hosted smoke test verified two-entry linking, replay, saved rules, source-specific budget exclusion, frozen history, unlinking, deletion guards and server-only permissions. The synthetic owner was absent afterward, and no historical pairs or rules were created. Security advisor findings were unchanged; the existing five unrelated unindexed foreign keys were unchanged. Application and OCR deployment is still required to expose the new interface and align advisory duplicate checks.
+
+
+## Incoming share recovery
+
+The service worker normally intercepts the Android image-share POST at `/share-target/finance` and keeps the files in its bounded, temporary handoff. If the POST reaches the web server instead, middleware returns a private, non-cacheable **303** redirect to `/finance/add?finance_share_error=not_ready`, without reading or storing the multipart body. Authentication still applies to the following GET. A 307 here would forward the image POST to the login page and can produce a Next.js 500 response.
+
+The existing global Finance rejection bridge consumes the recovery marker on the login or app screen and shows sign-in, access or reshare instructions without requiring a working service worker. No transaction or upload is created by the fallback. PWA registration starts when the root component mounts instead of waiting for the window load event, reducing the early-share race. The successful worker-controlled file path, upload validation and Finance authorization remain in force. Regression coverage lives in `tests/auth-boundaries.test.ts`, `tests/finance-share-target.test.tsx` and `tests/pwa-register.test.tsx`, alongside the existing share worker and browser suites.
