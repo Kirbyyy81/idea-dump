@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest, NextResponse } from 'next/server';
-const mocks=vi.hoisted(()=>({auth:vi.fn(),get:vi.fn(),set:vi.fn(),save:vi.fn()}));
+const mocks=vi.hoisted(()=>({auth:vi.fn(),get:vi.fn(),set:vi.fn(),save:vi.fn(),savePattern:vi.fn()}));
 vi.mock('@/lib/rbac/guards',()=>({authorizeSessionModule:mocks.auth}));
-vi.mock('@/lib/finance/notifications/settings',()=>({getNotificationPatternSettings:mocks.get,setNotificationPatternStatus:mocks.set,saveNotificationIgnoreRule:mocks.save}));
+vi.mock('@/lib/finance/notifications/settings',()=>({getNotificationPatternSettings:mocks.get,setNotificationPatternStatus:mocks.set,saveNotificationIgnoreRule:mocks.save,saveNotificationPattern:mocks.savePattern}));
 import { GET,PATCH,PUT } from '@/app/api/finance/notification-patterns/route';
 import { CompanionError } from '@/lib/companion/core/http';
 const id='52000000-0000-4000-8000-000000000001';
@@ -12,6 +12,12 @@ const patch=(input:unknown=body,origin='https://app.test')=>new NextRequest('htt
 });
 beforeEach(()=>{vi.clearAllMocks();mocks.auth.mockResolvedValue({user:{id:'verified'}});mocks.get.mockResolvedValue([]);});
 describe('notification pattern API',()=>{
+ it('saves extraction edits with notes under the verified identity',async()=>{
+  const definition={version:1,parts:[{kind:'amount',field:'amount'},' received from ',{kind:'text',field:'payee_name'},' for ',{kind:'notes',field:'notes'}],direction:'income'};
+  const input={kind:'extract',id,source_id:id,revision:2,name:'Incoming transfer',definition,is_active:true};
+  expect((await PUT(new NextRequest('https://app.test/api/finance/notification-patterns',{method:'PUT',headers:{'Content-Type':'application/json',Origin:'https://app.test'},body:JSON.stringify(input)}))).status).toBe(200);
+  expect(mocks.savePattern).toHaveBeenCalledWith('verified',{id,source_id:id,revision:2,name:'Incoming transfer',definition,is_active:true});
+ });
  const rule={id:null,revision:null,source_id:id,source_package:'my.rytbank.app',name:' Approval prompts ',prefix:'  Tap  to confirm card payment  ',is_active:true,user_id:'untrusted'};
  const put=(input:unknown=rule,origin='https://app.test')=>new NextRequest('https://app.test/api/finance/notification-patterns',{
   method:'PUT',headers:{'Content-Type':'application/json',Origin:origin},body:JSON.stringify(input),

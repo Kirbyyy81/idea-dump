@@ -1,10 +1,10 @@
 import { normalizeForeignAmount, normalizeForeignCurrency } from '@/lib/finance/transactions/foreignCurrency';
 import type { FinanceNotificationField, FinanceNotificationPattern, FinanceNotificationPatternDefinition, FinanceNotificationExtractionTrace } from '@/lib/types';
 import { normalizeFinanceNotificationText as normalize } from './normalization';
-import { normalizeFinanceDate, toPositiveFinanceAmount } from '@/lib/finance/core/values';
+import { normalizeFinanceDate, toPositiveFinanceAmount, MAX_FINANCE_NOTES_LENGTH } from '@/lib/finance/core/values';
 import { toIsoDate } from '@/shared/date';
 
-export const notificationFields: FinanceNotificationField[] = ['amount', 'direction', 'merchant', 'payee_name', 'transaction_date', 'reference_number', 'foreign_amount', 'foreign_currency'];
+export const notificationFields: FinanceNotificationField[] = ['amount', 'direction', 'merchant', 'payee_name', 'transaction_date', 'reference_number', 'foreign_amount', 'foreign_currency', 'notes'];
 export const moneyToken = '(?:RM|MYR)\\s*((?:\\d{1,3}(?:,\\d{3})+|\\d+)\\.\\d{2})(?!\\d|\\.\\d)';
 export const dateToken = '(?:20\\d{2}-\\d{2}-\\d{2}|\\d{1,2}[/-]\\d{1,2}[/-]20\\d{2}|\\d{1,2}\\s+[A-Za-z]+\\s+20\\d{2})';
 // The pattern can recognize an invalid amount without treating it as a domestic payment.
@@ -26,6 +26,7 @@ const kinds: Record<string, string> = {
     foreign_money: foreignMoneyCapture,
     date: dateToken, time: '\\d{1,2}:\\d{2}\\s*(?:am|pm)',
     text: '.{1,500}?', reference: '[\\p{L}\\p{N}/@._-]{1,200}?',
+    notes: `.{1,${MAX_FINANCE_NOTES_LENGTH}}`,
 };
 export function notificationDate(value: string): string | null {
     const iso = normalizeFinanceDate(value);
@@ -62,6 +63,8 @@ export function validNotificationDefinition(input: unknown): input is FinanceNot
             seenKinds.add(p.kind);
             if (p.kind === 'foreign_money' && (p.field !== 'foreign_amount' || d.match)) return false;
             if (p.kind !== 'foreign_money' && p.field === 'foreign_amount') return false;
+            if (p.kind === 'notes' && (p.field !== 'notes' || i !== d.parts.length - 1 || d.match || d.trailing_sentence)) return false;
+            if (p.kind !== 'notes' && p.field === 'notes') return false;
             if (p.field && (typeof p.field !== 'string' || seen.has(p.field) || !notificationFields.includes(p.field)
                 || (p.kind === 'amount' && p.field !== 'amount')
                 || (p.kind === 'date' && p.field !== 'transaction_date')
@@ -81,9 +84,11 @@ export function extractNotificationPattern(definition: FinanceNotificationPatter
     const text = normalize(raw);
     const captures = definition.parts.filter(p => typeof p !== 'string');
     const expression = (definition.match === 'contains' ? '\\b' : '^') + definition.parts.map(p => typeof p === 'string' ? escape(p) : '(' + kinds[p.kind] + ')').join('')
-        + (definition.match === 'contains' ? '(?=[.!?, ]|$)' : definition.trailing_sentence ? '(?:[.!?](?: .*)?| .*)?$' : '[.!?]?$');
+        + (definition.match === 'contains' ? '(?=[.!?, ]|$)' : definition.trailing_sentence ? '(?:[.!?](?: .*)?| .*)?$'
+            : captures.some(p => p.kind === 'notes') ? '$' : '[.!?]?$');
     const match = new RegExp(expression, 'iu').exec(text);
     if (!match) return null;
+    if (captures.some((part,index) => part.kind === 'notes' && match[index+1].trim().length > MAX_FINANCE_NOTES_LENGTH)) return null;
     const values: Partial<Record<FinanceNotificationField, string | number | null>> = {};
     captures.forEach((p, i) => {
         if (!p.field) return;

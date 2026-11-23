@@ -38,7 +38,7 @@ test('compares formats, directions and evidence without opening rows',async({pag
  const table=page.getByRole('table',{name:'Notification patterns'});
  await expect(table.getByRole('row')).toHaveCount(4);
  await expect(table.locator('details, summary')).toHaveCount(0);
- const starterRow=table.getByRole('row').filter({has:page.getByRole('rowheader',{name:'Transaction amount Starter pattern',exact:true})});
+ const starterRow=table.getByRole('row').filter({has:page.getByRole('rowheader',{name:/^Transaction amount Starter pattern/})});
  await expect(starterRow.getByRole('cell',{name:'amount: [amount]',exact:true})).toBeVisible();
  await expect(starterRow.getByRole('cell',{name:'Not specified',exact:true})).toBeVisible();
  await expect(starterRow.getByRole('switch')).toHaveAttribute('aria-checked','false');
@@ -182,4 +182,28 @@ test('edits, disables, restores and creates saved ignore rules',async({page},inf
  await create.getByRole('button',{name:'Save rule',exact:true}).click();
  await expect(page.getByText('Payment reminders',{exact:true})).toBeVisible();
  expect(writes.at(-1)).toMatchObject({id:null,revision:null,source_id:source,prefix:'Please complete your payment'});
+});
+
+test('edits extraction formats with a terminal notes field',async({page})=>{
+ let saved:Record<string,unknown>|undefined;
+ const notes={...pattern,id:'52000000-0000-4000-8000-000000000020',name:'TNG incoming transfer with notes',source_package:'my.com.tngdigital.ewallet',origin:'starter',
+  definition:{version:1,parts:[{kind:'amount',field:'amount'},' received from ',{kind:'text',field:'payee_name'},' for ',{kind:'notes',field:'notes'}],direction:'income'}};
+ await page.route('**/api/finance/notification-patterns**',async route=>{
+  if(route.request().method()==='PUT'){saved=route.request().postDataJSON();return route.fulfill({json:{success:true}});}
+  await route.fulfill({json:{data:[notes]}});
+ });
+ await page.goto('/finance/settings/notifications');
+ await page.getByRole('button',{name:'Edit TNG incoming transfer with notes',exact:true}).click();
+ const dialog=page.getByRole('dialog',{name:'Edit notification pattern'});
+ await expect(dialog.getByLabel('Matching format')).toHaveValue('[amount] received from [payee name] for [notes]');
+ await dialog.getByLabel('Matching format').fill('[amount][payee name]');
+ await dialog.getByRole('button',{name:'Save pattern',exact:true}).click();
+ await expect(dialog.getByRole('alert')).toContainText('Separate fields');expect(saved).toBeUndefined();
+ await dialog.getByLabel('Matching format').fill('[amount] received from [payee name] for ');
+ await dialog.getByRole('combobox',{name:'Insert field',exact:true}).click();
+ await page.getByRole('option',{name:'notes',exact:true}).click();
+ await expect(dialog.getByLabel('Matching format')).toHaveValue('[amount] received from [payee name] for [notes]');
+ await dialog.getByRole('button',{name:'Save pattern',exact:true}).click();
+ await expect(dialog).toHaveCount(0);
+ expect(saved).toMatchObject({kind:'extract',id:notes.id,revision:2,source_id:source,definition:notes.definition});
 });

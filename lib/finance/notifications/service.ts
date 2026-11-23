@@ -82,6 +82,7 @@ export async function confirmFinanceNotification(userId: string, candidateId: st
         amount: params.p_amount as number, direction: params.p_direction as 'expense' | 'income',
         merchant: params.p_merchant as string | null, payee_name: params.p_payee_name as string | null,
         transaction_date: params.p_transaction_date as string, reference_number: params.p_reference_number as string | null,
+        notes: params.p_notes as string | null,
     }, patterns || [], userId);
     return createAdminClient().rpc('finance_confirm_notification_v1', {
         p_user_id: userId, p_candidate_id: candidateId, p_expected_digest: row.payload_digest,

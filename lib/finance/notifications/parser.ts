@@ -31,7 +31,7 @@ export function parseFinanceNotification(event: FinanceNotificationEventInput, p
     const foreignSpans = notificationForeignMoneySpans(body).filter(span => {
         // A domestic merchant such as "AUD 23 Cafe" is not a conversion.
         if (capturedForeign) return true;
-        return ![payload.merchant, payload.payee_name].some(party =>
+        return ![payload.merchant, payload.payee_name, payload.notes].some(party =>
             party?.toLowerCase().includes(span[0].toLowerCase()));
     });
     const rytForeignLayout = event.source_package === 'my.rytbank.app'

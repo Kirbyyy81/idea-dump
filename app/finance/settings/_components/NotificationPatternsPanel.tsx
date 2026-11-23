@@ -9,6 +9,7 @@ import { financeApiRequest } from '@/lib/finance/core/client';
 import { useFinanceReferenceData } from '@/app/finance/_components/FinanceReferenceData';
 import type { FinanceNotificationPattern, FinanceNotificationPart } from '@/lib/types';
 import { NotificationIgnoreRuleForm } from './NotificationIgnoreRuleForm';
+import { NotificationPatternForm } from './NotificationPatternForm';
 
 type Pattern = Pick<FinanceNotificationPattern,'id'|'name'|'definition'|'is_active'|'evidence_valid'|'revision'|'origin'|'source_package'>;
 const slotLabel=(part: Exclude<FinanceNotificationPart,string>) => part.kind === 'foreign_money' ? 'foreign currency and amount' : part.field?.replace(/_/g,' ') || part.kind;
@@ -70,7 +71,7 @@ export function NotificationPatternsPanel() {
                         <th scope="row" className="px-3 py-3 font-normal [overflow-wrap:anywhere]">
                             <span className="font-semibold">{pattern.name}</span>
                             <p className="mt-1 text-xs text-text-secondary">{pattern.origin==='learned' ? 'Learned from your review' : pattern.origin==='override' ? 'Your rule' : 'Starter pattern'}</p>
-                            {pattern.definition.action==='ignore' && <Button variant="ghost" className="mt-1" aria-label={`Edit ${pattern.name}`} disabled={!!pending || loading} onClick={()=>setEditing(pattern)}>Edit</Button>}
+                            <Button variant="ghost" className="mt-1" aria-label={`Edit ${pattern.name}`} disabled={!!pending || loading} onClick={()=>setEditing(pattern)}>Edit</Button>
                             {!pattern.evidence_valid ? <p className="mt-1 text-xs text-warning">Supporting transaction changed. Confirm a new example to relearn.</p> : null}
                         </th>
                         <td className="whitespace-pre-wrap px-3 py-3 font-mono text-xs leading-relaxed text-text-secondary [overflow-wrap:anywhere]">{pattern.definition.action==='ignore' ? 'Starts with: ' : ''}{pattern.definition.parts.map(p=>typeof p==='string'?p:'['+slotLabel(p)+']').join('')}</td>
@@ -84,6 +85,8 @@ export function NotificationPatternsPanel() {
                 </tbody>
             </table>
         </div> : null}
-        {editing!==undefined && <NotificationIgnoreRuleForm sourceId={sourceId} pattern={editing ?? undefined} onClose={()=>setEditing(undefined)} onSaved={async()=>{setEditing(undefined);await load();}} />}
+        {editing!==undefined && (editing && editing.definition.action!=='ignore'
+            ? <NotificationPatternForm sourceId={sourceId} pattern={editing} onClose={()=>setEditing(undefined)} onSaved={async()=>{setEditing(undefined);await load();}} />
+            : <NotificationIgnoreRuleForm sourceId={sourceId} pattern={editing ?? undefined} onClose={()=>setEditing(undefined)} onSaved={async()=>{setEditing(undefined);await load();}} />)}
     </Card>;
 }
