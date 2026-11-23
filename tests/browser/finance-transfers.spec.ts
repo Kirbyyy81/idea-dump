@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { tagTransactions } from './finance-tags-fixture';
 
-const first = { kind: 'candidate', id: 'candidate-1', version: '2026-11-19T04:00:00+00:00', amount: 100, currency: 'MYR', direction: 'expense', party_name: 'My TNG', transaction_date: '2026-11-19', transfer_id: null };
+const first = { kind: 'transaction', id: tagTransactions[0].id, version: '2026-11-19T04:00:00+00:00', amount: 100, currency: 'MYR', direction: 'expense', party_name: 'My TNG', transaction_date: '2026-11-19', transfer_id: null };
 const second = { ...first, kind: 'candidate', id: 'candidate-2', direction: 'income', party_name: 'My Ryt', source_name: 'TNG' };
 test.beforeEach(async ({ page }) => {
     await page.route('**/api/finance/reference-data', route => route.fulfill({ json: { data: { sources: [], categories: [], tags: [] } } }));
@@ -12,7 +12,13 @@ test('previews both entries and explicitly saves a reusable transfer rule', asyn
     let body: Record<string, unknown> | undefined;
     await page.route('**/api/finance/transfers?*', route => route.fulfill({ json: { data: { entry: first, options: [second] } } }));
     await page.route('**/api/finance/transfers', async route => { body = route.request().postDataJSON(); await route.fulfill({ json: { data: { resolved_candidate_ids: ['candidate-1', 'candidate-2'] } } }); });
-    await page.goto('/finance/review');
+    await page.goto('/finance/transactions/edit?id=' + first.id);
+    const actions = page.getByRole('button', { name: 'Save changes' }).locator('..');
+    await expect(actions.getByRole('button', { name: 'Link as internal transfer' })).toBeVisible();
+    await expect(actions.getByRole('link', { name: 'Cancel', exact: true })).toBeVisible();
+    const notesBounds = await page.locator('#edit-notes').boundingBox();
+    const actionBounds = await actions.boundingBox();
+    expect(actionBounds!.y).toBeGreaterThan(notesBounds!.y + notesBounds!.height);
     await page.getByRole('button', { name: 'Link as internal transfer' }).click();
     const region = page.getByRole('region', { name: 'Internal transfer', exact: true });
     await expect(region.getByText(/This entry: Outgoing RM\s*100\.00/)).toBeVisible();
@@ -32,13 +38,13 @@ test('previews both entries and explicitly saves a reusable transfer rule', asyn
     await region.screenshot({ path: info.outputPath('transfer-preview.png') });
     await region.getByRole('button', { name: 'Link both entries' }).click();
     await expect.poll(() => body).toMatchObject({ first, second, save_rule: true });
-    await expect(page.getByRole('button', { name: 'Link as internal transfer' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Link both entries' })).toHaveCount(0);
 });
 
 test('keeps the pair available after a stale version conflict', async ({ page }) => {
     await page.route('**/api/finance/transfers?*', route => route.fulfill({ json: { data: { entry: first, options: [second] } } }));
     await page.route('**/api/finance/transfers', route => route.fulfill({ status: 409, json: { error: 'Transaction details changed. Reload and select the pair again.' } }));
-    await page.goto('/finance/review');
+    await page.goto('/finance/transactions/edit?id=' + first.id);
     await page.getByRole('button', { name: 'Link as internal transfer' }).click();
     await page.getByRole('combobox', { name: 'Other account entry' }).click();
     await page.getByRole('option', { name: /TNG · Incoming/ }).click();
@@ -47,14 +53,21 @@ test('keeps the pair available after a stale version conflict', async ({ page })
     await expect(page.getByRole('button', { name: 'Link both entries' })).toBeEnabled();
 });
 
-test('requires both entries and prevents dropping unsaved review edits', async ({ page }) => {
+test('requires both entries and prevents dropping unsaved transaction edits', async ({ page }) => {
     await page.route('**/api/finance/transfers?*', route => route.fulfill({ json: { data: { entry: first, options: [] } } }));
-    await page.goto('/finance/review');
+    await page.goto('/finance/transactions/edit?id=' + first.id);
     await page.getByRole('button', { name: 'Link as internal transfer' }).click();
     await expect(page.getByText(/Both entries are required/)).toBeVisible();
-    await page.locator('#review-notes').fill('Keep these edited details');
+    await page.locator('#edit-notes').fill('Keep these edited details');
     await expect(page.getByRole('button', { name: 'Reload matching entries' })).toBeDisabled();
-    await expect(page.getByText('Confirm your edited details before linking a transfer.')).toBeVisible();
+    await expect(page.getByText('Save your changes before linking a transfer.')).toBeVisible();
+});
+
+test('does not offer internal transfer linking in Review', async ({ page }) => {
+    await page.goto('/finance/review');
+    await expect(page.getByRole('heading', { name: 'Candidate details' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Link as internal transfer' })).toHaveCount(0);
+    await expect(page.getByRole('region', { name: 'Internal transfer', exact: true })).toHaveCount(0);
 });
 
 test('shows neutral transfer rows and protects the linked financial fields', async ({ page }) => {

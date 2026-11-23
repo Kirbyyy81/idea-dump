@@ -1,5 +1,4 @@
 'use client';
-import { FinanceTransferLink } from '@/app/finance/_components/FinanceTransferLink';
 
 import { FinanceForeignFields } from '@/app/finance/_components/FinanceForeignFields';
 import { foreignFormDetails, parseForeignDetails, type ForeignForm } from '@/lib/finance/transactions/foreignCurrency';
@@ -509,13 +508,6 @@ export function FinanceReviewClient({
                                 {selected.intake?.source === 'notification' ? <NotificationExtractionStatus trace={selected.payload.notification_extraction} /> : null}
                                 <FinanceFormErrorSummary errors={fieldErrors} />
 
-                                <FinanceTransferLink key={`transfer:${selected.id}`} kind="candidate" id={selected.id} disabled={isSaving || isRetryingQueue}
-                                    onBusyChange={(busy) => { mutationInProgress.current = busy; setIsSaving(busy); }}
-                                    blockedReason={JSON.stringify(form) !== JSON.stringify(formFromCandidate(selected, today)) ? 'Confirm your edited details before linking a transfer.' : undefined}
-                                    onChanged={(ids) => {
-                                        const remaining = candidates.filter(candidate => !ids.includes(candidate.id));
-                                        setCandidates(remaining); setSelectedId(remaining[0]?.id || ''); router.refresh();
-                                    }} />
                                 {duplicateOutcome(selected) !== 'none' && (
                                     <div className="mt-4 border border-warning bg-warning-bg px-4 py-3 text-sm text-warning">
                                         <p className="font-semibold">{duplicateOutcome(selected) === 'strong' ? 'Strong duplicate match' : 'Possible duplicate match'}</p>
