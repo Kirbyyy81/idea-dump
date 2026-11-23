@@ -12,6 +12,7 @@ import { DocumentDoodleIcon, ScanDoodleIcon } from '@/components/atoms/DoodleIco
 import { FileUpload } from '@/components/molecules/FileUpload';
 import { FormDialog } from '@/components/molecules/FormDialog';
 import { Input } from '@/components/atoms/Input';
+import { DatePicker } from '@/components/atoms/DatePicker';
 import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
 import { Toggle } from '@/components/atoms/Toggle';
@@ -337,7 +338,7 @@ export function FinanceTransactionEntry({ initialMode }: { initialMode: FinanceE
             <Toggle id="manual-has-payee" label="Payee" toggleLabel="Is a payee" errorMessage={fieldErrors.has_payee} data-finance-field="has_payee" checked={form.has_payee} aria-label="Is a payee" onChange={setManualPayeeClassification} />
             {form.has_payee && <Input id="manual-payee" label="Payee name" required errorMessage={fieldErrors.payee_name} data-finance-field="payee_name" maxLength={MAX_FINANCE_PAYEE_LENGTH} value={form.payee_name} onChange={(event) => setManualField('payee_name', event.target.value)} />}
             <Input id="manual-reference" label="Transaction reference" errorMessage={fieldErrors.reference_number} data-finance-field="reference_number" maxLength={MAX_FINANCE_REFERENCE_LENGTH} value={form.reference_number} onChange={(event) => setManualField('reference_number', event.target.value)} />
-            <Input id="manual-date" label="Date" required errorMessage={fieldErrors.transaction_date} data-finance-field="transaction_date" type="date" max={getLocalFinanceDate()} value={form.transaction_date} onChange={(event) => setManualField('transaction_date', event.target.value)} />
+            <DatePicker id="manual-date" label="Date" required errorMessage={fieldErrors.transaction_date} data-finance-field="transaction_date" max={getLocalFinanceDate()} value={form.transaction_date} onChange={(value) => setManualField('transaction_date', value)} />
             <Textarea id="manual-notes" label="Notes" errorMessage={fieldErrors.notes} data-finance-field="notes" maxLength={MAX_FINANCE_NOTES_LENGTH} value={form.notes} onChange={(event) => setManualField('notes', event.target.value)} />
             <Button type="submit" className="w-full" isLoading={isSaving} disabled={isSaving}>Add transaction</Button>
         </form> : <form onSubmit={submitScreenshot} className="mt-6"><FileUpload label="Transaction screenshot" previewSize="large" aria-describedby="finance-upload-help" accept="image/png,image/jpeg,image/webp" multiple value={file} onChange={selectScreenshot} onFilesChange={selectScreenshots} disabled={isSaving} /><p id="finance-upload-help" className="mt-2 text-sm text-text-muted">PNG, JPEG, or WebP · Up to 10 images, 4 MB each</p><Button type="submit" className="mt-5 w-full" isLoading={isSaving} disabled={!file || isSaving}>Process screenshot</Button></form>}
