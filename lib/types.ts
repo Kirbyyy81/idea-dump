@@ -1517,17 +1517,31 @@ export interface FinanceNotificationPrepared extends FinanceNotificationParseRes
     duplicate_outcome?: FinanceDuplicateOutcome; duplicate_score?: number; duplicate_signals?: FinanceDuplicateSignal[];
     duplicate_explanation?: string; duplicate_checked_at?: string;
 }
-export type FinanceNotificationField = 'amount' | 'direction' | 'merchant' | 'payee_name' | 'transaction_date' | 'reference_number' | 'foreign_amount' | 'foreign_currency';
+export type FinanceNotificationField = 'amount' | 'direction' | 'merchant' | 'payee_name' | 'transaction_date' | 'reference_number' | 'foreign_amount' | 'foreign_currency' | 'notes';
 export type FinanceNotificationPart = string | {
-    kind: 'amount' | 'date' | 'time' | 'text' | 'reference' | 'foreign_money';
+    kind: 'amount' | 'date' | 'time' | 'text' | 'reference' | 'foreign_money' | 'notes';
     field?: Exclude<FinanceNotificationField, 'direction' | 'foreign_currency'>;
 };
 export interface FinanceNotificationPatternDefinition {
     version: 1;
+    action?: 'ignore';
     parts: FinanceNotificationPart[];
     direction?: FinanceTransactionDirection;
     trailing_sentence?: boolean;
     match?: "contains";
+}
+export interface FinanceNotificationIgnoreRuleInput {
+    id: string | null;
+    revision: number | null;
+    source_id: string;
+    source_package: string;
+    name: string;
+    prefix: string;
+    is_active: boolean;
+}
+export interface FinanceNotificationPatternEditInput {
+    id: string; revision: number; source_id: string; name: string;
+    definition: FinanceNotificationPatternDefinition; is_active: boolean;
 }
 export interface FinanceNotificationPattern {
     origin?: 'starter' | 'learned' | 'override';

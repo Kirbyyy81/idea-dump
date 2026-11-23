@@ -1,14 +1,21 @@
 'use client';
 
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { FieldShell } from '@/components/atoms/FieldShell';
 
 interface DatePickerProps {
     id?: string;
     ariaDescribedBy?: string;
     error?: boolean;
+    errorMessage?: string;
+    label?: ReactNode;
+    required?: boolean;
+    clearable?: boolean;
+    max?: string;
+    'data-finance-field'?: string;
     value: string;
     onChange: (value: string) => void;
     placeholder?: string;
@@ -53,6 +60,12 @@ export function DatePicker({
     id,
     ariaDescribedBy,
     error,
+    errorMessage,
+    label,
+    required,
+    clearable = false,
+    max,
+    'data-finance-field': financeField,
     value,
     onChange,
     placeholder = 'Select date',
@@ -69,6 +82,7 @@ export function DatePicker({
     const selectedDate = parseInputDate(value);
     const [viewDate, setViewDate] = useState(() => selectedDate ?? parseInputDate(getTodayInputDate()) ?? new Date());
     const dialogId = `date-picker-${useId()}`;
+    const controlId = id ?? `${dialogId}-trigger`;
 
     const closePicker = () => {
         setIsOpen(false);
@@ -178,6 +192,7 @@ export function DatePicker({
     }, [viewDate]);
 
     const chooseDate = (date: Date) => {
+        if (max && formatInputDate(date) > max) return;
         onChange(formatInputDate(date));
         closePicker();
     };
@@ -198,11 +213,13 @@ export function DatePicker({
     }).format(viewDate);
 
     return (
-        <div ref={containerRef} className={cn('relative', className)}>
+        <FieldShell id={controlId} label={label} required={required} errorMessage={errorMessage} ariaDescribedBy={ariaDescribedBy} className={className}>
+        {({ describedBy, hasError }) => <div ref={containerRef} className="relative">
             <button
                 ref={buttonRef}
-                id={id}
-                aria-describedby={ariaDescribedBy}
+                id={controlId}
+                aria-describedby={describedBy}
+                data-finance-field={financeField}
                 type="button"
                 disabled={disabled}
                 aria-haspopup="dialog"
@@ -213,7 +230,7 @@ export function DatePicker({
                 className={cn(
                     'input flex h-10 items-center justify-between gap-2 pr-10 text-left',
                     disabled && 'cursor-not-allowed opacity-60',
-                    error && 'border-error',
+                    (error || hasError) && 'border-error',
                     buttonClassName
                 )}
             >
@@ -268,14 +285,16 @@ export function DatePicker({
                                 <button
                                     key={inputDate}
                                     type="button"
+                                    disabled={Boolean(max && inputDate > max)}
                                     onClick={() => chooseDate(date)}
-                                    aria-label={new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).format(date)}
+                                    aria-label={new Intl.DateTimeFormat('en-GB', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).format(date)}
                                     aria-pressed={isSelected}
                                     className={cn(
                                         'grid size-7 place-items-center rounded-full text-xs transition-colors',
                                         isSelected
                                             ? 'bg-action-primary text-action-primary-text'
-                                            : 'text-text-secondary hover:bg-bg-hover hover:text-text-primary',
+                                            : 'text-text-secondary enabled:hover:bg-bg-hover enabled:hover:text-text-primary',
+                                        max && inputDate > max && 'cursor-not-allowed opacity-40',
                                         isOutsideMonth && !isSelected && 'text-text-muted/50',
                                         isToday && !isSelected && 'ring-1 ring-border-strong'
                                     )}
@@ -287,13 +306,16 @@ export function DatePicker({
                     </div>
 
                     <div className="mt-2 flex justify-end border-t border-border-subtle pt-2">
-                        <button type="button" className="btn-ghost h-7 min-h-7 px-3" onClick={jumpToToday}>
+                        {clearable && value && <button type="button" className="btn-ghost mr-auto h-7 min-h-7 px-3"
+                            aria-label={`Clear ${ariaLabel ?? 'date'}`} onClick={() => { onChange(''); closePicker(); }}>Clear</button>}
+                        <button type="button" className="btn-ghost h-7 min-h-7 px-3" disabled={Boolean(max && getTodayInputDate() > max)} onClick={jumpToToday}>
                             Today
                         </button>
                     </div>
                 </div>,
                 document.body
             )}
-        </div>
+        </div>}
+        </FieldShell>
     );
 }

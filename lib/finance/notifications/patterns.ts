@@ -1,10 +1,10 @@
 import { normalizeForeignAmount, normalizeForeignCurrency } from '@/lib/finance/transactions/foreignCurrency';
 import type { FinanceNotificationField, FinanceNotificationPattern, FinanceNotificationPatternDefinition, FinanceNotificationExtractionTrace } from '@/lib/types';
 import { normalizeFinanceNotificationText as normalize } from './normalization';
-import { normalizeFinanceDate, toPositiveFinanceAmount } from '@/lib/finance/core/values';
+import { normalizeFinanceDate, toPositiveFinanceAmount, MAX_FINANCE_NOTES_LENGTH } from '@/lib/finance/core/values';
 import { toIsoDate } from '@/shared/date';
 
-export const notificationFields: FinanceNotificationField[] = ['amount', 'direction', 'merchant', 'payee_name', 'transaction_date', 'reference_number', 'foreign_amount', 'foreign_currency'];
+export const notificationFields: FinanceNotificationField[] = ['amount', 'direction', 'merchant', 'payee_name', 'transaction_date', 'reference_number', 'foreign_amount', 'foreign_currency', 'notes'];
 export const moneyToken = '(?:RM|MYR)\\s*((?:\\d{1,3}(?:,\\d{3})+|\\d+)\\.\\d{2})(?!\\d|\\.\\d)';
 export const dateToken = '(?:20\\d{2}-\\d{2}-\\d{2}|\\d{1,2}[/-]\\d{1,2}[/-]20\\d{2}|\\d{1,2}\\s+[A-Za-z]+\\s+20\\d{2})';
 // The pattern can recognize an invalid amount without treating it as a domestic payment.
@@ -26,6 +26,7 @@ const kinds: Record<string, string> = {
     foreign_money: foreignMoneyCapture,
     date: dateToken, time: '\\d{1,2}:\\d{2}\\s*(?:am|pm)',
     text: '.{1,500}?', reference: '[\\p{L}\\p{N}/@._-]{1,200}?',
+    notes: `.{1,${MAX_FINANCE_NOTES_LENGTH}}`,
 };
 export function notificationDate(value: string): string | null {
     const iso = normalizeFinanceDate(value);
@@ -39,6 +40,10 @@ export function notificationDate(value: string): string | null {
 export function validNotificationDefinition(input: unknown): input is FinanceNotificationPatternDefinition {
     if (!input || typeof input !== 'object' || Array.isArray(input)) return false;
     const d = input as FinanceNotificationPatternDefinition;
+    if ('action' in d) return d.action === 'ignore' && d.version === 1 && d.trailing_sentence === true
+        && Object.keys(d).length === 4 && Array.isArray(d.parts) && d.parts.length === 1
+        && typeof d.parts[0] === 'string' && d.parts[0].length >= 4 && d.parts[0].length <= 120
+        && !/[\u0000-\u001f]/.test(d.parts[0]) && normalize(d.parts[0]) === d.parts[0];
     if (Object.keys(d).some(k => !['version','parts','direction','trailing_sentence','match'].includes(k))
         || d.version !== 1 || !Array.isArray(d.parts) || d.parts.length < 1 || d.parts.length > 24
         || JSON.stringify(d).length > 4096 || (d.direction !== undefined && !['income','expense'].includes(d.direction))
@@ -58,6 +63,8 @@ export function validNotificationDefinition(input: unknown): input is FinanceNot
             seenKinds.add(p.kind);
             if (p.kind === 'foreign_money' && (p.field !== 'foreign_amount' || d.match)) return false;
             if (p.kind !== 'foreign_money' && p.field === 'foreign_amount') return false;
+            if (p.kind === 'notes' && (p.field !== 'notes' || i !== d.parts.length - 1 || d.match || d.trailing_sentence)) return false;
+            if (p.kind !== 'notes' && p.field === 'notes') return false;
             if (p.field && (typeof p.field !== 'string' || seen.has(p.field) || !notificationFields.includes(p.field)
                 || (p.kind === 'amount' && p.field !== 'amount')
                 || (p.kind === 'date' && p.field !== 'transaction_date')
@@ -73,13 +80,15 @@ export function validNotificationDefinition(input: unknown): input is FinanceNot
 }
 function escape(value: string) { return value.replace(/[.*+?^{}()|[\]\\$]/g, '\\$&'); }
 export function extractNotificationPattern(definition: FinanceNotificationPatternDefinition, raw: string) {
-    if (!validNotificationDefinition(definition)) return null;
+    if (!validNotificationDefinition(definition) || definition.action === 'ignore') return null;
     const text = normalize(raw);
     const captures = definition.parts.filter(p => typeof p !== 'string');
     const expression = (definition.match === 'contains' ? '\\b' : '^') + definition.parts.map(p => typeof p === 'string' ? escape(p) : '(' + kinds[p.kind] + ')').join('')
-        + (definition.match === 'contains' ? '(?=[.!?, ]|$)' : definition.trailing_sentence ? '(?:[.!?](?: .*)?| .*)?$' : '[.!?]?$');
+        + (definition.match === 'contains' ? '(?=[.!?, ]|$)' : definition.trailing_sentence ? '(?:[.!?](?: .*)?| .*)?$'
+            : captures.some(p => p.kind === 'notes') ? '$' : '[.!?]?$');
     const match = new RegExp(expression, 'iu').exec(text);
     if (!match) return null;
+    if (captures.some((part,index) => part.kind === 'notes' && match[index+1].trim().length > MAX_FINANCE_NOTES_LENGTH)) return null;
     const values: Partial<Record<FinanceNotificationField, string | number | null>> = {};
     captures.forEach((p, i) => {
         if (!p.field) return;
@@ -99,11 +108,22 @@ export function extractNotificationPattern(definition: FinanceNotificationPatter
     else if ('payee_name' in values) values.merchant = null;
     return values;
 }
-export function applyNotificationPatterns(raw: string, patterns: FinanceNotificationPattern[], scope: {userId?: string; sourceId: string; sourcePackage: string}) {
+function activeNotificationPatterns(patterns: FinanceNotificationPattern[], scope: {userId?: string; sourceId: string; sourcePackage: string}) {
     const eligible = patterns.filter(p => (p.source_package === '*' || p.source_package === scope.sourcePackage)
         && (p.user_id === null || (p.user_id === scope.userId && p.source_id === scope.sourceId)));
     const overrides = new Set(eligible.filter(p => p.user_id !== null).map(p => p.source_package+':'+p.format_key));
-    const active = eligible.filter(p => (p.user_id !== null || !overrides.has(p.source_package+':'+p.format_key)) && p.is_active && p.evidence_valid);
+    return eligible.filter(p => (p.user_id !== null || !overrides.has(p.source_package+':'+p.format_key)) && p.is_active && p.evidence_valid);
+}
+export function matchesNotificationIgnoreRule(parts: string[], patterns: FinanceNotificationPattern[], scope: {userId?: string; sourceId: string; sourcePackage: string}) {
+    const lines = parts.flatMap(part => part.split(/[\r\n]+/).map(line => normalize(line).toLowerCase()));
+    return activeNotificationPatterns(patterns, scope).some(pattern => {
+        if (pattern.definition.action !== 'ignore' || !validNotificationDefinition(pattern.definition)) return false;
+        const prefix = (pattern.definition.parts[0] as string).toLowerCase();
+        return lines.some(line => line.startsWith(prefix) && (line.length === prefix.length || /[\s.!?:,]/.test(line[prefix.length])));
+    });
+}
+export function applyNotificationPatterns(raw: string, patterns: FinanceNotificationPattern[], scope: {userId?: string; sourceId: string; sourcePackage: string}) {
+    const active = activeNotificationPatterns(patterns, scope);
     const values: Partial<Record<FinanceNotificationField, string | number | null>> = {};
     const trace: FinanceNotificationExtractionTrace = { version: 1, fields: {}, conflicts: [] };
     for (const pattern of active) {

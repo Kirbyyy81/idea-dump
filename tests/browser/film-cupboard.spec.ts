@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
+test.use({ locale: 'en-US' });
+
 const cameraFixture = [
     { id: 'camera-a', name: 'Weekend camera', brand: 'Nikon', model: 'F3', notes: '', purchase_date: '' },
     { id: 'camera-b', name: 'Travel camera', brand: 'Samsung', model: 'AF Slim Zoom', notes: '', purchase_date: '' },
@@ -165,8 +167,10 @@ test('preserves multiple rows after adding a roll, navigation and reload', async
     await expect(page).toHaveURL(/\/film$/);
     await expect.poll(() => rows.count()).toBeGreaterThan(1);
     await page.getByRole('link', { name: 'Add roll', exact: true }).click();
+    await page.getByRole('combobox', { name: 'Film brand', exact: true }).click();
+    await page.getByRole('option', { name: 'Other brand', exact: true }).click();
     await page.getByRole('textbox', { name: 'Film name' }).fill('Added roll');
-    await page.getByRole('textbox', { name: 'Brand' }).fill('Kodak');
+    await page.getByRole('textbox', { name: 'Brand name' }).fill('Kodak');
     await page.getByRole('button', { name: 'Place on Shelf' }).click();
     await expect(page).toHaveURL(/\/film\/rolls\/roll-new$/);
     await expect(page.getByRole('textbox', { name: 'Film name' })).toHaveValue('Added roll');
@@ -191,6 +195,8 @@ test('keeps camera switching, creating, editing, deleting and maintenance workin
     await expect(page.getByRole('textbox', { name: 'Camera name' })).toHaveValue('');
     await page.getByRole('textbox', { name: 'Camera name' }).fill('New camera test');
     await page.locator('form').filter({ has: page.getByRole('heading', { name: 'New camera' }) }).getByRole('button', { name: 'Add Camera', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'New camera test', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Save Camera', exact: true })).toBeEnabled();
     await expect(page.getByRole('textbox', { name: 'Camera name' })).toHaveValue('New camera test');
     await page.getByRole('textbox', { name: 'Camera name' }).fill('Renamed camera');
     await page.getByRole('button', { name: 'Save Camera' }).click();
@@ -220,4 +226,37 @@ test('falls back for missing or invalid camera links and handles empty cupboards
     await expect(page.getByText('No cameras yet.')).toBeVisible();
     await page.getByRole('link', { name: 'Add Camera', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'New camera' })).toBeVisible();
+});
+
+test('camera purchase and service dates use the shared day-first picker and remain clearable', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-11-23T04:00:00Z'));
+    await setup(page);
+    await page.goto('/film/cameras?camera=camera-b');
+    const purchase = page.getByRole('button', { name: /^Purchase date,/ });
+    await purchase.click();
+    await page.getByRole('button', { name: 'Saturday, 21 November 2026', exact: true }).click();
+    await expect(purchase).toHaveText('21 Nov 2026');
+    const saved = page.waitForRequest(request => request.url().endsWith('/api/film/cameras') && request.method() === 'PUT');
+    await page.getByRole('button', { name: 'Save Camera', exact: true }).click();
+    expect((await saved).postDataJSON().purchase_date).toBe('2026-11-21');
+    await purchase.click();
+    await page.getByRole('button', { name: 'Clear Purchase date', exact: true }).click();
+    await expect(purchase).toHaveText('Select date');
+    const cleared = page.waitForRequest(request => request.url().endsWith('/api/film/cameras') && request.method() === 'PUT');
+    await page.getByRole('button', { name: 'Save Camera', exact: true }).click();
+    expect((await cleared).postDataJSON().purchase_date).toBe('');
+
+    const service = page.getByRole('button', { name: /^Service date,/ });
+    await service.click();
+    await page.getByRole('button', { name: 'Sunday, 22 November 2026', exact: true }).click();
+    await expect(service).toHaveText('22 Nov 2026');
+    await service.click();
+    await page.getByRole('button', { name: 'Clear Service date', exact: true }).click();
+    await expect(service).toHaveText('Select date');
+    await service.click();
+    await page.getByRole('button', { name: 'Saturday, 21 November 2026', exact: true }).click();
+    const maintained = page.waitForRequest(request => request.url().endsWith('/api/film/maintenance') && request.method() === 'POST');
+    await page.getByRole('button', { name: 'Add Maintenance', exact: true }).click();
+    expect((await maintained).postDataJSON().service_date).toBe('2026-11-21');
+    await expect(page.locator('input[type="date"]')).toHaveCount(0);
 });

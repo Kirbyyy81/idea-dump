@@ -100,6 +100,33 @@ describe('authentication response boundaries', () => {
         vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'public-key');
     });
 
+    it('turns a missed multipart share into a GET before authentication, without reading image data', async () => {
+        const body = new FormData();
+        body.append('finance_images', new File(['private image bytes'], 'receipt.png', { type: 'image/png' }));
+        const request = new NextRequest('https://preview.example/share-target/finance?next=https://untrusted.example', { method: 'POST', body });
+        const readBody = vi.spyOn(request, 'formData');
+        const response = await middleware(request);
+        expect(response.status).toBe(303);
+        expect(response.headers.get('location')).toBe('https://preview.example/finance/add?finance_share_error=not_ready');
+        expect(response.headers.get('cache-control')).toBe('private, no-store');
+        expect(readBody).not.toHaveBeenCalled();
+        expect(supabaseMocks.createServerClient).not.toHaveBeenCalled();
+
+        configureServerClient({ user: null });
+        const continued = await middleware(new NextRequest(response.headers.get('location')!, { method: 'GET' }));
+        expect(continued.headers.get('location')).toBe('https://preview.example/login?finance_share_error=not_ready');
+        const login = await middleware(new NextRequest(continued.headers.get('location')!, { method: 'GET' }));
+        expect(login.status).toBe(200);
+    });
+
+    it('keeps GET requests to the share path behind normal authentication', async () => {
+        configureServerClient({ user: null });
+        const response = await middleware(new NextRequest('https://preview.example/share-target/finance'));
+        expect(response.status).toBe(307);
+        expect(response.headers.get('location')).toBe('https://preview.example/login');
+        expect(supabaseMocks.createServerClient).toHaveBeenCalled();
+    });
+
     it('propagates refreshed cookie chunks and cache headers on a normal middleware response', async () => {
         configureServerClient({ user: { id: 'user-1' } });
 

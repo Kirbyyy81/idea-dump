@@ -1,5 +1,6 @@
 'use client';
 
+import { formatDateTime } from '@/lib/utils';
 import { useState } from 'react';
 import { Button } from '@/components/atoms/Button';
 import { financeTemplateFieldLabels } from '@/lib/finance/shadowRules';
@@ -7,7 +8,6 @@ import type { FinanceShadowRulesSummary } from '@/lib/types';
 
 const pageSize = 5;
 const percentage = (value: number | null) => value === null ? 'Not measured' : `${Math.round(value * 100)}%`;
-const date = (value: string) => new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
 
 export function ShadowRulesList({ summary }: { summary: FinanceShadowRulesSummary }) {
     const [page, setPage] = useState(0);
@@ -46,8 +46,8 @@ export function ShadowRulesList({ summary }: { summary: FinanceShadowRulesSummar
                                     ))}
                                 </dl>
                                 <p className="text-xs text-text-secondary">
-                                    {rule.shadow_started_at ? <>Testing since <time dateTime={rule.shadow_started_at}>{date(rule.shadow_started_at)}</time>. </> : 'Testing start not recorded. '}
-                                    {rule.evaluated_at ? <>Last evaluated <time dateTime={rule.evaluated_at}>{date(rule.evaluated_at)}</time>.</> : 'Not evaluated yet.'}
+                                    {rule.shadow_started_at ? <>Testing since <time dateTime={rule.shadow_started_at}>{formatDateTime(rule.shadow_started_at)}</time>. </> : 'Testing start not recorded. '}
+                                    {rule.evaluated_at ? <>Last evaluated <time dateTime={rule.evaluated_at}>{formatDateTime(rule.evaluated_at)}</time>.</> : 'Not evaluated yet.'}
                                 </p>
                             </li>
                         ))}

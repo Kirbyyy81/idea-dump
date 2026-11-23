@@ -76,6 +76,31 @@ beforeEach(() => {
 });
 
 describe('notification preparation for intake and Retry', () => {
+    it('sends approval prompts to the ignored intake path without category rules or duplicate checks', async () => {
+        const input = event();
+        input.source_package = 'my.rytbank.app';
+        input.notification.title = 'Tap to confirm card payment';
+        input.notification.text = 'Confirm card payment of RM143.24 to MY SHOPEE MARKETPLACE?';
+        mocks.rpc.mockResolvedValue({ data: { status: 'ignored', replayed: false }, error: null });
+        await expect(acceptFinanceNotification(owner, 'device-1', input)).resolves.toMatchObject({ status: 'ignored' });
+        expect(mocks.queries).toEqual([]);
+        expect(mocks.rules).not.toHaveBeenCalled();
+        expect(mocks.assess).not.toHaveBeenCalled();
+        expect(mocks.rpc).toHaveBeenCalledExactlyOnceWith('finance_accept_notification_v2', expect.objectContaining({
+            p_event: input, p_parsed: { status: 'ignored', failure_code: 'not_transaction', payload: null, date_provenance: 'unavailable' },
+        }));
+    });
+    it('does not auto-add an older queued approval prompt through Retry', async () => {
+        const input = event();
+        input.source_package = 'my.rytbank.app';
+        input.notification.title = 'Tap to confirm card payment';
+        input.notification.text = 'Confirm card payment of RM143.24 to MY SHOPEE MARKETPLACE?';
+        mocks.tables.finance_notification_events = [storedNotification(input)];
+        await expect(retryFinanceNotification(owner, 'candidate-1', 'intake-1')).rejects.toMatchObject({ status: 422 });
+        expect(mocks.rpc).not.toHaveBeenCalled();
+        expect(mocks.rules).not.toHaveBeenCalled();
+        expect(mocks.assess).not.toHaveBeenCalled();
+    });
     it('reparses a queued Ryt card payment with a joined title without changing its stored text', async () => {
         const input = event();
         input.source_package = 'my.rytbank.app';

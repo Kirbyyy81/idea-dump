@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { daysInMonth, isLeapYear, normalizeDate, toIsoDate } from '@/shared/date';
+import { formatDate, formatDateTime } from '@/lib/utils';
 
 describe('shared date utilities', () => {
+    it('uses day-first display for dates and timestamps independently of the default locale', () => {
+        expect(formatDate('2026-11-21T12:00:00')).toBe('21 Nov 2026');
+        expect(formatDateTime('2026-11-21T12:00:00')).toBe('21 Nov 2026, 12:00');
+    });
     it('applies Gregorian leap-year rules', () => {
         expect(isLeapYear(2024)).toBe(true);
         expect(isLeapYear(1900)).toBe(false);

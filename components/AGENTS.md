@@ -20,6 +20,7 @@
 - Use the design tokens and visual rules in `document/DESIGN_SYSTEM.md`.
 - Do not expose raw browser form controls in user-facing UI. Wrap them in an existing or reusable styled component.
 - Use `FieldShell` and `SelectTrigger` for searchable or multi-select fields so their labels, trigger typography, spacing and dropdown indicators match `Select` across flows.
+- Use the shared `DatePicker` for calendar dates. Display dates day-first with an explicit `en-GB` or `en-MY` locale; keep ISO dates in API and storage values. Optional date fields must remain clearable.
 - Omit "(optional)" from form labels. Use the shared required-field asterisk for required inputs, and leave optional labels unmarked.
 - Keep copy direct and necessary. Do not add decorative descriptions or generic `Description` labels.
 - Use `next/image` for application images when image optimization applies.

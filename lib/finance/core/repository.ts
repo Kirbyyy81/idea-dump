@@ -762,11 +762,24 @@ export async function listFinanceDuplicateCandidates(input: {
 }
 
 export async function listFinanceNotificationPatterns(userId: string, sourceId: string) {
-    return createAdminClient().rpc('finance_notification_patterns_for_user_v1', { p_user_id: userId, p_source_id: sourceId });
+    return createAdminClient().rpc('finance_notification_patterns_for_user_v2', { p_user_id: userId, p_source_id: sourceId });
 }
 
 export async function updateFinanceNotificationPatternStatus(userId: string, sourceId: string, id: string, active: boolean, revision: number) {
     return createAdminClient().rpc('finance_set_notification_pattern_v1', {
         p_user_id:userId,p_source_id:sourceId,p_pattern_id:id,p_is_active:active,p_expected_revision:revision,
+    });
+}
+
+export async function saveFinanceNotificationIgnoreRule(userId: string, rule: import('@/lib/types').FinanceNotificationIgnoreRuleInput) {
+    return createAdminClient().rpc('finance_save_notification_ignore_rule_v1', {
+        p_user_id: userId, p_source_id: rule.source_id, p_id: rule.id, p_revision: rule.revision,
+        p_name: rule.name, p_prefix: rule.prefix, p_source_package: rule.source_package, p_is_active: rule.is_active,
+    });
+}
+export async function saveFinanceNotificationPattern(userId: string, rule: import('@/lib/types').FinanceNotificationPatternEditInput) {
+    return createAdminClient().rpc('finance_save_notification_pattern_v1', {
+        p_user_id:userId,p_source_id:rule.source_id,p_id:rule.id,p_revision:rule.revision,
+        p_name:rule.name,p_definition:rule.definition,p_is_active:rule.is_active,
     });
 }

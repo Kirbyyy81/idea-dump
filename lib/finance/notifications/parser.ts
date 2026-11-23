@@ -1,17 +1,19 @@
 import type { FinanceCandidatePayload, FinanceNotificationEventInput, FinanceNotificationParseResult, FinanceNotificationPattern } from '@/lib/types';
 import { FINANCE_TIME_ZONE, getFinanceDateInTimeZone } from '@/lib/finance/core/values';
 import { financeNotificationPatternBody, normalizeFinanceNotificationText } from './normalization';
-import { applyNotificationPatterns, moneyToken, dateToken, notificationDate, notificationForeignMoneySpans } from './patterns';
+import { applyNotificationPatterns, matchesNotificationIgnoreRule, moneyToken, dateToken, notificationDate, notificationForeignMoneySpans } from './patterns';
 
 const sensitive = /\b(?:otp|tac|one[- ]time (?:password|passcode)|verification code|security code|authentication code)\b|sensitive (?:content|notification) (?:hidden|redacted)/i;
 const irrelevant = /\b(?:cashback offer|promotion|promo code|special offer|payment reminder|payment due|unsuccessful|failed|declined|cancelled)\b/i;
 export function parseFinanceNotification(event: FinanceNotificationEventInput, patterns: FinanceNotificationPattern[] = [], userId?: string): FinanceNotificationParseResult {
     const body = financeNotificationPatternBody(event);
-    const text = normalizeFinanceNotificationText([event.notification.title,event.notification.text,event.notification.subtext].filter(Boolean).join('\n'));
+    const parts = [event.notification.title,event.notification.text,event.notification.subtext].filter((part): part is string => Boolean(part));
+    const text = normalizeFinanceNotificationText(parts.join('\n'));
     if (sensitive.test(text)) return { status:'ignored', failure_code:'sensitive_notification', payload:null, date_provenance:'unavailable' };
+    const ignoredByRule = matchesNotificationIgnoreRule(parts, patterns, { userId, sourceId: event.source_id, sourcePackage: event.source_package });
     const amounts = [...body.matchAll(new RegExp(moneyToken,'ig'))];
     const balanceOnly = /\b(?:available |current )?balance\b/i.test(body) && !/\b(?:paid|sent|received|payment|transferred|purchase|debited|credited|refund|withdrawal)\b/i.test(text);
-    if (irrelevant.test(text) || !new RegExp(moneyToken,'i').test(text) || balanceOnly) {
+    if (ignoredByRule || irrelevant.test(text) || !new RegExp(moneyToken,'i').test(text) || balanceOnly) {
         return { status:'ignored', failure_code:'not_transaction', payload:null, date_provenance:'unavailable' };
     }
     const explicitDates = [...body.matchAll(new RegExp('\\b'+dateToken+'\\b','ig'))].map(m => notificationDate(m[0]));
@@ -29,7 +31,7 @@ export function parseFinanceNotification(event: FinanceNotificationEventInput, p
     const foreignSpans = notificationForeignMoneySpans(body).filter(span => {
         // A domestic merchant such as "AUD 23 Cafe" is not a conversion.
         if (capturedForeign) return true;
-        return ![payload.merchant, payload.payee_name].some(party =>
+        return ![payload.merchant, payload.payee_name, payload.notes].some(party =>
             party?.toLowerCase().includes(span[0].toLowerCase()));
     });
     const rytForeignLayout = event.source_package === 'my.rytbank.app'

@@ -1,7 +1,24 @@
 import 'server-only';
-import type { FinanceNotificationPattern } from '@/lib/types';
+import type { FinanceNotificationPattern, FinanceNotificationIgnoreRuleInput } from '@/lib/types';
 import { listFinanceNotificationPatterns, getOwnedFinanceSource, updateFinanceNotificationPatternStatus } from '@/lib/finance/core/repository';
 import { CompanionError } from '@/lib/companion/core/http';
+import { saveFinanceNotificationIgnoreRule } from '@/lib/finance/core/repository';
+import { saveFinanceNotificationPattern } from '@/lib/finance/core/repository';
+import type { FinanceNotificationPatternEditInput } from '@/lib/types';
+
+export async function saveNotificationPattern(userId: string, rule: FinanceNotificationPatternEditInput) {
+    const {error}=await saveFinanceNotificationPattern(userId,rule);
+    if(error) throw new CompanionError(error.code==='40001' ? 'Pattern changed. Refresh and try again.'
+        : error.code==='P0002' ? 'Notification pattern not found' : error.code==='22023' ? 'Check the notification format' : 'Could not save pattern',
+        error.code==='40001' ? 409 : error.code==='P0002' ? 404 : error.code==='22023' ? 422 : 503);
+}
+
+export async function saveNotificationIgnoreRule(userId: string, rule: FinanceNotificationIgnoreRuleInput) {
+    const { error } = await saveFinanceNotificationIgnoreRule(userId, rule);
+    if (error) throw new CompanionError(error.code === '40001' ? 'Rule changed. Refresh and try again.'
+        : error.code === 'P0002' ? 'Ignore rule not found' : error.code === '22023' ? 'Check the ignore rule fields' : 'Could not save ignore rule',
+        error.code === '40001' ? 409 : error.code === 'P0002' ? 404 : error.code === '22023' ? 422 : 503);
+}
 
 export async function getNotificationPatternSettings(userId: string, sourceId: string) {
     const source=await getOwnedFinanceSource(userId,sourceId);

@@ -21,6 +21,7 @@ import {
     WarningDoodleIcon,
 } from '@/components/atoms/DoodleIcons';
 import { Input } from '@/components/atoms/Input';
+import { DatePicker } from '@/components/atoms/DatePicker';
 import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
 import { Toggle } from '@/components/atoms/Toggle';
@@ -583,7 +584,7 @@ export function FinanceReviewClient({
                                     <Input id="review-merchant" label="Merchant (optional)" errorMessage={fieldErrors.merchant} data-finance-field="merchant" maxLength={MAX_FINANCE_MERCHANT_LENGTH} value={form.merchant} onChange={(event) => setReviewField('merchant', event.target.value)} />
                                     <Toggle id="review-has-payee" label="Payee" toggleLabel="Is a payee" errorMessage={fieldErrors.has_payee} data-finance-field="has_payee" checked={form.has_payee} onChange={setReviewPayeeClassification} aria-label="Is a payee" />
                                     {form.has_payee && <Input id="review-payee" label="Payee" required errorMessage={fieldErrors.payee_name} data-finance-field="payee_name" maxLength={MAX_FINANCE_PAYEE_LENGTH} value={form.payee_name} onChange={(event) => setReviewField('payee_name', event.target.value)} />}
-                                    <div><Input id="review-date" label="Date" required errorMessage={fieldErrors.transaction_date} data-finance-field="transaction_date" type="date" max={today} aria-describedby={isDateProposalPending ? 'date-proposal-help' : undefined} value={form.transaction_date} onChange={(event) => { setReviewField('transaction_date', event.target.value); setIsDateProposalPending(false); }} />{isDateProposalPending && <span id="date-proposal-help" className="mt-1 block text-xs text-warning">No date was detected. Today is proposed; confirm this date before continuing.</span>}{isDateProposalPending && <Button type="button" variant="ghost" onClick={() => { setIsDateProposalPending(false); setFieldErrors((current) => ({ ...current, transaction_date: undefined })); }}>Use proposed date</Button>}</div>
+                                    <div><DatePicker id="review-date" label="Date" required errorMessage={fieldErrors.transaction_date} data-finance-field="transaction_date" max={today} ariaDescribedBy={isDateProposalPending ? 'date-proposal-help' : undefined} value={form.transaction_date} onChange={(value) => { setReviewField('transaction_date', value); setIsDateProposalPending(false); }} />{isDateProposalPending && <span id="date-proposal-help" className="mt-1 block text-xs text-warning">No date was detected. Today is proposed; confirm this date before continuing.</span>}{isDateProposalPending && <Button type="button" variant="ghost" onClick={() => { setIsDateProposalPending(false); setFieldErrors((current) => ({ ...current, transaction_date: undefined })); }}>Use proposed date</Button>}</div>
                                     <Textarea id="review-notes" label="Notes" containerClassName="md:col-span-2" errorMessage={fieldErrors.notes} data-finance-field="notes" maxLength={MAX_FINANCE_NOTES_LENGTH} value={form.notes} onChange={(event) => setReviewField('notes', event.target.value)} />
                                 </div>
 

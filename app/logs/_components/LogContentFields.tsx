@@ -2,6 +2,7 @@
 
 import { DailyLogContent } from '@/lib/types';
 import { Input } from '@/components/atoms/Input';
+import { DatePicker } from '@/components/atoms/DatePicker';
 import { Textarea } from '@/components/atoms/Textarea';
 
 interface LogContentFieldsProps {
@@ -31,12 +32,11 @@ export function LogContentFields({ content, onChange, compact = false }: LogCont
         <>
             <div className={`grid grid-cols-1 sm:grid-cols-2 ${compact ? 'gap-3' : 'gap-4'} ${fieldGap}`}>
                 <div>
-                    <label className={labelClass}>Date</label>
-                    <Input
-                        type="date"
+                    <DatePicker
+                        label="Date"
                         value={content.date}
-                        onChange={(e) => onChange({ ...content, date: e.target.value })}
-                        className={inputClass}
+                        onChange={(date) => onChange({ ...content, date })}
+                        buttonClassName={inputClass}
                     />
                 </div>
                 <div>

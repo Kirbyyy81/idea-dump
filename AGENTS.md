@@ -52,6 +52,7 @@
 - Run the smallest relevant checks while iterating, then complete every applicable check before handing off finished work.
 - `.github/workflows/validate.yml` routes validation by changed paths. Keep its OCR filters aligned with imports from shared Finance code, `lib/types.ts`, and `shared/date.ts`. Validate workflow edits with actionlint and check web-only, OCR-only, Android-only, shared-code, documentation-only, and manual-run routing.
 - Workflow changes, `.gitattributes` changes, or manual `workflow_dispatch` runs validate all projects. Pushes compare against the previous push; pull requests use their full diff. If change detection fails, all projects are validated. Skipped jobs do not produce build artifacts.
+- `.github/workflows/sonarqube.yml` independently analyzes the web application, shared code, service worker, and Finance OCR source on `main` pushes and PRs targeting `main`. Keep source/test classification in `sonar-project.properties` aligned with this scope. The initial scan imports no coverage and does not wait for a quality gate; fork and Dependabot PRs are skipped. Store its analysis token only in the repository Actions secret `SONAR_TOKEN`.
 
 ## Editing Rules
 
@@ -79,4 +80,4 @@
 - Native Android code lives in `android/`. Read its scoped `AGENTS.md` before editing.
 - Use JDK 17 and Android SDK 36. From `android/`, run `./gradlew testDebugUnitTest lintDebug assembleDebug` (Windows: `gradlew.bat`).
 - Android 13 and 16 phones and the target Android Auto head unit require physical acceptance testing.
-- CI builds Android for changes under `android/`, changes to `.github/workflows/validate.yml` or `.gitattributes`, manual `workflow_dispatch` runs, or a change-detection failure. Runs that skip Android do not publish an APK; web and Finance OCR checks use their own change filters.
+- CI builds Android for changes under `android/`, changes under `.github/workflows/` or to `.gitattributes`, manual `workflow_dispatch` runs, or a change-detection failure. Runs that skip Android do not publish an APK; web and Finance OCR checks use their own change filters.

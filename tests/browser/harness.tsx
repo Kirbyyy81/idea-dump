@@ -1,3 +1,4 @@
+import LogsPage from '@/app/logs/page';
 import { TransferRulesPanel } from '@/app/finance/settings/_components/TransferRulesPanel';
 import { FinanceTransactionsClient } from '@/app/finance/transactions/_components/FinanceTransactionsClient';
 import { FinanceTransactionEditor } from '@/app/finance/transactions/edit/_components/FinanceTransactionEditor';
@@ -30,7 +31,9 @@ const oneTimeBudgets = (window as unknown as { dashboardOneTimeBudgets?: Finance
 const olderDayTransaction = { ...dashboardFixture.recent_transactions[0], id: 'older-transaction', merchant: 'Earlier day cafe', finance_payee: null, transaction_date: '2026-09-17' };
 const dashboardSummary = dashboardDate ? { ...dashboardFixture, recent_transactions: [...dashboardFixture.recent_transactions, olderDayTransaction].filter((item) => item.transaction_date === dashboardDate) } : dashboardFixture;
 createRoot(document.getElementById('root')!).render(<FinanceReferenceDataProvider>
-    {window.location.pathname === '/finance'
+    {window.location.pathname === '/logs'
+        ? <AlertProvider><AlertDialog /><LogsPage /></AlertProvider>
+        : window.location.pathname === '/finance'
         ? <FinanceDashboardClient month={dashboardMonth} today={budgetMonthsEnabled ? '2026-10-02' : '2026-09-22'} selectedDate={dashboardDate}
             summary={budgetMonthsEnabled ? { ...dashboardSummary, budget_cycles: [...(dashboardBudgetMonths[dashboardMonth] ?? []), ...oneTimeBudgets] } : dashboardSummary} />
         : window.location.pathname === '/finance/transactions'

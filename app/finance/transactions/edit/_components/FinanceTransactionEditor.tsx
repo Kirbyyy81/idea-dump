@@ -13,6 +13,7 @@ import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { BackDoodleIcon } from '@/components/atoms/DoodleIcons';
 import { Input } from '@/components/atoms/Input';
+import { DatePicker } from '@/components/atoms/DatePicker';
 import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
 import { Toggle } from '@/components/atoms/Toggle';
@@ -250,7 +251,7 @@ export function FinanceTransactionEditor({
                                 <Toggle id="edit-has-payee" disabled={Boolean(initialTransaction.transfer_id)} label="Payee" toggleLabel="Is a payee" errorMessage={fieldErrors.has_payee} data-finance-field="has_payee" checked={form.has_payee} aria-label="Is a payee" onChange={setTransactionPayeeClassification} />
                                 {form.has_payee && <Input id="edit-payee" disabled={Boolean(initialTransaction.transfer_id)} label="Payee name" required errorMessage={fieldErrors.payee_name} data-finance-field="payee_name" maxLength={MAX_FINANCE_PAYEE_LENGTH} value={form.payee_name} onChange={(event) => setTransactionField('payee_name', event.target.value)} />}
                                 <Input id="edit-reference" disabled={Boolean(initialTransaction.transfer_id)} label="Transaction reference" errorMessage={fieldErrors.reference_number} data-finance-field="reference_number" maxLength={MAX_FINANCE_REFERENCE_LENGTH} value={form.reference_number} onChange={(event) => setTransactionField('reference_number', event.target.value)} />
-                                <Input id="edit-date" disabled={Boolean(initialTransaction.transfer_id)} label="Date" required errorMessage={fieldErrors.transaction_date} data-finance-field="transaction_date" type="date" max={getLocalFinanceDate()} value={form.transaction_date} onChange={(event) => setTransactionField('transaction_date', event.target.value)} />
+                                <DatePicker id="edit-date" disabled={Boolean(initialTransaction.transfer_id)} label="Date" required errorMessage={fieldErrors.transaction_date} data-finance-field="transaction_date" max={getLocalFinanceDate()} value={form.transaction_date} onChange={(value) => setTransactionField('transaction_date', value)} />
                                 <Textarea id="edit-notes" label="Notes" errorMessage={fieldErrors.notes} data-finance-field="notes" maxLength={MAX_FINANCE_NOTES_LENGTH} value={form.notes} onChange={(event) => setTransactionField('notes', event.target.value)} />
                             </div>
                             <div className="mt-5 flex flex-wrap justify-end gap-2">

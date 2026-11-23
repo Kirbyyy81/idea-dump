@@ -1,3 +1,4 @@
+import { formatDateTime } from '@/lib/utils';
 import { Card } from '@/components/atoms/Card';
 import { Button } from '@/components/atoms/Button';
 import { SparkleDoodleIcon } from '@/components/atoms/DoodleIcons';
@@ -11,13 +12,6 @@ interface LearningSummaryPanelProps {
     summary: FinanceLearningSummary;
     shadowRules?: FinanceShadowRulesSummary;
     onRefresh?: () => void;
-}
-
-function formatRunTime(value: string) {
-    return new Intl.DateTimeFormat(undefined, {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-    }).format(new Date(value));
 }
 
 function formatPercentage(value: number | null) {
@@ -45,7 +39,7 @@ export function LearningSummaryPanel({ isLoading, summary, shadowRules, onRefres
                 <div className="space-y-5 px-5 py-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                         <p className="text-sm text-text-secondary">
-                            Last completed <time dateTime={summary.latest_run.finished_at}>{formatRunTime(summary.latest_run.finished_at)}</time>
+                            Last completed <time dateTime={summary.latest_run.finished_at}>{formatDateTime(summary.latest_run.finished_at)}</time>
                         </p>
                         <span className={summary.latest_run.status === 'succeeded'
                             ? 'rounded-full bg-bg-subtle px-2 py-1 text-xs font-semibold text-success'

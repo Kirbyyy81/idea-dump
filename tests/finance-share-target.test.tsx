@@ -259,3 +259,24 @@ describe('Finance share-target lifecycle', () => {
         expect(screen.getByTestId('file-count').textContent).toBe('0');
     });
 });
+
+
+describe('missed share recovery', () => {
+    it.each([
+        [null, 'Sign in first'],
+        [appAccess([]), 'You do not have access to Finance'],
+        [appAccess(['finance']), 'Image sharing was not ready'],
+    ])('shows recovery without depending on an active worker', (access, message) => {
+        navigation.pathname = access ? '/finance/add' : '/login';
+        window.history.replaceState({}, '', `${navigation.pathname}?finance_share_error=not_ready&keep=value`);
+        const descriptor = Object.getOwnPropertyDescriptor(navigator, 'serviceWorker');
+        Reflect.deleteProperty(navigator, 'serviceWorker');
+        try {
+            render(<AccessProvider access={access}><FinanceShareRejectionBridge /></AccessProvider>);
+            expect(alerts.showError).toHaveBeenCalledWith(expect.stringContaining(message));
+            expect(navigation.replace).toHaveBeenCalledWith(`${navigation.pathname}?keep=value`);
+        } finally {
+            if (descriptor) Object.defineProperty(navigator, 'serviceWorker', descriptor);
+        }
+    });
+});

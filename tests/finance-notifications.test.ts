@@ -14,6 +14,28 @@ const fixture = (text = 'Alex Tan has transferred RM 25.90 to you. Tap here to c
     notification: { title: 'TNG eWallet', text, subtext: null, posted_at: '2026-09-25T16:00:00.000Z' },
 });
 describe('Finance notification intake', () => {
+    it.each([
+        { title: 'Tap to confirm card payment', text: 'Confirm card payment of RM143.24 to MY SHOPEE MARKETPLACE?', subtext: null },
+        { title: 'Ryt Bank', text: 'Tap to confirm card payment\nConfirm card payment of RM9.80 to ANOTHER SHOP?', subtext: null },
+        { title: 'Ryt Bank', text: '  CONFIRM card payment of MYR 1,234.56 to ANOTHER SHOP?  ', subtext: null },
+        { title: 'Ryt Bank', text: 'Confirm card payment of ＲＭ１４３.２４ to MY SHOPEE MARKETPLACE?', subtext: null },
+        { title: 'Ryt Bank', text: 'Payment of RM143.24', subtext: 'Tap to confirm card payment' },
+    ])('ignores cardholder approval prompts before applying extraction: $text', notification => {
+        const input = fixture();
+        input.source_package = 'my.rytbank.app';
+        input.notification = { ...input.notification, ...notification };
+        expect(parseFinanceNotification(input)).toEqual({
+            status: 'ignored', failure_code: 'not_transaction', payload: null, date_provenance: 'unavailable',
+        });
+    });
+    it('keeps completed payments eligible, including merchants whose names contain approval wording', () => {
+        for (const merchant of ['MY SHOPEE MARKETPLACE', 'Tap to confirm card payment', 'Confirm card payment of RM']) {
+            const input = fixture(`RM143.24 paid at ${merchant} using your Main Account.`);
+            input.source_package = 'my.rytbank.app';
+            input.notification.title = 'Card payment completed 👍';
+            expect(parseFinanceNotification(input)).toMatchObject({ status: 'review', payload: { merchant, direction: 'expense' } });
+        }
+    });
     it('parses TNG income and suggests the Malaysia notification date', () => {
         const result = parseFinanceNotification(fixture());
         expect(result.status).toBe('review');

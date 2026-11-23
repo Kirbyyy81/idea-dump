@@ -7,6 +7,8 @@ import { useAccess } from '@/lib/contexts/AccessContext';
 import {
     FINANCE_SHARE_MESSAGE_TYPES,
     FINANCE_SHARE_QUERY_PARAM,
+    FINANCE_SHARE_ERROR_QUERY_PARAM,
+    FINANCE_SHARE_NOT_READY,
     parseFinanceShareWorkerMessage,
 } from '@/lib/finance/share/protocol';
 import { postFinanceShareWorkerMessage } from '@/lib/finance/share/workerClient';
@@ -27,11 +29,25 @@ export function FinanceShareRejectionBridge() {
 
     const removeShareQuery = useCallback(() => {
         const params = new URLSearchParams(window.location.search);
-        if (!params.has(FINANCE_SHARE_QUERY_PARAM)) return;
+        if (!params.has(FINANCE_SHARE_QUERY_PARAM) && !params.has(FINANCE_SHARE_ERROR_QUERY_PARAM)) return;
         params.delete(FINANCE_SHARE_QUERY_PARAM);
+        params.delete(FINANCE_SHARE_ERROR_QUERY_PARAM);
         const query = params.toString();
         router.replace(query ? `${pathname}?${query}` : pathname);
     }, [pathname, router]);
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get(FINANCE_SHARE_ERROR_QUERY_PARAM) !== FINANCE_SHARE_NOT_READY) return;
+        if (!access) {
+            showError('Sign in first, then reopen IdeaDump and share the images again. Image sharing was not ready.');
+        } else if (!canAccessFinance) {
+            showError('You do not have access to Finance. The shared images were not saved.');
+        } else {
+            showError('Image sharing was not ready. Reopen IdeaDump, then return to the source app and share the images again. You can also use Upload image.');
+        }
+        removeShareQuery();
+    }, [access, canAccessFinance, removeShareQuery, showError]);
 
     useEffect(() => {
         if (canAccessFinance || !('serviceWorker' in navigator)) return;

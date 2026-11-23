@@ -5,7 +5,7 @@ import { financeNotificationPatternBody, normalizeFinanceNotificationText as nor
 import { dateToken, moneyToken, notificationDate, extractNotificationPattern, validNotificationDefinition, notificationForeignMoneySpans, parseNotificationForeignMoney } from './patterns';
 import { normalizeFinancePayeeKey } from '@/lib/finance/ocr/normalizer';
 
-type Reviewed = Pick<FinanceCandidatePayload,'amount'|'direction'|'merchant'|'payee_name'|'transaction_date'|'reference_number'|'foreign_amount'|'foreign_currency'>;
+type Reviewed = Pick<FinanceCandidatePayload,'amount'|'direction'|'merchant'|'payee_name'|'transaction_date'|'reference_number'|'foreign_amount'|'foreign_currency'> & { notes?: string | null };
 function sameParty(a: string, b: string) { return normalizeFinancePayeeKey(a) === normalizeFinancePayeeKey(b); }
 function matchedFields(definition: FinanceNotificationPatternDefinition, text: string, reviewed: Reviewed) {
     const values = extractNotificationPattern(definition,text);
@@ -14,6 +14,10 @@ function matchedFields(definition: FinanceNotificationPatternDefinition, text: s
     next.direction = reviewed.direction || undefined;
     for (const part of next.parts) {
         if (typeof part === 'string' || !part.field) continue;
+        if (part.kind === 'notes') {
+            if (values.notes !== normalize(reviewed.notes ?? '')) return null;
+            continue;
+        }
         if (part.kind === 'foreign_money') {
             if (values.foreign_amount !== reviewed.foreign_amount || values.foreign_currency !== reviewed.foreign_currency) return null;
         } else if (part.kind === 'text') {
@@ -27,8 +31,9 @@ function matchedFields(definition: FinanceNotificationPatternDefinition, text: s
     return next;
 }
 export function learnNotificationPattern(event: FinanceNotificationEventInput, reviewed: Reviewed, patterns: FinanceNotificationPattern[], userId: string) {
-    if (!parseFinanceNotification(event).payload) return null;
-    const text = financeNotificationPatternBody(event).replace(/[.!?]$/,'');
+    if (!parseFinanceNotification(event, patterns, userId).payload) return null;
+    const raw = financeNotificationPatternBody(event);
+    const text = reviewed.notes ? raw : raw.replace(/[.!?]$/,'');
     const monies = [...text.matchAll(new RegExp(moneyToken,'ig'))];
     if (monies.length !== 1 || !reviewed.direction) return null;
     const foreignSpans = notificationForeignMoneySpans(text);
@@ -44,6 +49,7 @@ export function learnNotificationPattern(event: FinanceNotificationEventInput, r
         && extractNotificationPattern(p.definition,text));
     const owned = known.filter(p=>p.user_id === userId);
     const choices = owned.length ? owned : known;
+    if (choices.some(p => p.origin === 'override')) return null;
     if (choices.length === 1) {
         const definition = matchedFields(choices[0].definition,text,reviewed);
         if (foreignExample) {
@@ -75,6 +81,10 @@ export function learnNotificationPattern(event: FinanceNotificationEventInput, r
     const partySpan=locate(party.value);
     if (!partySpan) return null;
     spans.push({...partySpan,part:{kind:'text',field:party.field}});
+    if (reviewed.notes) {
+        const noteSpan=locate(reviewed.notes);
+        if (noteSpan && noteSpan.end===text.length) spans.push({...noteSpan,part:{kind:'notes',field:'notes'}});
+    }
     if (reviewed.reference_number) {
         const at=locate(reviewed.reference_number);
         if (at) spans.push({...at,part:{kind:'reference',field:'reference_number'}});

@@ -151,7 +151,7 @@ test('custom dates and durations remain available without losing edits', async (
     const dialog = page.getByRole('dialog', { name: 'Create budget' });
     await dialog.getByRole('button', { name: 'Customize', exact: true }).click();
     await dialog.getByRole('button', { name: /^Start date,/ }).click();
-    await page.getByRole('button', { name: 'Thursday, September 10, 2026', exact: true }).click();
+    await page.getByRole('button', { name: 'Thursday, 10 September 2026', exact: true }).click();
     await expect(dialog.getByRole('button', { name: /^Start date,/ })).toContainText('10 Sept 2026');
     await dialog.getByRole('button', { name: 'Hide customization' }).click();
     await dialog.getByRole('button', { name: 'Customize', exact: true }).click();
