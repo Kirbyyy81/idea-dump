@@ -9,11 +9,15 @@ export function cn(...inputs: ClassValue[]) {
 // Format date for display
 export function formatDate(dateString: string): string {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString('en-GB', {
         month: 'short',
-        day: 'numeric',
+        day: '2-digit',
         year: 'numeric',
     });
+}
+
+export function formatDateTime(dateString: string): string {
+    return new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(dateString));
 }
 
 export function formatCurrency(value: number, currency = 'MYR'): string {

@@ -1,4 +1,5 @@
 'use client';
+import { formatDateTime } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/atoms/Button';
 import type { CompanionDevice } from '@/lib/types';
@@ -33,7 +34,7 @@ export function CompanionDevicesPanel() {
         {loading ? <p role="status">Loading devices...</p> : !devices.length && <p>No companion connected. Start pairing from the Android app.</p>}
         {devices.map(device => <div key={device.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border-default bg-bg-surface p-4">
             <div><p className="font-semibold">{device.label}</p>
-                <p className="text-sm text-text-muted">{device.revoked_at ? 'Disconnected' : device.last_seen_at ? 'Last connected ' + new Date(device.last_seen_at).toLocaleString() : 'Awaiting first connection'}</p></div>
+                <p className="text-sm text-text-muted">{device.revoked_at ? 'Disconnected' : device.last_seen_at ? 'Last connected ' + formatDateTime(device.last_seen_at) : 'Awaiting first connection'}</p></div>
             {!device.revoked_at && <Button variant="secondary" disabled={busy !== null} isLoading={busy === device.id} onClick={() => disconnect(device.id)}>Disconnect</Button>}
         </div>)}
     </section>;

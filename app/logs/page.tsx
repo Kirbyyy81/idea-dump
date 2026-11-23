@@ -12,6 +12,7 @@ import { Plus, Download, RefreshCw, Calendar, BookOpen } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { useAlert } from '@/lib/contexts/AlertContext';
 import { Input } from '@/components/atoms/Input';
+import { DatePicker } from '@/components/atoms/DatePicker';
 import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
 import {
@@ -268,20 +269,22 @@ export default function LogsPage() {
                         <div className="flex flex-wrap items-end gap-3">
                             <div className="grid w-full grid-cols-1 gap-2 sm:w-auto sm:grid-cols-[auto_auto_auto_auto] sm:items-center">
                                 <Calendar size={16} className="text-text-muted" />
-                                <Input
-                                    type="date"
+                                <DatePicker
+                                    ariaLabel="From date"
+                                    placeholder="From date"
+                                    clearable
                                     value={exportFrom}
-                                    onChange={(e) => setExportFrom(e.target.value)}
-                                    className="h-9 text-sm"
-                                    title="From date"
+                                    onChange={setExportFrom}
+                                    buttonClassName="h-9 text-sm"
                                 />
                                 <span className="text-text-muted text-sm">→</span>
-                                <Input
-                                    type="date"
+                                <DatePicker
+                                    ariaLabel="To date"
+                                    placeholder="To date"
+                                    clearable
                                     value={exportTo}
-                                    onChange={(e) => setExportTo(e.target.value)}
-                                    className="h-9 text-sm"
-                                    title="To date"
+                                    onChange={setExportTo}
+                                    buttonClassName="h-9 text-sm"
                                 />
                             </div>
 

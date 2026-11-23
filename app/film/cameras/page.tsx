@@ -7,6 +7,7 @@ import { AppShell } from '@/components/organisms/AppShell';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/atoms/Card';
 import { Input } from '@/components/atoms/Input';
+import { DatePicker } from '@/components/atoms/DatePicker';
 import { Select } from '@/components/atoms/Select';
 import { Textarea } from '@/components/atoms/Textarea';
 import { FilmCameraView as FilmCamera, FilmMaintenanceView as FilmMaintenanceRecord } from '@/lib/types';
@@ -267,14 +268,11 @@ function CameraManager({ initialCameraId }: { initialCameraId: string }) {
                                             onChange={(event) => setForm({ ...form, model: event.target.value })}
                                         />
                                     </label>
-                                    <label className="space-y-2">
-                                        <span className="text-sm text-text-secondary">Purchase date</span>
-                                        <Input
-                                            type="date"
-                                            value={form.purchase_date}
-                                            onChange={(event) => setForm({ ...form, purchase_date: event.target.value })}
-                                        />
-                                    </label>
+                                    <DatePicker
+                                        label="Purchase date" ariaLabel="Purchase date" clearable
+                                        value={form.purchase_date}
+                                        onChange={(purchase_date) => setForm({ ...form, purchase_date })}
+                                    />
                                     <label className="space-y-2 md:col-span-2">
                                         <span className="text-sm text-text-secondary">Camera notes</span>
                                         <Textarea
@@ -385,17 +383,11 @@ function CameraManager({ initialCameraId }: { initialCameraId: string }) {
                                             })}
                                         />
                                     </label>
-                                    <label className="space-y-2">
-                                        <span className="text-sm text-text-secondary">Service date</span>
-                                        <Input
-                                            type="date"
-                                            value={maintenanceForm.service_date}
-                                            onChange={(event) => setMaintenanceForm({
-                                                ...maintenanceForm,
-                                                service_date: event.target.value,
-                                            })}
-                                        />
-                                    </label>
+                                    <DatePicker
+                                        label="Service date" ariaLabel="Service date" clearable
+                                        value={maintenanceForm.service_date}
+                                        onChange={(service_date) => setMaintenanceForm({ ...maintenanceForm, service_date })}
+                                    />
                                     <label className="space-y-2 md:col-span-2">
                                         <span className="text-sm text-text-secondary">Service notes</span>
                                         <Textarea

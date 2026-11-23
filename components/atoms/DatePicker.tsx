@@ -13,6 +13,7 @@ interface DatePickerProps {
     errorMessage?: string;
     label?: ReactNode;
     required?: boolean;
+    clearable?: boolean;
     max?: string;
     'data-finance-field'?: string;
     value: string;
@@ -62,6 +63,7 @@ export function DatePicker({
     errorMessage,
     label,
     required,
+    clearable = false,
     max,
     'data-finance-field': financeField,
     value,
@@ -211,8 +213,8 @@ export function DatePicker({
     }).format(viewDate);
 
     return (
-        <FieldShell id={controlId} label={label} required={required} errorMessage={errorMessage} ariaDescribedBy={ariaDescribedBy}>
-        {({ describedBy, hasError }) => <div ref={containerRef} className={cn('relative', className)}>
+        <FieldShell id={controlId} label={label} required={required} errorMessage={errorMessage} ariaDescribedBy={ariaDescribedBy} className={className}>
+        {({ describedBy, hasError }) => <div ref={containerRef} className="relative">
             <button
                 ref={buttonRef}
                 id={controlId}
@@ -285,7 +287,7 @@ export function DatePicker({
                                     type="button"
                                     disabled={Boolean(max && inputDate > max)}
                                     onClick={() => chooseDate(date)}
-                                    aria-label={new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).format(date)}
+                                    aria-label={new Intl.DateTimeFormat('en-GB', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).format(date)}
                                     aria-pressed={isSelected}
                                     className={cn(
                                         'grid size-7 place-items-center rounded-full text-xs transition-colors',
@@ -304,6 +306,8 @@ export function DatePicker({
                     </div>
 
                     <div className="mt-2 flex justify-end border-t border-border-subtle pt-2">
+                        {clearable && value && <button type="button" className="btn-ghost mr-auto h-7 min-h-7 px-3"
+                            aria-label={`Clear ${ariaLabel ?? 'date'}`} onClick={() => { onChange(''); closePicker(); }}>Clear</button>}
                         <button type="button" className="btn-ghost h-7 min-h-7 px-3" disabled={Boolean(max && getTodayInputDate() > max)} onClick={jumpToToday}>
                             Today
                         </button>

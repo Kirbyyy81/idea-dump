@@ -26,8 +26,8 @@ for (const flow of ['Add', 'Edit', 'Review'] as const) {
         const calendar = page.getByRole('dialog', { name: /^Choose date/ });
         await expect(calendar).toBeVisible();
         await expect(calendar.getByRole('button', { name: 'Previous month' })).toBeFocused();
-        await expect(calendar.getByRole('button', { name: 'Wednesday, September 23, 2026', exact: true })).toBeDisabled();
-        await calendar.getByRole('button', { name: 'Sunday, September 20, 2026', exact: true }).focus();
+        await expect(calendar.getByRole('button', { name: 'Wednesday, 23 September 2026', exact: true })).toBeDisabled();
+        await calendar.getByRole('button', { name: 'Sunday, 20 September 2026', exact: true }).focus();
         await page.keyboard.press('Enter');
         await expect(date).toHaveText('20 Sept 2026');
         await expect(date).toBeFocused();

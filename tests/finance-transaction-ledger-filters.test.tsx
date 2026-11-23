@@ -154,7 +154,7 @@ describe('TransactionLedgerFilters', () => {
         renderFilters();
 
         fireEvent.click(screen.getByRole('button', { name: /Ledger start date, 20 Aug 2026/ }));
-        fireEvent.click(screen.getByRole('button', { name: 'Monday, August 31, 2026' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Monday, 31 August 2026' }));
 
         const replacement = latestReplacement();
         expect(replacement.searchParams.get('date_from')).toBe('2026-08-31');
