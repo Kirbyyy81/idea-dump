@@ -5,13 +5,17 @@ import { applyNotificationPatterns, moneyToken, dateToken, notificationDate, not
 
 const sensitive = /\b(?:otp|tac|one[- ]time (?:password|passcode)|verification code|security code|authentication code)\b|sensitive (?:content|notification) (?:hidden|redacted)/i;
 const irrelevant = /\b(?:cashback offer|promotion|promo code|special offer|payment reminder|payment due|unsuccessful|failed|declined|cancelled)\b/i;
+const cardApprovalRequest = /^(?:tap to confirm card payment\b|confirm card payment of\s+(?:RM|MYR)\s*\d)/i;
 export function parseFinanceNotification(event: FinanceNotificationEventInput, patterns: FinanceNotificationPattern[] = [], userId?: string): FinanceNotificationParseResult {
     const body = financeNotificationPatternBody(event);
-    const text = normalizeFinanceNotificationText([event.notification.title,event.notification.text,event.notification.subtext].filter(Boolean).join('\n'));
+    const parts = [event.notification.title,event.notification.text,event.notification.subtext].filter((part): part is string => Boolean(part));
+    const text = normalizeFinanceNotificationText(parts.join('\n'));
     if (sensitive.test(text)) return { status:'ignored', failure_code:'sensitive_notification', payload:null, date_provenance:'unavailable' };
+    // Approval requests describe an action still awaiting the cardholder, before any extraction rules run.
+    const needsCardApproval = parts.some(part => part.split(/[\r\n]+/).some(line => cardApprovalRequest.test(normalizeFinanceNotificationText(line))));
     const amounts = [...body.matchAll(new RegExp(moneyToken,'ig'))];
     const balanceOnly = /\b(?:available |current )?balance\b/i.test(body) && !/\b(?:paid|sent|received|payment|transferred|purchase|debited|credited|refund|withdrawal)\b/i.test(text);
-    if (irrelevant.test(text) || !new RegExp(moneyToken,'i').test(text) || balanceOnly) {
+    if (needsCardApproval || irrelevant.test(text) || !new RegExp(moneyToken,'i').test(text) || balanceOnly) {
         return { status:'ignored', failure_code:'not_transaction', payload:null, date_provenance:'unavailable' };
     }
     const explicitDates = [...body.matchAll(new RegExp('\\b'+dateToken+'\\b','ig'))].map(m => notificationDate(m[0]));

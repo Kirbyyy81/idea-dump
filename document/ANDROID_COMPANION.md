@@ -69,6 +69,8 @@ An explicit transaction date wins. Otherwise the candidate suggests the notifica
 
 ## Automatic notification transactions
 
+Card-payment approval prompts such as `Tap to confirm card payment` and `Confirm card payment of RM143.24 to MY SHOPEE MARKETPLACE?` are ignored before extraction patterns, category rules or automatic confirmation. This is a wording exclusion, independent of the merchant and amount. Completed card-payment notifications remain eligible. Cancelling a Review item does not train an exclusion, since cancellation can also mean duplicate or incorrect details. Existing queued prompts can be cancelled; upload replays retain their original result.
+
 A notification is added directly to Transactions when it has a positive valid amount, expense/income direction, a merchant or payee, and a valid date no later than today in Asia/Kuala_Lumpur. The existing Malaysia-local posted-date fallback is valid for this policy. The mapped source must remain active and owned. Category and reference are optional; existing manual rules can still assign a category.
 
 `finance_accept_notification_v2` stores the upload and attempts confirmation in one database transaction. `finance_retry_notification_v1` applies current extraction and the same policy to an explicit Retry. Both use the existing ledger confirmation and duplicate checks under the per-user lock. Possible or strong duplicates require review, including when another upload committed during processing. Conflicting extraction, stale/disabled patterns, missing values, and invalid values cannot auto-confirm. Successful automatic confirmation deletes raw text and records `notification_auto_confirmed` provenance.

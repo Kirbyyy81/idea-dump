@@ -10,6 +10,16 @@ export const sampleNotification = (text: string): FinanceNotificationEventInput 
  notification:{title:'Card payment completed',text,subtext:null,posted_at:'2026-10-02T07:45:54Z'},
 });
 describe('stored notification patterns', () => {
+ it('ignores approval requests even when a saved extraction pattern could recognize them', () => {
+  const input = sampleNotification('Confirm card payment of RM143.24 to MY SHOPEE MARKETPLACE?');
+  input.notification.title = 'Ryt Bank';
+  const learned = { ...notificationPatterns.find(p => p.format_key === 'ryt-card-payment')!,
+   id:'old-approval-pattern',user_id:'owner',source_id:input.source_id,format_key:'old-approval-request',origin:'learned' as const,
+   definition:{version:1 as const,parts:['Confirm card payment of ',{kind:'amount' as const,field:'amount' as const},' to ',
+    {kind:'text' as const,field:'merchant' as const},'?'],direction:'expense' as const},
+  };
+  expect(parseFinanceNotification(input,[learned],'owner')).toMatchObject({status:'ignored',payload:null,failure_code:'not_transaction'});
+ });
  it('extracts the new card format using only stored starter data', () => {
   const event = sampleNotification('RM16.00 paid at SYNTHETIC CAFE - PJ using your Main Account.');
   expect(parseFinanceNotification(event,notificationPatterns).payload).toMatchObject({

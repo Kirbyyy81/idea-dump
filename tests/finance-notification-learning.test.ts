@@ -44,6 +44,7 @@ describe('notification learning from one review',()=>{
   for(const input of [
    event(message+' Balance RM200.00.'), event('Your OTP is 123456 for '+message),
    event('Promotion: '+message), event('Settled RM16.00 with FIRST CAFE account 777777.'),
+   event('Confirm card payment of RM16.00 to FIRST CAFE?'),
   ]) expect(learnNotificationPattern(input,reviewed,notificationPatterns,'owner')).toBeNull();
  });
  it('does not invent selectors for corrections absent from the message',()=>{
