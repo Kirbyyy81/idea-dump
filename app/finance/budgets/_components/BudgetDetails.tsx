@@ -33,7 +33,7 @@ export function BudgetDetails({ detail, onEdit, onArchive, onRestore, onHistoryP
     const categories = [...labels(configuration.categories), ...(configuration.include_uncategorised ? ['Uncategorised'] : [])];
     const filters = describeBudgetFilters(configuration, {
         source: sources, category: categories, tag: labels(configuration.tags ?? []),
-    });
+    }, labels(configuration.excluded_tags ?? []));
     const configurationRows = [
         ['Schedule', configuration.cycle_type === 'one_time' ? 'One-time, no dates' : `${configuration.cycle_type === 'custom' ? `Every ${configuration.custom_days} days` : configuration.cycle_type === 'monthly' ? `Monthly on day ${configuration.anchor_day}` : 'Every 7 days'} (${configuration.time_zone})`],
     ];

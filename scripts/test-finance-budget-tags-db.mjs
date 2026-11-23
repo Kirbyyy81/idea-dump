@@ -26,6 +26,8 @@ try {
         await db.query("select set_config('TimeZone', $1, false)", [timeZone]);
         await db.exec(lifecycleSql);
         await db.exec(await financeSqlFile('supabase/tests/finance_budget_filter_groups.test.sql'));
+        await db.exec(await financeSqlFile('supabase/tests/finance_budget_tag_exclusions.test.sql'));
+        process.stdout.write(`Passed exclusion-only budgets, split matching, ownership, live recalculation and frozen history (${timeZone}).\n`);
         process.stdout.write(`Passed tag-only budgets, one-time lifecycle, ownership, matching, dashboard visibility and frozen history (${timeZone}).\n`);
         process.stdout.write(`Passed grouped budget matching, validation, replay and snapshots (${timeZone}).\n`);
     }

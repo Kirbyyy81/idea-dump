@@ -703,6 +703,7 @@ export interface FinanceBudgetFilters {
     source_ids: string[];
     category_ids: string[];
     tag_ids?: string[];
+    excluded_tag_ids?: string[];
     include_uncategorised: boolean;
 }
 export interface FinanceBudgetConfiguration extends FinanceBudgetFilters {
@@ -724,6 +725,7 @@ export interface FinanceBudgetSettings extends FinanceBudgetConfiguration {
     sources: FinanceBudgetSelection[];
     categories: FinanceBudgetSelection[];
     tags?: FinanceBudgetSelection[];
+    excluded_tags?: FinanceBudgetSelection[];
 }
 export interface FinanceBudgetMetrics {
     expense: FinanceBudgetMoney;
