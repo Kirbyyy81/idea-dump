@@ -183,6 +183,7 @@ function namedReference(value: { name: string } | null | undefined) {
 
 export function toFinanceTransactionView(transaction: FinanceTransaction): FinanceTransactionView {
     return {
+        ...(transaction.split_payment_id ? { split_payment_id: transaction.split_payment_id } : {}),
         transfer_id: transaction.transfer_id ?? null,
         transfer: transaction.transfer ?? null,
         tags: transactionTags(transaction),
@@ -214,6 +215,7 @@ export function toFinanceDashboardRecentTransaction(
     transaction: FinanceTransaction
 ): FinanceDashboardRecentTransaction {
     return {
+        ...(transaction.split_payment_id ? { split_payment_id: transaction.split_payment_id } : {}),
         transfer_id: transaction.transfer_id ?? null,
         transfer: transaction.transfer ?? null,
         tags: transactionTags(transaction),

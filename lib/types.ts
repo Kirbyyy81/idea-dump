@@ -585,6 +585,8 @@ export interface FinanceForeignDetails {
 }
 
 export interface FinanceTransaction extends FinanceForeignDetails, FinanceTransferMetadata {
+    is_split?: boolean;
+    split_payment_id?: string;
     tags?: FinanceTag[];
     tag_links?: Array<{ tag: FinanceTag | null }>;
     id: string;
@@ -611,6 +613,7 @@ export interface FinanceTransaction extends FinanceForeignDetails, FinanceTransf
 }
 
 export interface FinanceTransactionView extends FinanceForeignDetails, FinanceTransferMetadata {
+    split_payment_id?: string;
     tags?: FinanceTag[];
     id: string;
     source_id: string;
@@ -630,6 +633,7 @@ export interface FinanceTransactionView extends FinanceForeignDetails, FinanceTr
 }
 
 export interface FinanceDashboardRecentTransaction extends FinanceTransferMetadata {
+    split_payment_id?: string;
     tags?: FinanceTag[];
     category?: Pick<FinanceReferenceOption, 'name'> | null;
     id: string;
@@ -639,6 +643,30 @@ export interface FinanceDashboardRecentTransaction extends FinanceTransferMetada
     transaction_date: string;
     finance_source?: Pick<FinanceReferenceOption, 'name'> | null;
     finance_payee?: Pick<FinanceReferenceOption, 'name'> | null;
+}
+
+export interface FinanceSplitAllocation {
+    amount: string;
+    category_id: string | null;
+    notes: string | null;
+    tag_ids: string[];
+}
+
+export interface FinanceTransactionSplit {
+    version: string;
+    payment: Pick<FinanceTransaction, 'id' | 'currency' | 'direction' | 'transaction_date' | 'reference_number' | 'foreign_currency' | 'foreign_amount' | 'transfer_id'> & {
+        amount: string;
+        party: string | null;
+        source_name: string | null;
+        category: FinanceCategoryDetail | null;
+        notes: string | null;
+        tags: FinanceTag[];
+    };
+    parts: Array<Omit<FinanceSplitAllocation, 'tag_ids' | 'category_id'> & {
+        id: string;
+        category: FinanceCategoryDetail | null;
+        tags: FinanceTag[];
+    }>;
 }
 
 export interface FinanceDashboardSummary {
@@ -743,6 +771,7 @@ export interface FinanceBudgetPage<T> {
     total: number;
 }
 export interface FinanceBudgetTransaction {
+    split_payment_id?: string | null;
     id: string;
     transaction_date: string;
     direction: FinanceTransactionDirection;

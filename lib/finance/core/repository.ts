@@ -24,14 +24,8 @@ const FINANCE_TRANSACTION_REPLAY_SELECT = [
 ].join(', ');
 const FINANCE_TRANSACTION_INTERNAL_SELECT =
     'id, source_id, category_id, direction, amount, currency, foreign_amount::text, foreign_currency, merchant, payee_id, reference_number, transaction_date, notes, source, status';
-const FINANCE_DASHBOARD_RECENT_SELECT = [
-    'id, direction, amount, merchant, transaction_date',
-    FINANCE_TRANSFER_SELECT,
-    'tag_links:finance_transaction_tags(tag:dim_finance_tags(id,name,is_archived))',
-    'category:dim_finance_categories(name)',
-    'finance_source:dim_finance_sources(name)',
-    'finance_payee:dim_finance_payees(name)',
-].join(', ');
+const FINANCE_LEDGER_SELECT = 'id, source_id, category_id, direction, amount, currency, foreign_amount::text, foreign_currency, merchant, payee_id, reference_number, transaction_date, notes, created_at, transfer_id, transfer, finance_source, tags, category, finance_payee, split_payment_id';
+const FINANCE_DASHBOARD_RECENT_SELECT = 'id, direction, amount, merchant, transaction_date, transfer_id, transfer, tags, category, finance_source, finance_payee, split_payment_id';
 export const FINANCE_REVIEW_DUPLICATE_SELECT = [
     'id, source_id, category_id, direction, amount, currency, merchant, transaction_date, reference_number, notes, updated_at',
     'category:dim_finance_categories(name)',
@@ -339,6 +333,12 @@ export async function deleteFinanceRule(userId: string, ruleId: string) {
         .eq('user_id', userId);
 }
 
+function financeLedgerQuery(admin: ReturnType<typeof createAdminClient>, userId: string, tags: FinanceTagFilter) {
+    return tags.tagIds?.length
+        ? admin.rpc('finance_tagged_ledger_entries', { p_user_id: userId, p_tag_ids: tags.tagIds, p_mode: tags.tagMode || 'include' })
+        : admin.from('finance_ledger_entries');
+}
+
 export async function listFinanceTransactions(
     userId: string,
     options: FinanceTagFilter & {
@@ -368,8 +368,8 @@ export async function listFinanceTransactions(
         matchingPayeeIds = (data || []).map((payee) => payee.id);
     }
     for (let from = 0; ; from += options.pageSize) {
-        let query = (options.tagIds?.length ? admin.rpc('finance_tagged_transactions', { p_user_id: userId, p_tag_ids: options.tagIds, p_mode: options.tagMode || 'include' }) : admin.from('finance_transactions'))
-            .select(FINANCE_TRANSACTION_VIEW_SELECT)
+        let query = financeLedgerQuery(admin, userId, options)
+            .select(FINANCE_LEDGER_SELECT)
             .eq('user_id', userId)
             .eq('status', options.status)
             .order('transaction_date', { ascending: false })
@@ -477,8 +477,8 @@ export async function listFinanceDashboardMonthTransactions(
     const rows: unknown[] = [];
     const admin = createAdminClient();
     for (let from = 0; ; from += pageSize) {
-        const { data, error } = await (tags.tagIds?.length ? admin.rpc('finance_tagged_transactions', { p_user_id: userId, p_tag_ids: tags.tagIds, p_mode: tags.tagMode || 'include' }) : admin.from('finance_transactions'))
-            .select('amount, direction, transaction_date, category_id, transfer_id, category:dim_finance_categories(name)')
+        const { data, error } = await financeLedgerQuery(admin, userId, tags)
+            .select('amount, direction, transaction_date, category_id, transfer_id, category')
             .is('transfer_id', null)
             .eq('user_id', userId)
             .eq('status', 'confirmed')
@@ -502,7 +502,7 @@ export async function listFinanceDashboardRecentTransactions(
     tags: FinanceTagFilter = {}
 ) {
     const admin = createAdminClient();
-    const query = (tags.tagIds?.length ? admin.rpc('finance_tagged_transactions', { p_user_id: userId, p_tag_ids: tags.tagIds, p_mode: tags.tagMode || 'include' }) : admin.from('finance_transactions'))
+    const query = financeLedgerQuery(admin, userId, tags)
         .select(FINANCE_DASHBOARD_RECENT_SELECT)
         .eq('user_id', userId)
         .eq('status', 'confirmed')
@@ -510,6 +510,7 @@ export async function listFinanceDashboardRecentTransactions(
         .lt('transaction_date', nextMonthStart)
         .order('transaction_date', { ascending: false })
         .order('created_at', { ascending: false })
+        .order('id', { ascending: true })
         .limit(6);
     if (selectedDate) query.eq('transaction_date', selectedDate);
     return query;

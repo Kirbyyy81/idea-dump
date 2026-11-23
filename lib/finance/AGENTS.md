@@ -79,3 +79,9 @@
 - Only explicit saved source/party rules permit automatic notification pairing. Require current extraction evidence, posting times within ten minutes and a unique match in both directions. Missing sides follow ordinary intake; ambiguous pairs stay in review. Do not scan historical entries, teach category memory from transfers, retain raw notification text or automatically relink dismissed pairs.
 - Run `npm run test:finance-transfers:db`, the transfer API/accounting tests, `tests/browser/finance-transfers.spec.ts`, and the existing notification/duplicate/budget suites after transfer changes. The database runner restores the real migration chain on disposable PGlite. Run independent-session concurrency tests against disposable loopback PostgreSQL as well when changing locking.
 - Set `BROWSER_TEST_PORT` to an unused loopback port when another browser test server is running; the default remains 4179.
+
+## Split transactions
+
+- Keep the bank payment in `finance_transactions` for evidence, replay, duplicate detection, and existing references. The ledger projection replaces a split payment with two or three allocations. Use that projection for category and tag filters, dashboard accounting, and budget matches.
+- Only the split RPC can change allocations. Take the Finance ledger lock, check the original version, freeze due budget cycles, and save all amounts and tags together. Database constraints must preserve the original total. Never teach categories or change original tags as part of a split.
+- Run `npm run test:finance-splits:db` and `tests/browser/finance-splits.spec.ts` along with the relevant budget, transaction and transfer regressions.
