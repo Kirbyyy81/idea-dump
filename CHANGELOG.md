@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.21.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.20.1...idea-dump-v0.21.0) (2026-11-24)
+
+
+### Features
+
+* group budget filters ([6974122](https://github.com/Kirbyyy81/idea-dump/commit/6974122f2c0ec7d122a9bef03212a9ff759543ba))
+* split finance transactions ([3eeddb8](https://github.com/Kirbyyy81/idea-dump/commit/3eeddb8d8d64376b4d7d54f3512740ccfc0f3b2d))
+
+
+### Bug Fixes
+
+* add SonarQube scanning ([0caed9b](https://github.com/Kirbyyy81/idea-dump/commit/0caed9bfda070122b7e2a113645f36bfddee2290))
+* align remaining date fields ([5f9b296](https://github.com/Kirbyyy81/idea-dump/commit/5f9b29641175ba4042607665044ac4eb789054b2))
+* display kinoeye label upright ([42f34b2](https://github.com/Kirbyyy81/idea-dump/commit/42f34b20497f3ee53c4f853c97029cf14fddc459))
+* display street candy upright ([7725694](https://github.com/Kirbyyy81/idea-dump/commit/772569402e21e4d441f9326add6baa74d0cd116b))
+* edit notification formats ([f3ea5e0](https://github.com/Kirbyyy81/idea-dump/commit/f3ea5e0e8e2cda9965135f22a854673dd7c9d8a3))
+* exclude tagged budget entries ([b50a6d8](https://github.com/Kirbyyy81/idea-dump/commit/b50a6d8685d702cd8cce2fd1c97f30bac2d2faab))
+* ignore card approval prompts ([f1a4cac](https://github.com/Kirbyyy81/idea-dump/commit/f1a4cac7efe97397836fc54c93d439cc4cefdde8))
+* label the processing lab name input ([895f750](https://github.com/Kirbyyy81/idea-dump/commit/895f750a1f3c874b0a7ab4237ccb5a1a44faa1a7))
+* link internal transfers ([d8c99bd](https://github.com/Kirbyyy81/idea-dump/commit/d8c99bd76ff7be72e41e9ecf53dfd3392abd838f))
+* move transfer linking to editor ([758b3f9](https://github.com/Kirbyyy81/idea-dump/commit/758b3f9ffd06a3aeb09917b0ae9852fa46befdec))
+* patch next.js security vulnerabilities ([dd8a189](https://github.com/Kirbyyy81/idea-dump/commit/dd8a189bb9e8519221ee0fe8c45db3610def29b9))
+* recover missed image shares ([cec32a9](https://github.com/Kirbyyy81/idea-dump/commit/cec32a92008ff3b2f8bc21011df99b0e637a5832))
+* remove label artwork sources ([3e0f277](https://github.com/Kirbyyy81/idea-dump/commit/3e0f277c86fd40c863e93416a69c1f5d8d28f5c7))
+* save notification ignore rules ([cc2ae60](https://github.com/Kirbyyy81/idea-dump/commit/cc2ae6000a3cb56725ae3c225d53a19c8697b2b2))
+* simplify document reader header ([61a6f50](https://github.com/Kirbyyy81/idea-dump/commit/61a6f504ce0cac10154cec427039c65514a4b110))
+* sort documentation newest first ([573da1f](https://github.com/Kirbyyy81/idea-dump/commit/573da1f8405d2212ac403f7c38ee1467b578fd26))
+* standardize transaction dates ([e05e9f7](https://github.com/Kirbyyy81/idea-dump/commit/e05e9f73c6a993a38a29802d383894d4b164dfde))
+* use authentic film artwork ([5e4b62a](https://github.com/Kirbyyy81/idea-dump/commit/5e4b62a8a71983b552728b74aa00294e8e527fcd))
+* use lucid and yue packaging ([93d563b](https://github.com/Kirbyyy81/idea-dump/commit/93d563b5774c63c835ca2804ebb12848341542a7))
+
 ## [0.20.1](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.20.0...idea-dump-v0.20.1) (2026-11-17)
 
 
