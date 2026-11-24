@@ -29,7 +29,7 @@ test('simple calendar budget defaults and optional customization', async ({ page
     await expect(dialog.getByLabel('Cycle', { exact: true })).toHaveText('Monthly (starts from 1st of the month)');
     await expect(dialog.getByText('Start date', { exact: true })).toHaveCount(0);
     await expect(dialog.getByRole('switch', { name: 'Bank', exact: true })).not.toBeChecked();
-    await expect(dialog.getByRole('region', { name: 'Tags filter' })).toBeVisible();
+    await expect(dialog.getByRole('region', { name: 'Tags filter', exact: true })).toBeVisible();
     await dialog.getByLabel('Cycle', { exact: true }).click();
     await expect(page.getByRole('option', { name: 'Custom', exact: true })).toHaveCount(0);
     await page.getByRole('option', { name: 'Weekly (starts on Monday)', exact: true }).click();

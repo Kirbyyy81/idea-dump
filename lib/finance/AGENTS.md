@@ -69,6 +69,7 @@
 ## Tag and one-time budgets
 
 - Budget tag filters match any selected tag across categories. Combine populated source/category/tag dimensions using the saved outer AND/OR and optional `filter_group` pair. Grouping holds exactly two distinct dimensions with its own AND/OR, and empty cards are absent operands. Omitted grouping preserves it on edit/restore and null clears it. Keep TypeScript matching, rule descriptions and SQL evaluation aligned; use EXISTS so multiple tag matches never duplicate amounts. Omitted `tag_ids` preserve selections and `[]` clears them.
+- Keep per-budget `excluded_tag_ids` outside filter grouping. Store them as `tag_exclude` selections with `excluded_tags` metadata. Any excluded allocation tag vetoes positive matching; omitted settings preserve selections and `[]` clears them. Reconcile exclusion-only budgets before tag or ledger writes, and never rewrite frozen snapshots. Include `finance_budget_tag_exclusions.test.sql` in both budget database runners.
 - One-time budgets have null start/end dates and no renewal. Count all matching confirmed transactions, append all active one-time cards in every dashboard month, and remove them when archived. Archive freezes the cumulative snapshot; restore resumes matching without a new date window. Hide pace markers for undated cycles.
 - Reconcile due tagged cycles under the Finance ledger lock before transaction or tag membership writes. Preserve frozen history and category-learning boundaries. Run `npm run test:finance-budget-tags:db` (included in `npm test`) plus the usual budget browser and independent-session database suites.
 
@@ -79,3 +80,9 @@
 - Only explicit saved source/party rules permit automatic notification pairing. Require current extraction evidence, posting times within ten minutes and a unique match in both directions. Missing sides follow ordinary intake; ambiguous pairs stay in review. Do not scan historical entries, teach category memory from transfers, retain raw notification text or automatically relink dismissed pairs.
 - Run `npm run test:finance-transfers:db`, the transfer API/accounting tests, `tests/browser/finance-transfers.spec.ts`, and the existing notification/duplicate/budget suites after transfer changes. The database runner restores the real migration chain on disposable PGlite. Run independent-session concurrency tests against disposable loopback PostgreSQL as well when changing locking.
 - Set `BROWSER_TEST_PORT` to an unused loopback port when another browser test server is running; the default remains 4179.
+
+## Split transactions
+
+- Keep the bank payment in `finance_transactions` for evidence, replay, duplicate detection, and existing references. The ledger projection replaces a split payment with two or three allocations. Use that projection for category and tag filters, dashboard accounting, and budget matches.
+- Only the split RPC can change allocations. Take the Finance ledger lock, check the original version, freeze due budget cycles, and save all amounts and tags together. Database constraints must preserve the original total. Never teach categories or change original tags as part of a split.
+- Run `npm run test:finance-splits:db` and `tests/browser/finance-splits.spec.ts` along with the relevant budget, transaction and transfer regressions.

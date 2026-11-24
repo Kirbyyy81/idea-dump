@@ -29,12 +29,13 @@ export function combineBudgetFilterValues<T>(filters: Pick<FinanceBudgetFilters,
 }
 
 export function describeBudgetFilters(filters: Pick<FinanceBudgetFilters, 'filter_group' | 'filter_logic'>,
-    labels: Partial<Record<FinanceBudgetFilterDimension, string[]>>): string {
+    labels: Partial<Record<FinanceBudgetFilterDimension, string[]>>, excludedTags: string[] = []): string {
     const values: Partial<Record<FinanceBudgetFilterDimension, string>> = {};
     for (const dimension of budgetFilterDimensions) {
         const names = labels[dimension];
         if (names?.length) values[dimension] = `${budgetFilterLabels[dimension]} (${names.join(' or ')})`;
     }
-    return combineBudgetFilterValues(filters, values, (items, logic) => `(${items.join(logic === 'and' ? ' AND ' : ' OR ')})`)
+    const included = combineBudgetFilterValues(filters, values, (items, logic) => `(${items.join(logic === 'and' ? ' AND ' : ' OR ')})`)
         ?? 'All transactions';
+    return excludedTags.length ? `${included} AND NOT Tags (${excludedTags.join(' or ')})` : included;
 }

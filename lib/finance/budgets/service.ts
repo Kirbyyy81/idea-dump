@@ -12,6 +12,7 @@ const FIELD_MESSAGES: FinanceBudgetFieldErrors = {
     filter_group: 'Choose two different filter cards and AND or OR',
     source_ids: 'Remove missing sources or choose sources you own', category_ids: 'Remove missing categories or choose categories you own',
     tag_ids: 'Remove missing tags or choose tags you own',
+    excluded_tag_ids: 'Remove missing excluded tags or choose tags you own',
 };
 
 export function throwBudgetDatabaseError(error: { code?: string; message?: string }): never {

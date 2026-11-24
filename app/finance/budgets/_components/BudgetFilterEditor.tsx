@@ -46,12 +46,13 @@ export function BudgetFilterEditor({ value, saved, onChange, disabled, errors }:
     };
     const selectionNames = (dimension: 'source' | 'category') => options[dimension]
         .filter(item => value[dimension === 'source' ? 'source_ids' : 'category_ids'].includes(item.id)).map(item => item.name);
-    const tagLibrary = [...new Map([...(saved?.tags ?? []).map(tag => [tag.original_id, tag.name] as const),
+    const savedTags = [...(saved?.tags ?? []), ...(saved?.excluded_tags ?? [])];
+    const tagLibrary = [...new Map([...savedTags.map(tag => [tag.original_id, tag.name] as const),
         ...(references.tags ?? []).map(tag => [tag.id, tag.name] as const)]).entries()];
     const preview = describeBudgetFilters(value, {
         source: selectionNames('source'), category: [...selectionNames('category'), ...(value.include_uncategorised ? ['Uncategorised'] : [])],
         tag: (value.tag_ids ?? []).map(id => tagLibrary.find(([tagId]) => tagId === id)?.[1] ?? 'Selected tag'),
-    });
+    }, (value.excluded_tag_ids ?? []).map(id => tagLibrary.find(([tagId]) => tagId === id)?.[1] ?? 'Selected tag'));
     const findDropTarget = (event: PointerEvent<HTMLButtonElement>) => {
         const element = document.elementFromPoint(event.clientX, event.clientY);
         if (!element || !root.current?.contains(element)) return null;
@@ -128,6 +129,14 @@ export function BudgetFilterEditor({ value, saved, onChange, disabled, errors }:
             </div>
             {group.dimensions.map(card)}
         </fieldset>}
+        <section aria-label="Excluded tags filter" className="min-w-0 space-y-3 rounded-md border border-border-default bg-bg-surface p-3">
+            <h3 className="text-sm font-semibold">Excluded tags</h3>
+            <FinanceTagPicker label="Excluded tags" hideLabel value={value.excluded_tag_ids ?? []}
+                onChange={excluded_tag_ids => update({ excluded_tag_ids })} disabled={disabled} errorMessage={errors.excluded_tag_ids}
+                initialTags={(saved?.excluded_tags ?? []).map(tag => ({ id: tag.original_id,
+                    name: `${tag.name}${tag.id === null ? ' (deleted)' : ''}`, is_archived: tag.is_archived || tag.id === null }))} />
+            <p className="text-xs text-text-secondary">Transactions with any selected tag are always excluded.</p>
+        </section>
         {dragging && group && <div data-budget-ungroup className="rounded-md border border-dashed border-border-strong p-3 text-sm">Drop here to ungroup</div>}
         {errors.filter_group && <p role="alert" className="text-xs text-error">{errors.filter_group}</p>}
         <p className="break-words text-sm text-text-secondary" role="status" aria-label="Budget matching rule">{preview}</p>

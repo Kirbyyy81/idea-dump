@@ -2,6 +2,7 @@ import LogsPage from '@/app/logs/page';
 import { TransferRulesPanel } from '@/app/finance/settings/_components/TransferRulesPanel';
 import { FinanceTransactionsClient } from '@/app/finance/transactions/_components/FinanceTransactionsClient';
 import { FinanceTransactionEditor } from '@/app/finance/transactions/edit/_components/FinanceTransactionEditor';
+import { FinanceSplitEditor } from '@/app/finance/transactions/split/_components/FinanceSplitEditor';
 import { TagsSettingsPanel } from '@/app/finance/settings/_components/TagsSettingsPanel';
 import { tagTransactions } from './finance-tags-fixture';
 import { NotificationPatternsPanel } from '@/app/finance/settings/_components/NotificationPatternsPanel';
@@ -10,7 +11,7 @@ import { AlertDialog } from '@/components/molecules/AlertDialog';
 import { createRoot } from 'react-dom/client';
 import { FinanceBudgetsClient } from '@/app/finance/budgets/_components/FinanceBudgetsClient';
 import { FinanceReferenceDataProvider } from '@/app/finance/_components/FinanceReferenceData';
-import type { FinanceBudgetDetail, FinanceBudgetPage, FinanceBudgetSummary, FinanceReviewCandidate, FinanceDashboardBudget, FinanceTransactionView } from '@/lib/types';
+import type { FinanceBudgetDetail, FinanceBudgetPage, FinanceBudgetSummary, FinanceReviewCandidate, FinanceDashboardBudget, FinanceTransactionSplit, FinanceTransactionView } from '@/lib/types';
 import { FinanceTransactionEntry } from '@/app/finance/add/_components/FinanceTransactionEntry';
 import { FinanceShareTargetProvider } from '@/app/finance/_components/FinanceShareTargetProvider';
 import { AlertProvider } from '@/lib/contexts/AlertContext';
@@ -40,6 +41,8 @@ createRoot(document.getElementById('root')!).render(<FinanceReferenceDataProvide
         ? <AlertProvider><AlertDialog /><FinanceTransactionsClient initialTransactions={transactions} initialQuery="" /></AlertProvider>
         : window.location.pathname === '/finance/transactions/edit'
         ? <AlertProvider><AlertDialog /><FinanceTransactionEditor canRetry={false} loadError={null} initialTransaction={{ ...transactions[0], finance_source: undefined, finance_payee: undefined, category: undefined, user_id: 'test-user', source: 'manual', status: 'confirmed', intake_item_id: null, manual_idempotency_key: null, updated_at: transactions[0].created_at }} /></AlertProvider>
+        : window.location.pathname === '/finance/transactions/split'
+        ? <AlertProvider><FinanceSplitEditor initialSplit={(window as unknown as { splitInitial?: FinanceTransactionSplit }).splitInitial} /></AlertProvider>
         : window.location.pathname === '/finance/settings' && dashboardParams.get('section') === 'transfers'
         ? <TransferRulesPanel />
         : window.location.pathname === '/finance/settings' && dashboardParams.get('section') === 'tags'

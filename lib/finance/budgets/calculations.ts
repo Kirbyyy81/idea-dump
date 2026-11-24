@@ -81,6 +81,7 @@ export function nextBudgetBoundary(start: string | null, type: FinanceBudgetCycl
 }
 
 export function matchesBudgetFilters(filters: FinanceBudgetFilters, sourceId: string, categoryId: string | null, tagIds: string[] = []): boolean {
+    if (filters.excluded_tag_ids?.some(id => tagIds.includes(id))) return false;
     return combineBudgetFilterValues(filters, {
         source: filters.source_ids.length ? filters.source_ids.includes(sourceId) : undefined,
         category: filters.category_ids.length || filters.include_uncategorised

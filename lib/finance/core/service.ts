@@ -447,7 +447,7 @@ export async function getFinanceTransactionForUser(
     const { data, error } = await findFinanceTransaction(
         userId,
         transactionId,
-        `${FINANCE_TRANSACTION_VIEW_SELECT}, source, status`
+        `${FINANCE_TRANSACTION_VIEW_SELECT}, source, status, is_split`
     );
     if (error) throw error;
     if (!data) fail('Transaction not found', 404);

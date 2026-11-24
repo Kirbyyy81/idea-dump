@@ -21,9 +21,10 @@ function initialConfiguration(budget?: FinanceBudgetSummary, restore = false): F
         anchor_day: restore && budget.configuration.cycle_type === 'monthly' ? Number(today.slice(8)) : budget.configuration.anchor_day,
         filter_group: budget.configuration.filter_group ?? null,
         tag_ids: (budget.configuration.tags ?? []).map(item => item.original_id),
+        excluded_tag_ids: budget.configuration.excluded_tags?.map(item => item.original_id) ?? budget.configuration.excluded_tag_ids ?? [],
         source_ids: budget.configuration.sources.map((item) => item.original_id), category_ids: budget.configuration.categories.map((item) => item.original_id) }
         : { name: '', amount: '', cycle_type: 'monthly', start_date: startOfBudgetPeriod(today, 'monthly'), anchor_day: 1, custom_days: null,
-            time_zone: zone, filter_logic: 'and', filter_group: null, include_uncategorised: false, source_ids: [], category_ids: [], tag_ids: [] };
+            time_zone: zone, filter_logic: 'and', filter_group: null, include_uncategorised: false, source_ids: [], category_ids: [], tag_ids: [], excluded_tag_ids: [] };
 }
 
 export function BudgetForm({ budget, restore = false, onClose, onSaved, onReload }: {
@@ -96,7 +97,7 @@ export function BudgetForm({ budget, restore = false, onClose, onSaved, onReload
             </div>
             <BudgetFilterEditor value={configuration} saved={budget?.configuration} disabled={saving || references.status !== 'ready'} errors={errors}
                 onChange={next => { setConfiguration(next); setErrors(current => ({ ...current, source_ids: undefined, category_ids: undefined,
-                    tag_ids: undefined, filter_logic: undefined, filter_group: undefined })); }} />
+                    tag_ids: undefined, excluded_tag_ids: undefined, filter_logic: undefined, filter_group: undefined })); }} />
             {configuration.cycle_type === 'one_time' && <p className="text-xs text-text-muted">Counts all matching transactions, including existing ones, until archived.</p>}
             <Button type="button" variant="ghost" aria-expanded={customize} aria-controls={customizationId} disabled={saving} onClick={() => setCustomize(!customize)}>
                 {customize ? 'Hide customization' : 'Customize'}

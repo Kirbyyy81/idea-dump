@@ -44,7 +44,7 @@ export function validateBudgetConfiguration(value: unknown, options: { allowPast
         catch { errors.filter_group = 'Choose two different filter cards and AND or OR'; }
     }
     if (typeof input.include_uncategorised !== 'boolean') errors.include_uncategorised = 'Choose whether Uncategorised transactions count';
-    const references = (key: 'source_ids' | 'category_ids' | 'tag_ids') => {
+    const references = (key: 'source_ids' | 'category_ids' | 'tag_ids' | 'excluded_tag_ids') => {
         const values = input[key];
         if (!Array.isArray(values) || !values.every(isBudgetUuid)) {
             errors[key] = 'Remove unavailable selections and choose valid Finance options';
@@ -55,6 +55,8 @@ export function validateBudgetConfiguration(value: unknown, options: { allowPast
     const sourceIds = references('source_ids');
     const categoryIds = references('category_ids');
     const tagIds = input.tag_ids === undefined ? undefined : references('tag_ids');
+    const excludedTagIds = input.excluded_tag_ids === undefined ? undefined : references('excluded_tag_ids');
+    if (excludedTagIds && excludedTagIds.length > 50) errors.excluded_tag_ids = 'Choose up to 50 excluded tags';
     if (tagIds && tagIds.length > 50) errors.tag_ids = 'Choose up to 50 tags';
     if (Object.keys(errors).length) return { error: 'Check the highlighted fields', field_errors: errors };
     return { data: {
@@ -63,6 +65,7 @@ export function validateBudgetConfiguration(value: unknown, options: { allowPast
         time_zone: timeZone, filter_logic: input.filter_logic as 'and' | 'or', include_uncategorised: input.include_uncategorised as boolean,
         ...(Object.hasOwn(input, 'filter_group') && { filter_group: filterGroup }),
         source_ids: sourceIds, category_ids: categoryIds, ...(tagIds !== undefined && { tag_ids: tagIds }),
+        ...(excludedTagIds !== undefined && { excluded_tag_ids: excludedTagIds }),
     } };
 }
 

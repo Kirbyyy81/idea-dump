@@ -231,9 +231,6 @@ export function FinanceTransactionEditor({
                 ) : form ? (
                     <form onSubmit={saveTransaction} noValidate>
                         <Card className="p-5">
-                            <FinanceTransferLink kind="transaction" id={initialTransaction.id} transfer={initialTransaction.transfer} disabled={isSaving} onBusyChange={setIsSaving}
-                                blockedReason={!initialTransaction.transfer_id && form && JSON.stringify(form) !== JSON.stringify(createFinanceTransactionEditForm(initialTransaction)) ? 'Save your changes before linking a transfer.' : undefined}
-                                onChanged={() => router.refresh()} />
                             <FinanceFormErrorSummary errors={fieldErrors} />
                             <div className="space-y-4">
                                 <Select id="edit-direction" disabled={Boolean(initialTransaction.transfer_id)} label="Direction" required errorMessage={fieldErrors.direction} data-finance-field="direction" aria-label="Transaction direction" value={form.direction} onChange={(direction) => setTransactionField('direction', direction as FinanceTransactionDirection)} options={[{ value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }]} />
@@ -254,14 +251,16 @@ export function FinanceTransactionEditor({
                                 <DatePicker id="edit-date" disabled={Boolean(initialTransaction.transfer_id)} label="Date" required errorMessage={fieldErrors.transaction_date} data-finance-field="transaction_date" max={getLocalFinanceDate()} value={form.transaction_date} onChange={(value) => setTransactionField('transaction_date', value)} />
                                 <Textarea id="edit-notes" label="Notes" errorMessage={fieldErrors.notes} data-finance-field="notes" maxLength={MAX_FINANCE_NOTES_LENGTH} value={form.notes} onChange={(event) => setTransactionField('notes', event.target.value)} />
                             </div>
-                            <div className="mt-5 flex flex-wrap justify-end gap-2">
-                                <Link href="/finance/transactions" className="btn-secondary">
-                                    Cancel
-                                </Link>
-                                <Button type="submit" isLoading={isSaving} disabled={isSaving}>
-                                    Save changes
-                                </Button>
-                            </div>
+                            <FinanceTransferLink kind="transaction" id={initialTransaction.id} transfer={initialTransaction.transfer} disabled={isSaving} onBusyChange={setIsSaving}
+                                blockedReason={!initialTransaction.transfer_id && form && JSON.stringify(form) !== JSON.stringify(createFinanceTransactionEditForm(initialTransaction)) ? 'Save your changes before linking a transfer.' : undefined}
+                                onChanged={() => router.refresh()} actions={<>
+                                    <Link href="/finance/transactions" className="btn-secondary">
+                                        Cancel
+                                    </Link>
+                                    <Button type="submit" isLoading={isSaving} disabled={isSaving}>
+                                        Save changes
+                                    </Button>
+                            </>} />
                         </Card>
                     </form>
                 ) : null}

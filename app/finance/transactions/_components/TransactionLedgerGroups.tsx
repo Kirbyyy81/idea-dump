@@ -60,7 +60,7 @@ export function TransactionLedgerGroups({
                         <div className="divide-y divide-border-default">
                             {group.transactions.map((transaction) => (
                                 <div key={transaction.id} className="flex min-w-0 items-center">
-                                    {selection && (
+                                    {selection && !transaction.split_payment_id && (
                                         <Checkbox
                                             className="ml-2 shrink-0"
                                             ariaLabel={`Select transaction ${transaction.finance_payee?.name || transaction.merchant || transaction.id}`}

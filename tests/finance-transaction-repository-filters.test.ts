@@ -76,7 +76,8 @@ describe('Finance transaction repository filters', () => {
         expect(database.order.mock.calls).toContainEqual(['transaction_date', { ascending: false }]);
         expect(database.order.mock.calls).toContainEqual(['created_at', { ascending: false }]);
         expect(database.limit).toHaveBeenCalledWith(6);
-        expect(database.select.mock.calls.some(([select]) => select.includes('id, direction, amount, merchant, transaction_date') && select.includes('category:dim_finance_categories(name)'))).toBe(true);
+        expect(database.from).toHaveBeenCalledWith('finance_ledger_entries');
+        expect(database.select.mock.calls.some(([select]) => select.includes('id, direction, amount, merchant, transaction_date') && select.includes('split_payment_id'))).toBe(true);
         expect(summary.recent_transactions).toEqual([]);
         expect(summary.budget_cycles).toEqual([]);
         expect(database.rpc).toHaveBeenCalledWith('finance_budget_dashboard', {
