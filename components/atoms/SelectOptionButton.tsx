@@ -2,6 +2,7 @@
 
 import { forwardRef, type ButtonHTMLAttributes } from 'react';
 import { cn } from '@/lib/utils';
+import { CheckDoodleIcon } from '@/components/atoms/DoodleIcons';
 
 interface SelectOptionButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
     selected: boolean;
@@ -15,7 +16,10 @@ export const SelectOptionButton = forwardRef<HTMLButtonElement, SelectOptionButt
             selected ? 'bg-bg-hover text-text-primary' : 'text-text-secondary hover:bg-bg-subtle hover:text-text-primary',
             disabled && 'cursor-not-allowed opacity-50 hover:bg-transparent hover:text-text-secondary',
             className
-        )}>{children}</button>
+        )}>
+            {children}
+            {selected && <CheckDoodleIcon size={14} className="shrink-0 text-accent-rose" />}
+        </button>
     )
 );
 

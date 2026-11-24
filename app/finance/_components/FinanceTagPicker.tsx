@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { SelectOptionButton } from '@/components/atoms/SelectOptionButton';
-import { CheckDoodleIcon } from '@/components/atoms/DoodleIcons';
+import { SelectMenu } from '@/components/atoms/SelectMenu';
 import { FieldShell } from '@/components/atoms/FieldShell';
 import { SelectTrigger } from '@/components/atoms/SelectTrigger';
 import { cn } from '@/lib/utils';
@@ -190,7 +190,7 @@ export function FinanceTagPicker({ value, onChange, includeArchived = false, dis
                             </span>
                         </SelectTrigger>
                         {open && (
-                            <div ref={menuRef} id={id} role="group" tabIndex={-1} aria-label={label} style={menuPosition} className="custom-scrollbar fixed z-50 flex min-w-0 flex-col overflow-y-auto rounded-md border border-border-default bg-bg-elevated py-1 text-sm shadow-subtle"
+                            <SelectMenu ref={menuRef} id={id} role="group" tabIndex={-1} aria-label={label} style={menuPosition} className="flex min-w-0 flex-col"
                                 onMouseDown={event => {
                                     if (event.button !== 0 || !(event.target instanceof Element)) return;
                                     const button = event.target.closest('button');
@@ -204,12 +204,11 @@ export function FinanceTagPicker({ value, onChange, includeArchived = false, dis
                                             onFocus={() => setActiveTag(tag.id)} selected={value.includes(tag.id)} aria-pressed={value.includes(tag.id)} disabled={disabled || (!includeArchived && tag.is_archived && !value.includes(tag.id)) || (!value.includes(tag.id) && value.length >= 50)}
                                             onClick={() => toggle(tag.id)}>
                                             <span className="truncate">{tag.name}{tag.is_archived ? ' (archived)' : ''}</span>
-                                            {value.includes(tag.id) && <CheckDoodleIcon size={14} className="shrink-0 text-accent-rose" />}
                                         </SelectOptionButton>
                                     ))}
                                     {!available.length && <p className="px-3 py-2 text-sm text-text-muted">No tags available.</p>}
                                 </div>
-                            </div>
+                            </SelectMenu>
                         )}
                     </div>
                 )}
