@@ -433,9 +433,8 @@ test('selects and saves a travel tag in a short budget edit dialog', async ({ pa
     const dialog = page.getByRole('dialog', { name: 'Edit budget' });
     const picker = dialog.getByRole('button', { name: 'Choose tags', exact: true });
     await picker.click();
-    const search = dialog.getByRole('textbox', { name: 'Search tags' });
-    await expect(search).toBeFocused();
-    await search.press('Escape');
+    await expect(dialog.getByRole('textbox', { name: 'Search tags' })).toHaveCount(0);
+    await page.keyboard.press('Escape');
     await expect(picker).toBeFocused();
     await picker.click();
     const tag = dialog.getByRole('button', { name: travelTag.name, exact: true });

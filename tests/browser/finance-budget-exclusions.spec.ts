@@ -37,10 +37,9 @@ test('saves, reloads and clears exclusions separately from grouped filters', asy
     await expect(excluded.locator('[data-budget-dimension]')).toHaveCount(0);
     await expect(excluded.getByRole('button', { name: /group/i })).toHaveCount(0);
     await excluded.getByRole('button', { name: 'Choose excluded tags' }).click();
-    await excluded.getByRole('textbox', { name: 'Search tags' }).fill('Travel');
+    await page.keyboard.press('t');
     await page.keyboard.press('Enter');
     expect(saved).toBeUndefined();
-    await excluded.getByRole('textbox', { name: 'Search tags' }).fill('');
     await excluded.getByRole('button', { name: work.name, exact: true }).click();
     await excluded.getByRole('button', { name: 'Done', exact: true }).click();
     const rule = 'Tags (Travel) AND NOT Tags (Travel or Work)';
