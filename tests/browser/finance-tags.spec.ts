@@ -52,7 +52,7 @@ for (const operation of ['add', 'remove'] as const) {
         await expect(page.getByRole('checkbox',{name:'Select transaction Daily cafe'})).toBeChecked();
         await page.getByRole('button',{name:'Choose bulk tags'}).click();
         await page.getByRole('button',{name:'Holiday',exact:true}).click();
-        await page.getByRole('button',{name:'Done',exact:true}).click();
+        await page.keyboard.press('Escape');
         await page.getByRole('button',{name:operation === 'add' ? 'Add tags' : 'Remove tags',exact:true}).click();
         await expect.poll(()=>body).toEqual({transaction_ids:[tagTransactions[1].id],tag_ids:[tripTag.id],operation});
         await expect(page.getByRole('checkbox',{name:'Select transaction Daily cafe'})).not.toBeChecked();
@@ -157,7 +157,7 @@ test('ledger pointer selection persists multiple tags, exclusions and clearing a
         await choose.click();
         await expect(page.getByRole('textbox', { name: 'Search tags', exact: true })).toHaveCount(0);
         await page.getByRole('button', { name, exact: true }).click();
-        await page.getByRole('button', { name: 'Done', exact: true }).click();
+        await page.keyboard.press('Escape');
     };
     await selectTag('Holiday');
     await expect(page).toHaveURL(url => url.searchParams.get('tag_ids') === tripTag.id && url.searchParams.get('date') === '2026-09-17');
@@ -175,7 +175,9 @@ test('ledger pointer selection persists multiple tags, exclusions and clearing a
     if (info.project.name === 'mobile') await page.getByRole('button', { name: /^Filters/ }).click();
     await expect(page.getByRole('combobox', { name: 'Tag matching', exact: true })).toContainText('Exclude tags');
     await choose.click();
-    await page.getByRole('button', { name: 'Clear tags', exact: true }).click();
+    await page.getByRole('button', { name: 'Holiday', exact: true }).click();
+    await page.getByRole('button', { name: 'Hackathon (archived)', exact: true }).click();
+    await page.keyboard.press('Escape');
     await expect(page).toHaveURL(url => !url.searchParams.has('tag_ids'));
     await expect(page.getByLabel('Selected tags')).toHaveCount(0);
 });
@@ -209,12 +211,16 @@ test('jumps through the full tag list while scrolling only the options', async (
     await page.keyboard.press('Enter');
     await expect(travel).toHaveAttribute('aria-pressed', 'true');
     expect(saved).toBe(false);
+    await expect(popup.getByRole('button', { name: /^(Clear tags|Done)$/ })).toHaveCount(0);
+    await page.keyboard.press('Shift+Tab');
+    const choose = page.getByRole('button', { name: 'Choose tags', exact: true });
+    await expect(choose).toBeFocused();
+    await expect(popup).toHaveCount(0);
+    await choose.click();
+    await expect(travel).toBeFocused();
     await page.keyboard.press('Tab');
-    await expect(popup.getByRole('button', { name: 'Clear tags', exact: true })).toBeFocused();
-    await page.keyboard.press('Tab');
-    await expect(popup.getByRole('button', { name: 'Done', exact: true })).toBeFocused();
-    await page.keyboard.press('Enter');
-    await expect(page.getByRole('button', { name: 'Choose tags', exact: true })).toBeFocused();
+    await expect(page.getByRole('textbox', { name: 'Currency', exact: true })).toBeFocused();
+    await expect(popup).toHaveCount(0);
 });
 
 test('creates new tags in Settings and selects them from the field-free dropdown', async ({ page }) => {

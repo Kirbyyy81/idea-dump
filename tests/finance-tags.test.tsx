@@ -36,6 +36,7 @@ describe('Finance tags', () => {
         const holiday = screen.getByRole('button', { name: 'Holiday' });
         expect(document.activeElement).toBe(holiday);
         expect(screen.queryByRole('textbox')).toBeNull();
+        expect(screen.queryByRole('button', { name: /^(Clear tags|Done)$/ })).toBeNull();
         expect(screen.queryByRole('button', { name: /Create/ })).toBeNull();
         expect(screen.queryByRole('button', { name: 'Hackathon (archived)' })).toBeNull();
         fireEvent.keyDown(holiday, { key: 'Enter' });
@@ -180,15 +181,29 @@ describe('tag picker typeahead', () => {
         expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Tango' }));
     });
 
-    it('focuses Done when there are no available tags', async () => {
+    it('keeps an empty dropdown keyboard accessible without footer actions', async () => {
         vi.mocked(financeApiRequest).mockResolvedValue({ data: { sources: [], categories: [], tags: [] } });
         render(<Picker />);
         const trigger = await open();
-        expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Done' }));
+        expect(document.activeElement).toBe(screen.getByRole('group', { name: 'Tags' }));
         expect(screen.getByText('No tags available.')).toBeTruthy();
         type('t');
-        expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Done' }));
-        fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+        expect(document.activeElement).toBe(screen.getByRole('group', { name: 'Tags' }));
+        expect(screen.queryByRole('button', { name: /^(Clear tags|Done)$/ })).toBeNull();
+        type('Escape');
         expect(document.activeElement).toBe(trigger);
     });
+});
+
+it('retains focus when deselecting the last retained archived tag', async () => {
+    vi.mocked(financeApiRequest).mockResolvedValue({ data: { sources: [], categories: [], tags: [{ id: archived, name: 'Hackathon', is_archived: true }] } });
+    render(<Picker initial={[archived]} />);
+    const trigger = screen.getByRole('button', { name: 'Choose tags' });
+    await waitFor(() => expect(trigger.hasAttribute('disabled')).toBe(false));
+    fireEvent.click(trigger);
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Hackathon (archived)' }), { key: 'Enter' });
+    expect(document.activeElement).toBe(screen.getByRole('group', { name: 'Tags' }));
+    expect(screen.getByRole('status').textContent).toBe('');
+    fireEvent.keyDown(document.activeElement!, { key: 'Escape' });
+    expect(document.activeElement).toBe(trigger);
 });

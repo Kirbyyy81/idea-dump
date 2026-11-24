@@ -30,7 +30,7 @@ test('manual entry opens foreign fields only for a travel tag and saves both amo
     await page.getByRole('button', { name: plainTag.name, exact: true }).click();
     await expect(page.getByLabel('Foreign amount', { exact: true })).toHaveCount(0);
     await page.getByRole('button', { name: travelTag.name, exact: true }).click();
-    await page.getByRole('button', { name: 'Done', exact: true }).click();
+    await page.keyboard.press('Escape');
     await page.getByLabel('Foreign currency', { exact: true }).fill('twd');
     await page.getByRole('button', { name: 'Add transaction', exact: true }).click();
     await expect(page.getByLabel('Foreign amount', { exact: true })).toBeFocused();
@@ -75,7 +75,7 @@ test('edit preserves the saved conversion when removing the travel tag', async (
     await expect(page.getByLabel('Foreign amount', { exact: true })).toHaveValue('1600');
     await page.getByRole('button', { name: 'Choose tags', exact: true }).click();
     await page.getByRole('button', { name: travelTag.name, exact: true }).click();
-    await page.getByRole('button', { name: 'Done', exact: true }).click();
+    await page.keyboard.press('Escape');
     await expect(page.getByLabel('Foreign amount', { exact: true })).toHaveCount(0);
     await expect(page.getByText('TWD 1,600.00 · 1 TWD = MYR 0.125475')).toBeVisible();
     await page.getByRole('button', { name: 'Save changes', exact: true }).click();
@@ -117,7 +117,7 @@ for (const selection of ['Enter', 'click'] as const) {
         if (selection === 'Enter') await page.keyboard.press('Enter');
         else await option.click();
         await expect(option).toHaveAttribute('aria-pressed', 'true');
-        await page.getByRole('button', { name: 'Done', exact: true }).click();
+        await page.keyboard.press('Escape');
         await expect(page.getByLabel('Selected tags')).toContainText(travelTag.name);
         await expect(page.getByLabel('Foreign amount', { exact: true })).toBeVisible();
         expect(body).toBeUndefined();

@@ -394,7 +394,7 @@ test('creates a tag-only one-time budget without date controls', async ({ page }
     await page.getByRole('option', { name: 'One-time (no dates)', exact: true }).click();
     await dialog.getByRole('button', { name: 'Choose tags', exact: true }).click();
     await page.getByRole('button', { name: 'Holiday', exact: true }).click();
-    await page.getByRole('button', { name: 'Done', exact: true }).click();
+    await page.keyboard.press('Escape');
     await expect(dialog.getByLabel('Selected tags')).toContainText('Holiday');
     await dialog.getByRole('button', { name: 'Customize', exact: true }).click();
     await expect(dialog.getByText('Start date', { exact: true })).toHaveCount(0);
@@ -448,7 +448,7 @@ test('selects and saves a travel tag in a short budget edit dialog', async ({ pa
     if (isMobile) await page.touchscreen.tap(x, y);
     else await page.mouse.click(x, y);
     await expect(tag).toHaveAttribute('aria-pressed', 'true');
-    await dialog.getByRole('button', { name: 'Done', exact: true }).click();
+    await page.keyboard.press('Escape');
     await expect(dialog.getByLabel('Selected tags')).toContainText(travelTag.name);
     await expect(dialog.getByRole('switch', { name: 'Bank' })).toBeChecked();
     await dialog.getByRole('button', { name: 'Save changes', exact: true }).click();

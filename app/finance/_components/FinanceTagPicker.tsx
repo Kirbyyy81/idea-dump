@@ -44,7 +44,7 @@ export function FinanceTagPicker({ value, onChange, includeArchived = false, dis
     const root = useRef<HTMLDivElement>(null);
     const trigger = useRef<HTMLButtonElement>(null);
     const listRef = useRef<HTMLDivElement>(null);
-    const doneRef = useRef<HTMLButtonElement>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
     const typedPrefix = useRef({ text: '', at: 0 });
     const id = useId();
     const triggerId = `${id}-trigger`;
@@ -105,7 +105,7 @@ export function FinanceTagPicker({ value, onChange, includeArchived = false, dis
         } else {
             focusTagButton(options.find(option => option.getAttribute('aria-pressed') === 'true') ?? options[0], listRef.current);
         }
-        if (!options.length) doneRef.current?.focus({ preventScroll: true });
+        if (!options.length) menuRef.current?.focus({ preventScroll: true });
         // Safari can blur an option without moving focus to another element.
         // Close only when a pointer or focus target actually moves outside.
         const outside = (event: PointerEvent | FocusEvent) => {
@@ -122,7 +122,7 @@ export function FinanceTagPicker({ value, onChange, includeArchived = false, dis
         if (!includeArchived && value.includes(id) && library.find(tag => tag.id === id)?.is_archived) {
             const remaining = enabledTagButtons(listRef.current).find(option => option.dataset.tagId !== id);
             if (remaining) focusTagButton(remaining, listRef.current);
-            else doneRef.current?.focus({ preventScroll: true });
+            else menuRef.current?.focus({ preventScroll: true });
         }
         onChange(value.includes(id) ? value.filter(item => item !== id) : [...value, id].sort());
     };
@@ -145,7 +145,11 @@ export function FinanceTagPicker({ value, onChange, includeArchived = false, dis
             else setOpen(true);
             return;
         }
-        if (event.key === 'Tab') typedPrefix.current = { text: '', at: 0 };
+        if (event.key === 'Tab') {
+            typedPrefix.current = { text: '', at: 0 };
+            if (open && event.shiftKey) { event.preventDefault(); close(); }
+            return;
+        }
         if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key) && (open || event.target === trigger.current)) {
             event.preventDefault();
             typedPrefix.current = { text: '', at: 0 };
@@ -185,7 +189,7 @@ export function FinanceTagPicker({ value, onChange, includeArchived = false, dis
                             </span>
                         </SelectTrigger>
                         {open && (
-                            <div id={id} role="group" aria-label={label} style={menuPosition} className="custom-scrollbar fixed z-50 flex min-w-0 flex-col overflow-y-auto rounded-md border border-border-default bg-bg-elevated p-3 text-sm shadow-subtle"
+                            <div ref={menuRef} id={id} role="group" tabIndex={-1} aria-label={label} style={menuPosition} className="custom-scrollbar fixed z-50 flex min-w-0 flex-col overflow-y-auto rounded-md border border-border-default bg-bg-elevated p-3 text-sm shadow-subtle"
                                 onMouseDown={event => {
                                     if (event.button !== 0 || !(event.target instanceof Element)) return;
                                     const button = event.target.closest('button');
@@ -204,10 +208,6 @@ export function FinanceTagPicker({ value, onChange, includeArchived = false, dis
                                         </Button>
                                     ))}
                                     {!available.length && <p className="py-2 text-sm text-text-muted">No tags available.</p>}
-                                </div>
-                                <div className="mt-2 flex shrink-0 justify-between">
-                                    <Button type="button" variant="ghost" disabled={disabled} onClick={() => { typedPrefix.current = { text: '', at: 0 }; onChange([]); }}>Clear tags</Button>
-                                    <Button ref={doneRef} type="button" variant="ghost" onClick={close}>Done</Button>
                                 </div>
                             </div>
                         )}
