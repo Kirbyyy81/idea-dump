@@ -115,6 +115,16 @@ export function ExpenseDoodleIcon(props: DoodleIconProps) {
     );
 }
 
+export function SplitDoodleIcon(props: DoodleIconProps) {
+    return (
+        <DoodleIcon {...props}>
+            <path d="M12.1 20c-.2-2.2-.1-4.5.1-6.7C11 10.2 8.4 7.6 5 5.1" />
+            <path d="m5.2 10.4-.4-5.6 5.6.2" />
+            <path d="M12.2 13.3c1.3-3.2 3.8-5.7 7-8.2m-5.3-.1 5.6-.2-.2 5.5" />
+        </DoodleIcon>
+    );
+}
+
 export function DocumentDoodleIcon(props: DoodleIconProps) {
     return (
         <DoodleIcon {...props}>

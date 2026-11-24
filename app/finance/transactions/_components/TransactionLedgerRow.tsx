@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { DeleteDoodleIcon, EditDoodleIcon, MoreDoodleIcon } from '@/components/atoms/DoodleIcons';
+import { DeleteDoodleIcon, EditDoodleIcon, MoreDoodleIcon, SplitDoodleIcon } from '@/components/atoms/DoodleIcons';
 import type { FinanceTransactionView } from '@/lib/types';
 import { financeSplitHref } from '@/lib/finance/transactions/splitValues';
 import { formatCurrency } from '@/lib/utils';
@@ -119,6 +119,7 @@ export function TransactionLedgerRow({
                                     <Link href={splitHref}
                                         className="flex min-h-10 w-full items-center gap-2 whitespace-nowrap rounded-sm px-3 py-2 text-left text-sm font-semibold text-text-secondary hover:bg-bg-hover focus-visible:bg-bg-hover focus-visible:text-text-primary focus-visible:outline-none"
                                         onClick={() => closeMenu(false)}>
+                                        <SplitDoodleIcon size={16} />
                                         Split transaction
                                     </Link>
                                 )}
