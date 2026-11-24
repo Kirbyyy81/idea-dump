@@ -1,6 +1,6 @@
 import type { FinanceTagFilter } from '@/lib/finance/tagValues';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { FinanceCategory, FinanceLinkChanges, FinanceSource, FinanceTransaction } from '@/lib/types';
+import { FinanceCategory, FinanceSplitAllocation, FinanceLinkChanges, FinanceSource, FinanceTransaction } from '@/lib/types';
 
 const FINANCE_TRANSFER_SELECT = 'transfer_id, transfer:finance_internal_transfers!finance_transactions_transfer_fkey(id,created_at,outgoing_transaction_id,incoming_transaction_id,outgoing_source:dim_finance_sources!finance_internal_transfers_outgoing_source_fkey(id,name),incoming_source:dim_finance_sources!finance_internal_transfers_incoming_source_fkey(id,name))';
 
@@ -23,7 +23,7 @@ const FINANCE_TRANSACTION_REPLAY_SELECT = [
     'finance_payee:dim_finance_payees(id,name)',
 ].join(', ');
 const FINANCE_TRANSACTION_INTERNAL_SELECT =
-    'id, source_id, category_id, direction, amount, currency, foreign_amount::text, foreign_currency, merchant, payee_id, reference_number, transaction_date, notes, source, status';
+    'id, source_id, category_id, direction, amount, currency, foreign_amount::text, foreign_currency, merchant, payee_id, reference_number, transaction_date, notes, source, status, is_split';
 const FINANCE_LEDGER_SELECT = 'id, source_id, category_id, direction, amount, currency, foreign_amount::text, foreign_currency, merchant, payee_id, reference_number, transaction_date, notes, created_at, transfer_id, transfer, finance_source, tags, category, finance_payee, split_payment_id';
 const FINANCE_DASHBOARD_RECENT_SELECT = 'id, direction, amount, merchant, transaction_date, transfer_id, transfer, tags, category, finance_source, finance_payee, split_payment_id';
 export const FINANCE_REVIEW_DUPLICATE_SELECT = [
@@ -435,8 +435,10 @@ export async function findFinanceTransaction(userId: string, transactionId: stri
 export async function updateFinanceTransaction(
     userId: string,
     transactionId: string,
-    input: Record<string, unknown>
+    input: Record<string, unknown>,
+    split?: { version: string; parts: FinanceSplitAllocation[] }
 ) {
+    if (split) return createAdminClient().rpc('finance_update_split_transaction', { p_user_id: userId, p_payment_id: transactionId, p_version: split.version, p_input: input, p_parts: split.parts });
     if (input.p_tag_ids !== undefined || input.p_foreign_amount !== undefined) return createAdminClient().rpc('finance_save_tagged_transaction', { p_user_id: userId, p_transaction_id: transactionId, p_input: input });
     return createAdminClient().rpc('finance_update_transaction_v3', {
         p_user_id: userId,

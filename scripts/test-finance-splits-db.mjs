@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { createFinanceTestDatabase } from './lib/finance-test-database.mjs';
+import { createFinanceTestDatabase, financeSqlFile } from './lib/finance-test-database.mjs';
 
 const db = await createFinanceTestDatabase();
 const [owner, other, bank, wallet, food, shopping, trip, gifts, alienTag, expense, income, device] =
@@ -22,6 +22,8 @@ const setupBudget = async (config, asOf) => {
 };
 
 try {
+    await db.exec(await financeSqlFile('supabase/tests/finance_split_transaction_edit.test.sql'));
+    console.log('Original payment editing passed: atomic allocations, stale versions, ownership, rollback and frozen budgets.');
     const day = await value("select (now() at time zone 'Asia/Kuala_Lumpur')::date::text value");
     const asOf = new Date().toISOString();
     await sql("insert into public.dim_modules(modules,name,path,enabled) values('finance','Finance','/finance',true),('companion','Companion','/companion',true) on conflict do nothing");

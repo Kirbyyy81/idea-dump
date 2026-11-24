@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { Button } from '@/components/atoms/Button';
 import { FinanceTransactionRow } from './FinanceTransactionRow';
-import { financeSplitHref } from '@/lib/finance/transactions/splitValues';
 import { FinanceActivityCalendar } from './FinanceActivityCalendar';
 import { AppShell } from '@/components/organisms/AppShell';
 import { MonthPicker } from '@/components/atoms/MonthPicker';
@@ -147,12 +146,6 @@ export function FinanceDashboardClient({ month, today, selectedDate = null, summ
                     {isPending ? <p className="py-6 text-sm text-text-muted" role="status">Loading transactions…</p> : <ul className="mt-3 divide-y divide-border-default border-y border-border-default">{summary.recent_transactions.map((transaction) => <li key={transaction.id}>
                     <FinanceTransactionRow
                         density="summary"
-                        status={transaction.split_payment_id && (
-                            <Link href={`${financeSplitHref(transaction.split_payment_id)}#original-payment`}
-                                aria-label="Split: view original payment" className="inline-flex min-h-10 items-center font-semibold text-accent-blue hover:underline">
-                                Split
-                            </Link>
-                        )}
                         categoryName={transaction.category?.name ?? null}
                         tags={transaction.tags} payeeName={transaction.finance_payee?.name}
                         merchant={transaction.merchant}

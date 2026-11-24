@@ -4,7 +4,7 @@ import { FinanceServiceError } from '@/lib/finance/core/errors';
 import { isFinanceUuid } from '@/lib/finance/core/schemas';
 import { MAX_FINANCE_NOTES_LENGTH } from '@/lib/finance/core/values';
 import { parseFinanceTagIds } from '@/lib/finance/tagValues';
-import type { FinanceSplitAllocation, FinanceTransactionSplit } from '@/lib/types';
+import type { FinanceSplitAllocation, FinanceSplitTransactionEdit, FinanceTransactionSplit } from '@/lib/types';
 import { MAX_SPLIT_PARTS, MIN_SPLIT_PARTS, parseFinanceSplitAmount } from './splitValues';
 
 export function parseFinanceSplitParts(value: unknown): FinanceSplitAllocation[] {
@@ -60,4 +60,11 @@ export async function saveFinanceTransactionSplit(userId: string, paymentId: str
         throw new FinanceServiceError(message, 422);
     }
     throw error;
+}
+
+export async function getFinanceSplitTransactionEdit(userId: string, paymentId: string): Promise<FinanceSplitTransactionEdit> {
+    const { data, error } = await createAdminClient().rpc('finance_get_split_transaction_edit', { p_user_id: userId, p_payment_id: paymentId });
+    if (error) throw error;
+    if (!data) throw new FinanceServiceError('The payment changed. Reload it before editing.', 409);
+    return data as FinanceSplitTransactionEdit;
 }

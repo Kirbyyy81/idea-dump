@@ -5,8 +5,11 @@ import type { FinanceTransaction } from '@/lib/types';
 const server = vi.hoisted(() => ({
     getFinanceTransactionForUser: vi.fn(),
     getSessionUser: vi.fn(),
+    getFinanceSplitTransactionEdit: vi.fn(),
     isFinanceServiceError: vi.fn(),
 }));
+
+vi.mock('@/lib/finance/transactions/splits', () => ({ getFinanceSplitTransactionEdit: server.getFinanceSplitTransactionEdit }));
 
 vi.mock('@/lib/rbac/access', () => ({
     getSessionUser: server.getSessionUser,
@@ -83,6 +86,16 @@ describe('Finance transaction edit route', () => {
             initialTransaction: transaction,
             loadError: null,
         });
+    });
+
+    it('opens the original editor with allocations from a consistent snapshot instead of redirecting', async () => {
+        server.getFinanceTransactionForUser.mockResolvedValue({ ...transaction, is_split: true });
+        const original = { ...transaction, amount: 40, is_split: true };
+        const split = { version: 'a'.repeat(32), payment: { id: transaction.id, amount: '40.00' }, parts: [] };
+        server.getFinanceSplitTransactionEdit.mockResolvedValue({ transaction: original, split });
+        const props = await getEditorProps(transaction.id);
+        expect(server.getFinanceSplitTransactionEdit).toHaveBeenCalledWith('user-1', transaction.id);
+        expect(props).toMatchObject({ initialTransaction: original, initialSplit: split, loadError: null });
     });
 
     it.each([

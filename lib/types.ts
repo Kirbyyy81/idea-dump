@@ -669,6 +669,11 @@ export interface FinanceTransactionSplit {
     }>;
 }
 
+export interface FinanceSplitTransactionEdit {
+    transaction: FinanceTransaction;
+    split: FinanceTransactionSplit;
+}
+
 export interface FinanceDashboardSummary {
     budget_cycles?: FinanceDashboardBudget[];
     total_expense: number;
