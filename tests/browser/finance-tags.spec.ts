@@ -133,7 +133,21 @@ for (const flow of [
             await expect(label).toHaveCSS(property, await baselineLabel.evaluate((element, property) => getComputedStyle(element).getPropertyValue(property), property));
         }
         expect(await tags.locator('svg').count()).toBe(1);
+        await baseline.press('ArrowDown');
+        const referenceMenu = page.getByRole('listbox');
+        const referenceOption = referenceMenu.getByRole('option').first();
+        await expect(referenceOption).toBeFocused();
+        const menuProperties = ['paddingTop', 'paddingBottom', 'paddingLeft', 'paddingRight', 'borderRadius', 'borderWidth', 'borderColor', 'backgroundColor', 'boxShadow', 'fontSize'] as const;
+        const optionProperties = ['height', 'paddingTop', 'paddingBottom', 'paddingLeft', 'paddingRight', 'borderRadius', 'borderWidth', 'fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'outlineWidth', 'outlineOffset', 'outlineColor'] as const;
+        const categoryMenuStyles = await referenceMenu.evaluate((element, properties) => properties.map(property => getComputedStyle(element)[property]), menuProperties);
+        const categoryOptionStyles = await referenceOption.evaluate((element, properties) => properties.map(property => getComputedStyle(element)[property]), optionProperties);
+        await page.keyboard.press('Escape');
         await tags.press('ArrowDown');
+        const tagMenu = page.getByRole('group', { name: flow.label, exact: true });
+        const focusedTag = tagMenu.locator('button[data-tag-name]:focus');
+        await expect(focusedTag).toHaveCount(1);
+        expect(await tagMenu.evaluate((element, properties) => properties.map(property => getComputedStyle(element)[property]), menuProperties)).toEqual(categoryMenuStyles);
+        expect(await focusedTag.evaluate((element, properties) => properties.map(property => getComputedStyle(element)[property]), optionProperties)).toEqual(categoryOptionStyles);
         await expect(page.getByRole('textbox', { name: 'Search tags', exact: true })).toHaveCount(0);
         const holiday = page.getByRole('button', { name: 'Holiday', exact: true });
         const wasSelected = await holiday.getAttribute('aria-pressed') === 'true';

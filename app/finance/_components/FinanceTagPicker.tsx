@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
-import { Button } from '@/components/atoms/Button';
+import { SelectOptionButton } from '@/components/atoms/SelectOptionButton';
 import { CheckDoodleIcon } from '@/components/atoms/DoodleIcons';
 import { FieldShell } from '@/components/atoms/FieldShell';
 import { SelectTrigger } from '@/components/atoms/SelectTrigger';
@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import { useFinanceReferenceData } from './FinanceReferenceData';
 import type { FinanceTag } from '@/lib/types';
 
-const preferredMenuHeight = 370;
+const preferredMenuHeight = 256;
 const typeaheadTimeout = 1000;
 
 function enabledTagButtons(list: HTMLDivElement | null) {
@@ -51,6 +51,7 @@ export function FinanceTagPicker({ value, onChange, includeArchived = false, dis
     const navigationHintId = `${id}-navigation`;
     const library = [...new Map([...initialTags, ...tags].map(tag => [tag.id, tag])).values()];
     const available = library.filter(tag => includeArchived || !tag.is_archived || value.includes(tag.id));
+    const desiredMenuHeight = Math.min(preferredMenuHeight, Math.max(1, available.length) * 40 + 8);
 
     useLayoutEffect(() => {
         if (!open) return;
@@ -68,11 +69,11 @@ export function FinanceTagPicker({ value, onChange, includeArchived = false, dis
             const viewportBottom = viewportTop + (viewport?.height ?? window.innerHeight);
             const below = viewportBottom - rect.bottom - gap - gutter;
             const above = rect.top - viewportTop - gap - gutter;
-            const openAbove = below < preferredMenuHeight * zoom && above > below;
+            const openAbove = below < desiredMenuHeight * zoom && above > below;
             setMenuPosition({
                 left: rect.left / zoom,
                 width: rect.width / zoom,
-                maxHeight: Math.max(0, openAbove ? above : below) / zoom,
+                maxHeight: Math.min(desiredMenuHeight, Math.max(0, openAbove ? above : below) / zoom),
                 ...(openAbove ? { bottom: (window.innerHeight - rect.top + gap) / zoom } : { top: (rect.bottom + gap) / zoom }),
             });
         };
@@ -91,7 +92,7 @@ export function FinanceTagPicker({ value, onChange, includeArchived = false, dis
             viewport?.removeEventListener('resize', positionMenu);
             viewport?.removeEventListener('scroll', positionMenu);
         };
-    }, [open]);
+    }, [open, desiredMenuHeight]);
 
     useEffect(() => {
         if (!open) {
@@ -189,7 +190,7 @@ export function FinanceTagPicker({ value, onChange, includeArchived = false, dis
                             </span>
                         </SelectTrigger>
                         {open && (
-                            <div ref={menuRef} id={id} role="group" tabIndex={-1} aria-label={label} style={menuPosition} className="custom-scrollbar fixed z-50 flex min-w-0 flex-col overflow-y-auto rounded-md border border-border-default bg-bg-elevated p-3 text-sm shadow-subtle"
+                            <div ref={menuRef} id={id} role="group" tabIndex={-1} aria-label={label} style={menuPosition} className="custom-scrollbar fixed z-50 flex min-w-0 flex-col overflow-y-auto rounded-md border border-border-default bg-bg-elevated py-1 text-sm shadow-subtle"
                                 onMouseDown={event => {
                                     if (event.button !== 0 || !(event.target instanceof Element)) return;
                                     const button = event.target.closest('button');
@@ -197,17 +198,16 @@ export function FinanceTagPicker({ value, onChange, includeArchived = false, dis
                                     event.preventDefault();
                                     button.focus({ preventScroll: true });
                                 }}>
-                                <div ref={listRef} className="custom-scrollbar min-h-10 max-h-60 space-y-1 overflow-y-auto">
+                                <div ref={listRef} className="custom-scrollbar min-h-10 overflow-y-auto">
                                     {available.map(tag => (
-                                        <Button key={tag.id} data-tag-id={tag.id} data-tag-name={tag.name.toLowerCase()} tabIndex={activeTag === tag.id ? 0 : -1}
-                                            onFocus={() => setActiveTag(tag.id)} variant="ghost" type="button" aria-pressed={value.includes(tag.id)} disabled={disabled || (!includeArchived && tag.is_archived && !value.includes(tag.id)) || (!value.includes(tag.id) && value.length >= 50)}
-                                            className={cn('min-h-10 w-full justify-between gap-3 rounded-sm px-3 py-2 text-left text-sm font-normal', value.includes(tag.id) ? 'bg-bg-hover text-text-primary' : 'text-text-secondary hover:bg-bg-subtle hover:text-text-primary focus-visible:bg-bg-hover focus-visible:text-text-primary')}
+                                        <SelectOptionButton key={tag.id} data-tag-id={tag.id} data-tag-name={tag.name.toLowerCase()} tabIndex={activeTag === tag.id ? 0 : -1}
+                                            onFocus={() => setActiveTag(tag.id)} selected={value.includes(tag.id)} aria-pressed={value.includes(tag.id)} disabled={disabled || (!includeArchived && tag.is_archived && !value.includes(tag.id)) || (!value.includes(tag.id) && value.length >= 50)}
                                             onClick={() => toggle(tag.id)}>
-                                            <span className="min-w-0 whitespace-normal break-words">{tag.name}{tag.is_archived ? ' (archived)' : ''}</span>
+                                            <span className="truncate">{tag.name}{tag.is_archived ? ' (archived)' : ''}</span>
                                             {value.includes(tag.id) && <CheckDoodleIcon size={14} className="shrink-0 text-accent-rose" />}
-                                        </Button>
+                                        </SelectOptionButton>
                                     ))}
-                                    {!available.length && <p className="py-2 text-sm text-text-muted">No tags available.</p>}
+                                    {!available.length && <p className="px-3 py-2 text-sm text-text-muted">No tags available.</p>}
                                 </div>
                             </div>
                         )}
