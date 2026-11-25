@@ -5,8 +5,7 @@ import { FinanceTransactionEditor } from '@/app/finance/transactions/edit/_compo
 import { FinanceSplitEditor } from '@/app/finance/transactions/split/_components/FinanceSplitEditor';
 import { TagsSettingsPanel } from '@/app/finance/settings/_components/TagsSettingsPanel';
 import { tagTransactions } from './finance-tags-fixture';
-import { NotificationPatternsPanel } from '@/app/finance/settings/_components/NotificationPatternsPanel';
-import { CategoryMemoriesPanel } from '@/app/finance/settings/_components/CategoryMemoriesPanel';
+import { RulesSettingsPanel } from '@/app/finance/settings/_components/RulesSettingsPanel';
 import { AlertDialog } from '@/components/molecules/AlertDialog';
 import { createRoot } from 'react-dom/client';
 import { FinanceBudgetsClient } from '@/app/finance/budgets/_components/FinanceBudgetsClient';
@@ -49,10 +48,8 @@ createRoot(document.getElementById('root')!).render(<FinanceReferenceDataProvide
         ? <TransferRulesPanel />
         : window.location.pathname === '/finance/settings' && dashboardParams.get('section') === 'tags'
         ? <AlertProvider><AlertDialog /><TagsSettingsPanel /></AlertProvider>
-        : window.location.pathname === '/finance/settings/notifications'
-        ? <NotificationPatternsPanel />
-        : window.location.pathname === '/finance/settings/category-memories'
-        ? <CategoryMemoriesPanel />
+        : window.location.pathname === '/finance/settings' && dashboardParams.get('section') === 'rules'
+        ? <AlertProvider><AlertDialog /><RulesSettingsPanel /></AlertProvider>
         : window.location.pathname === '/finance/review'
         ? <AlertProvider><AlertDialog /><FinanceReviewClient initialCandidates={(window as unknown as { reviewInitial?: FinanceReviewCandidate[] }).reviewInitial || reviewCandidates} initialFailedIntakes={[]} initialSelectedId="candidate-1" today="2026-09-22" /></AlertProvider>
         : window.location.pathname === '/finance/add'

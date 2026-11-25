@@ -1,7 +1,5 @@
 import { formatDateTime } from '@/lib/utils';
-import { Card } from '@/components/atoms/Card';
 import { Button } from '@/components/atoms/Button';
-import { SparkleDoodleIcon } from '@/components/atoms/DoodleIcons';
 import { InlineLoadingState } from '@/components/molecules/InlineLoadingState';
 import type { FinanceLearningSummary, FinanceShadowRulesSummary } from '@/lib/types';
 import { financeTemplateFieldLabels as fieldLabels } from '@/lib/finance/shadowRules';
@@ -20,12 +18,12 @@ function formatPercentage(value: number | null) {
 
 export function LearningSummaryPanel({ isLoading, summary, shadowRules, onRefresh }: LearningSummaryPanelProps) {
     return (
-        <Card className="overflow-hidden p-0">
-            <div className="flex items-center gap-2 border-b border-border-default px-5 py-4">
-                <SparkleDoodleIcon size={17} className="text-accent-apricot" />
-                <h2 className="text-base font-bold">Learning</h2>
-                {onRefresh ? <Button className="ml-auto" variant="ghost" disabled={isLoading} onClick={onRefresh}>Refresh learning status</Button> : null}
-            </div>
+        <>
+            {onRefresh ? (
+                <div className="flex justify-end px-4 pt-3 sm:px-5">
+                    <Button variant="ghost" disabled={isLoading} onClick={onRefresh}>Refresh learning status</Button>
+                </div>
+            ) : null}
             {isLoading ? <InlineLoadingState label="Loading learning status..." /> : null}
             {!isLoading && summary.availability === 'unavailable' ? (
                 <p className="px-5 py-4 text-sm text-error" role="status">
@@ -81,6 +79,6 @@ export function LearningSummaryPanel({ isLoading, summary, shadowRules, onRefres
                 </div>
             ) : null}
             {!isLoading ? <ShadowRulesList summary={shadowRules ?? { availability: 'unavailable' }} /> : null}
-        </Card>
+        </>
     );
 }
