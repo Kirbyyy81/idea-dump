@@ -217,7 +217,7 @@ test('create, edit, archive, frozen history and restore', async ({ page }, testI
     await transactionsToggle.click();
     await expect(page.getByText('No matching transactions this cycle.')).not.toBeVisible();
     expect(bodies[0]).toMatchObject({ request_id: expect.any(String), configuration: { amount: '100.00', cycle_type: 'weekly', source_ids: [sourceId], include_uncategorised: true, filter_logic: 'or' } });
-    await expect(page.getByRole('table', { name: 'Budget configuration' }).getByRole('rowheader')).toHaveText(['Schedule', 'Filters']);
+    await expect(page.getByRole('table', { name: 'Budget configuration' }).getByRole('rowheader')).toHaveText(['Budget total', 'Schedule', 'Filters']);
     const details = page.getByRole('region', { name: 'Everyday spending details' });
     await expect(details.getByText('14 to 20 Sept 2026')).toBeVisible();
     await expect(details.getByText('Budget RM 100.00')).toHaveCount(0);

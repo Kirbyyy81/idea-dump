@@ -34,6 +34,7 @@ export function BudgetDetails({ detail, onEdit, onArchive, onRestore, onHistoryP
         source: sources, category: categories, tag: labels(configuration.tags ?? []),
     }, labels(configuration.excluded_tags ?? []));
     const configurationRows = [
+        ['Budget total', formatBudgetMoney(configuration.amount)],
         ['Schedule', configuration.cycle_type === 'one_time' ? 'One-time, no dates' : `${configuration.cycle_type === 'custom' ? `Every ${configuration.custom_days} days` : configuration.cycle_type === 'monthly' ? `Monthly on day ${configuration.anchor_day}` : 'Every 7 days'} (${configuration.time_zone})`],
     ];
     return <section aria-label={`${budget.name} details`} className="min-w-0 rounded-lg border border-border-default bg-bg-surface p-4 sm:p-5" aria-busy={busy}>
