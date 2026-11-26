@@ -82,6 +82,24 @@ select 'BUDGET_READY'; select pg_sleep(0.4); commit;`, [], ledgerSignal);
     check(assigned.code === 0 && edited.code === 0, 'tag membership and configuration writes serialize');
     const matched = await run(`select count(*) from public.finance_budget_matching('${owner}','${cumulativeId}',null,null);`);
     check(matched.output.trim() === '0', 'omitted exclusion preserved across concurrent tag assignment');
+    const parts = JSON.stringify([{ amount: '10', category_id: null, notes: null, tag_ids: [] }, { amount: '15', category_id: null, notes: null, tag_ids: [] }]);
+    const initialSnapshot = await run(`select public.finance_get_transaction_split('${owner}','${transaction}');`);
+    check(initialSnapshot.code === 0, 'split edit snapshot');
+    const initialVersion = JSON.parse(initialSnapshot.output.trim()).version;
+    check((await run(`select public.finance_save_transaction_split('${owner}','${transaction}','${initialVersion}','${parts}');`)).code === 0, 'split edit fixture');
+    const editSnapshot = await run(`select public.finance_get_split_transaction_edit('${owner}','${transaction}');`);
+    check(editSnapshot.code === 0, 'original and allocations load together');
+    const editVersion = JSON.parse(editSnapshot.output.trim()).split.version;
+    const paymentInput = JSON.stringify({ p_source_id: source, p_category_id: null, p_direction: 'expense', p_amount: 30, p_currency: 'MYR',
+        p_merchant: 'Concurrent edited payment', p_payee_name: null, p_transaction_date: new Date().toISOString().slice(0, 10), p_notes: 'Original edit', p_reference_number: 'EDIT-30', p_tag_ids: [] });
+    const changedParts = JSON.stringify([{ amount: '12', category_id: null, notes: 'Part edit', tag_ids: [] }, { amount: '18', category_id: null, notes: null, tag_ids: [] }]);
+    const editSql = `select public.finance_update_split_transaction('${owner}','${transaction}','${editVersion}','${paymentInput}','${changedParts}');`;
+    const splitEdits = await Promise.all([run(editSql), run(editSql)]);
+    check(splitEdits.filter(result => result.code === 0).length === 1 && splitEdits.some(result => result.error.includes('40001')), 'one concurrent original-and-split edit wins');
+    const balanced = await run(`select t.is_split and t.amount=30 and count(e.id)=2 and sum(e.amount)=30
+from public.finance_transactions t join public.finance_ledger_entries e on e.user_id=t.user_id and e.split_payment_id=t.id
+where t.user_id='${owner}' and t.id='${transaction}' group by t.id;`);
+    check(balanced.output.trim() === 't', 'concurrent original and parts stay balanced without duplicate ledger entries');
     process.stdout.write('Budget SQL lifecycle, security, idempotency, concurrency and closure checks passed.\n');
 } finally {
     const cleanup = await run(`delete from auth.users where id='${owner}';`);

@@ -1,8 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/atoms/Button';
-import { Card } from '@/components/atoms/Card';
 import { Select } from '@/components/atoms/Select';
 import { Toggle } from '@/components/atoms/Toggle';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
@@ -17,6 +16,8 @@ export function CategoryMemoriesPanel() {
     const [pending, setPending] = useState<string | null>(null);
     const [forgetting, setForgetting] = useState<FinanceCategoryMemory | null>(null);
     const [error, setError] = useState('');
+    const forgetButton = useRef<HTMLButtonElement>(null);
+    const refreshButton = useRef<HTMLButtonElement>(null);
     const load = useCallback(async (signal?: AbortSignal) => {
         setLoading(true);
         setError('');
@@ -32,6 +33,11 @@ export function CategoryMemoriesPanel() {
         void load(controller.signal);
         return () => controller.abort();
     }, [load]);
+    useEffect(() => {
+        if (forgetting || pending || !forgetButton.current) return;
+        if (!forgetButton.current.isConnected) refreshButton.current?.focus();
+        forgetButton.current = null;
+    }, [forgetting, pending]);
 
     async function update(memory: FinanceCategoryMemory, changes: { action?: 'set' | 'forget'; category_id?: string | null; is_active?: boolean }) {
         setPending(memory.id);
@@ -47,10 +53,9 @@ export function CategoryMemoriesPanel() {
         finally { setPending(null); }
     }
 
-    return <Card className="min-w-0 p-5" aria-label="Learned categories">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-base font-bold">Learned categories</h2>
-            <Button variant="ghost" disabled={loading || pending !== null} onClick={() => void load()}>Refresh categories</Button>
+    return <div className="min-w-0 p-4 sm:p-5">
+        <div className="flex justify-end">
+            <Button ref={refreshButton} variant="ghost" disabled={loading || pending !== null} onClick={() => void load()}>Refresh categories</Button>
         </div>
         {loading ? <p role="status" className="mt-3 text-sm text-text-muted">Loading learned categories...</p> : null}
         {error ? <p role="alert" className="mt-3 text-sm text-error">{error}</p> : null}
@@ -71,7 +76,11 @@ export function CategoryMemoriesPanel() {
                         disabled={pending !== null || loading} onChange={category_id => void update(memory, { category_id: category_id || null })}
                         options={[{ value: '', label: !memory.override_category_id && memory.category_id ? `Learned: ${categories.find(c => c.id === memory.category_id)?.name || 'Category unavailable'}` : 'Use learned choices' },
                             ...categories.map(c => ({ value: c.id, label: `Always use ${c.name}` }))]} /></div>
-                    <Button variant="ghost" disabled={pending !== null || loading} onClick={() => setForgetting(memory)}>Forget</Button>
+                    <Button variant="ghost" disabled={pending !== null || loading} onClick={event => {
+                        forgetButton.current = event.currentTarget;
+                        event.currentTarget.focus({ preventScroll: true });
+                        setForgetting(memory);
+                    }}>Forget</Button>
                 </div>
             </li>)}
         </ul>
@@ -79,5 +88,5 @@ export function CategoryMemoriesPanel() {
             description={`Future matches for ${forgetting?.party_name || 'this merchant or payee'} will use manual rules or defaults until you teach a category again.`}
             confirmLabel="Forget" isConfirming={pending !== null} onCancel={() => setForgetting(null)}
             onConfirm={() => { if (forgetting) void update(forgetting, { action: 'forget' }); }} />
-    </Card>;
+    </div>;
 }

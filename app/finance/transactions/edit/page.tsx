@@ -6,7 +6,8 @@ import {
     isFinanceServiceError,
 } from '@/lib/finance/core/service';
 import { getSessionUser } from '@/lib/rbac/access';
-import { financeSplitHref } from '@/lib/finance/transactions/splitValues';
+import { getFinanceSplitTransactionEdit } from '@/lib/finance/transactions/splits';
+import type { FinanceTransaction, FinanceTransactionSplit } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,9 +39,15 @@ export default async function FinanceTransactionEditRoute({
     const user = await getSessionUser();
     if (!user) redirect('/login');
 
-    let transaction: Awaited<ReturnType<typeof getFinanceTransactionForUser>>;
+    let split: FinanceTransactionSplit | undefined;
+    let transaction: FinanceTransaction;
     try {
         transaction = await getFinanceTransactionForUser(user.id, transactionId);
+        if (transaction.is_split) {
+            const edit = await getFinanceSplitTransactionEdit(user.id, transaction.id);
+            transaction = edit.transaction;
+            split = edit.split;
+        }
     } catch (error) {
         if (isFinanceServiceError(error)) {
             return (
@@ -66,11 +73,11 @@ export default async function FinanceTransactionEditRoute({
             />
         );
     }
-    if (transaction.is_split) redirect(financeSplitHref(transaction.id));
     return (
         <FinanceTransactionEditor
-            key={`transaction:${transaction.id}`}
+            key={`transaction:${transaction.id}:${split?.version ?? transaction.updated_at}`}
             initialTransaction={transaction}
+            initialSplit={split}
             loadError={null}
             canRetry={false}
         />

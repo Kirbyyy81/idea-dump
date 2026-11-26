@@ -1,35 +1,57 @@
 'use client';
 
-import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
-import { Button } from '@/components/atoms/Button';
-import { CheckDoodleIcon } from '@/components/atoms/DoodleIcons';
+import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
+import { SelectOptionButton } from '@/components/atoms/SelectOptionButton';
+import { SelectMenu } from '@/components/atoms/SelectMenu';
 import { FieldShell } from '@/components/atoms/FieldShell';
-import { Input } from '@/components/atoms/Input';
 import { SelectTrigger } from '@/components/atoms/SelectTrigger';
 import { cn } from '@/lib/utils';
 import { useFinanceReferenceData } from './FinanceReferenceData';
-import { financeApiRequest } from '@/lib/finance/core/client';
 import type { FinanceTag } from '@/lib/types';
 
-const preferredMenuHeight = 370;
+const preferredMenuHeight = 256;
+const typeaheadTimeout = 1000;
 
-export function FinanceTagPicker({ value, onChange, allowCreate = true, includeArchived = false, disabled = false, initialTags = [], label = 'Tags', hideLabel = false, errorMessage }: {
-    value: string[]; onChange: (value: string[]) => void; allowCreate?: boolean; includeArchived?: boolean; disabled?: boolean; initialTags?: FinanceTag[]; label?: string; hideLabel?: boolean; errorMessage?: string;
+function enabledTagButtons(list: HTMLDivElement | null) {
+    return Array.from(list?.querySelectorAll<HTMLButtonElement>('button[data-tag-name]:not(:disabled)') ?? []);
+}
+
+function focusTagButton(button: HTMLButtonElement | undefined, list: HTMLDivElement | null) {
+    if (!button || !list) return;
+    button.focus({ preventScroll: true });
+    const optionBounds = button.getBoundingClientRect();
+    const listBounds = list.getBoundingClientRect();
+    if (optionBounds.top < listBounds.top) list.scrollTop -= listBounds.top - optionBounds.top;
+    else if (optionBounds.bottom > listBounds.bottom) list.scrollTop += optionBounds.bottom - listBounds.bottom;
+}
+
+function jumpToPrefix(list: HTMLDivElement | null, text: string) {
+    const options = enabledTagButtons(list);
+    const repeated = text.length > 1 && [...text].every(letter => letter === text[0]);
+    const query = repeated ? text[0] : text;
+    const current = options.indexOf(document.activeElement as HTMLButtonElement);
+    const ordered = repeated ? [...options.slice(current + 1), ...options.slice(0, current + 1)] : options;
+    focusTagButton(ordered.find(option => option.dataset.tagName?.startsWith(query)), list);
+}
+
+export function FinanceTagPicker({ value, onChange, includeArchived = false, disabled = false, initialTags = [], label = 'Tags', hideLabel = false, errorMessage }: {
+    value: string[]; onChange: (value: string[]) => void; includeArchived?: boolean; disabled?: boolean; initialTags?: FinanceTag[]; label?: string; hideLabel?: boolean; errorMessage?: string;
 }) {
-    const { tags = [], upsertTag, status } = useFinanceReferenceData();
+    const { tags = [], status } = useFinanceReferenceData();
     const [open, setOpen] = useState(false);
     const [menuPosition, setMenuPosition] = useState<CSSProperties>();
-    const [search, setSearch] = useState('');
-    const [error, setError] = useState('');
-    const [saving, setSaving] = useState(false);
+    const [activeTag, setActiveTag] = useState<string>();
     const root = useRef<HTMLDivElement>(null);
     const trigger = useRef<HTMLButtonElement>(null);
-    const searchRef = useRef<HTMLInputElement>(null);
+    const listRef = useRef<HTMLDivElement>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
+    const typedPrefix = useRef({ text: '', at: 0 });
     const id = useId();
     const triggerId = `${id}-trigger`;
+    const navigationHintId = `${id}-navigation`;
     const library = [...new Map([...initialTags, ...tags].map(tag => [tag.id, tag])).values()];
-    const query = search.trim().toLowerCase();
-    const available = library.filter(tag => (includeArchived || !tag.is_archived || value.includes(tag.id)) && tag.name.toLowerCase().includes(query));
+    const available = library.filter(tag => includeArchived || !tag.is_archived || value.includes(tag.id));
+    const desiredMenuHeight = Math.min(preferredMenuHeight, Math.max(1, available.length) * 40 + 8);
 
     useLayoutEffect(() => {
         if (!open) return;
@@ -47,11 +69,11 @@ export function FinanceTagPicker({ value, onChange, allowCreate = true, includeA
             const viewportBottom = viewportTop + (viewport?.height ?? window.innerHeight);
             const below = viewportBottom - rect.bottom - gap - gutter;
             const above = rect.top - viewportTop - gap - gutter;
-            const openAbove = below < preferredMenuHeight * zoom && above > below;
+            const openAbove = below < desiredMenuHeight * zoom && above > below;
             setMenuPosition({
                 left: rect.left / zoom,
                 width: rect.width / zoom,
-                maxHeight: Math.max(0, openAbove ? above : below) / zoom,
+                maxHeight: Math.min(desiredMenuHeight, Math.max(0, openAbove ? above : below) / zoom),
                 ...(openAbove ? { bottom: (window.innerHeight - rect.top + gap) / zoom } : { top: (rect.bottom + gap) / zoom }),
             });
         };
@@ -70,12 +92,22 @@ export function FinanceTagPicker({ value, onChange, allowCreate = true, includeA
             viewport?.removeEventListener('resize', positionMenu);
             viewport?.removeEventListener('scroll', positionMenu);
         };
-    }, [open]);
+    }, [open, desiredMenuHeight]);
 
     useEffect(() => {
-        if (!open) return;
-        searchRef.current?.focus({ preventScroll: true });
-        // Safari can blur search before clicking a button without focusing it.
+        if (!open) {
+            typedPrefix.current = { text: '', at: 0 };
+            return;
+        }
+        const options = enabledTagButtons(listRef.current);
+        if (typedPrefix.current.text) {
+            focusTagButton(options[0], listRef.current);
+            jumpToPrefix(listRef.current, typedPrefix.current.text);
+        } else {
+            focusTagButton(options.find(option => option.getAttribute('aria-pressed') === 'true') ?? options[0], listRef.current);
+        }
+        if (!options.length) menuRef.current?.focus({ preventScroll: true });
+        // Safari can blur an option without moving focus to another element.
         // Close only when a pointer or focus target actually moves outside.
         const outside = (event: PointerEvent | FocusEvent) => {
             if (!root.current?.contains(event.target as Node)) setOpen(false);
@@ -87,24 +119,57 @@ export function FinanceTagPicker({ value, onChange, allowCreate = true, includeA
             document.removeEventListener('focusin', outside);
         };
     }, [open]);
-    const toggle = (id: string) => onChange(value.includes(id) ? value.filter(item => item !== id) : [...value, id].sort());
-    const create = async () => {
-        searchRef.current?.focus();
-        setSaving(true); setError('');
-        try {
-            const { data } = await financeApiRequest<{ data: FinanceTag }>('/api/finance/tags', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: search.trim() }) });
-            searchRef.current?.focus();
-            upsertTag(data);
-            if (data.is_archived) { setError('This tag is archived. Restore it in Finance settings first.'); return; }
-            onChange([...new Set([...value, data.id])].sort()); setSearch('');
-        } catch (error) { setError(error instanceof Error ? error.message : 'Could not create tag'); }
-        finally { setSaving(false); }
+    const toggle = (id: string) => {
+        if (!includeArchived && value.includes(id) && library.find(tag => tag.id === id)?.is_archived) {
+            const remaining = enabledTagButtons(listRef.current).find(option => option.dataset.tagId !== id);
+            if (remaining) focusTagButton(remaining, listRef.current);
+            else menuRef.current?.focus({ preventScroll: true });
+        }
+        onChange(value.includes(id) ? value.filter(item => item !== id) : [...value, id].sort());
+    };
+    const close = () => {
+        setOpen(false);
+        trigger.current?.focus({ preventScroll: true });
+    };
+    const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+        if (disabled || status !== 'ready' || event.nativeEvent.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
+        if (event.key === 'Escape' && open) {
+            event.preventDefault(); event.stopPropagation(); close();
+            return;
+        }
+        if (event.key.length === 1 && event.key !== ' ') {
+            event.preventDefault();
+            const now = Date.now();
+            const previous = now - typedPrefix.current.at < typeaheadTimeout ? typedPrefix.current.text : '';
+            typedPrefix.current = { text: (previous + event.key.toLowerCase()).slice(-120), at: now };
+            if (open) jumpToPrefix(listRef.current, typedPrefix.current.text);
+            else setOpen(true);
+            return;
+        }
+        if (event.key === 'Tab') {
+            typedPrefix.current = { text: '', at: 0 };
+            if (open && event.shiftKey) { event.preventDefault(); close(); }
+            return;
+        }
+        if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key) && (open || event.target === trigger.current)) {
+            event.preventDefault();
+            typedPrefix.current = { text: '', at: 0 };
+            if (!open) { setOpen(true); return; }
+            const options = enabledTagButtons(listRef.current);
+            const current = options.indexOf(document.activeElement as HTMLButtonElement);
+            const index = event.key === 'Home' ? 0 : event.key === 'End' ? options.length - 1
+                : current < 0 ? event.key === 'ArrowUp' ? options.length - 1 : 0
+                : (current + (event.key === 'ArrowUp' ? -1 : 1) + options.length) % options.length;
+            focusTagButton(options[index], listRef.current);
+        } else if (open && (event.key === 'Enter' || event.key === ' ') && event.target instanceof HTMLButtonElement && event.target.dataset.tagName !== undefined) {
+            event.preventDefault();
+            event.target.click();
+        }
     };
     return (
-        <div ref={root} className="min-w-0" onKeyDown={event => {
-            if (event.key === 'Escape' && open) { event.stopPropagation(); setOpen(false); trigger.current?.focus(); }
-        }}>
-            <FieldShell id={triggerId} label={hideLabel ? undefined : label} errorMessage={error || errorMessage}>
+        <div ref={root} className="min-w-0" onKeyDown={handleKeyDown}>
+            <span id={navigationHintId} className="sr-only">Type to jump to a tag. Use arrow keys to move and Enter or Space to select.</span>
+            <FieldShell id={triggerId} label={hideLabel ? undefined : label} errorMessage={errorMessage}>
                 {({ describedBy, hasError }) => (
                     <div className="relative">
                         <SelectTrigger
@@ -115,23 +180,17 @@ export function FinanceTagPicker({ value, onChange, allowCreate = true, includeA
                             aria-label={`Choose ${label.toLowerCase()}`}
                             aria-expanded={open}
                             aria-controls={open ? id : undefined}
-                            aria-describedby={describedBy}
+                            aria-describedby={[describedBy, navigationHintId].filter(Boolean).join(' ')}
                             aria-invalid={hasError || undefined}
                             disabled={disabled || status !== 'ready'}
-                            onClick={() => setOpen(current => !current)}
-                            onKeyDown={event => {
-                                if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-                                    event.preventDefault();
-                                    setOpen(true);
-                                }
-                            }}
+                            onClick={() => { typedPrefix.current = { text: '', at: 0 }; setOpen(current => !current); }}
                         >
                             <span className={cn('truncate', !value.length && 'text-text-muted')}>
                                 {value.length ? `${value.length} selected` : 'Choose tags'}
                             </span>
                         </SelectTrigger>
                         {open && (
-                            <div id={id} role="group" aria-label={label} style={menuPosition} className="custom-scrollbar fixed z-50 flex min-w-0 flex-col overflow-y-auto rounded-md border border-border-default bg-bg-elevated p-3 text-sm shadow-subtle"
+                            <SelectMenu ref={menuRef} id={id} role="group" tabIndex={-1} aria-label={label} style={menuPosition} className="flex min-w-0 flex-col"
                                 onMouseDown={event => {
                                     if (event.button !== 0 || !(event.target instanceof Element)) return;
                                     const button = event.target.closest('button');
@@ -139,36 +198,17 @@ export function FinanceTagPicker({ value, onChange, allowCreate = true, includeA
                                     event.preventDefault();
                                     button.focus({ preventScroll: true });
                                 }}>
-                                <Input ref={searchRef} aria-label="Search tags" placeholder="Search tags" maxLength={120} value={search}
-                                    onChange={event => setSearch(event.target.value)}
-                                    onKeyDown={event => {
-                                        if (event.key !== 'Enter' || event.nativeEvent.isComposing) return;
-                                        // The picker can be inside a form. Enter here must not submit it.
-                                        event.preventDefault();
-                                        if (!query || saving || disabled || value.length >= 50) return;
-                                        const match = available.find(tag => tag.name.toLowerCase() === query)
-                                            ?? (available.length === 1 ? available[0] : undefined);
-                                        if (match && !value.includes(match.id)) toggle(match.id);
-                                    }} />
-                                <div className="custom-scrollbar mt-2 min-h-10 max-h-60 space-y-1 overflow-y-auto">
+                                <div ref={listRef} className="custom-scrollbar min-h-10 overflow-y-auto">
                                     {available.map(tag => (
-                                        <Button key={tag.id} variant="ghost" type="button" aria-pressed={value.includes(tag.id)} disabled={saving || (!includeArchived && tag.is_archived && !value.includes(tag.id)) || (!value.includes(tag.id) && value.length >= 50)}
-                                            className={cn('min-h-10 w-full justify-between gap-3 rounded-sm px-3 py-2 text-left text-sm font-normal', value.includes(tag.id) ? 'bg-bg-hover text-text-primary' : 'text-text-secondary hover:bg-bg-subtle hover:text-text-primary')}
+                                        <SelectOptionButton key={tag.id} data-tag-id={tag.id} data-tag-name={tag.name.toLowerCase()} tabIndex={activeTag === tag.id ? 0 : -1}
+                                            onFocus={() => setActiveTag(tag.id)} selected={value.includes(tag.id)} aria-pressed={value.includes(tag.id)} disabled={disabled || (!includeArchived && tag.is_archived && !value.includes(tag.id)) || (!value.includes(tag.id) && value.length >= 50)}
                                             onClick={() => toggle(tag.id)}>
-                                            <span className="min-w-0 whitespace-normal break-words">{tag.name}{tag.is_archived ? ' (archived)' : ''}</span>
-                                            {value.includes(tag.id) && <CheckDoodleIcon size={14} className="shrink-0 text-accent-rose" />}
-                                        </Button>
+                                            <span className="truncate">{tag.name}{tag.is_archived ? ' (archived)' : ''}</span>
+                                        </SelectOptionButton>
                                     ))}
-                                    {!available.length && <p className="py-2 text-sm text-text-muted">No matching tags.</p>}
+                                    {!available.length && <p className="px-3 py-2 text-sm text-text-muted">No tags available.</p>}
                                 </div>
-                                {allowCreate && search.trim() && !library.some(tag => tag.name.toLowerCase() === search.trim().toLowerCase()) && (
-                                    <Button type="button" variant="secondary" className="mt-2 w-full shrink-0 whitespace-normal break-words" isLoading={saving} disabled={saving || value.length >= 50} onClick={() => void create()}>Create “{search.trim()}”</Button>
-                                )}
-                                <div className="mt-2 flex shrink-0 justify-between">
-                                    <Button type="button" variant="ghost" onClick={() => onChange([])}>Clear tags</Button>
-                                    <Button type="button" variant="ghost" onClick={() => { setOpen(false); trigger.current?.focus(); }}>Done</Button>
-                                </div>
-                            </div>
+                            </SelectMenu>
                         )}
                     </div>
                 )}

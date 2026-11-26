@@ -37,12 +37,11 @@ test('saves, reloads and clears exclusions separately from grouped filters', asy
     await expect(excluded.locator('[data-budget-dimension]')).toHaveCount(0);
     await expect(excluded.getByRole('button', { name: /group/i })).toHaveCount(0);
     await excluded.getByRole('button', { name: 'Choose excluded tags' }).click();
-    await excluded.getByRole('textbox', { name: 'Search tags' }).fill('Travel');
+    await page.keyboard.press('t');
     await page.keyboard.press('Enter');
     expect(saved).toBeUndefined();
-    await excluded.getByRole('textbox', { name: 'Search tags' }).fill('');
     await excluded.getByRole('button', { name: work.name, exact: true }).click();
-    await excluded.getByRole('button', { name: 'Done', exact: true }).click();
+    await page.keyboard.press('Escape');
     const rule = 'Tags (Travel) AND NOT Tags (Travel or Work)';
     await expect(dialog.getByRole('status', { name: 'Budget matching rule' })).toHaveText(rule);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
@@ -56,8 +55,9 @@ test('saves, reloads and clears exclusions separately from grouped filters', asy
     await expect(dialog.getByRole('status', { name: 'Budget matching rule' })).toHaveText(rule);
     await excluded.getByRole('button', { name: 'Choose excluded tags' }).click();
     await expect(excluded.getByRole('button', { name: travel.name, exact: true })).toHaveAttribute('aria-pressed', 'true');
-    await excluded.getByRole('button', { name: 'Clear tags', exact: true }).click();
-    await excluded.getByRole('button', { name: 'Done', exact: true }).click();
+    await excluded.getByRole('button', { name: travel.name, exact: true }).click();
+    await excluded.getByRole('button', { name: work.name, exact: true }).click();
+    await page.keyboard.press('Escape');
     await dialog.getByRole('button', { name: 'Save changes', exact: true }).click();
     await expect.poll(() => saved?.excluded_tag_ids).toEqual([]);
     await page.getByRole('button', { name: 'View Everyday food', exact: true }).click();

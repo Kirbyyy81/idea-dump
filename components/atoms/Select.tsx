@@ -2,9 +2,10 @@
 
 import { KeyboardEvent, ReactNode, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Check } from 'lucide-react';
 import { FieldShell } from '@/components/atoms/FieldShell';
 import { SelectTrigger } from '@/components/atoms/SelectTrigger';
+import { SelectOptionButton } from '@/components/atoms/SelectOptionButton';
+import { SelectMenu } from '@/components/atoms/SelectMenu';
 import { cn } from '@/lib/utils';
 
 export interface SelectOption {
@@ -228,7 +229,7 @@ export function Select({
             </SelectTrigger>
 
             {isOpen && createPortal(
-                <div
+                <SelectMenu
                     ref={menuRef}
                     id={listboxId}
                     role="listbox"
@@ -239,39 +240,30 @@ export function Select({
                         top: menuPosition.top,
                         width: menuPosition.width,
                     }}
-                    className={cn(
-                        'custom-scrollbar fixed z-50 max-h-64 overflow-y-auto rounded-md border border-border-default bg-bg-elevated py-1 text-sm shadow-subtle',
-                        menuClassName
-                    )}
+                    className={menuClassName}
                 >
                     {options.map((option, index) => {
                         const isSelected = option.value === value;
 
                         return (
-                            <button
+                            <SelectOptionButton
                                 key={`${option.value}-${index}`}
                                 ref={(node) => {
                                     optionRefs.current[index] = node;
                                 }}
-                                type="button"
                                 role="option"
                                 tabIndex={-1}
+                                selected={isSelected}
                                 aria-selected={isSelected}
                                 disabled={option.disabled}
                                 onClick={() => chooseOption(option)}
                                 onKeyDown={(event) => handleOptionKeyDown(event, option, index)}
-                                className={cn(
-                                    'flex min-h-10 w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors',
-                                    isSelected ? 'bg-bg-hover text-text-primary' : 'text-text-secondary hover:bg-bg-subtle hover:text-text-primary',
-                                    option.disabled && 'cursor-not-allowed opacity-50 hover:bg-transparent hover:text-text-secondary'
-                                )}
                             >
                                 <span className="truncate">{option.label}</span>
-                                {isSelected && <Check size={14} className="shrink-0 text-accent-rose" />}
-                            </button>
+                            </SelectOptionButton>
                         );
                     })}
-                </div>,
+                </SelectMenu>,
                 document.body
             )}
         </div>

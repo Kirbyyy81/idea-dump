@@ -1,8 +1,5 @@
 'use client';
 
-import { CategoryMemoriesPanel } from './CategoryMemoriesPanel';
-
-import { NotificationPatternsPanel } from './NotificationPatternsPanel';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
@@ -21,14 +18,15 @@ import {
 import { persistVirtualDefaultCategory } from '@/lib/finance/catalogClient';
 import { financeApiRequest } from '@/lib/finance/core/client';
 import { FinanceReferenceDataState, useFinanceReferenceData } from '@/app/finance/_components/FinanceReferenceData';
-import { LearningSummaryPanel } from '@/app/finance/settings/_components/LearningSummaryPanel';
-import {
-    FinanceSettingsFormCard,
-    FinanceSettingsPanelLayout,
-} from '@/app/finance/settings/_components/FinanceSettingsPanelLayout';
+import { CategoryMemoriesPanel } from './CategoryMemoriesPanel';
+import { FinanceSettingsPanelLayout } from './FinanceSettingsPanelLayout';
+import { LearningSummaryPanel } from './LearningSummaryPanel';
+import { NotificationPatternsPanel } from './NotificationPatternsPanel';
+import { RulesSettingsSection } from './RulesSettingsSection';
 
 type MatchType = FinanceRule['match_type'];
 type RuleWithRelations = FinanceRuleView;
+type RulesSection = 'new-rule' | 'notification-patterns' | 'learned-categories' | 'learning';
 
 const initialForm = {
     name: '',
@@ -60,6 +58,7 @@ export function RulesSettingsPanel() {
     const [learning, setLearning] = useState<FinanceLearningSummary>({ availability: 'never_run' });
     const [shadowRules, setShadowRules] = useState<FinanceShadowRulesSummary>({ availability: 'unavailable' });
     const [form, setForm] = useState(initialForm);
+    const [openSection, setOpenSection] = useState<RulesSection | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -110,6 +109,10 @@ export function RulesSettingsPanel() {
         }
     };
 
+    function toggleSection(section: RulesSection) {
+        setOpenSection(current => current === section ? null : section);
+    }
+
     return (
         <FinanceSettingsPanelLayout>
             {referenceStatus !== 'ready' ? (
@@ -120,26 +123,32 @@ export function RulesSettingsPanel() {
                 />
             ) : null}
 
-            <LearningSummaryPanel isLoading={isLoading} summary={learning} shadowRules={shadowRules} onRefresh={() => void loadData()} />
-
-            <NotificationPatternsPanel />
-            <CategoryMemoriesPanel />
-
-            <form onSubmit={addRule}>
-                <FinanceSettingsFormCard
-                    title="New rule"
-                    action={<Button type="submit" className="w-full" isLoading={isSaving} disabled={referenceStatus !== 'ready'}>Add rule</Button>}
-                >
-                    <label className="block space-y-2"><span className="text-sm text-text-secondary">Rule name</span><Input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Jaya Grocer" /></label>
-                    <label className="block space-y-2"><span className="text-sm text-text-secondary">Match type</span><Select ariaLabel="Rule match type" value={form.match_type} onChange={(match_type) => setForm({ ...form, match_type: match_type as MatchType })} options={matchTypeOptions} /></label>
-                    <label className="block space-y-2"><span className="text-sm text-text-secondary">Text to match</span><Input required value={form.pattern} onChange={(event) => setForm({ ...form, pattern: event.target.value })} placeholder="JAYA GROCER" /></label>
-                    <label className="block space-y-2"><span className="text-sm text-text-secondary">Set source</span><Select disabled={referenceStatus !== 'ready'} ariaLabel="Rule source" value={form.source_id} onChange={(source_id) => setForm({ ...form, source_id })} options={[{ value: '', label: 'Do not change' }, ...sources.map((source) => ({ value: source.id, label: source.name }))]} /></label>
-                    <label className="block space-y-2"><span className="text-sm text-text-secondary">Set category</span><Select disabled={referenceStatus !== 'ready'} ariaLabel="Rule category" value={form.category_id} onChange={(category_id) => setForm({ ...form, category_id })} options={[{ value: '', label: 'Do not change' }, ...getFinanceReferenceCategoryOptions(categories)]} /></label>
-                    <label className="block space-y-2"><span className="text-sm text-text-secondary">Set direction</span><Select ariaLabel="Rule direction" value={form.direction} onChange={(direction) => setForm({ ...form, direction: direction as FinanceTransactionDirection | '' })} options={[{ value: '', label: 'Do not change' }, { value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }]} /></label>
-                    <label className="block space-y-2"><span className="text-sm text-text-secondary">Priority</span><Input type="number" step="1" value={form.priority} onChange={(event) => setForm({ ...form, priority: event.target.value })} /></label>
-                </FinanceSettingsFormCard>
-            </form>
-
+            <div className="space-y-3">
+                <RulesSettingsSection title="New rule" expanded={openSection === 'new-rule'} onToggle={() => toggleSection('new-rule')}>
+                    <form onSubmit={addRule} className="space-y-4 p-4 sm:p-5">
+                        <Input label="Rule name" required value={form.name} onChange={event => setForm({ ...form, name: event.target.value })} placeholder="Jaya Grocer" />
+                        <Select label="Match type" value={form.match_type} onChange={match_type => setForm({ ...form, match_type: match_type as MatchType })} options={matchTypeOptions} />
+                        <Input label="Text to match" required value={form.pattern} onChange={event => setForm({ ...form, pattern: event.target.value })} placeholder="JAYA GROCER" />
+                        <Select label="Set source" disabled={referenceStatus !== 'ready'} value={form.source_id} onChange={source_id => setForm({ ...form, source_id })}
+                            options={[{ value: '', label: 'Do not change' }, ...sources.map(source => ({ value: source.id, label: source.name }))]} />
+                        <Select label="Set category" disabled={referenceStatus !== 'ready'} value={form.category_id} onChange={category_id => setForm({ ...form, category_id })}
+                            options={[{ value: '', label: 'Do not change' }, ...getFinanceReferenceCategoryOptions(categories)]} />
+                        <Select label="Set direction" value={form.direction} onChange={direction => setForm({ ...form, direction: direction as FinanceTransactionDirection | '' })}
+                            options={[{ value: '', label: 'Do not change' }, { value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }]} />
+                        <Input label="Priority" type="number" step="1" value={form.priority} onChange={event => setForm({ ...form, priority: event.target.value })} />
+                        <Button type="submit" className="w-full" isLoading={isSaving} disabled={referenceStatus !== 'ready'}>Add rule</Button>
+                    </form>
+                </RulesSettingsSection>
+                <RulesSettingsSection title="Notification patterns" expanded={openSection === 'notification-patterns'} onToggle={() => toggleSection('notification-patterns')}>
+                    <NotificationPatternsPanel />
+                </RulesSettingsSection>
+                <RulesSettingsSection title="Learned categories" expanded={openSection === 'learned-categories'} onToggle={() => toggleSection('learned-categories')}>
+                    <CategoryMemoriesPanel />
+                </RulesSettingsSection>
+                <RulesSettingsSection title="Learning" expanded={openSection === 'learning'} onToggle={() => toggleSection('learning')}>
+                    <LearningSummaryPanel isLoading={isLoading} summary={learning} shadowRules={shadowRules} onRefresh={() => void loadData()} />
+                </RulesSettingsSection>
+            </div>
         </FinanceSettingsPanelLayout>
     );
 }

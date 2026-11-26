@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { DeleteDoodleIcon, EditDoodleIcon, MoreDoodleIcon } from '@/components/atoms/DoodleIcons';
+import { DeleteDoodleIcon, EditDoodleIcon, MoreDoodleIcon, SplitDoodleIcon } from '@/components/atoms/DoodleIcons';
 import type { FinanceTransactionView } from '@/lib/types';
 import { financeSplitHref } from '@/lib/finance/transactions/splitValues';
 import { formatCurrency } from '@/lib/utils';
@@ -25,7 +25,7 @@ export function TransactionLedgerRow({
     const router = useRouter();
     const splitPaymentId = transaction.split_payment_id;
     const splitHref = financeSplitHref(splitPaymentId ?? transaction.id);
-    const editHref = splitPaymentId ? splitHref : `/finance/transactions/edit?id=${encodeURIComponent(transaction.id)}`;
+    const editHref = `/finance/transactions/edit?id=${encodeURIComponent(splitPaymentId ?? transaction.id)}`;
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
     const popoverId = useId();
     const containerRef = useRef<HTMLSpanElement>(null);
@@ -76,13 +76,6 @@ export function TransactionLedgerRow({
                 merchant={transaction.merchant}
                 sourceName={transaction.finance_source?.name}
                 categoryName={transaction.category?.name ?? null}
-                status={splitPaymentId && <>
-                    <Link href={`${splitHref}#original-payment`} aria-label="Split: view original payment"
-                        className="inline-flex min-h-10 items-center font-semibold text-accent-blue hover:underline">
-                        Split
-                    </Link>
-                    {transaction.notes && <span className="block whitespace-pre-wrap break-words text-text-secondary">{transaction.notes}</span>}
-                </>}
                 transferLabel={transaction.transfer_id ? transaction.transfer
                     ? `Internal transfer · ${transaction.transfer.outgoing_source.name} → ${transaction.transfer.incoming_source.name}` : 'Internal transfer' : null}
                 direction={transaction.direction}
@@ -113,12 +106,13 @@ export function TransactionLedgerRow({
                                     onClick={() => closeMenu(false)}
                                 >
                                     <EditDoodleIcon size={16} />
-                                    {splitPaymentId ? 'Edit split' : 'Edit'}
+                                    Edit
                                 </Link>
                                 {!splitPaymentId && !transaction.transfer_id && (
                                     <Link href={splitHref}
                                         className="flex min-h-10 w-full items-center gap-2 whitespace-nowrap rounded-sm px-3 py-2 text-left text-sm font-semibold text-text-secondary hover:bg-bg-hover focus-visible:bg-bg-hover focus-visible:text-text-primary focus-visible:outline-none"
                                         onClick={() => closeMenu(false)}>
+                                        <SplitDoodleIcon size={16} />
                                         Split transaction
                                     </Link>
                                 )}

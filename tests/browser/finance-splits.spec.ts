@@ -14,7 +14,7 @@ const payment: FinanceTransactionSplit['payment'] = {
 
 test.beforeEach(async ({ page }) => {
     await page.route('**/api/finance/reference-data', route => route.fulfill({ json: {
-        data: { sources: [], categories: [food, shopping], tags: [tripTag] },
+        data: { sources: [{ id: tagTransactions[0].source_id, name: 'Test Bank' }], categories: [food, shopping], tags: [tripTag] },
     } }));
 });
 
@@ -83,9 +83,13 @@ test('opens shared split actions from any part, reloads a stale edit and confirm
         ...tagTransactions[0], id: part.id, amount: Number(part.amount), split_payment_id: paymentId,
         direction: 'income', category: part.category, notes: part.notes, tags: part.tags,
     }));
-    await page.addInitScript(({ initial, entries }) => {
-        Object.assign(window, { splitInitial: initial, transactionInitial: entries });
-    }, { initial, entries });
+    const original = { ...tagTransactions[0], amount: 34.32, direction: payment.direction, is_split: true,
+        reference_number: payment.reference_number, notes: payment.notes, category: food,
+        user_id: 'test-user', source: 'manual', status: 'confirmed', intake_item_id: null, manual_idempotency_key: null,
+        updated_at: tagTransactions[0].created_at };
+    await page.addInitScript(({ initial, entries, original }) => {
+        Object.assign(window, { splitInitial: initial, transactionInitial: [...entries, { ...entries[0], id: 'regular', split_payment_id: undefined }], transactionEditInitial: original });
+    }, { initial, entries, original });
     let removed: unknown;
     await page.route('**/api/finance/transactions/split**', async route => {
         if (route.request().method() === 'PUT') return route.fulfill({ status: 409, json: { error: 'The payment changed. Reload it before saving again.' } });
@@ -95,11 +99,20 @@ test('opens shared split actions from any part, reloads a stale edit and confirm
     });
 
     await page.goto('/finance/transactions');
-    await expect(page.getByRole('link', { name: 'Split: view original payment' })).toHaveCount(3);
-    await expect(page.getByRole('link', { name: 'Split: view original payment' }).first()).toHaveAttribute('href', `${editUrl}#original-payment`);
+    await expect(page.getByRole('link', { name: 'Split: view original payment' })).toHaveCount(0);
+    await expect(page.getByText('Meal', { exact: true })).toHaveCount(0);
+    const rows = page.locator('[data-finance-transaction-row="default"]');
+    expect((await rows.first().boundingBox())?.height).toBe((await rows.last().boundingBox())?.height);
     await page.getByRole('button', { name: 'Actions for Trip cafe' }).first().click();
     await expect(page.getByRole('button', { name: 'Delete', exact: true })).toHaveCount(0);
-    await page.getByRole('link', { name: 'Edit split', exact: true }).click();
+    const edit = page.getByRole('link', { name: 'Edit', exact: true });
+    await expect(edit).toHaveAttribute('href', `/finance/transactions/edit?id=${paymentId}`);
+    await edit.click();
+    await expect(page.getByRole('heading', { name: 'Edit transaction', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Original payment', exact: true })).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Transaction reference' })).toHaveValue('BANK-3432');
+    await expect(page.getByRole('heading', { name: 'Split payments', exact: true })).toBeVisible();
+    await page.getByRole('link', { name: 'Manage split' }).click();
     await page.getByRole('button', { name: 'Remove part 3' }).click();
     await expect(page.getByRole('button', { name: 'Save split' })).toBeDisabled();
     await page.getByRole('group', { name: 'Part 2', exact: true }).getByRole('textbox', { name: /Amount/ }).fill('14.32');
@@ -112,3 +125,38 @@ test('opens shared split actions from any part, reloads a stale edit and confirm
     await expect(page).toHaveURL('/finance/transactions');
     expect(removed).toEqual({ id: paymentId, version: '2'.repeat(32) });
 });
+
+for (const direction of ['income', 'expense'] satisfies FinanceTransactionDirection[]) {
+    test(`edits the original ${direction} and its split payments together`, async ({ page }, info) => {
+        const initial = { version: '1'.repeat(32), payment: { ...payment, direction }, parts: [
+            { id: 'part-1', amount: '20', category: food, notes: 'Meal', tags: [] },
+            { id: 'part-2', amount: '14.32', category: shopping, notes: null, tags: [] },
+        ] };
+        const original = { ...tagTransactions[0], amount: 34.32, direction, is_split: true,
+            reference_number: payment.reference_number, notes: payment.notes, tags: [], category: food,
+            user_id: 'test-user', source: 'manual', status: 'confirmed', intake_item_id: null, manual_idempotency_key: null,
+            updated_at: tagTransactions[0].created_at };
+        await page.addInitScript(({ initial, original }) => Object.assign(window, { splitInitial: initial, transactionEditInitial: original }), { initial, original });
+        let saved: Record<string, unknown> | undefined;
+        await page.route('**/api/finance/transactions', async route => {
+            saved = route.request().postDataJSON();
+            await route.fulfill({ json: { data: original } });
+        });
+        await page.goto(`/finance/transactions/edit?id=${paymentId}`);
+        await expect(page.getByRole('spinbutton', { name: 'Amount' })).toHaveValue('34.32');
+        await page.getByRole('textbox', { name: 'Merchant (optional)' }).fill('Updated payment');
+        await page.getByRole('textbox', { name: 'Transaction reference' }).fill('EDIT-40');
+        await page.getByRole('spinbutton', { name: 'Amount' }).fill('40');
+        await expect(page.getByRole('button', { name: 'Save changes' })).toBeDisabled();
+        await page.getByRole('group', { name: 'Part 1', exact: true }).getByRole('textbox', { name: /Amount/ }).fill('25.68');
+        await page.getByRole('group', { name: 'Part 2', exact: true }).getByRole('textbox', { name: 'Payment notes' }).fill('Updated allocation note');
+        await page.screenshot({ path: info.outputPath('split-transaction-editor.png'), fullPage: true });
+        await page.getByRole('button', { name: 'Save changes' }).click();
+        await expect(page).toHaveURL('/finance/transactions');
+        expect(saved).toMatchObject({ id: paymentId, amount: 40, direction, merchant: 'Updated payment', reference_number: 'EDIT-40',
+            split_version: initial.version, split_parts: [
+                { amount: '25.68', category_id: food.id, notes: 'Meal', tag_ids: [] },
+                { amount: '14.32', category_id: shopping.id, notes: 'Updated allocation note', tag_ids: [] },
+            ] });
+    });
+}

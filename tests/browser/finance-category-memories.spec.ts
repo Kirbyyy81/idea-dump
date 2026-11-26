@@ -8,6 +8,7 @@ test('resolves conflicting categories, pauses learning and forgets with confirma
     await page.route('**/api/finance/reference-data', route => route.fulfill({ json: { data: {
         sources: [], categories: [{ id: category, name: 'Food' }],
     } } }));
+    await page.route('**/api/finance/rules', route => route.fulfill({ json: { data: [], learning: { availability: 'never_run' } } }));
     let rows = [{ id, party_kind: 'payee', party_name: 'Alex', direction: 'expense', is_active: true,
         override_category_id: null as string | null, category_id: null as string | null, revision: 1, evidence_count: 2, has_conflict: true }];
     const mutations: Record<string, unknown>[] = [];
@@ -22,7 +23,8 @@ test('resolves conflicting categories, pauses learning and forgets with confirma
         }
         await route.fulfill({ json: { data: rows } });
     });
-    await page.goto('/finance/settings/category-memories');
+    await page.goto('/finance/settings?section=rules');
+    await page.getByRole('button', { name: 'Learned categories', exact: true }).click();
     await expect(page.getByText('Different categories were chosen.', { exact: false })).toBeVisible();
     await page.getByRole('combobox', { name: 'Category for Alex' }).click();
     await page.getByRole('option', { name: 'Always use Food' }).click();
@@ -39,9 +41,14 @@ test('resolves conflicting categories, pauses learning and forgets with confirma
     expect(mutations.at(-1)).toMatchObject({ id, category_id: category, is_active: false });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
     await page.screenshot({ path: info.outputPath('learned-categories.png'), fullPage: true });
-    await page.getByRole('button', { name: 'Forget', exact: true }).click();
+    const forget = page.getByRole('button', { name: 'Forget', exact: true });
+    await forget.click();
     await expect(page.getByRole('alertdialog')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(forget).toBeFocused();
+    await forget.click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'Forget', exact: true }).click();
     await expect(page.getByRole('alertdialog')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Refresh categories', exact: true })).toBeFocused();
     await expect(page.getByText('Category corrections in Review and Transactions will appear here.')).toBeVisible();
 });

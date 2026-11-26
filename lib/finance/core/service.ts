@@ -1,6 +1,7 @@
+import { parseFinanceSplitParts } from '@/lib/finance/transactions/splits';
 import { listFinanceTags } from '@/lib/finance/tags';
 import type { FinanceTagFilter } from '@/lib/finance/tagValues';
-import type { FinanceNotificationRetryResult } from '@/lib/types';
+import type { FinanceSplitAllocation, FinanceNotificationRetryResult } from '@/lib/types';
 import { confirmFinanceNotification, retryFinanceNotification } from '@/lib/finance/notifications/service';
 import { PostgrestError } from '@supabase/supabase-js';
 import { canonicalFinanceCategoryName } from '@/lib/finance/catalog';
@@ -549,6 +550,13 @@ export async function updateFinanceTransactionForUser(
     if (!existing) fail('Transaction not found', 404);
     const existingTransaction = existing as unknown as FinanceTransaction;
     if (existingTransaction.status !== 'confirmed') fail('Only confirmed ledger transactions can be edited', 409);
+    let split: { version: string; parts: FinanceSplitAllocation[] } | undefined;
+    if (existingTransaction.is_split || body.split_version !== undefined || body.split_parts !== undefined) {
+        if (!existingTransaction.is_split || typeof body.split_version !== 'string' || !/^[0-9a-f]{32}$/.test(body.split_version)) {
+            fail('The payment changed. Reload it before saving again.', 409);
+        }
+        split = { version: body.split_version, parts: parseFinanceSplitParts(body.split_parts) };
+    }
     // Omitted foreign fields must stay omitted through the locked write.
     const editable: Record<string, unknown> = { ...existingTransaction };
     delete editable.foreign_amount;
@@ -570,7 +578,7 @@ export async function updateFinanceTransactionForUser(
         p_notes: input.notes,
         p_currency: input.currency,
         p_reference_number: input.reference_number,
-    });
+    }, split);
     if (error) {
         transactionRpcError(error);
         throw error;

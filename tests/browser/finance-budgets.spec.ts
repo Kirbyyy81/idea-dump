@@ -217,7 +217,7 @@ test('create, edit, archive, frozen history and restore', async ({ page }, testI
     await transactionsToggle.click();
     await expect(page.getByText('No matching transactions this cycle.')).not.toBeVisible();
     expect(bodies[0]).toMatchObject({ request_id: expect.any(String), configuration: { amount: '100.00', cycle_type: 'weekly', source_ids: [sourceId], include_uncategorised: true, filter_logic: 'or' } });
-    await expect(page.getByRole('table', { name: 'Budget configuration' }).getByRole('rowheader')).toHaveText(['Schedule', 'Filters']);
+    await expect(page.getByRole('table', { name: 'Budget configuration' }).getByRole('rowheader')).toHaveText(['Budget total', 'Schedule', 'Filters']);
     const details = page.getByRole('region', { name: 'Everyday spending details' });
     await expect(details.getByText('14 to 20 Sept 2026')).toBeVisible();
     await expect(details.getByText('Budget RM 100.00')).toHaveCount(0);
@@ -394,7 +394,7 @@ test('creates a tag-only one-time budget without date controls', async ({ page }
     await page.getByRole('option', { name: 'One-time (no dates)', exact: true }).click();
     await dialog.getByRole('button', { name: 'Choose tags', exact: true }).click();
     await page.getByRole('button', { name: 'Holiday', exact: true }).click();
-    await page.getByRole('button', { name: 'Done', exact: true }).click();
+    await page.keyboard.press('Escape');
     await expect(dialog.getByLabel('Selected tags')).toContainText('Holiday');
     await dialog.getByRole('button', { name: 'Customize', exact: true }).click();
     await expect(dialog.getByText('Start date', { exact: true })).toHaveCount(0);
@@ -433,9 +433,8 @@ test('selects and saves a travel tag in a short budget edit dialog', async ({ pa
     const dialog = page.getByRole('dialog', { name: 'Edit budget' });
     const picker = dialog.getByRole('button', { name: 'Choose tags', exact: true });
     await picker.click();
-    const search = dialog.getByRole('textbox', { name: 'Search tags' });
-    await expect(search).toBeFocused();
-    await search.press('Escape');
+    await expect(dialog.getByRole('textbox', { name: 'Search tags' })).toHaveCount(0);
+    await page.keyboard.press('Escape');
     await expect(picker).toBeFocused();
     await picker.click();
     const tag = dialog.getByRole('button', { name: travelTag.name, exact: true });
@@ -449,7 +448,7 @@ test('selects and saves a travel tag in a short budget edit dialog', async ({ pa
     if (isMobile) await page.touchscreen.tap(x, y);
     else await page.mouse.click(x, y);
     await expect(tag).toHaveAttribute('aria-pressed', 'true');
-    await dialog.getByRole('button', { name: 'Done', exact: true }).click();
+    await page.keyboard.press('Escape');
     await expect(dialog.getByLabel('Selected tags')).toContainText(travelTag.name);
     await expect(dialog.getByRole('switch', { name: 'Bank' })).toBeChecked();
     await dialog.getByRole('button', { name: 'Save changes', exact: true }).click();

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { RulesSettingsPanel } from '@/app/finance/settings/_components/RulesSettingsPanel';
 import { AlertProvider } from '@/lib/contexts/AlertContext';
@@ -12,7 +12,8 @@ vi.mock('@/lib/finance/core/client', () => ({ financeApiRequest: vi.fn().mockRes
 describe('Finance settings without the rule library', () => {
     it('omits the library while preserving learning and rule creation', async () => {
         render(<AlertProvider><RulesSettingsPanel /></AlertProvider>);
-        expect(await screen.findByText('No learning run has completed yet.')).toBeTruthy();
+        fireEvent.click(screen.getByRole('button', { name: 'Learning' }));
+        expect(await within(screen.getByRole('region', { name: 'Learning' })).findByText('No learning run has completed yet.')).toBeTruthy();
         expect(screen.queryByRole('region', { name: 'Rule library' })).toBeNull();
         expect(screen.queryByRole('heading', { name: 'Rule library' })).toBeNull();
         expect(screen.queryByText('Retired legacy rule')).toBeNull();
@@ -22,6 +23,7 @@ describe('Finance settings without the rule library', () => {
         expect(screen.queryByRole('button', { name: 'Delete rule learning rule' })).toBeNull();
         expect(screen.queryByText('Stale suggestion')).toBeNull();
         expect(screen.queryByText('Compatibility rules')).toBeNull();
+        fireEvent.click(screen.getByRole('button', { name: 'New rule' }));
         expect(screen.getByRole('button', { name: 'Add rule' })).toBeTruthy();
         expect(screen.getByRole('heading', { name: 'Notification patterns' })).toBeTruthy();
     });

@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { FinanceTransactionRow } from '../../_components/FinanceTransactionRow';
-import { financeSplitHref } from '@/lib/finance/transactions/splitValues';
 import { Archive, ChevronDown, History, Pencil } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
 import { ActionMenu } from '@/components/molecules/ActionMenu';
@@ -35,6 +34,7 @@ export function BudgetDetails({ detail, onEdit, onArchive, onRestore, onHistoryP
         source: sources, category: categories, tag: labels(configuration.tags ?? []),
     }, labels(configuration.excluded_tags ?? []));
     const configurationRows = [
+        ['Budget total', formatBudgetMoney(configuration.amount)],
         ['Schedule', configuration.cycle_type === 'one_time' ? 'One-time, no dates' : `${configuration.cycle_type === 'custom' ? `Every ${configuration.custom_days} days` : configuration.cycle_type === 'monthly' ? `Monthly on day ${configuration.anchor_day}` : 'Every 7 days'} (${configuration.time_zone})`],
     ];
     return <section aria-label={`${budget.name} details`} className="min-w-0 rounded-lg border border-border-default bg-bg-surface p-4 sm:p-5" aria-busy={busy}>
@@ -69,8 +69,7 @@ export function BudgetDetails({ detail, onEdit, onArchive, onRestore, onHistoryP
             <ul className="mt-2 divide-y divide-border-default">{transactions.data.map((item) => <li key={item.id}>
                 <FinanceTransactionRow
                     density="compact"
-                    href={item.split_payment_id ? `${financeSplitHref(item.split_payment_id)}#original-payment` : `/finance/transactions/edit?id=${encodeURIComponent(item.id)}`}
-                    status={item.split_payment_id ? 'Split' : undefined}
+                    href={`/finance/transactions/edit?id=${encodeURIComponent(item.split_payment_id ?? item.id)}`}
                     merchant={item.merchant}
                     sourceName={item.source_name}
                     categoryName={item.category_name}
