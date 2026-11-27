@@ -32,7 +32,7 @@ export default function ProjectsPage() {
             }
         }
 
-        fetchProjects();
+        void fetchProjects();
     }, []);
 
     useEffect(() => {

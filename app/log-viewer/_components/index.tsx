@@ -114,7 +114,7 @@ export function LogViewer() {
       finish = line === end ? next : next + 1;
     }
     input.setSelectionRange(offset, finish);
-    input.scrollTop = Math.max(0, (start - 2) * (parseFloat(getComputedStyle(input).lineHeight) || 18));
+    input.scrollTop = Math.max(0, (start - 2) * (Number.parseFloat(getComputedStyle(input).lineHeight) || 18));
     setLineAnnouncement('Selected raw ' + (start === end ? 'line ' + start : 'lines ' + start + '-' + end) + '.');
   };
 

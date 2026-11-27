@@ -44,7 +44,7 @@ export default function FilmJournalPage() {
                 setIsLoading(false);
             }
         }
-        loadShelf();
+        void loadShelf();
     }, []);
 
     const filteredRolls = useMemo(() => {

@@ -103,7 +103,7 @@ export function DocumentReader({ pageId, initialQuery }: { pageId: string; initi
     }
 
     useEffect(() => {
-        fetchCurrent();
+        void fetchCurrent();
         return () => { controller.current?.abort(); loaded.current = false; };
         // A different page mounts a new reader.
         // eslint-disable-next-line react-hooks/exhaustive-deps

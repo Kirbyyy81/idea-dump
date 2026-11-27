@@ -119,7 +119,7 @@ export function AppShell({
             }
         }
 
-        fetchProjects();
+        void fetchProjects();
 
         return () => {
             cancelled = true;

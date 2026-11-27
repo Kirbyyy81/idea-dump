@@ -50,7 +50,7 @@ export default function SettingsPage() {
             }
         }
 
-        fetchProjects();
+        void fetchProjects();
 
         const supabase = createClient();
 
@@ -70,7 +70,7 @@ export default function SettingsPage() {
             }
         }
 
-        syncProfile();
+        void syncProfile();
 
         const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
             if (session?.user) {

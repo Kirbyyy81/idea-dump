@@ -104,7 +104,7 @@ export function BudgetFilterEditor({ value, saved, onChange, disabled, errors }:
                 <div className="custom-scrollbar mt-3 flex max-h-40 flex-wrap gap-2 overflow-y-auto" role="group" aria-label={label}>
                     {options[dimension].filter(item => item.name.toLowerCase().includes(queries[dimension].trim().toLowerCase())).map(item => <Toggle
                         key={item.id} checked={selected.includes(item.id)} disabled={disabled} toggleLabel={item.name}
-                        onChange={() => update({ [field]: selected.includes(item.id) ? selected.filter(id => id !== item.id) : [...selected, item.id].sort() })} />)}
+                        onChange={() => update({ [field]: selected.includes(item.id) ? selected.filter(id => id !== item.id) : [...selected, item.id].sort((a, b) => a.localeCompare(b)) })} />)}
                     {dimension === 'category' && 'uncategorised'.includes(queries.category.trim().toLowerCase()) && <Toggle
                         toggleLabel="Uncategorised" checked={value.include_uncategorised} disabled={disabled}
                         onChange={include_uncategorised => update({ include_uncategorised })} />}

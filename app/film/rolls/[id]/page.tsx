@@ -139,7 +139,7 @@ function RollDetailContent() {
     }, [rollId]);
 
     useEffect(() => {
-        loadRoll();
+        void loadRoll();
     }, [loadRoll]);
 
     const photos = useMemo(() => roll?.photos ?? [], [roll?.photos]);

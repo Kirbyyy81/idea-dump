@@ -41,7 +41,7 @@ export default function EditProjectPage() {
                 setIsLoading(false);
             }
         }
-        fetchProject();
+        void fetchProject();
     }, [projectId]);
 
     const handleSubmit = async (data: CreateProjectInput) => {

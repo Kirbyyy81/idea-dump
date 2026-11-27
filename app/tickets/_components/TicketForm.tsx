@@ -84,8 +84,9 @@ export function TicketForm({
             <div className="space-y-4">
                 {!lockedProjectId && (
                     <div>
-                        <label className="block text-sm text-text-secondary mb-1">Project <span className="text-accent-rose">*</span></label>
+                        <label htmlFor="ticket-form-project" className="block text-sm text-text-secondary mb-1">Project <span className="text-accent-rose">*</span></label>
                         <Select
+                            id="ticket-form-project"
                             value={projectId}
                             onChange={setProjectId}
                             ariaLabel={error === 'Project is required' ? 'Project, required, error: Project is required' : 'Project, required'}
@@ -132,8 +133,9 @@ export function TicketForm({
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
-                        <label className="block text-sm text-text-secondary mb-1">Status</label>
+                        <label htmlFor="ticket-form-status" className="block text-sm text-text-secondary mb-1">Status</label>
                         <Select
+                            id="ticket-form-status"
                             value={status}
                             onChange={(nextValue) => setStatus(nextValue as TicketStatus)}
                             ariaLabel="Status"
@@ -145,8 +147,9 @@ export function TicketForm({
                     </div>
 
                     <div>
-                        <label className="block text-sm text-text-secondary mb-1">Source</label>
+                        <label htmlFor="ticket-form-source" className="block text-sm text-text-secondary mb-1">Source</label>
                         <Select
+                            id="ticket-form-source"
                             value={source}
                             onChange={(nextValue) => setSource(nextValue as TicketSource)}
                             ariaLabel="Source"
