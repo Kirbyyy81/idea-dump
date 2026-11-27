@@ -3,6 +3,7 @@ import { combineBudgetFilterValues } from './filterGroups';
 
 const ZERO = BigInt(0);
 const HUNDRED = BigInt(100);
+const BUDGET_DATE_OPTIONS: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' };
 
 export function budgetMinorUnits(value: string): bigint {
     if (!/^-?\d+(?:\.\d{1,2})?$/.test(value)) throw new Error('Invalid budget decimal');
@@ -35,7 +36,7 @@ export function addBudgetDays(value: string, days: number): string {
     return new Date((budgetDayNumber(value) + days) * 86_400_000).toISOString().slice(0, 10);
 }
 
-export function formatBudgetDate(value: string, options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' }): string {
+export function formatBudgetDate(value: string, options = BUDGET_DATE_OPTIONS): string {
     return new Intl.DateTimeFormat('en-GB', { ...options, timeZone: 'UTC' }).format(new Date(budgetDayNumber(value) * 86_400_000));
 }
 

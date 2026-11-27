@@ -14,7 +14,7 @@ export function parseFinanceTagIds(value: unknown): string[] {
     if (!Array.isArray(value) || value.length > MAX_FINANCE_TAGS || value.some(id => typeof id !== 'string' || !uuid.test(id))) {
         throw new Error('Choose up to 50 valid tags');
     }
-    return [...new Set((value as string[]).map(id => id.toLowerCase()))].sort();
+    return [...new Set((value as string[]).map(id => id.toLowerCase()))].sort((a, b) => a.localeCompare(b));
 }
 export function transactionTags(transaction: { tags?: FinanceTag[]; tag_links?: Array<{ tag: FinanceTag | null }> }): FinanceTag[] {
     return (transaction.tags ?? transaction.tag_links?.flatMap(link => link.tag ? [link.tag] : []) ?? [])
