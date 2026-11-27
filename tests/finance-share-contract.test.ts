@@ -262,27 +262,37 @@ describe('Finance share target contracts', () => {
         const accepted = await receiveShare('finance-client', ['one.png', 'two.png']);
         const acceptedClient = createClient('finance-client');
         handlers.get('message')?.({
+            origin: 'https://unrelated.test',
+            data: { type: types.claim, shareId: accepted.shareId },
+            source: acceptedClient.source,
+        });
+        expect(acceptedClient.posted).toHaveLength(0);
+        handlers.get('message')?.({
+            origin: 'https://idea-dump.test',
             data: { type: types.claim, shareId: accepted.shareId },
             source: acceptedClient.source,
         });
         expect(acceptedClient.posted[0].type).toBe(types.payload);
         expect(acceptedClient.posted[0].files).toHaveLength(2);
 
-        handlers.get('message')?.({ data: { type: types.ready }, source: acceptedClient.source });
+        handlers.get('message')?.({ origin: 'https://idea-dump.test', data: { type: types.ready }, source: acceptedClient.source });
         expect(acceptedClient.posted).toHaveLength(1);
         handlers.get('message')?.({
+            origin: 'https://idea-dump.test',
             data: { type: 'finance-share:invalid', shareId: accepted.shareId },
             source: acceptedClient.source,
         });
-        handlers.get('message')?.({ data: { type: types.claim }, source: acceptedClient.source });
+        handlers.get('message')?.({ origin: 'https://idea-dump.test', data: { type: types.claim }, source: acceptedClient.source });
         expect(acceptedClient.posted).toHaveLength(1);
 
         handlers.get('message')?.({
+            origin: 'https://idea-dump.test',
             data: { type: types.acknowledge, shareId: accepted.shareId },
             source: acceptedClient.source,
         });
         await accepted.lifetimePromise;
         handlers.get('message')?.({
+            origin: 'https://idea-dump.test',
             data: { type: types.claim, shareId: accepted.shareId },
             source: acceptedClient.source,
         });
@@ -290,12 +300,13 @@ describe('Finance share target contracts', () => {
 
         const isolated = await receiveShare('target-tab', ['isolated.png']);
         const wrongTab = createClient('other-tab');
-        handlers.get('message')?.({ data: { type: types.ready }, source: wrongTab.source });
+        handlers.get('message')?.({ origin: 'https://idea-dump.test', data: { type: types.ready }, source: wrongTab.source });
         expect(wrongTab.posted).toHaveLength(0);
         const targetTab = createClient('target-tab');
-        handlers.get('message')?.({ data: { type: types.ready }, source: targetTab.source });
+        handlers.get('message')?.({ origin: 'https://idea-dump.test', data: { type: types.ready }, source: targetTab.source });
         expect(targetTab.posted[0]).toMatchObject({ type: types.payload, shareId: isolated.shareId });
         handlers.get('message')?.({
+            origin: 'https://idea-dump.test',
             data: { type: types.acknowledge, shareId: isolated.shareId },
             source: targetTab.source,
         });
@@ -307,6 +318,7 @@ describe('Finance share target contracts', () => {
         await expired.lifetimePromise;
         const expiredTab = createClient('expired-tab');
         handlers.get('message')?.({
+            origin: 'https://idea-dump.test',
             data: { type: types.claim, shareId: expired.shareId },
             source: expiredTab.source,
         });
@@ -315,6 +327,7 @@ describe('Finance share target contracts', () => {
         const invalid = await receiveShare('invalid-tab', []);
         const invalidTab = createClient('invalid-tab');
         handlers.get('message')?.({
+            origin: 'https://idea-dump.test',
             data: { type: types.claim, shareId: invalid.shareId },
             source: invalidTab.source,
         });
