@@ -1,3 +1,4 @@
+import { stripTrailingSlashes } from '@/shared/url';
 import { getOwnedActiveFinanceShareBatch as getOwnedActiveFinanceShareBatchFromRepository } from '@/lib/finance/core/repository';
 import type {
     FinanceShareBatch,
@@ -114,7 +115,7 @@ export function normalizeShareReservation(value: unknown): FinanceShareReservati
 }
 
 export async function wakeFinanceShareQueue() {
-    const baseUrl = process.env.NEXT_PUBLIC_FINANCE_OCR_URL?.trim().replace(/\/+$/, '');
+    const baseUrl = stripTrailingSlashes(process.env.NEXT_PUBLIC_FINANCE_OCR_URL?.trim() ?? '');
     const secret = process.env.FINANCE_QUEUE_WAKE_SECRET?.trim();
     if (!baseUrl || !secret || Buffer.byteLength(secret, 'utf8') < 32) {
         console.error('Finance share queue wake is not configured');

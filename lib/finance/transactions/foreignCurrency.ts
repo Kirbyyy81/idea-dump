@@ -14,7 +14,9 @@ export function normalizeForeignAmount(value: unknown) {
     if (!/^\d{1,12}(?:\.\d{1,4})?$/.test(text)) return null;
     const [whole, fraction = ''] = text.split('.');
     const integer = whole.replace(/^0+(?=\d)/, '');
-    const decimal = fraction.replace(/0+$/, '');
+    let decimalEnd = fraction.length;
+    while (decimalEnd > 0 && fraction[decimalEnd - 1] === '0') decimalEnd -= 1;
+    const decimal = fraction.slice(0, decimalEnd);
     return integer !== '0' || decimal ? integer + (decimal ? '.' + decimal : '') : null;
 }
 
@@ -47,7 +49,7 @@ export function formatFinanceForeignDetails(myrAmount: number | string, details:
     const charged = Number(myrAmount);
     if (!amount || !currency || !Number.isFinite(charged) || charged <= 0) return null;
     const [whole, fraction] = amount.split('.');
-    const displayAmount = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (fraction ? '.' + fraction.padEnd(2, '0') : '.00');
+    const displayAmount = Number(whole).toLocaleString('en-MY') + '.' + (fraction ?? '').padEnd(2, '0');
     const rate = new Intl.NumberFormat('en-MY', { maximumSignificantDigits: 8 }).format(charged / Number(amount));
     return `${currency} ${displayAmount} · 1 ${currency} = MYR ${rate}`;
 }

@@ -7,7 +7,9 @@ function splitOutsideValues(text: string, separator: RegExp): string[] | undefin
   let quoted = false;
   let escaped = false;
   let start = 0;
-  for (let i = 0; i < text.length; i += 1) {
+  let index = 0;
+  while (index < text.length) {
+    const i = index++;
     const char = text[i];
     if (escaped) { escaped = false; continue; }
     if (quoted && char === '\\') { escaped = true; continue; }
@@ -23,7 +25,7 @@ function splitOutsideValues(text: string, separator: RegExp): string[] | undefin
     if (match) {
       parts.push(text.slice(start, i));
       start = i + match[0].length;
-      i = start - 1;
+      index = start;
     }
   }
   if (quoted || stack.length) return undefined;
@@ -41,9 +43,9 @@ function parseRow(rawText: string): LogTableRow {
 export function parseTableDump(text: string): LogTableDump | undefined {
   const empty = text.match(/^Table\s+([A-Za-z_]\w*)\s+is empty\s*$/);
   if (empty) return { name: empty[1], empty: true, rows: [] };
-  const header = text.match(/^={3,}\s*Table:\s*([A-Za-z_]\w*)\s*={3,}[ \t]*([\s\S]*)$/);
+  const header = text.match(/^={3,}\s*Table:\s*([A-Za-z_]\w*)\s*={3,}/);
   if (!header) return undefined;
-  const body = header[2].replace(/\r?\n$/, '');
+  const body = text.slice(header[0].length).replace(/^[ \t]+/, '').replace(/\r?\n$/, '');
   const rowStart = body.match(/^Row:[ \t]*/);
   if (!rowStart) return { name: header[1], empty: false, rows: [{ rawText: body }] };
   const rawRows = splitOutsideValues(body.slice(rowStart[0].length), /(?:={3,}[ \t]*|\r?\n[ \t]*)Row:[ \t]*/y);
