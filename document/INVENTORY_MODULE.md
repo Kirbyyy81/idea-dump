@@ -34,6 +34,10 @@ Apply `20261028063403_inventory_product_deletion.sql` before releasing the UI. I
 - Compare measured products per 100 ml or 100 g, and countable products per individual item. The price checker uses a prospective price for one purchased pack and never changes stock.
 - Dates use calendar dates in Asia/Kuala_Lumpur. Historical dates can be entered from 1900 onward; future dates and backwards usage intervals are rejected.
 
+## Purchase history
+
+Receipts start collapsed and show the date, line count and receipt total. When some prices are unknown, the row shows the known total. Select the receipt to reveal its items. Double-click the receipt summary or choose **Edit purchase** in **Purchase actions** to open the editor. When filtered by product, the expanded receipt shows the matching lines, the summary identifies how many lines match, and editing opens the complete receipt.
+
 ## Finance linking
 
 Open a saved purchase from **Purchases** or product details and choose **Link Finance expense**. Search the owner's existing confirmed MYR expenses by merchant, with paged results. Linking needs both Inventory and Finance module access.
