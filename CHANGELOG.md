@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.21.1](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.21.0...idea-dump-v0.21.1) (2026-11-27)
+
+
+### Bug Fixes
+
+* label controls and handle promises ([2c31186](https://github.com/Kirbyyy81/idea-dump/commit/2c311861f229e639ef7c75f2deb1f5fd123b9c67))
+* make finance ordering explicit ([4233da4](https://github.com/Kirbyyy81/idea-dump/commit/4233da4ec43a3199794a9ed803ba31c96612d661))
+* match tag dropdown styling ([894c5b7](https://github.com/Kirbyyy81/idea-dump/commit/894c5b71667b5873975e0b9eb47d23909cdd1dca))
+* navigate tags by typing ([b75a812](https://github.com/Kirbyyy81/idea-dump/commit/b75a8121f1ec26f27e8ce12435654937e404e0e1))
+* share dropdown design ([01deb86](https://github.com/Kirbyyy81/idea-dump/commit/01deb869cf2befdb3566f7c207381a6b13044feb))
+* show budget total ([b1d3901](https://github.com/Kirbyyy81/idea-dump/commit/b1d3901ba47afa80a5bf42bc508dcb69857f4a31))
+* simplify finance rules navigation ([9c7a1cb](https://github.com/Kirbyyy81/idea-dump/commit/9c7a1cbfe09e497e8f95a95cae26360cafef86c4))
+* simplify parsers and helpers ([927f49f](https://github.com/Kirbyyy81/idea-dump/commit/927f49f04f83fcd73d858a53a43f8b8741aa47c0))
+* simplify purchase history rows ([12da446](https://github.com/Kirbyyy81/idea-dump/commit/12da44647fb3d74abeea765e439b00df5f1fcd6c))
+* simplify tag dropdown ([cd84178](https://github.com/Kirbyyy81/idea-dump/commit/cd84178a55bbb181cd5454e74ce9ed1a918d80f8))
+* validate share message origins ([bcdcb27](https://github.com/Kirbyyy81/idea-dump/commit/bcdcb275ffa38b7bbadb4bd24fab72b6bfad22df))
+* verify build dependencies ([ea87c3e](https://github.com/Kirbyyy81/idea-dump/commit/ea87c3ec7cba7d85e59e10675b1b75708d014f2f))
+
 ## [0.21.0](https://github.com/Kirbyyy81/idea-dump/compare/idea-dump-v0.20.1...idea-dump-v0.21.0) (2026-11-24)
 
 
