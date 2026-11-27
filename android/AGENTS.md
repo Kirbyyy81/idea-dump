@@ -3,6 +3,7 @@
 - Apply the repository guide and this guide to android/.
 - Keep Kotlin domain types in their native owning feature. Web domain types remain in lib/types.ts.
 - Use the checked-in Gradle wrapper, JDK 17 or 21, SDK 36, and pinned dependencies.
+- When changing dependencies, update and review the Gradle SHA-256 verification metadata, including platform-specific AAPT2 artifacts if the Android Gradle plugin changes.
 - Run ./gradlew :app:lintDebug :app:testDebugUnitTest :app:assembleDebug before handing off Android changes (gradlew.bat on Windows).
 - For device validation, build assembleDebugAndroidTest and run the instrumentation runner on the explicitly selected adb serial, following README.md. Prefer the user-selected connected phone. Do not enable notification capture or inspect unrelated phone data as part of synthetic tests.
 - Keep Finance and Lyrics data, network clients, storage, and failures isolated.
