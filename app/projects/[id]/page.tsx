@@ -82,7 +82,7 @@ export default function ProjectPage() {
             }
         }
 
-        fetchData();
+        void fetchData();
     }, [projectId, canAccessTickets, canManageTickets]);
 
     const handleAddNote = async (content: string) => {
@@ -115,7 +115,7 @@ export default function ProjectPage() {
     };
 
     const handleToggleArchive = () => {
-        handleUpdateProject({ archived: !project?.archived });
+        void handleUpdateProject({ archived: !project?.archived });
     };
 
     const handleDelete = async () => {

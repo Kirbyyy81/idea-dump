@@ -92,7 +92,7 @@ export default function SettingsApiDocsPage() {
             }
         }
 
-        initDocs();
+        void initDocs();
 
         return () => {
             cancelled = true;

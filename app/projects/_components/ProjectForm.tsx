@@ -48,24 +48,28 @@ export function ProjectForm({
     };
 
     const extractTitle = (content: string, fileName: string) => {
-        const match = content.match(/^#\s+(.+)$/m);
-        if (match?.[1]) return match[1].trim();
+        const heading = content.split(/[\r\n\u2028\u2029]/).find(line => /^#\s/.test(line));
+        const headingTitle = heading?.slice(1).trim();
+        if (headingTitle) return headingTitle;
         return fileName.replace(/\.md$/i, '');
     };
 
     const loadMarkdownFile = async (file: File) => {
-        const content = await file.text();
-        setPrdContent(content);
+        try {
+            const content = await file.text();
+            setPrdContent(content);
+            clearFieldError('prd_content');
 
-        if (!title.trim()) {
-            setTitle(extractTitle(content, file.name));
+            setTitle(current => current.trim() ? current : extractTitle(content, file.name));
+        } catch {
+            setErrors(current => ({ ...current, prd_content: 'Could not read the Markdown file.' }));
         }
     };
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        loadMarkdownFile(file);
+        void loadMarkdownFile(file);
     };
 
     const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {

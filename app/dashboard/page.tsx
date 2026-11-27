@@ -69,7 +69,7 @@ export default function DashboardPage() {
             }
         }
 
-        loadProjects();
+        void loadProjects();
 
         return () => {
             cancelled = true;

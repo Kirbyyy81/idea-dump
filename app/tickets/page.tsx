@@ -44,7 +44,7 @@ export default function TicketsPage() {
             }
         }
 
-        fetchData();
+        void fetchData();
     }, []);
 
     const filteredTickets = useMemo(
@@ -137,8 +137,9 @@ export default function TicketsPage() {
                 <Card className="p-4">
                     <div className="flex flex-wrap items-end gap-3">
                         <div className="w-full sm:min-w-[180px] sm:flex-1 lg:flex-none">
-                            <label className="mb-1 block text-xs text-text-muted">Project</label>
+                            <label htmlFor="tickets-filter-project" className="mb-1 block text-xs text-text-muted">Project</label>
                             <Select
+                                id="tickets-filter-project"
                                 value={filterProject}
                                 onChange={setFilterProject}
                                 buttonClassName="text-sm"
@@ -149,8 +150,9 @@ export default function TicketsPage() {
                             />
                         </div>
                         <div className="w-full sm:min-w-[160px] sm:flex-1 lg:flex-none">
-                            <label className="mb-1 block text-xs text-text-muted">Status</label>
+                            <label htmlFor="tickets-filter-status" className="mb-1 block text-xs text-text-muted">Status</label>
                             <Select
+                                id="tickets-filter-status"
                                 value={filterStatus}
                                 onChange={setFilterStatus}
                                 buttonClassName="text-sm"
@@ -164,8 +166,9 @@ export default function TicketsPage() {
                             />
                         </div>
                         <div className="w-full sm:min-w-[160px] sm:flex-1 lg:flex-none">
-                            <label className="mb-1 block text-xs text-text-muted">Priority</label>
+                            <label htmlFor="tickets-filter-priority" className="mb-1 block text-xs text-text-muted">Priority</label>
                             <Select
+                                id="tickets-filter-priority"
                                 value={filterPriority}
                                 onChange={setFilterPriority}
                                 buttonClassName="text-sm"
@@ -178,8 +181,9 @@ export default function TicketsPage() {
                             />
                         </div>
                         <div className="w-full sm:min-w-[160px] sm:flex-1 lg:flex-none">
-                            <label className="mb-1 block text-xs text-text-muted">Source</label>
+                            <label htmlFor="tickets-filter-source" className="mb-1 block text-xs text-text-muted">Source</label>
                             <Select
+                                id="tickets-filter-source"
                                 value={filterSource}
                                 onChange={setFilterSource}
                                 buttonClassName="text-sm"
@@ -193,8 +197,9 @@ export default function TicketsPage() {
                             />
                         </div>
                         <div className="w-full min-w-0 flex-1 sm:min-w-[220px]">
-                            <label className="mb-1 block text-xs text-text-muted">Search</label>
+                            <label htmlFor="tickets-filter-search" className="mb-1 block text-xs text-text-muted">Search</label>
                             <Input
+                                id="tickets-filter-search"
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
                                 placeholder="Search title, description, or notes"

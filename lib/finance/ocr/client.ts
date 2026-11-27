@@ -1,5 +1,6 @@
 'use client';
 
+import { stripTrailingSlashes } from '@/shared/url';
 import { createClient } from '@/lib/supabase/client';
 
 const OCR_REQUEST_TIMEOUT_MS = 3 * 60 * 1000;
@@ -115,7 +116,7 @@ function renderOcrUrl(path: string) {
             message: 'Screenshot processing is not configured yet.',
         });
     }
-    return `${configuredUrl.replace(/\/+$/, '')}${path}`;
+    return `${stripTrailingSlashes(configuredUrl)}${path}`;
 }
 
 async function getAccessToken(forceRefresh = false) {

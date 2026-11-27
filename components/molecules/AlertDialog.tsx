@@ -117,12 +117,9 @@ export function AlertDialog() {
     const styles = STYLES[alert.type];
 
     return (
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center"
-            onClick={hideAlert}
-        >
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
             {/* Backdrop */}
-            <div className="absolute inset-0 bg-overlay-backdrop" />
+            <button type="button" tabIndex={-1} aria-label="Dismiss alert" className="absolute inset-0 bg-overlay-backdrop" onClick={hideAlert} />
 
             {/* Dialog */}
             <div
@@ -137,7 +134,6 @@ export function AlertDialog() {
                     "bg-bg-elevated border",
                     styles.border
                 )}
-                onClick={(e) => e.stopPropagation()}
             >
                 {/* Close button */}
                 <button

@@ -12,6 +12,7 @@
     "check:service-worker": "node scripts/build-service-worker.mjs --check && npm run typecheck:service-worker",
     "start": "next start",
     "lint": "next lint",
+    "typecheck": "tsc --noEmit",
     "test": "npm run check:service-worker && vitest run && npm run test:inventory:db && npm run test:finance-categories:db && npm run test:finance-tags:db && npm run test:finance-budget-tags:db && npm run test:finance-transfers:db && npm run test:finance-splits:db",
     "test:log-viewer": "vitest run tests/log-viewer",
     "test:finance-security": "vitest run tests/finance-security.test.ts",

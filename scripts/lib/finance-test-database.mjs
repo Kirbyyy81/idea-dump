@@ -36,7 +36,7 @@ export async function createFinanceTestDatabase(database, { beforeMigration } = 
     const baseline = (await financeSqlFile('supabase/schema.sql')).replace(/^\\.*$/gm, '');
     await db.exec(baseline);
     // Historical ledger entries preceded the adopted schema baseline.
-    const migrations = (await readdir(new URL('supabase/migrations/', root))).filter(name => name.endsWith('.sql') && name > '20260713021718').sort();
+    const migrations = (await readdir(new URL('supabase/migrations/', root))).filter(name => name.endsWith('.sql') && name > '20260713021718').sort((a, b) => a.localeCompare(b));
     try {
         for (const name of migrations) {
             await beforeMigration?.(db, name);

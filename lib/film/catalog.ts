@@ -187,7 +187,7 @@ export function findFilmCatalogEntryLoose(brand: string, name: string): FilmCata
     if (catalogBrand === 't5swf') catalogName = name.replace(/\bkinoeye(?=\d)/i, 'Kinoeye ');
     // Older rolls use the emulsion name instead of the rebrand's box title.
     if (catalogBrand === 'lucid film' || catalogBrand === 'yue films') {
-        catalogName = name.replace(/^\s*(?:kodak\s+)?vision\s*3?\s+(?=500t\b)/i, '');
+        catalogName = name.replace(/^\s*(?:kodak\s+)?vision(?:\s*3)?\s+(?=500t\b)/i, '');
     }
     const exactMatch = findFilmCatalogEntry(catalogBrand, catalogName);
     if (exactMatch) return exactMatch;

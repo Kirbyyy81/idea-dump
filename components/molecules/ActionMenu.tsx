@@ -51,7 +51,7 @@ export function ActionMenu({ label, items, disabled = false, portal = false }: {
                     event.preventDefault(); focusLast.current = event.key === 'ArrowUp'; setOpen(true);
                 }
             }}><MoreHorizontal size={20} aria-hidden="true" /></Button>
-        {open && !disabled && renderMenu(<div ref={menu} id={menuId} role="menu" aria-labelledby={triggerId}
+        {open && !disabled && renderMenu(<div ref={menu} id={menuId} role="menu" tabIndex={-1} aria-labelledby={triggerId}
             style={portal ? position : undefined}
             className={`${portal ? 'fixed z-50' : 'absolute right-0 top-full z-30 mt-1'} w-44 max-w-[calc(100vw-2rem)] rounded-md border border-border-default bg-bg-elevated p-1 shadow-subtle`}
             onKeyDown={(event) => {

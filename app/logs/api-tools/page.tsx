@@ -168,7 +168,7 @@ export default function LogApiToolsPage() {
             }
         }
 
-        fetchKeys();
+        void fetchKeys();
 
         return () => {
             cancelled = true;
@@ -207,8 +207,13 @@ export default function LogApiToolsPage() {
         }
     };
 
-    const copyToClipboard = (text: string) => {
-        navigator.clipboard.writeText(text);
+    const copyToClipboard = async (text: string) => {
+        try {
+            await navigator.clipboard.writeText(text);
+            setKeyError(null);
+        } catch {
+            setKeyError('Could not copy the API key. Select and copy it manually.');
+        }
     };
 
     const copySkillMarkdown = async () => {

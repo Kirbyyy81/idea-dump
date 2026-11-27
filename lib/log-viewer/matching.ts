@@ -1,3 +1,4 @@
+import { stripTrailingSlashes } from '@/shared/url';
 import type { LogContentMatch, LogEvent, Transaction } from '@/lib/types';
 import { contentEndpoints, normalizeLogName } from './dictionary';
 
@@ -16,7 +17,7 @@ export function endpointName(event: LogEvent): string {
 
 export function endpointKeys(events: LogEvent[]): Map<LogEvent, string> {
   const pathsByName = new Map<string, Set<string>>();
-  const fullKey = (event: LogEvent) => `${sourceScope(event)}:${event.host ?? ''}:${(event.path ?? '').replace(/\/+$/, '')}`;
+  const fullKey = (event: LogEvent) => `${sourceScope(event)}:${event.host ?? ''}:${stripTrailingSlashes(event.path ?? '')}`;
   for (const event of events) {
     if (!event.path) continue;
     const name = `${sourceScope(event)}:${endpointName(event)}`;
@@ -78,7 +79,7 @@ export function responseContentRequest(
     // The response endpoint can disambiguate concurrent encrypted requests.
     if (response.endpointName && endpointName(response) !== endpointName(tx.request!)) return false;
     if (response.host && tx.request?.host && response.host !== tx.request.host) return false;
-    if (response.path && tx.request?.path && response.path.replace(/\/+$/, '') !== tx.request.path.replace(/\/+$/, '')) return false;
+    if (response.path && tx.request?.path && stripTrailingSlashes(response.path) !== stripTrailingSlashes(tx.request.path)) return false;
     return !events.slice(start + 1, index).some((event) => event.lineType === 'content_data' &&
       sourceScope(event) === sourceScope(content) && (endpoints.length === 0 ||
         contentEndpoints(event).some((name) => endpoints.includes(name))));

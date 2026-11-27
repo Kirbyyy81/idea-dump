@@ -134,6 +134,7 @@
     return Boolean(source && "id" in source && typeof source.id === "string");
   }
   self.addEventListener("message", (event) => {
+    if (event.origin !== self.location.origin) return;
     const message = parseFinanceShareClientMessage(event.data);
     if (!message || !isClient(event.source)) return;
     if (message.type === FINANCE_SHARE_MESSAGE_TYPES.ready) {

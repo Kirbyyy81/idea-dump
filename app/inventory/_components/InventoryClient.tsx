@@ -148,7 +148,7 @@ export function InventoryClient({ initialData, canLinkFinance, view = 'shelf' }:
                         <div className="flex flex-wrap gap-3">{groupProducts.map((product) => <ShelfCard key={product.id} product={product} data={data} onOpen={() => setDialog({ type: 'detail', id: product.id })} onAddStock={() => setDialog({ type: 'cart', productId: product.id })} onStartUsing={() => action({ action: 'start', productId: product.id })} onEdit={() => setDialog({ type: 'product', id: product.id })} onDelete={() => setDialog({ type: 'delete_product', product })} />)}</div>
                     </section>)}
                 </div>}
-                {products.length > 0 && layout === 'table' && <div role="region" aria-label="Inventory table" tabIndex={0} className="relative overflow-x-auto rounded-lg border border-border-default bg-bg-surface">
+                {products.length > 0 && layout === 'table' && <div role="region" aria-label="Inventory table" tabIndex={0} className="relative overflow-x-auto rounded-lg border border-border-default bg-bg-surface"> {/* NOSONAR - scroll region requires keyboard focus */}
                     <table className="w-full min-w-[46rem] table-fixed text-left text-sm">
                         <colgroup><col className="w-40 sm:w-56" /><col className="w-28 sm:w-36" /><col className="w-28" /><col className="w-40" /><col className="w-32" /><col className="w-16" /></colgroup>
                         <thead className="border-b border-border-default bg-bg-subtle"><tr>{['Product', 'Brand', 'Stock', 'Unit price', 'Stock lasts (approx.)', 'Actions'].map((label) => <th key={label} scope="col" className="px-3 py-3 font-semibold">{label === 'Actions' ? <span className="sr-only">Actions</span> : label}</th>)}</tr></thead>

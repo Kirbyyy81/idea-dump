@@ -79,7 +79,7 @@ export function AuthFlow({ queryError, view }: AuthFlowProps) {
             }
         }
 
-        completeAuth();
+        void completeAuth();
         return () => {
             cancelled = true;
         };

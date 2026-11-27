@@ -1,3 +1,4 @@
+import { stripTrailingSlashes } from '@/shared/url';
 import { LogBodyKind, LogEvent, LogLineType, LogViewerSource } from '@/lib/log-viewer/types';
 import { resolveSources, sourceFromUrl, sourceParsers } from './sources';
 import { parseTableDump } from './tables';
@@ -12,7 +13,7 @@ const HTTP_METHODS = new Set([
   'OPTIONS',
 ]);
 
-const TIMESTAMP_PATTERN = /^[ \t]*(\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}[.,]\d{3})[ \t]+([\s\S]+)$/;
+const TIMESTAMP_PATTERN = /^[ \t]*(\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}[.,]\d{3})(?=[ \t][\s\S])/;
 
 function tryParseTimestampMs(timestamp: string): number | undefined {
   const isoish = timestamp.replace(' ', 'T').replace(',', '.');
@@ -32,9 +33,13 @@ function markerText(text: string): string {
   return (jsonIndex >= 0 ? text.slice(0, jsonIndex) : text).trim();
 }
 
+function withoutTrailingUrl(text: string): string {
+  const start = text.search(/\s(?:URL:\s*)?https?:\/\//i);
+  return (start === -1 ? text : text.slice(0, start)).trim();
+}
+
 function classifyLine(rest: string, hasTimestamp: boolean): LogLineType {
-  const marker = markerText(rest).split(/>{2,}/)[0]
-    .replace(/\s+(?:URL:\s*)?https?:\/\/[\s\S]*$/i, '').trim().toUpperCase();
+  const marker = withoutTrailingUrl(markerText(rest).split(/>{2,}/)[0]).toUpperCase();
 
   if (/^CONTENT\s+DATA\b/.test(marker)) return 'content_data';
   if (/^JSON\s+DATA\s+STRING\b/.test(marker)) return 'content_data';
@@ -132,15 +137,18 @@ function parseBody(bodyText: string | undefined): {
 }
 
 function trimUrlCandidate(url: string): string {
-  return url.replace(/[),.;]+$/, '').replace(/[}\]]+$/, '');
+  let end = url.length;
+  while (end > 0 && '),.;'.includes(url[end - 1])) end -= 1;
+  while (end > 0 && '}]'.includes(url[end - 1])) end -= 1;
+  return url.slice(0, end);
 }
 
 function extractUrl(text: string): string | undefined {
   const withoutJson = text.slice(0, firstJsonIndex(text) >= 0 ? firstJsonIndex(text) : text.length);
-  const urlLabelMatch = withoutJson.match(/URL:\s*(https?:\/\/[^\s<>"')]+(?:\([^)]+\))?)/i);
+  const urlLabelMatch = withoutJson.match(/URL:\s*(https?:\/\/[^\s<>"')]+)/i);
   if (urlLabelMatch?.[1]) return trimUrlCandidate(urlLabelMatch[1]);
 
-  const match = withoutJson.match(/https?:\/\/[^\s<>"')]+(?:\([^)]+\))?/i);
+  const match = withoutJson.match(/https?:\/\/[^\s<>"')]+/i);
   return match?.[0] ? trimUrlCandidate(match[0]) : undefined;
 }
 
@@ -156,7 +164,7 @@ function getUrlParts(url: string | undefined): { host?: string; path?: string; e
       endpointKey: path,
     };
   } catch {
-    const withoutQuery = url.split(/[?#]/)[0]?.replace(/\/+$/, '') || url;
+    const withoutQuery = stripTrailingSlashes(url.split(/[?#]/)[0]) || url;
     const segments = withoutQuery.split('/').filter(Boolean);
     const path = segments.length > 0 ? `/${segments.join('/')}` : withoutQuery;
     return { path, endpointKey: path };
@@ -164,8 +172,16 @@ function getUrlParts(url: string | undefined): { host?: string; path?: string; e
 }
 
 function extractCrashContext(rest: string): string | undefined {
-  const match = rest.match(/CRASH\s*>+\s*(?:>*\s*)?([^>]+?)\s*>+/i);
-  return match?.[1]?.trim();
+  const marker = /CRASH\s*>+/i.exec(rest);
+  if (!marker) return undefined;
+  const context = rest.slice(marker.index + marker[0].length);
+  const first = context.indexOf('>');
+  if (first === -1) return undefined;
+  const name = context.slice(0, first).trim();
+  if (name) return name;
+  const tail = context.slice(first).replace(/^>+/, '');
+  const end = tail.indexOf('>');
+  return end >= 0 ? tail.slice(0, end).trim() : first > 0 ? '' : undefined;
 }
 
 function extractInfoEventType(rest: string): string {
@@ -174,7 +190,7 @@ function extractInfoEventType(rest: string): string {
   if (/^NEW\s+REFRESH\s+TOKEN\s+GENERATED/i.test(rest)) return 'Refresh Token Generated';
   if (/^APP\s+VERSION\s+CODE:/i.test(rest)) return 'App Version';
   if (/^EKYC_CAPTURE\b/i.test(rest)) return 'EKYC Capture';
-  return markerText(rest).split(/>{2,}|\s+-\s+/)[0]?.trim() || 'Info';
+  return markerText(rest).split(/>{2,}|\s-\s/)[0]?.trim() || 'Info';
 }
 
 function extractMethod(rest: string, parts: string[], eventType: string): string | undefined {
@@ -243,18 +259,19 @@ export function parseLogLine(
   const tsMatch = line.match(TIMESTAMP_PATTERN);
 
   const timestamp = tsMatch?.[1] ?? '';
-  const rest = tsMatch?.[2] ?? line;
+  const tail = tsMatch ? line.slice(tsMatch[0].length) : '';
+  const rest = tsMatch ? tail.replace(/^[ \t]+/, '') || tail.slice(-1) : line;
   const timestampMs = timestamp ? tryParseTimestampMs(timestamp) : undefined;
   const tableDump = parseTableDump(rest);
   const lineType = tableDump ? 'info' : inheritedSource === 'yes-shop' && /^Postpaid Registration\s*>{2,}/i.test(rest)
     ? 'content_data' : classifyLine(rest, Boolean(timestamp));
 
   const parts = rest
-    .split(/\s*>{3,}\s*/)
+    .split(/>{3,}/)
     .map((p) => p.trim())
     .filter(Boolean);
 
-  const defaultEventType = markerText(parts[0] ?? rest).replace(/\s+(?:URL:\s*)?https?:\/\/[\s\S]*$/i, '').trim();
+  const defaultEventType = withoutTrailingUrl(markerText(parts[0] ?? rest));
   const eventType = tableDump ? 'Table dump' : lineType === 'crash'
     ? 'CRASH'
     : lineType === 'info'
@@ -326,9 +343,10 @@ export function parseLogText(text: string): LogEvent[] {
   const lines = text.split(/\r?\n/);
   const events: LogEvent[] = [];
 
-  for (let i = 0; i < lines.length; i += 1) {
+  let i = 0;
+  while (i < lines.length) {
     const line = lines[i];
-    if (!line.trim()) continue;
+    if (!line.trim()) { i += 1; continue; }
 
     const blockLines = [line];
     let endIndex = i;
@@ -343,7 +361,7 @@ export function parseLogText(text: string): LogEvent[] {
     }
 
     events.push(parseLogLine(blockLines.join('\n'), i + 1, endIndex + 1));
-    i = endIndex;
+    i = endIndex + 1;
   }
 
   const sources = resolveSources(events);

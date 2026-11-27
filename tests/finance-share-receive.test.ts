@@ -41,10 +41,11 @@ async function receive(request: Request, ready = false, foreignFileConstructor =
         postMessage: (message: Record<string, unknown>) => posted.push(message),
     };
     handlers.get('message')!({
+        origin: 'https://idea-dump.test',
         source,
         data: ready ? { type: types.ready } : { type: types.claim, shareId },
     });
-    handlers.get('message')!({ source, data: { type: types.acknowledge, shareId } });
+    handlers.get('message')!({ origin: 'https://idea-dump.test', source, data: { type: types.acknowledge, shareId } });
     await lifetime;
     expect(posted).toHaveLength(1);
     return posted[0];

@@ -1,5 +1,6 @@
 'use client';
 
+import { useId } from 'react';
 import { DailyLogContent } from '@/lib/types';
 import { Input } from '@/components/atoms/Input';
 import { DatePicker } from '@/components/atoms/DatePicker';
@@ -20,6 +21,7 @@ interface LogContentFieldsProps {
  * In compact mode: abbreviated labels, smaller inputs, no bottom margins (parent uses space-y).
  */
 export function LogContentFields({ content, onChange, compact = false }: LogContentFieldsProps) {
+    const fieldId = useId();
     const labelClass = compact
         ? 'block text-xs text-text-muted mb-1'
         : 'block text-sm text-text-secondary mb-1';
@@ -40,8 +42,9 @@ export function LogContentFields({ content, onChange, compact = false }: LogCont
                     />
                 </div>
                 <div>
-                    <label className={labelClass}>Day</label>
+                    <label htmlFor={`${fieldId}-day`} className={labelClass}>Day</label>
                     <Input
+                        id={`${fieldId}-day`}
                         type="text"
                         value={content.day || ''}
                         onChange={(e) => onChange({ ...content, day: e.target.value })}
@@ -51,10 +54,11 @@ export function LogContentFields({ content, onChange, compact = false }: LogCont
                 </div>
             </div>
             <div className={fieldGap}>
-                <label className={labelClass}>
+                <label htmlFor={`${fieldId}-task`} className={labelClass}>
                     {compact ? 'Task' : 'Operation / Task'}
                 </label>
                 <Textarea
+                    id={`${fieldId}-task`}
                     value={content.operation_task || ''}
                     onChange={(e) => onChange({ ...content, operation_task: e.target.value })}
                     className={`${inputClass} ${compact ? 'min-h-[60px]' : 'min-h-[80px] resize-y'}`}
@@ -62,10 +66,11 @@ export function LogContentFields({ content, onChange, compact = false }: LogCont
                 />
             </div>
             <div className={fieldGap}>
-                <label className={labelClass}>
+                <label htmlFor={`${fieldId}-tools`} className={labelClass}>
                     {compact ? 'Tools' : 'Tools Used'}
                 </label>
                 <Input
+                    id={`${fieldId}-tools`}
                     type="text"
                     value={content.tools_used || ''}
                     onChange={(e) => onChange({ ...content, tools_used: e.target.value })}
@@ -74,10 +79,11 @@ export function LogContentFields({ content, onChange, compact = false }: LogCont
                 />
             </div>
             <div className={fieldGap}>
-                <label className={labelClass}>
+                <label htmlFor={`${fieldId}-lesson`} className={labelClass}>
                     {compact ? 'Lesson' : 'Lesson Learned'}
                 </label>
                 <Textarea
+                    id={`${fieldId}-lesson`}
                     value={content.lesson_learned || ''}
                     onChange={(e) => onChange({ ...content, lesson_learned: e.target.value })}
                     className={`${inputClass} ${compact ? 'min-h-[40px]' : 'min-h-[60px] resize-y'}`}

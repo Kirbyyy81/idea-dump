@@ -27,7 +27,7 @@ export default function NewTicketPage() {
             }
         }
 
-        fetchProjects();
+        void fetchProjects();
     }, []);
 
     const handleCreate = async (data: CreateTicketInput) => {

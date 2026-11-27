@@ -30,7 +30,7 @@ export default function ArticleCreationPage() {
             }
         }
 
-        fetchProjects();
+        void fetchProjects();
 
         return () => {
             cancelled = true;

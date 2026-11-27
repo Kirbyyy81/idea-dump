@@ -1,11 +1,10 @@
 /** @type {import('next').NextConfig} */
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 
 function tryGetGitCommitSha() {
   try {
-    return execSync('git rev-parse HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
-      .toString()
-      .trim();
+    const git = process.platform === 'win32' ? 'C:\\Program Files\\Git\\cmd\\git.exe' : '/usr/bin/git';
+    return execFileSync(git, ['rev-parse', 'HEAD'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
   } catch {
     return undefined;
   }

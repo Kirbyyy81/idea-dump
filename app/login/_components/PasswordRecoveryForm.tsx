@@ -45,7 +45,9 @@ export function PasswordRecoveryForm({ isReset, queryError }: PasswordRecoveryFo
             }
         }
 
-        checkSession();
+        void checkSession().catch(() => {
+            if (!cancelled) setSessionState('missing');
+        });
         return () => {
             cancelled = true;
         };

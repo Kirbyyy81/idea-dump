@@ -16,11 +16,11 @@ export function notificationFormatText(definition: FinanceNotificationPatternDef
 export function notificationDefinitionFromText(text: string, direction: string, match: string, trailing: boolean): FinanceNotificationPatternDefinition {
     const parts: FinanceNotificationPart[] = [];
     let end = 0;
-    for (const token of text.matchAll(/\[([^\]]*)\]/g)) {
-        if (token.index! > end) parts.push(text.slice(end, token.index));
+    for (const token of text.matchAll(/\[([^\[\]]*)\]/g)) {
+        if (token.index > end) parts.push(text.slice(end, token.index));
         const slot = slots[token[1]];
         if (!slot) throw new Error('Choose a supported field from Insert field');
-        parts.push({ ...slot }); end = token.index! + token[0].length;
+        parts.push({ ...slot }); end = token.index + token[0].length;
     }
     if (end < text.length) parts.push(text.slice(end));
     const definition: FinanceNotificationPatternDefinition = { version: 1, parts,

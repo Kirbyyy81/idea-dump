@@ -53,10 +53,11 @@ export function SlugImageNameCard() {
 
             <div className="grid gap-4 lg:grid-cols-[1.6fr,1fr]">
                 <div className="space-y-2">
-                    <label className="text-sm font-medium text-text-secondary">
+                    <label htmlFor="article-slug-main-title" className="text-sm font-medium text-text-secondary">
                         Main title
                     </label>
                     <Input
+                        id="article-slug-main-title"
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
                         placeholder="Why Just Cook at Home Isn't Enough for Malaysia's Health"
@@ -64,10 +65,11 @@ export function SlugImageNameCard() {
                 </div>
 
                 <div className="space-y-2">
-                    <label className="text-sm font-medium text-text-secondary">
+                    <label htmlFor="article-slug-suffix" className="text-sm font-medium text-text-secondary">
                         Suffix
                     </label>
                     <Select
+                        id="article-slug-suffix"
                         value={suffix}
                         onChange={setSuffix}
                         options={IMAGE_SUFFIX_OPTIONS.map((option) => ({

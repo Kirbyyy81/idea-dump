@@ -23,7 +23,7 @@ export function ProductForm({ data, productId, save, onSaved, onCancel }: {
     const activeCategories = data.categories.filter((item) => !item.is_archived);
     const subcategories = [...new Set(data.subcategories.filter((item) => !item.is_archived
         && data.categories.find((categoryItem) => categoryItem.id === item.category_id)?.name.trim().toLowerCase() === product.category.trim().toLowerCase())
-        .map((item) => item.name).concat(product.subcategory?.trim() ?? []))].sort();
+        .map((item) => item.name).concat(product.subcategory?.trim() ?? []))].sort((a, b) => a.localeCompare(b));
     const { busy, error, run } = useInventoryAction(save);
     const unitFixed = data.purchases.some((item) => item.product_id === product.id);
     const editVariant = (id: string, change: Partial<InventoryVariantInput>) => setProduct((current) => ({ ...current, variants: current.variants.map((variant) => variant.id === id ? { ...variant, ...change } : variant) }));

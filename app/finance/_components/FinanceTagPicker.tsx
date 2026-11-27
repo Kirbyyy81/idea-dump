@@ -106,7 +106,16 @@ export function FinanceTagPicker({ value, onChange, includeArchived = false, dis
         } else {
             focusTagButton(options.find(option => option.getAttribute('aria-pressed') === 'true') ?? options[0], listRef.current);
         }
-        if (!options.length) menuRef.current?.focus({ preventScroll: true });
+        const menu = menuRef.current;
+        if (!options.length) menu?.focus({ preventScroll: true });
+        // The menu itself only receives focus when there are no enabled options.
+        const handleMenuFocusKey = (event: globalThis.KeyboardEvent) => {
+            if (event.target !== menu || (event.key !== 'Escape' && !(event.key === 'Tab' && event.shiftKey))) return;
+            event.preventDefault();
+            event.stopPropagation();
+            setOpen(false);
+            trigger.current?.focus({ preventScroll: true });
+        };
         // Safari can blur an option without moving focus to another element.
         // Close only when a pointer or focus target actually moves outside.
         const outside = (event: PointerEvent | FocusEvent) => {
@@ -114,9 +123,11 @@ export function FinanceTagPicker({ value, onChange, includeArchived = false, dis
         };
         document.addEventListener('pointerdown', outside);
         document.addEventListener('focusin', outside);
+        menu?.addEventListener('keydown', handleMenuFocusKey);
         return () => {
             document.removeEventListener('pointerdown', outside);
             document.removeEventListener('focusin', outside);
+            menu?.removeEventListener('keydown', handleMenuFocusKey);
         };
     }, [open]);
     const toggle = (id: string) => {
@@ -125,13 +136,13 @@ export function FinanceTagPicker({ value, onChange, includeArchived = false, dis
             if (remaining) focusTagButton(remaining, listRef.current);
             else menuRef.current?.focus({ preventScroll: true });
         }
-        onChange(value.includes(id) ? value.filter(item => item !== id) : [...value, id].sort());
+        onChange(value.includes(id) ? value.filter(item => item !== id) : [...value, id].sort((a, b) => a.localeCompare(b)));
     };
     const close = () => {
         setOpen(false);
         trigger.current?.focus({ preventScroll: true });
     };
-    const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
         if (disabled || status !== 'ready' || event.nativeEvent.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
         if (event.key === 'Escape' && open) {
             event.preventDefault(); event.stopPropagation(); close();
@@ -167,7 +178,7 @@ export function FinanceTagPicker({ value, onChange, includeArchived = false, dis
         }
     };
     return (
-        <div ref={root} className="min-w-0" onKeyDown={handleKeyDown}>
+        <div ref={root} className="min-w-0">
             <span id={navigationHintId} className="sr-only">Type to jump to a tag. Use arrow keys to move and Enter or Space to select.</span>
             <FieldShell id={triggerId} label={hideLabel ? undefined : label} errorMessage={errorMessage}>
                 {({ describedBy, hasError }) => (
@@ -183,6 +194,7 @@ export function FinanceTagPicker({ value, onChange, includeArchived = false, dis
                             aria-describedby={[describedBy, navigationHintId].filter(Boolean).join(' ')}
                             aria-invalid={hasError || undefined}
                             disabled={disabled || status !== 'ready'}
+                            onKeyDown={handleKeyDown}
                             onClick={() => { typedPrefix.current = { text: '', at: 0 }; setOpen(current => !current); }}
                         >
                             <span className={cn('truncate', !value.length && 'text-text-muted')}>
@@ -201,6 +213,7 @@ export function FinanceTagPicker({ value, onChange, includeArchived = false, dis
                                 <div ref={listRef} className="custom-scrollbar min-h-10 overflow-y-auto">
                                     {available.map(tag => (
                                         <SelectOptionButton key={tag.id} data-tag-id={tag.id} data-tag-name={tag.name.toLowerCase()} tabIndex={activeTag === tag.id ? 0 : -1}
+                                            onKeyDown={handleKeyDown}
                                             onFocus={() => setActiveTag(tag.id)} selected={value.includes(tag.id)} aria-pressed={value.includes(tag.id)} disabled={disabled || (!includeArchived && tag.is_archived && !value.includes(tag.id)) || (!value.includes(tag.id) && value.length >= 50)}
                                             onClick={() => toggle(tag.id)}>
                                             <span className="truncate">{tag.name}{tag.is_archived ? ' (archived)' : ''}</span>

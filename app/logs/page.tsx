@@ -65,7 +65,7 @@ export default function LogsPage() {
                 setIsLoading(false);
             }
         }
-        fetchData();
+        void fetchData();
     }, []);
 
     const handleRefresh = async () => {
@@ -289,8 +289,9 @@ export default function LogsPage() {
                             </div>
 
                             <div className="w-full sm:min-w-[160px] sm:flex-1 lg:flex-none">
-                                <label className="block text-xs text-text-muted mb-1">Source</label>
+                                <label htmlFor="logs-filter-source" className="block text-xs text-text-muted mb-1">Source</label>
                                 <Select
+                                    id="logs-filter-source"
                                     value={sourceFilter}
                                     onChange={(nextValue) => setSourceFilter(nextValue as 'all' | 'agent' | 'human')}
                                     buttonClassName="py-2 text-sm"
@@ -303,8 +304,9 @@ export default function LogsPage() {
                             </div>
 
                             <div className="w-full min-w-0 flex-1 sm:min-w-[220px]">
-                                <label className="block text-xs text-text-muted mb-1">Search</label>
+                                <label htmlFor="logs-filter-search" className="block text-xs text-text-muted mb-1">Search</label>
                                 <Input
+                                    id="logs-filter-search"
                                     value={query}
                                     onChange={(e) => setQuery(e.target.value)}
                                     placeholder="Search task/tools/lesson…"

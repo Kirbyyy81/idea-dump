@@ -53,10 +53,10 @@ jobs:
             services/finance-ocr/package-lock.json
 
       - name: Install web dependencies for type inference
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Install OCR dependencies for type inference
-        run: npm ci --prefix services/finance-ocr
+        run: npm ci --ignore-scripts --prefix services/finance-ocr
 
       - name: Cache SonarQube packages
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0

@@ -14,6 +14,8 @@ adb -s YOUR_DEVICE_SERIAL install -r app/build/outputs/apk/debug/app-debug.apk
 
 On Linux/macOS use `./gradlew`. The debug APK is `app/build/outputs/apk/debug/app-debug.apk`. It is signed for sideload testing. Production signing and distribution are separate rollout tasks; keep signing keys outside Git.
 
+Gradle verifies dependency checksums against `gradle/verification-metadata.xml`. When changing dependencies, regenerate the SHA-256 entries with `--write-verification-metadata sha256` during the relevant builds, then review the checksum changes before committing. Android Gradle plugin upgrades also require AAPT2 checksums for Linux, macOS, and Windows.
+
 The HTTPS origin defaults to `https://idea-dump-alpha.vercel.app`. For a compatible preview deployment, add `-PcompanionOrigin=https://your-preview.example` to Gradle. The origin must match the web application's `APP_ORIGIN`. No server secret belongs in the APK. Finance pairing requires the web changes and all migrations in [the rollout guide](../document/ANDROID_COMPANION.md).
 
 ## Download from GitHub

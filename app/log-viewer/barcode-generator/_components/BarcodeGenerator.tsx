@@ -140,8 +140,9 @@ function BarcodeWorkspace() {
                         <h2 className="text-sm font-semibold">Barcode</h2>
                         <span className="text-xs text-text-muted">Code 128</span>
                     </div>
-                    <div ref={previewRef} tabIndex={generated ? 0 : undefined} aria-label="Barcode image area"
-                        className="min-w-0 overflow-x-auto rounded-md border border-border-default bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong">
+                    <div ref={previewRef} role="region" aria-label="Barcode image area"
+                        className="min-w-0 overflow-x-auto rounded-md border border-border-default bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong"
+                        tabIndex={generated ? 0 : undefined}> {/* NOSONAR - scroll region requires keyboard focus */}
                         <div className="flex min-h-[244px] min-w-full w-max items-center justify-center">
                             <svg ref={svgRef} role="img" aria-hidden={!generated} aria-label={generated ? `Barcode for ${generated}` : undefined}
                                 className={cn('max-w-none shrink-0', !generated && 'hidden')} />

@@ -44,14 +44,28 @@ const ignoredMerchantTerms = [
 function parseAmount(lines: string[]) {
     const candidates: Array<{ amount: number; score: number }> = [];
     for (const line of lines) {
-        const matches = Array.from(line.matchAll(/(?:RM|MYR)?\s*([0-9]{1,3}(?:,[0-9]{3})*|[0-9]+)\.([0-9]{2})/gi));
+        const matches = line.matchAll(/\d[\d,]*(?:\.(\d{2}))?/g);
+        const lower = line.toLowerCase();
         for (const match of matches) {
-            const amount = Number(`${match[1].replace(/,/g, '')}.${match[2]}`);
+            const cents = match[1];
+            if (cents === undefined) continue;
+            // Keep the rightmost valid amount when OCR inserts extra digits or commas.
+            const groups = match[0].slice(0, -3).split(',');
+            let first = groups.length - 1;
+            while (first > 0 && groups[first].length === 3 && groups[first - 1].length > 0) first -= 1;
+            const whole = groups.slice(first);
+            if (whole.length > 1) whole[0] = whole[0].slice(-3);
+            if (!whole[0]) continue;
+            const amount = Number(`${whole.join('')}.${cents}`);
             if (!Number.isFinite(amount) || amount <= 0) continue;
-            const lower = line.toLowerCase();
             let score = /(?:amount|total|paid|payment|purchase|transfer)/.test(lower) ? 3 : 1;
             if (/(?:balance|available|limit)/.test(lower)) score -= 3;
-            if (/(?:rm|myr)/i.test(match[0])) score += 1;
+            if (first === 0 && whole[0] === groups[0]) {
+                let prefixEnd = match.index;
+                while (prefixEnd > 0 && /\s/.test(line[prefixEnd - 1])) prefixEnd -= 1;
+                if (lower.slice(Math.max(0, prefixEnd - 2), prefixEnd) === 'rm'
+                    || lower.slice(Math.max(0, prefixEnd - 3), prefixEnd) === 'myr') score += 1;
+            }
             candidates.push({ amount, score });
         }
     }
@@ -99,7 +113,7 @@ function labeledPartyValue(
     for (let index = 0; index < lines.length; index += 1) {
         const match = pattern.exec(lines[index]);
         if (!match) continue;
-        const sameLine = cleanParty(match[1] || '');
+        const sameLine = cleanParty(lines[index].slice(match[0].length).replace(/^\s*[:\-]?/, ''));
         if (validParty(sameLine)) return sameLine;
 
         for (let nextIndex = index + 1; nextIndex < lines.length && nextIndex <= index + 2; nextIndex += 1) {
@@ -135,10 +149,10 @@ function matchSavedPayee(value: string | null, payees: FinanceOcrPayee[]) {
 }
 
 function parseParties(lines: string[], payees: FinanceOcrPayee[], sharedReceipt = false) {
-    let explicitMerchant = labeledPartyValue(lines, /^merchant(?:\s+name)?\s*[:\-]?\s*(.*)$/i);
+    let explicitMerchant = labeledPartyValue(lines, /^merchant(?:\s+name)?/i);
     let explicitPayee = labeledPartyValue(
         lines,
-        /^(?:payee|recipient|transfer\s+(?:recipient|to)|to)\b(?!\s+(?:reference|ref))(?:\s+name)?\s*[:\-]?\s*(.*)$/i,
+        /^(?:payee|recipient|transfer\s+(?:recipient|to)|to)\b(?!\s+(?:reference|ref))(?:\s+name)?/i,
     );
     if (sharedReceipt && explicitMerchant && isRytPartyNoise(explicitMerchant)) explicitMerchant = null;
     if (sharedReceipt && explicitPayee && isRytPartyNoise(explicitPayee)) explicitPayee = null;

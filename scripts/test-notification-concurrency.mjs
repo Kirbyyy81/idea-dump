@@ -59,7 +59,7 @@ try {
   notification_extraction:{version:1,fields:{amount:fxTrace,foreign_amount:fxTrace,foreign_currency:fxTrace},conflicts:[],date_provenance:'posted_at'}}};
  const uploads=[randomUUID(),randomUUID()].map(id=>"set role service_role; select public.finance_accept_notification_v2("+[owner,device,JSON.stringify({...event,client_event_id:id,source_package:'my.rytbank.app'}),'e'.repeat(64),JSON.stringify(autoParsed)].map(literal).join(',')+');');
  const automatic=await Promise.all(uploads.map(sql=>checked(sql).then(text=>JSON.parse(text))));
- if(automatic.map(r=>r.status).sort().join(',')!=='completed,review') throw new Error('Concurrent duplicate auto-add was not stopped');
+ if(automatic.map(r=>r.status).sort((a, b) => a.localeCompare(b)).join(',')!=='completed,review') throw new Error('Concurrent duplicate auto-add was not stopped');
  const replayed=JSON.parse(await checked(uploads[0]));
  if(!replayed.replayed||replayed.status!==automatic[0].status) throw new Error('Automatic upload replay changed the result');
  const autoCounts=await checked("select (select count(*) from public.finance_transactions where user_id="+literal(owner)+")||','||(select count(*) from public.finance_notification_patterns where user_id="+literal(owner)+");");

@@ -155,6 +155,7 @@ function isClient(source: ExtendableMessageEvent['source']): source is Client {
 }
 
 self.addEventListener('message', (event) => {
+    if (event.origin !== self.location.origin) return;
     const message = parseFinanceShareClientMessage(event.data);
     if (!message || !isClient(event.source)) return;
 

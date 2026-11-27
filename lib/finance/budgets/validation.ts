@@ -50,7 +50,7 @@ export function validateBudgetConfiguration(value: unknown, options: { allowPast
             errors[key] = 'Remove unavailable selections and choose valid Finance options';
             return [];
         }
-        return [...new Set(values.map((id) => id.toLowerCase()))].sort();
+        return [...new Set(values.map((id) => id.toLowerCase()))].sort((a, b) => a.localeCompare(b));
     };
     const sourceIds = references('source_ids');
     const categoryIds = references('category_ids');

@@ -2,15 +2,15 @@ import type { LogLineType, LogViewerRecord } from '@/lib/types';
 
 export function parseGenericRecord(rest: string, lineType: LogLineType, url?: string): LogViewerRecord {
   if (lineType === 'content_data') {
-    const named = rest.match(/^CONTENT\s+DATA\s*>>\s*([^>]+?)\s*>>\s*([\s\S]*)$/i);
+    const named = rest.match(/^CONTENT\s+DATA\s*>>([^>]+)>>([\s\S]*)$/i);
     return {
       functionName: named?.[1]?.trim(),
-      bodyText: named?.[2] ?? rest.replace(/^JSON\s+DATA\s+STRING\s*-\s*/i, ''),
+      bodyText: named?.[2].trimStart() ?? rest.replace(/^JSON\s+DATA\s+STRING\s*-\s*/i, ''),
     };
   }
   if (lineType !== 'request' && lineType !== 'response') {
-    const marker = rest.match(/^[^>]+>{2,}\s*([\s\S]*)$/);
-    return { bodyText: marker ? marker[1] : rest };
+    const marker = rest.match(/^[^>]+>{2,}/);
+    return { bodyText: marker ? rest.slice(marker[0].length).trimStart() : rest };
   }
 
   if (url) {

@@ -112,7 +112,7 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Audit dependencies
         run: |
@@ -122,7 +122,7 @@ jobs:
       - name: Lint and type-check
         run: |
           npm run lint
-          npx tsc --noEmit
+          npm run typecheck
 
       - name: Run application tests
         run: npm test
@@ -151,7 +151,7 @@ jobs:
           cache-dependency-path: services/finance-ocr/package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Audit dependencies
         run: |
@@ -181,11 +181,11 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
         with:
           # Google no longer distributes the legacy tools package.
           packages: 'platform-tools platforms;android-36'
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
       - name: Test, lint, and build debug APK
         run: ./gradlew testDebugUnitTest lintDebug assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4

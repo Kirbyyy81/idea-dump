@@ -203,6 +203,37 @@ test('links and unlinks an existing Finance expense from purchase history', asyn
     expect(commands.map((command) => command.action)).toEqual(['edit_purchase', 'link_finance']);
 });
 
+test('expands purchase receipts and opens the editor on double-click', async ({ page }) => {
+    const { commands } = await setup(page);
+    await page.getByRole('link', { name: 'Purchases', exact: true }).click();
+    const receipt = page.getByRole('button', { name: /^Purchase · 1 Oct 2026/ });
+    const tissues = page.getByText('Tissues · Five boxes', { exact: true });
+    const editor = page.getByRole('dialog', { name: 'Edit purchase', exact: true });
+
+    await expect(receipt).toHaveAttribute('aria-expanded', 'false');
+    await expect(receipt).toContainText(/3 lines.*RM\s*94\.00/);
+    await expect(tissues).toHaveCount(0);
+    await receipt.click();
+    await expect(receipt).toHaveAttribute('aria-expanded', 'true');
+    await expect(tissues).toBeVisible();
+    await expect(editor).toHaveCount(0);
+
+    await receipt.dblclick();
+    await expect(editor.getByRole('region', { name: /^Purchase item/ })).toHaveCount(3);
+    await page.keyboard.press('Escape');
+    await expect(receipt).toBeFocused();
+    await expect(receipt).toHaveAttribute('aria-expanded', 'true');
+    await receipt.press('Space');
+    await expect(receipt).toHaveAttribute('aria-expanded', 'false');
+    await expect(tissues).toHaveCount(0);
+
+    await receipt.dblclick();
+    await expect(editor).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(receipt).toHaveAttribute('aria-expanded', 'false');
+    expect(commands).toEqual([]);
+});
+
 test('edits size variants while retaining historical quantities', async ({ page }) => {
     const { commands } = await setup(page);
     await page.getByRole('button', { name: 'Dove Shampoo', exact: true }).click();
@@ -334,6 +365,7 @@ test('edits existing stock with unknown price and date', async ({ page }) => {
     fixture.purchases[0].total_paid = null;
     const { commands } = await setup(page, fixture);
     await page.getByRole('link', { name: 'Purchases', exact: true }).click();
+    await expect(page.getByRole('button', { name: /^Existing stock · Date unknown/ })).toContainText(/RM\s*40\.00Known total/);
     await page.getByRole('button', { name: 'Purchase actions', exact: true }).first().click();
     await page.getByRole('menuitem', { name: 'Edit purchase', exact: true }).click();
     const line = page.getByRole('region', { name: 'Purchase item 1', exact: true });
@@ -455,6 +487,7 @@ test('product More menu requires confirmation, supports cancellation and deletes
     await expect(page.getByRole('button', { name: 'Add product', exact: true })).toBeFocused();
     expect(commands).toEqual([{ action: 'delete_product', payload: { id: id.shampoo, revision: 1 } }]);
     await page.goto('/inventory/purchases');
+    await page.getByRole('button', { name: /^Purchase · 1 Oct 2026/ }).click();
     await expect(page.getByText(/^Dove Shampoo ·/)).toHaveCount(0);
     await expect(page.getByText('Tissues · Five boxes', { exact: true })).toBeVisible();
     await page.goto('/inventory/usage');
@@ -628,6 +661,10 @@ test('product history keeps context on refresh, Back, return and Close', async (
     await page.screenshot({ path: info.outputPath('inventory-product-details.png'), fullPage: true });
     await detail.getByRole('link', { name: 'Purchase history', exact: true }).click();
     await expect(page.getByRole('combobox', { name: 'Product', exact: true })).toHaveText('Dove Shampoo');
+    const receipt = page.getByRole('button', { name: /^Purchase · 1 Oct 2026/ });
+    await expect(receipt).toContainText('2 of 3 lines');
+    await receipt.click();
+    await expect(page.getByText('Dove Shampoo · 500 ml bottle', { exact: true })).toBeVisible();
     await expect(page.getByText('Tissues · Five boxes', { exact: true })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Purchase actions', exact: true })).toHaveCount(2);
     await page.reload();
@@ -648,10 +685,13 @@ test('product history keeps context on refresh, Back, return and Close', async (
     await expect(detail).toHaveCount(0);
     await page.getByRole('link', { name: 'Purchases', exact: true }).click();
     await choose(page, 'Product', 'Tissues');
+    await receipt.click();
     await expect(page.getByText('Tissues · Five boxes', { exact: true })).toBeVisible();
     await expect(page.getByText('Dove Shampoo · 500 ml bottle', { exact: true })).toHaveCount(0);
     await choose(page, 'Product', 'All products');
     await expect(page).toHaveURL(/\/inventory\/purchases$/);
+    await receipt.click();
+    await page.getByRole('button', { name: /^Purchase · 1 Aug 2026/ }).click();
     await expect(page.getByText('Dove Shampoo · 500 ml bottle', { exact: true })).toHaveCount(2);
     expect(commands).toHaveLength(0);
 });

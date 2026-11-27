@@ -45,10 +45,11 @@ export function TocAnchorGeneratorCard() {
 
             <div className="grid gap-4 lg:grid-cols-2">
                 <div className="space-y-2">
-                    <label className="text-sm font-medium text-text-secondary">
+                    <label htmlFor="article-toc-headings-input" className="text-sm font-medium text-text-secondary">
                         Headings input
                     </label>
                     <Textarea
+                        id="article-toc-headings-input"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         placeholder={'Introduction to Nutrition\nWhy Students Skip Breakfast\nHealthy Eating Tips'}
@@ -57,10 +58,11 @@ export function TocAnchorGeneratorCard() {
                 </div>
 
                 <div className="space-y-2">
-                    <label className="text-sm font-medium text-text-secondary">
+                    <label htmlFor="article-toc-generated-anchors" className="text-sm font-medium text-text-secondary">
                         Generated anchors
                     </label>
                     <Textarea
+                        id="article-toc-generated-anchors"
                         value={output}
                         readOnly
                         placeholder="Generated anchors will appear here..."
